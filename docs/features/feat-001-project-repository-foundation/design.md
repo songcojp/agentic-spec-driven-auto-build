@@ -27,7 +27,7 @@
 3. 创建新项目时，Project Service 在统一 `workspace/` 目录下创建 `workspace/<project-slug>` 项目目录。
 4. Project Service 持久化 Project 和初始配置。
 5. Project Service 将项目加入项目目录，并在首次创建或用户显式选择时更新 ProjectSelectionContext。
-6. Project Service 自动初始化 `.autobuild/` / Spec Protocol，并调用 Project Memory 初始化。
+6. Project Service 自动初始化 `.autobuild/` / Spec Protocol，从 agent runtime 模板生成缺失的 `AGENTS.md`，同步缺失的项目本地 `.agents/skills/`，并调用 Project Memory 初始化。
 7. Project Constitution Service 自动导入已有宪章或创建默认项目宪章，并写入版本记录。
 8. Repository Adapter 读取仓库状态。
 9. Project Health Checker 输出 `ready`、`blocked` 或 `failed`。

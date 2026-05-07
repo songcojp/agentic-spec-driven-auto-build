@@ -1483,6 +1483,40 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
   assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/requirements.md"]);
 });
 
+test("intake requirement from feature index writes back to mainline requirements", () => {
+  const dbPath = makeDbPath();
+  seedConsoleData(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "intake-feature-index-"));
+  mkdirSync(join(projectPath, "docs", "features"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "PRD.md"), "# PRD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "requirements.md"), "# Requirements\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "README.md"), "# Feature Specs\n", "utf8");
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+    { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
+  ]);
+
+  const receipt = submitConsoleCommand(dbPath, {
+    action: "intake_requirement",
+    entityType: "project",
+    entityId: "project-1",
+    requestedBy: "vscode-extension",
+    reason: "New Feature from feature index.",
+    payload: {
+      projectId: "project-1",
+      sourcePath: "docs/features/README.md",
+      requirementText: "Add UI concept alignment.",
+    },
+    now: stableDate,
+  }, { scheduler: createMemoryScheduler(dbPath) });
+  const result = runSqlite(dbPath, [], [
+    { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [receipt.schedulerJobId] },
+  ]);
+  const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
+  assert.deepEqual(jobPayload.context.sourcePaths, ["docs/features/README.md"]);
+  assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/requirements.md"]);
+});
+
 test("IDE lifecycle commands scan spec sources and run project health through Console gateway", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);

@@ -4315,14 +4315,18 @@ function requirementsArtifactForSource(sourcePath?: string, workspaceRoot?: stri
   if (!relativeSource || relativeSource.startsWith("..") || isAbsolute(relativeSource)) {
     return fallback;
   }
-  if (basename(relativeSource) === "PRD.md") {
-    if (workspaceRoot && isLocalizedProjectSpecPath(relativeSource) && !hasMultilingualSpecSupport(workspaceRoot)) {
+  const normalizedSource = relativeSource.replaceAll("\\", "/");
+  if (normalizedSource === "docs/features/README.md") {
+    return fallback;
+  }
+  if (basename(normalizedSource) === "PRD.md") {
+    if (workspaceRoot && isLocalizedProjectSpecPath(normalizedSource) && !hasMultilingualSpecSupport(workspaceRoot)) {
       return rootProjectSpecPaths().requirements;
     }
-    const folder = dirname(relativeSource);
+    const folder = dirname(normalizedSource);
     return (folder === "." ? "requirements.md" : join(folder, "requirements.md")).replaceAll("\\", "/");
   }
-  const folder = dirname(relativeSource);
+  const folder = dirname(normalizedSource);
   const artifact = folder === "." ? "requirements.md" : join(folder, "requirements.md");
   return artifact.replaceAll("\\", "/");
 }

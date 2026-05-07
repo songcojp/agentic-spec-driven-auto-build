@@ -13,7 +13,7 @@
 - 创建 AutoBuild 项目并保存项目身份、目标、类型、技术偏好、目标仓库、默认分支、信任级别、运行环境和自动化开关。
 - 维护项目目录、项目生命周期状态和当前项目选择上下文，支持导入现有项目、在统一 `workspace/` 目录下创建新项目，以及多个项目切换。
 - 连接 GitHub、GitLab、本地 Git 或私有 Git 仓库，并读取分支、commit、未提交变更、PR、CI、任务分支和 worktree 状态。
-- 在用户选择导入现有项目或创建新项目后，自动完成仓库探测或连接、`.autobuild/` / Spec Protocol、项目宪章、Project Memory、健康检查和当前项目上下文初始化。
+- 在用户选择导入现有项目或创建新项目后，自动完成仓库探测或连接、`.autobuild/` / Spec Protocol、模板化 `AGENTS.md` 生成、项目本地 `.agents/skills/` 同步、项目宪章、Project Memory、健康检查和当前项目上下文初始化。
 - 导入、创建和版本化项目宪章，并将项目级规则提供给 Project Memory、Scheduler、Review Center 和后续 Feature Spec 流程。
 - 执行项目健康检查，覆盖 Git 仓库、包管理器、测试命令、构建命令、Codex 配置、AGENTS.md、Spec Protocol 目录、未提交变更和敏感文件风险。
 - 输出 `ready`、`blocked` 或 `failed`，并提供可观察原因。
@@ -51,7 +51,8 @@
 - [ ] 首次安装或空数据库启动时项目列表为空，内置示例数据不会混入真实项目列表。
 - [ ] 同一规范化项目目录不能被两个项目或两个仓库连接重复绑定；重复创建返回冲突和已有项目 ID。
 - [ ] Demo 种子导入幂等，重复导入不会创建重复项目，导入成功后刷新列表但不自动切换项目。
-- [ ] 项目创建或导入后自动完成仓库探测或连接、`.autobuild/` / Spec Protocol、项目宪章、Project Memory、健康检查和当前项目上下文初始化。
+- [ ] 项目创建或导入后自动完成仓库探测或连接、`.autobuild/` / Spec Protocol、模板化 `AGENTS.md` 生成、项目本地 `.agents/skills/` 同步、项目宪章、Project Memory、健康检查和当前项目上下文初始化。
+- [ ] 目标项目 `AGENTS.md` 从 agent runtime 模板生成，内容覆盖 Spec 标准、Spec 操作、Spec 流程、技能说明、需求新增/变更协议、技能路由和实现边界；已有 `AGENTS.md` 不得被覆盖。
 - [ ] 项目级查询、健康检查、Project Memory 初始化和调度入口必须携带当前 `project_id`。
 - [ ] 项目宪章可以被 Project Memory、Skill Center、Scheduler、Review Center 和后续 Feature Spec 流程引用。
 - [ ] 项目宪章变更触发受影响 Feature 或任务的重新校验。

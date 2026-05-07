@@ -241,10 +241,15 @@ test("initializeProjectPhase1 creates SpecDrive gitignore and AGENTS guidance", 
   const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
   assert.match(agents, /This file explains the SpecDrive spec standard and the skill-driven workflow/);
   assert.match(agents, /## Spec Standard/);
+  assert.match(agents, /## Spec Operations/);
   assert.match(agents, /## Spec Workflow/);
   assert.match(agents, /## Skill Workflow/);
+  assert.match(agents, /## Skill Reference/);
+  assert.match(agents, /change-requirement/);
+  assert.match(agents, /Do not create project-level scratch requirement files under `docs\/features\/`/);
   assert.match(agents, /Use this file as the target project's SpecDrive operating contract/);
   assert.doesNotMatch(agents, /Skill-vs-Code Rule/);
+  assert.equal(existsSync(join(root, ".agents", "templates", "project-AGENTS.md")), true);
 
   const constitution = readFileSync(join(root, ".autobuild", "memory", "constitution.md"), "utf8");
   assert.match(constitution, /^# InitFiles Project Constitution/m);

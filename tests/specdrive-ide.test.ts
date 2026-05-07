@@ -1251,6 +1251,7 @@ test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown a
   ]).queries.jobs[0].payload_json));
   assert.equal(payload.operation, "intake_requirement");
   assert.equal(payload.context.requirementText, "Top New Feature request that may add or change existing scope.");
+  assert.deepEqual(payload.context.expectedArtifacts, ["docs/requirements.md"]);
 });
 
 test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill", () => {

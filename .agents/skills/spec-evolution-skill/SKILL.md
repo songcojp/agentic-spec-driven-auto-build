@@ -5,7 +5,7 @@ description: "Manage requirement changes and spec evolution caused by user decis
 
 # Spec Evolution Skill
 
-Before editing, follow the governance checklist in `docs/change-management.md` when it exists; for explicitly multilingual projects, use the localized checklist matching the active lane, such as `docs/zh-CN/change-management.md`. This skill is the design-named entry point for source-driven requirement and spec changes.
+Before editing, follow the governed requirement-change protocol in `.agents/skills/change-requirement/SKILL.md`. That protocol makes `docs/zh-CN/change-management.md` or the active-lane `docs/change-management.md` authoritative for triage, mainline updates, downstream Feature Spec sync, review routing, and commit expectations. This skill is the design-named entry point for source-driven requirement and spec changes after the change-requirement triage classifies the item as `CHANGE`, `DEPRECATE`, `CLARIFY`, or `TRACEABILITY_FIX`.
 
 ## When to Use This Skill vs. `requirement-intake-skill`
 
@@ -24,7 +24,7 @@ Before editing, follow the governance checklist in `docs/change-management.md` w
 
 ## Workflow
 
-1. Identify the changed requirement and its current source of truth. If no path is given, inspect root project docs first: `docs/PRD.md`, `docs/requirements.md`, `docs/hld.md`, `docs/design.md`, and `docs/features/README.md`. Use localized lanes such as `docs/en/*`, `docs/zh-CN/*`, or `docs/ja/*` only when the project explicitly declares multilingual documentation or the invocation provides localized paths.
+1. Identify the changed requirement and its current source of truth. If no path is given, inspect root project docs first: `docs/PRD.md`, `docs/requirements.md`, `docs/hld.md`, and `docs/features/README.md`. Use localized lanes such as `docs/en/*`, `docs/zh-CN/*`, or `docs/ja/*` only when the project explicitly declares multilingual documentation or the invocation provides localized paths.
 2. Identify the source reference: implementation result, test failure, review finding, delivery report, approval decision, repository fact, or user instruction.
 3. Classify the change:
    - `MAJOR`: product goal, core boundary, architecture direction, delivery model, or compatibility contract changes.
@@ -41,7 +41,7 @@ Before editing, follow the governance checklist in `docs/change-management.md` w
 6. Update documents in order:
    - PRD for product scope, source intent, non-goals, milestones, risks, page surfaces, or data model changes.
    - `requirements.md` for EARS statements, acceptance checks, priorities, traceability matrix, phase mapping, and open questions.
-   - `hld.md` or `design.md` when system boundaries, data domains, interfaces, state machines, technology stack, or risks change.
+   - `hld.md` when system boundaries, data domains, interfaces, state machines, technology stack, or risks change.
    - Feature Specs when the change affects executable feature scope, dependencies, tasks, or acceptance.
 7. Preserve existing IDs when the requirement is semantically the same. Mark deprecated or superseded requirements explicitly when replacement is necessary; do not silently reuse an old ID for a different behavior.
 8. If a change affects an active or completed Feature Spec, update the feature status or notes so execution does not continue from stale assumptions.
@@ -58,6 +58,7 @@ Before editing, follow the governance checklist in `docs/change-management.md` w
 
 - Make localized edits instead of rewriting whole specs unless the change truly invalidates the structure.
 - Preserve the source language unless the user asks otherwise.
+- Update the mainline requirements document for the active lane; do not create `docs/features/requirements.md` for project-level requirement changes unless the protocol explicitly defines it.
 - Keep change rationale short and source-backed.
 - Do not directly modify implementation code unless the user explicitly asks to implement the changed requirement.
 - Keep feature worktrees and unrelated docs out of scope unless they are part of the affected traceability chain.

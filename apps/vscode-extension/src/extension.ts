@@ -1383,7 +1383,7 @@ async function submitNewFeatureRequest(content: string, provider: SpecExplorerPr
     await vscode.window.showErrorMessage("SpecDrive New Feature input is empty.");
     return;
   }
-  const sourcePath = "docs/features/README.md";
+  const sourcePath = preferredRequirementIntakeSource(view);
   const document = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(vscode.Uri.file(workspaceRoot), ...sourcePath.split("/")));
   const firstLine = document.lineCount > 0 ? document.lineAt(0).text : "";
   const request: SpecChangeRequestV1 = {
@@ -1484,6 +1484,12 @@ function isSchedulableFeature(feature: SpecDriveIdeFeatureNode | undefined): boo
 
 function normalizeFeatureScheduleStatus(status: string | undefined): string {
   return (status ?? "").toLowerCase().replaceAll("_", " ").replaceAll("-", " ").trim();
+}
+
+function preferredRequirementIntakeSource(view: SpecDriveIdeView): string {
+  return view.documents.find((document) => document.exists && document.kind === "requirements")?.path
+    ?? view.documents.find((document) => document.exists && document.kind === "prd")?.path
+    ?? preferredWorkspaceRequestSource(view);
 }
 
 async function submitSpecWorkspaceRequest(content: string, intent: unknown, provider: SpecExplorerProvider): Promise<void> {

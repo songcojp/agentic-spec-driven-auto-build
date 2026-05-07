@@ -19,6 +19,7 @@ This repository is a spec-driven autonomous coding system. Treat the spec artifa
 - When a repository fact conflicts with a spec, update the spec through the spec-evolution path instead of silently coding around it.
 - If implementation intent, acceptance criteria, or file scope is unclear, stop for clarification before making risky changes.
 - For Chinese docs, preserve Chinese structure, numbering, and terminology unless the user asks for a language or tone change.
+- For any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix, treat `.agents/skills/change-requirement/SKILL.md` and the active `change-management.md` document as the Spec protocol. Triage through that protocol before editing, update the mainline spec lane first, and do not create project-level scratch requirement files under `docs/features/`.
 
 ## Skill-vs-Code Decision
 
@@ -50,6 +51,7 @@ When a new requirement or capability is proposed, evaluate **before writing any 
 - Use `test-execution-skill` for targeted, regression, browser, build, or acceptance verification.
 - Use `review-report-skill` for code/spec review findings and delivery-risk reports. When reviewing implementation, check for spec drift—behavior that diverges from `REQ-*` requirements—and report it as a finding alongside code quality issues.
 - Use `spec-evolution-skill` when an **existing** requirement ID must be changed, corrected, deprecated, or superseded. Use `requirement-intake-skill` when a brand-new requirement with a new stable ID must be added. When uncertain which applies, check: if a target ID already exists, use `spec-evolution-skill`; if no target ID exists yet, use `requirement-intake-skill`.
+- Use `change-requirement` as the governed entry point when the request is an add-or-change requirement flow or when routing between requirement intake and spec evolution is uncertain.
 - Use `pr-generation-skill` only after implementation, tests, and review are complete.
 
 ## Development Commands

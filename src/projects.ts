@@ -560,45 +560,36 @@ function ensureProjectGitIgnore(projectPath: string): void {
 
 function ensureProjectAgentRuntime(projectPath: string): void {
   const agentsFile = join(projectPath, "AGENTS.md");
+  const sourceAgents = resolveAgentRuntimeSource();
+  const templateFile = resolveProjectAgentGuidelinesTemplate(sourceAgents);
   if (!existsSync(agentsFile)) {
-    writeFileSync(agentsFile, projectAgentGuidelinesTemplate());
+    writeFileSync(agentsFile, readFileSync(templateFile, "utf8"));
   }
 
-  const sourceAgents = resolveAgentRuntimeSource();
   const targetAgents = join(projectPath, ".agents");
   mkdirSync(targetAgents, { recursive: true });
-  if (!existsSync(sourceAgents)) return;
-  copyMissingAgentRuntime(sourceAgents, targetAgents);
+  if (existsSync(sourceAgents)) {
+    copyMissingAgentRuntime(sourceAgents, targetAgents);
+  }
+  ensureProjectAgentTemplate(templateFile, targetAgents);
 }
 
-function projectAgentGuidelinesTemplate(): string {
-  return [
-    "# Agent Guidelines",
-    "",
-    "This project is managed by SpecDrive AutoBuild.",
-    "",
-    "## Spec Rules",
-    "",
-    "- Treat product docs, requirements, HLD/design docs, and `docs/features/<feature-id>/` as the source of truth.",
-    "- Runtime state lives under `.autobuild/`; `.autobuild/runs/` should stay ignored by Git.",
-    "",
-    "## Skills",
-    "",
-    "- Project-local skills live under `.agents/skills/`.",
-    "- Use skills for governed SpecDrive workflows or when the user explicitly names one.",
-    "- Use normal agent behavior for ordinary questions, simple edits, simple commands, and direct bug fixes.",
-    "",
-    "## Work Rules",
-    "",
-    "- Before changing code or specs, read the relevant product docs and Feature Spec.",
-    "- Preserve unrelated user changes and do not rewrite broad docs or refactor unrelated code without an explicit request.",
-    "- If a requested edit exceeds the active Feature Spec, update or evolve the spec first.",
-    "- If intent, acceptance criteria, or file scope is unclear, ask for clarification before risky changes.",
-    "- Preserve existing language, structure, numbering, and terminology in localized docs unless a language or tone change is requested.",
-    "",
-    "Use this file as the target project's SpecDrive operating contract.",
-    "",
-  ].join("\n");
+function resolveProjectAgentGuidelinesTemplate(sourceAgents: string): string {
+  const defaultAgents = join(dirname(fileURLToPath(import.meta.url)), "..", ".agents");
+  const candidates = [
+    join(sourceAgents, "templates", "project-AGENTS.md"),
+    join(defaultAgents, "templates", "project-AGENTS.md"),
+  ];
+  const templatePath = candidates.find((candidate) => existsSync(candidate));
+  if (!templatePath) throw new Error(`Project AGENTS template was not found: ${candidates.join(", ")}`);
+  return templatePath;
+}
+
+function ensureProjectAgentTemplate(templateFile: string, targetAgents: string): void {
+  const target = join(targetAgents, "templates", "project-AGENTS.md");
+  if (existsSync(target)) return;
+  mkdirSync(dirname(target), { recursive: true });
+  cpSync(templateFile, target, { force: false });
 }
 
 function resolveAgentRuntimeSource(): string {

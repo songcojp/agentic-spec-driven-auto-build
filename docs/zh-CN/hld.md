@@ -894,7 +894,7 @@ Decomposition rules:
 |---|---|---|
 | 创建项目 | **Code** | 配置需跨 session 持久化，被 Scheduler / Dashboard / Memory 机器查询 |
 | 连接 Git 仓库 | **Code** | `git` 命令输出需结构化存储，健康检查结果需机器可查 |
-| 初始化 Spec Protocol | **Code** | 一次性目录与 schema 建立，是结构不变式 |
+| 初始化 Spec Protocol | **Code** | 一次性目录与 schema 建立，是结构不变式；目标项目 `AGENTS.md` 必须从 agent runtime 模板生成，并与 `.agents/skills/` 一起作为 Spec Protocol 操作规范落地，代码不得内嵌完整 AGENTS 文案。 |
 | 导入或创建项目宪章 | **Skill** | `project-constitution-skill`；提示驱动生成，文件落地即持久化 |
 | 初始化 Project Memory | **Code**（创建文件）+ **Skill**（初始内容摘要） | 文件创建是结构副作用；初始摘要内容是 LLM 推理 |
 

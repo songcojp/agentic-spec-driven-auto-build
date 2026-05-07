@@ -5,7 +5,7 @@ description: "Intake and add new product requirements into the SpecDrive documen
 
 # Requirement Intake Skill
 
-Before editing, follow the governance checklist in `docs/change-management.md` when it exists; for explicitly multilingual projects, use the localized checklist matching the active lane, such as `docs/zh-CN/change-management.md`. This skill is the design-named requirement intake entry point and owns new requirement propagation.
+Before editing, follow the governed requirement-change protocol in `.agents/skills/change-requirement/SKILL.md`. That protocol makes `docs/zh-CN/change-management.md` or the active-lane `docs/change-management.md` authoritative for triage, mainline updates, downstream Feature Spec sync, review routing, and commit expectations. This skill is the design-named requirement intake entry point and owns new requirement propagation after the change-requirement triage classifies the item as `ADD`.
 
 ## When to Use This Skill vs. `spec-evolution-skill`
 
@@ -24,7 +24,7 @@ Before editing, follow the governance checklist in `docs/change-management.md` w
 
 ## Workflow
 
-1. Locate the active source lane. If the user does not provide paths, prefer root project docs: `docs/PRD.md`, `docs/requirements.md`, `docs/hld.md`, `docs/design.md`, and `docs/features/README.md`. Use localized lanes such as `docs/en/*`, `docs/zh-CN/*`, or `docs/ja/*` only when the project explicitly declares multilingual documentation or the invocation provides localized paths.
+1. Locate the active source lane. If the user does not provide paths, prefer root project docs: `docs/PRD.md`, `docs/requirements.md`, `docs/hld.md`, and `docs/features/README.md`. Use localized lanes such as `docs/en/*`, `docs/zh-CN/*`, or `docs/ja/*` only when the project explicitly declares multilingual documentation or the invocation provides localized paths.
 2. Classify the source: user request, PRD change, review finding, test result, delivery report, or implementation result.
 3. Determine whether the intake is a new requirement, a change to an existing requirement, or a clarification. Use `spec-evolution-skill` for changes to existing requirements.
 4. Classify the new requirement:
@@ -39,7 +39,7 @@ Before editing, follow the governance checklist in `docs/change-management.md` w
    - Every new requirement must point back to a PRD section, source note, clarification, or explicit user instruction.
    - Every new behavior must be atomic and observable.
    - Do not invent product intent; add a pending question when the input is ambiguous.
-8. If the new requirement affects architecture, technology stack, data ownership, workflows, interfaces, state machines, or security boundaries, update `hld.md` or `design.md`.
+8. If the new requirement affects architecture, technology stack, data ownership, workflows, interfaces, state machines, or security boundaries, update `hld.md`.
 9. Update Feature Specs:
    - If it belongs to an existing feature, update that feature's `requirements.md`, `design.md`, and `tasks.md`.
    - If it is independently deliverable, create a new feature folder and update `docs/features/README.md`.
@@ -64,6 +64,7 @@ Before editing, follow the governance checklist in `docs/change-management.md` w
 
 - Preserve the source language unless the user asks otherwise.
 - Prefer in-place edits to the current formal docs over creating scratch files.
+- Update the mainline requirements document for the active lane; do not create `docs/features/requirements.md` for project-level requirements unless the protocol explicitly defines it.
 - Keep IDs stable; append new IDs instead of renumbering existing requirements unless the user explicitly asks for a rebase.
 - Keep implementation details out of requirements unless the PRD states them as hard constraints.
 - If only documentation changed, do not touch code or feature worktrees.
