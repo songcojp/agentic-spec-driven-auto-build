@@ -1,7 +1,7 @@
 import { loadConfig } from "./config.ts";
 import { initialReadyState, runBootstrap } from "./bootstrap.ts";
 import { createControlPlaneServer, listen } from "./server.ts";
-import { createBullMqScheduler, createSchedulerWorkers, createUnavailableScheduler, EXECUTION_ADAPTER_QUEUE, type SchedulerWorkers } from "./scheduler.ts";
+import { createBullMqScheduler, createLocalScheduler, createSchedulerWorkers, createUnavailableScheduler, EXECUTION_ADAPTER_QUEUE, type SchedulerClient, type SchedulerWorkers } from "./scheduler.ts";
 import { runCommand } from "./cli-adapter.ts";
 
 
@@ -16,15 +16,17 @@ async function main(): Promise<void> {
     process.exit(result.readyState.status === "ready" ? 0 : 1);
   }
 
-  const scheduler = config.schedulerConfig.workerMode === "off"
-    ? createUnavailableScheduler(config.dbPath, "Scheduler worker mode is off.")
-    : createBullMqScheduler(config.dbPath, config.schedulerConfig.redisUrl);
-
   const result = await runBootstrap(config);
   if (result.readyState.status !== "ready") {
     console.error(JSON.stringify(result.readyState));
     process.exit(1);
   }
+
+  const scheduler: SchedulerClient = config.schedulerConfig.workerMode === "off"
+    ? createUnavailableScheduler(config.dbPath, "Scheduler worker mode is off.")
+    : config.schedulerConfig.workerMode === "worker-only"
+      ? createBullMqScheduler(config.dbPath, config.schedulerConfig.redisUrl)
+      : createLocalScheduler(config.dbPath);
 
   if (config.schedulerConfig.workerMode === "worker-only") {
     workers = await createSchedulerWorkers({
@@ -60,13 +62,6 @@ async function main(): Promise<void> {
   await listen(controlPlane.server, config);
 
   controlPlane.setReadyState(result.readyState);
-  if (config.schedulerConfig.workerMode === "embedded") {
-    workers = await createSchedulerWorkers({
-      dbPath: config.dbPath,
-      redisUrl: config.schedulerConfig.redisUrl,
-      scheduler,
-    });
-  }
 
   process.on("SIGINT", () => {
     void shutdown(controlPlane.server, workers, scheduler.close);

@@ -11,6 +11,7 @@ import {
   CLI_WORKER_LOCK_DURATION_MS,
   CLI_RUNNER_QUEUE,
   EXECUTION_ADAPTER_QUEUE,
+  createLocalScheduler,
   createMemoryScheduler,
   bullMqExecutionAdapterQueueName,
   listRecoverableSchedulerJobs,
@@ -72,6 +73,33 @@ test("scheduler schema records executor job metadata without feature target colu
     ["specdrive:execution-adapter", "cli.run", "queued", "feature_execution"],
     ["specdrive:execution-adapter", "rpc.run", "queued", "feature_execution"],
   ]);
+});
+
+test("local embedded scheduler executes queued CLI jobs without Redis", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-local-scheduler-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const scheduler = createLocalScheduler(dbPath, {
+    runner: () => ({
+      status: 0,
+      stdout: `{"type":"session","session_id":"SESSION-LOCAL"}\n${skillOutputEvent("RUN-LOCAL")}`,
+      stderr: "",
+    }),
+  });
+
+  const job = scheduler.enqueueCliRun(cliRunPayload("RUN-LOCAL"));
+  await scheduler.drain();
+  await scheduler.close();
+  const rows = runSqlite(dbPath, [], [
+    { name: "job", sql: "SELECT status, queue_name, job_type FROM scheduler_job_records WHERE id = ?", params: [job.schedulerJobId] },
+    { name: "execution", sql: "SELECT status, summary FROM execution_records WHERE id = 'RUN-LOCAL'" },
+  ]).queries;
+
+  assert.equal(scheduler.health?.().status, "ready");
+  assert.deepEqual([rows.job[0].queue_name, rows.job[0].job_type, rows.job[0].status], ["specdrive:execution-adapter", "cli.run", "completed"]);
+  assert.equal(rows.execution[0].status, "completed");
+  assert.equal(rows.execution[0].summary, "Skill completed.");
 });
 
 test("scheduler worker startup can recover transient queued jobs created while worker was unavailable", () => {

@@ -127,6 +127,10 @@ export type SchedulerWorkers = {
   close: () => Promise<void>;
 };
 
+export type LocalScheduler = SchedulerClient & SchedulerWorkers & {
+  drain: () => Promise<void>;
+};
+
 export type RecoverableSchedulerJob = {
   schedulerJobId: string;
   bullmqJobId: string;
@@ -255,6 +259,90 @@ export function createMemoryScheduler(dbPath: string): SchedulerClient & { jobs:
     },
     health() {
       return { status: "ready" };
+    },
+  };
+}
+
+export function createLocalScheduler(
+  dbPath: string,
+  options: {
+    runner?: CliCommandRunner;
+    appServerTransport?: CodexAppServerTransport;
+  } = {},
+): LocalScheduler {
+  let closed = false;
+  let chain = Promise.resolve();
+
+  const schedule = (input: {
+    schedulerJobId: string;
+    bullmqJobId: string;
+    jobType: Exclude<SchedulerJobType, "native.run">;
+    payload: ExecutorRunJobPayload;
+  }) => {
+    if (closed) return;
+    chain = chain
+      .then(() => dispatchLocalSchedulerJob(dbPath, input, options.runner, options.appServerTransport))
+      .catch(() => undefined);
+  };
+
+  const enqueue = (
+    jobType: Exclude<SchedulerJobType, "native.run">,
+    payload: ExecutorRunJobPayload,
+  ): SchedulerEnqueueResult => {
+    const result = createQueuedJobRecord(dbPath, {
+      queueName: EXECUTION_ADAPTER_QUEUE,
+      jobType,
+      payload,
+    });
+    schedule({
+      schedulerJobId: result.schedulerJobId,
+      bullmqJobId: result.bullmqJobId,
+      jobType,
+      payload,
+    });
+    return result;
+  };
+
+  queueMicrotask(() => {
+    for (const job of listRecoverableSchedulerJobs(dbPath)) {
+      schedule({
+        schedulerJobId: job.schedulerJobId,
+        bullmqJobId: job.bullmqJobId,
+        jobType: job.jobType,
+        payload: job.payload as ExecutorRunJobPayload,
+      });
+    }
+  });
+
+  return {
+    enqueueCliRun(payload) {
+      return enqueue("cli.run", payload);
+    },
+    enqueueRpcRun(payload) {
+      return enqueue("rpc.run", payload);
+    },
+    enqueueAppServerRun(payload) {
+      return enqueue("rpc.run", payload);
+    },
+    requeueExistingJob(input) {
+      updateSchedulerJobRecord(dbPath, input.bullmqJobId, "queued");
+      schedule(input);
+      return {
+        schedulerJobId: input.schedulerJobId,
+        bullmqJobId: input.bullmqJobId,
+        queueName: EXECUTION_ADAPTER_QUEUE,
+        jobType: input.jobType,
+      };
+    },
+    health() {
+      return { status: "ready" };
+    },
+    async drain() {
+      await chain;
+    },
+    async close() {
+      closed = true;
+      await chain;
     },
   };
 }
@@ -1390,16 +1478,61 @@ export function updateSchedulerJobRecord(dbPath: string, bullmqJobId: string | u
 }
 
 async function dispatchCliJob(dbPath: string, job: Job, runner?: CliCommandRunner, appServerTransport?: CodexAppServerTransport): Promise<void> {
-  updateSchedulerJobRecord(dbPath, String(job.id), "running", undefined, job.attemptsMade);
+  await dispatchSchedulerJob(dbPath, {
+    bullmqJobId: String(job.id),
+    schedulerJobId: optionalString((job.data as Record<string, unknown>).schedulerJobId),
+    jobType: job.name as Exclude<SchedulerJobType, "native.run">,
+    payload: job.data as ExecutorRunJobPayload,
+    attemptsMade: job.attemptsMade,
+  }, runner, appServerTransport);
+}
+
+async function dispatchLocalSchedulerJob(
+  dbPath: string,
+  input: {
+    schedulerJobId: string;
+    bullmqJobId: string;
+    jobType: Exclude<SchedulerJobType, "native.run">;
+    payload: ExecutorRunJobPayload;
+  },
+  runner?: CliCommandRunner,
+  appServerTransport?: CodexAppServerTransport,
+): Promise<void> {
+  await dispatchSchedulerJob(dbPath, {
+    ...input,
+    attemptsMade: 0,
+  }, runner, appServerTransport);
+}
+
+async function dispatchSchedulerJob(
+  dbPath: string,
+  input: {
+    bullmqJobId: string;
+    schedulerJobId?: string;
+    jobType: Exclude<SchedulerJobType, "native.run">;
+    payload: ExecutorRunJobPayload;
+    attemptsMade: number;
+  },
+  runner?: CliCommandRunner,
+  appServerTransport?: CodexAppServerTransport,
+): Promise<void> {
+  updateSchedulerJobRecord(dbPath, input.bullmqJobId, "running", undefined, input.attemptsMade);
+  const payload = { ...input.payload, schedulerJobId: input.schedulerJobId };
   try {
-    const result = job.name === "codex.rpc.run" || job.name === "codex.app_server.run"
-      ? await runCodexAppServerRunJob(dbPath, job.data as AppServerRunJobPayload, appServerTransport)
-      : job.name === "rpc.run"
-      ? await runRpcRunJob(dbPath, job.data as AppServerRunJobPayload, appServerTransport)
-      : await runCliRunJob(dbPath, job.data as CliRunJobPayload, runner);
-    updateSchedulerJobRecord(dbPath, String(job.id), result.status === "blocked" || result.status === "approval_needed" ? result.status : "completed", undefined, job.attemptsMade);
+    const result = input.jobType === "codex.rpc.run" || input.jobType === "codex.app_server.run"
+      ? await runCodexAppServerRunJob(dbPath, payload as AppServerRunJobPayload, appServerTransport)
+      : input.jobType === "rpc.run"
+      ? await runRpcRunJob(dbPath, payload as AppServerRunJobPayload, appServerTransport)
+      : await runCliRunJob(dbPath, payload as CliRunJobPayload, runner);
+    updateSchedulerJobRecord(
+      dbPath,
+      input.bullmqJobId,
+      result.status === "blocked" || result.status === "approval_needed" ? result.status : "completed",
+      undefined,
+      input.attemptsMade,
+    );
   } catch (error) {
-    updateSchedulerJobRecord(dbPath, String(job.id), "failed", error, job.attemptsMade);
+    updateSchedulerJobRecord(dbPath, input.bullmqJobId, "failed", error, input.attemptsMade);
     throw error;
   }
 }

@@ -106,20 +106,22 @@ fi
 
 build_backend_runtime
 
-if command -v docker >/dev/null 2>&1; then
-  echo "Starting Redis via Docker Compose..."
-  docker compose up -d redis
+if [ "${WORKER_MODE}" = "worker-only" ]; then
+  if command -v docker >/dev/null 2>&1; then
+    echo "Starting Redis via Docker Compose for BullMQ worker-only mode..."
+    docker compose up -d redis
 
-  echo "Waiting for Redis to be healthy..."
-  for _ in $(seq 1 20); do
-    if docker compose ps redis --format json | grep -q '"Health":"healthy"'; then
-      echo "Redis is healthy."
-      break
-    fi
-    sleep 0.5
-  done
-else
-  echo "Warning: docker command not found. Redis must be running at AUTOBUILD_REDIS_URL or 127.0.0.1:6379." >&2
+    echo "Waiting for Redis to be healthy..."
+    for _ in $(seq 1 20); do
+      if docker compose ps redis --format json | grep -q '"Health":"healthy"'; then
+        echo "Redis is healthy."
+        break
+      fi
+      sleep 0.5
+    done
+  else
+    echo "Warning: docker command not found. Redis must be running at AUTOBUILD_REDIS_URL or 127.0.0.1:6379 for worker-only mode." >&2
+  fi
 fi
 
 stop_pid_file_process

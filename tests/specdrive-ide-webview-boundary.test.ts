@@ -47,7 +47,8 @@ test("VSCode bundled server starts with embedded worker by default", () => {
   assert.equal(extensionPackage.contributes?.configuration?.properties?.["specdrive.serverWorkerMode"]?.default, "embedded");
   assert.match(vscodeRestartBackendScript, /BACKEND_PORT="\$\{AUTOBUILD_PORT:-43117\}"/);
   assert.match(vscodeRestartBackendScript, /WORKER_MODE="\$\{AUTOBUILD_WORKER_MODE:-embedded\}"/);
-  assert.match(vscodeRestartBackendScript, /docker compose up -d redis/);
+  assert.match(vscodeRestartBackendScript, /worker-only/);
+  assert.doesNotMatch(vscodeRestartBackendScript, /Redis must be running .*embedded/);
 });
 
 test("VSCode debug entry rebuilds artifacts and clears stale backend", () => {

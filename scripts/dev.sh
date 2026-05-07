@@ -66,26 +66,28 @@ start_services() {
     npm install
   fi
 
-  if command -v docker >/dev/null 2>&1; then
-    echo "Starting Redis via Docker Compose..."
-    docker compose up -d redis
+  if [ "$WORKER_MODE" = "worker-only" ]; then
+    if command -v docker >/dev/null 2>&1; then
+      echo "Starting Redis via Docker Compose for BullMQ worker-only mode..."
+      docker compose up -d redis
 
-    echo "Waiting for Redis to be healthy..."
-    MAX_RETRIES=10
-    RETRY_COUNT=0
-    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-      if docker compose ps redis --format json | grep -q '"Health":"healthy"'; then
-        echo "Redis is healthy."
-        break
+      echo "Waiting for Redis to be healthy..."
+      MAX_RETRIES=10
+      RETRY_COUNT=0
+      while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        if docker compose ps redis --format json | grep -q '"Health":"healthy"'; then
+          echo "Redis is healthy."
+          break
+        fi
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        sleep 1
+      done
+      if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        echo "Warning: Redis health check timed out. Proceeding anyway..."
       fi
-      RETRY_COUNT=$((RETRY_COUNT + 1))
-      sleep 1
-    done
-    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-      echo "Warning: Redis health check timed out. Proceeding anyway..."
+    else
+      echo "Warning: docker command not found. Redis must be running for worker-only mode."
     fi
-  else
-    echo "Warning: docker command not found. Skipping Redis startup."
   fi
 
   cleanup() {
@@ -127,7 +129,7 @@ start_services() {
   echo
   echo "Product Console: http://localhost:${FRONTEND_PORT}"
   echo "Backend health:  http://localhost:${BACKEND_PORT}/health"
-  echo "Worker mode:     ${WORKER_MODE} (Redis started via Docker)"
+  echo "Worker mode:     ${WORKER_MODE} (embedded uses local SQLite worker; worker-only uses Redis/BullMQ)"
   echo "Press Ctrl+C to stop all processes."
   echo
 
