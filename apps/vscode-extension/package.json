@@ -7,11 +7,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/songcojp/Spec-Driven-Autonomous-Coding-System.git"
+    "url": "https://github.com/songcojp/agentic-spec-driven-auto-build.git"
   },
-  "homepage": "https://github.com/songcojp/Spec-Driven-Autonomous-Coding-System#readme",
+  "homepage": "https://github.com/songcojp/agentic-spec-driven-auto-build#readme",
   "bugs": {
-    "url": "https://github.com/songcojp/Spec-Driven-Autonomous-Coding-System/issues"
+    "url": "https://github.com/songcojp/agentic-spec-driven-auto-build/issues"
   },
   "type": "commonjs",
   "engines": {

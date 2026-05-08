@@ -123,7 +123,7 @@ test("project service creates queryable project and repository connection record
     projectType: "typescript-service",
     techPreferences: ["node", "sqlite"],
     targetRepoPath: repo,
-    repositoryUrl: "https://github.com/songcojp/Spec-Driven-Autonomous-Coding-System.git",
+    repositoryUrl: "https://github.com/songcojp/agentic-spec-driven-auto-build.git",
     defaultBranch: "main",
     trustLevel: "trusted",
     environment: "local",
