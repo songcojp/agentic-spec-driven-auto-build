@@ -1,6 +1,6 @@
 # Spec-Driven Autonomous Coding System
 
-SpecDrive AutoBuild is a spec-driven autonomous coding system designed for long-running, auditable software delivery with AI agents.
+SpecDrive AutoBuild is an agentic spec-driven auto-build system for long-running, recoverable, and auditable AI software development.
 
 Languages: English | [中文](README.zh-CN.md) | [日本語](README.ja.md)
 
