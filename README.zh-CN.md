@@ -378,18 +378,18 @@ CLI 参数
 
 ```json
 {
-  \"port\": 43117,
-  \"artifactRoot\": \".autobuild\",
-  \"dbPath\": \".autobuild/autobuild.db\",
-  \"logLevel\": \"info\",
-  \"runnerConfig\": {
-    \"command\": \"codex\",
-    \"args\": [\"exec\"],
-    \"sandboxMode\": \"danger-full-access\"
+  "port": 43117,
+  "artifactRoot": ".autobuild",
+  "dbPath": ".autobuild/autobuild.db",
+  "logLevel": "info",
+  "runnerConfig": {
+    "command": "codex",
+    "args": ["exec"],
+    "sandboxMode": "danger-full-access"
   },
-  \"schedulerConfig\": {
-    \"redisUrl\": \"redis://127.0.0.1:6379\",
-    \"workerMode\": \"embedded\"
+  "schedulerConfig": {
+    "redisUrl": "redis://127.0.0.1:6379",
+    "workerMode": "embedded"
   }
 }
 ```

@@ -22,7 +22,7 @@ The system is designed to solve recurring problems in autonomous software develo
 - **Prompt drift**: requirements silently change when they are not anchored to specs.
 - **Unrecoverable runs**: interrupted coding sessions cannot safely resume without checkpoints.
 - **Weak traceability**: code changes are hard to map back to requirements and acceptance criteria.
-- **Untrusted completion**: an agent saying \"done\" is not enough evidence for delivery.
+- **Untrusted completion**: an agent saying "done" is not enough evidence for delivery.
 - **Unsafe parallelism**: multiple agents can conflict when workspace, file, and feature ownership are unclear.
 
 SpecDrive addresses these problems by combining a formal spec protocol, project-local skills, execution records, evidence packs, status checks, recovery rules, and review gates.
@@ -189,7 +189,7 @@ docs/features/<feature-id>/tasks.md
 docs/features/<feature-id>/spec-state.json
 ```
 
-A good Feature Spec is not \"frontend work\" or \"backend work\". It is a vertical capability that can be implemented, verified, reviewed, and delivered independently.
+A good Feature Spec is not "frontend work" or "backend work". It is a vertical capability that can be implemented, verified, reviewed, and delivered independently.
 
 ### 3. Scheduling and execution
 
@@ -382,18 +382,18 @@ Example config file:
 
 ```json
 {
-  \"port\": 43117,
-  \"artifactRoot\": \".autobuild\",
-  \"dbPath\": \".autobuild/autobuild.db\",
-  \"logLevel\": \"info\",
-  \"runnerConfig\": {
-    \"command\": \"codex\",
-    \"args\": [\"exec\"],
-    \"sandboxMode\": \"danger-full-access\"
+  "port": 43117,
+  "artifactRoot": ".autobuild",
+  "dbPath": ".autobuild/autobuild.db",
+  "logLevel": "info",
+  "runnerConfig": {
+    "command": "codex",
+    "args": ["exec"],
+    "sandboxMode": "danger-full-access"
   },
-  \"schedulerConfig\": {
-    \"redisUrl\": \"redis://127.0.0.1:6379\",
-    \"workerMode\": \"embedded\"
+  "schedulerConfig": {
+    "redisUrl": "redis://127.0.0.1:6379",
+    "workerMode": "embedded"
   }
 }
 ```
