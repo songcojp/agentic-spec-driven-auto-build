@@ -174,6 +174,7 @@ export type FeatureAggregationInput = {
   featureId: string;
   tasks: Pick<TaskGraphTask, "taskId" | "status">[];
   acceptancePassed: boolean;
+  journeyClosurePassed: boolean;
   specAlignmentPassed: boolean;
   requiredTestsPassed: boolean;
   reviewNeededReason?: ReviewNeededReason;
@@ -424,12 +425,12 @@ export function aggregateFeatureStatus(input: FeatureAggregationInput): { status
     };
   }
   if (input.tasks.every((task) => task.status === "done" || task.status === "delivered")) {
-    if (input.acceptancePassed && input.specAlignmentPassed && input.requiredTestsPassed) {
-      return { status: "done", reason: "Tasks, acceptance, spec alignment, and required tests are complete." };
+    if (input.acceptancePassed && input.journeyClosurePassed && input.specAlignmentPassed && input.requiredTestsPassed) {
+      return { status: "done", reason: "Tasks, acceptance, Journey Closure Gate, spec alignment, and required tests are complete." };
     }
     return {
       status: "review_needed",
-      reason: "Done is gated by acceptance, Spec Alignment Check, and required tests.",
+      reason: "Done is gated by acceptance, Journey Closure Gate, Spec Alignment Check, and required tests.",
       reviewNeededReason: input.reviewNeededReason ?? "clarification_needed",
     };
   }

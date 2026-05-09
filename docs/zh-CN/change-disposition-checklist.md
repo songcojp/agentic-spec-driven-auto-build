@@ -50,6 +50,7 @@
 | CHG-026 | 移除独立 Push Feature Pool 步骤并收拢到任务调度全流程 | 用户指令：彻底移除该步骤，在任务调度全流程中实现任务调度的全流程 | 已增强 PRD、requirements、HLD、Feature Index、FEAT-004、FEAT-013 和 VSCode/Product Console 流程 | 已执行 FEAT-004 / FEAT-013 / FEAT-019 / FEAT-021 patch：删除 `push_feature_spec_pool` public action 和 UI 步骤；项目级 `schedule_run` 与 `start_auto_run` 读取 Feature Pool Queue、调用 `06.planning.replan`、通过安全闸后创建 `<executor>.run` Job 和 Execution Record。 |
 | CHG-028 | 执行层重构为 Execution Adapter Layer | 用户指令：重新设计适配层，针对现有功能设计 CLI 和 RPC 适配层，不再使用 Runner 概念，先定接口再迁移 Codex | 已增强 requirements、HLD、Feature Index、FEAT-008、FEAT-018 | 先完成设计：定义 `ExecutionAdapterConfigV1`、`ExecutionAdapterInvocationV1`、`ExecutionAdapterEventV1`、`ExecutionAdapterResultV1`；FEAT-008 作为 CLI Adapter 迁移来源，FEAT-018 作为 RPC Adapter / Codex RPC provider 迁移来源。 |
 | CHG-043 | Feature Spec 拆分规则补充 `.gitignore` 创建 | 用户指令：项目初始化作为第一个 Feature Spec，需要在该 Feature 中增加 git ignore 文件创建需求；用户澄清该规则不是针对当前项目，而是固化到 Spec 中 | 已增强 REQ-006、HLD、Feature Index、FEAT-002 requirements/design/tasks、`05.feature.decompose` 和 `10.change.create-request` | 作为 Spec 生成规则：当拆分结果包含项目初始化作为首个 Feature Spec 时，生成的 Feature Spec 必须包含 `.gitignore` 创建或安全更新要求。 |
+| CHG-051 | Journey Closure Gate 协议级缺陷修复 | rapid 项目复盘；Feature 全部 completed 但用户旅程完成度严重不足；参考成熟 Agent/Skill 库中 eval / QA / critic 独立于执行的模式 | 已增强 Agentic Spec 标准、SkillOutputContract、Feature 拆分、执行、评审 Skill 和 Scheduler/Adapter 完成投影 | 新增 `09.review.journey-closure`；Feature completed 必须有 requirementCoverage、acceptanceEvidence、journeyEvidence 或合法 foundationExemption；缺口投影为 `review_needed`。 |
 
 ## 人工处置顺序建议
 
@@ -102,6 +103,7 @@
 | CHG-026 | 独立 `push_feature_spec_pool` 步骤废弃；任务调度全流程由项目级 `schedule_run` 和 `start_auto_run` 承担。 | 已同步 PRD、REQ-006、REQ-029、REQ-033、HLD、Feature Index、FEAT-004 requirements/design/tasks、FEAT-013 requirements/design、Product Console Spec flow、VSCode Webview 和测试；`push_feature_spec_pool` 已从 public command action、Spec Workspace action 和工作流阶段移除。 | 已同步实现 |
 | CHG-028 | 执行层重构为 Execution Adapter Layer，CLI 与 RPC 使用统一适配层接口。 | 已同步 REQ-037、REQ-065、REQ-080、HLD 7.8 / 9、Feature Index、FEAT-008 requirements/design、FEAT-018 requirements/design；实现迁移尚未开始。 | 需同步实现 |
 | CHG-050 | Feature 最新费用与 Job 累计费用边界 | 用户指令：Feature 执行完成后 VSCode Feature Spec 页面未正确显示 token 计费；同一 Feature 可以多次执行，Job 记录每次费用，Feature 只保留最后一次执行费用，累计成本按 Job 历史统计 | 已增强 NFR-006、REQ-084、Feature Index 和 FEAT-021 requirements/tasks | 已执行 FEAT-021 follow-up：`T-021-26` 覆盖 Feature 最新执行费用、Job 历史累计边界和再次 queued/run 状态依据。 |
+| CHG-051 | Journey Closure Gate 协议级缺陷修复；执行 Skill 不再拥有最终完成度裁决。 | 已同步 `docs/zh-CN/agentic-spec-standard.md`、`.agents/skills/SKILL_OUTPUT_CONTRACT.md`、`05.feature.decompose`、`07.execution.dispatch-adapter`、`09.review.spec-consistency`、`09.review.code-diff`、新增 `09.review.journey-closure`、Adapter/Scheduler/Orchestration 代码和回归测试。 | 已同步实现 |
 
 ## Feature Spec Execute 评估
 

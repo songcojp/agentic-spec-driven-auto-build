@@ -92,6 +92,7 @@ function skillOutputEvent(overrides: Partial<{
   nextAction: string;
   resultSummary: string;
   producedArtifacts: Array<{ path: string; kind: string; status: "created" | "updated" | "unchanged" | "missing" | "skipped" }>;
+  result: Record<string, unknown>;
 }> = {}): string {
   const output = {
     contractVersion: "skill-contract/v1",
@@ -103,7 +104,7 @@ function skillOutputEvent(overrides: Partial<{
     nextAction: "Update spec-state.json and continue.",
     producedArtifacts: overrides.producedArtifacts ?? [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
     traceability: { featureId: null },
-    result: { resultSummary: overrides.resultSummary ?? "Skill result details." },
+    result: overrides.result ?? { resultSummary: overrides.resultSummary ?? "Skill result details." },
   };
   return JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: JSON.stringify(output) } });
 }
@@ -377,6 +378,65 @@ test("SkillOutputContract validation requires common fields but allows skill-spe
   const missingArtifact = validateSkillOutputContract(invocation, { ...valid, producedArtifacts: [] });
   assert.equal(missingArtifact.valid, false);
   assert.match(missingArtifact.reasons.join("\n"), /Required artifact was not produced/);
+});
+
+test("feature execution completion requires Journey Closure Gate evidence", () => {
+  const invocation = executionInvocation({
+    executionId: "RUN-FEATURE-CLOSURE",
+    operation: "feature_execution",
+    skillSlug: "07.execution.dispatch-adapter",
+    requestedAction: "feature_execution",
+    featureId: "FEAT-008",
+    taskId: "TASK-001",
+    expectedArtifacts: [],
+  });
+  const valid = {
+    contractVersion: "skill-contract/v1",
+    executionId: "RUN-FEATURE-CLOSURE",
+    skillSlug: "07.execution.dispatch-adapter",
+    requestedAction: "feature_execution",
+    status: "completed",
+    summary: "Feature implemented.",
+    nextAction: null,
+    producedArtifacts: [],
+    traceability: { featureId: "FEAT-008" },
+    result: {
+      requirementCoverage: [{ requirementId: "REQ-001", status: "passed", evidence: ["unit test"] }],
+      acceptanceEvidence: [{ scenarioId: "AC-001", status: "passed", evidence: ["browser screenshot"] }],
+      journeyEvidence: [{ userStoryId: "US-001", scenario: "primary flow", status: "passed", evidence: ["browser screenshot"] }],
+    },
+  } as const;
+
+  assert.equal(validateSkillOutputContract(invocation, valid).valid, true);
+
+  const missingJourney = validateSkillOutputContract(invocation, { ...valid, result: {} });
+  assert.equal(missingJourney.valid, false);
+  assert.match(missingJourney.reasons.join("\n"), /Journey Closure Gate failed: evidence_missing/);
+  assert.match(missingJourney.reasons.join("\n"), /journeyEvidence is required/);
+
+  const mockOnlyUi = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      requirementCoverage: [{ requirementId: "REQ-001", status: "passed", evidence: ["mock API test"] }],
+      acceptanceEvidence: [{ scenarioId: "AC-001", status: "skipped", evidence: ["view model test only"] }],
+      journeyEvidence: [{ userStoryId: "US-001", scenario: "primary UI flow", status: "skipped", evidence: ["mock API test only"] }],
+    },
+  });
+  assert.equal(mockOnlyUi.valid, false);
+  assert.match(mockOnlyUi.reasons.join("\n"), /Journey Closure Gate failed: journey_not_closed/);
+
+  const foundation = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      foundationExemption: {
+        exempt: true,
+        reason: "Adapter foundation; no user-facing journey exists until the downstream UI feature.",
+        downstreamFeatures: ["FEAT-UI-001"],
+        integrationEvidence: ["tests/adapter-contract.test.ts"],
+      },
+    },
+  });
+  assert.equal(foundation.valid, true);
 });
 
 test("CLI adapter validation rejects configs with missing or empty executable", () => {
@@ -726,6 +786,7 @@ test("feature-level coding prompt requires Feature Spec execution instead of rep
   assert.match(prompt, /requirements\.md, design\.md, and tasks\.md/);
   assert.match(prompt, /Do not satisfy feature_execution by only creating a report JSON file/);
   assert.match(prompt, /actual code, test, config, or documentation files/);
+  assert.match(prompt, /requirementCoverage, acceptanceEvidence, and journeyEvidence/);
 });
 
 test("task-slicing prompt requires the full SkillOutputContract result", () => {

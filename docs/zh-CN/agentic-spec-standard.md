@@ -710,6 +710,47 @@ the system shall <response>.
 
 ---
 
+## 6.3.1 Journey Closure Gate
+
+Agentic Spec 不允许仅凭任务勾选、提交、PR、单元测试或执行 Skill 自我声明来判定 Feature 完成。Feature 完成必须经过独立的用户旅程闭环验收。
+
+该 Gate 借鉴成熟 Agent/Skill 库中的分层模式：执行 Agent/Skill 负责实现和收集证据，eval / QA / critic 类 Skill 负责独立判断完成度。SpecDrive 中对应的独立 Gate 是：
+
+```text
+09.review.journey-closure
+```
+
+职责边界：
+
+- `05.feature.decompose`：按用户故事纵切 Feature，在 `requirements.md` 生成 `User Journey Coverage`，在 `tasks.md` 生成 `Journey Checkpoint`。
+- `07.execution.dispatch-adapter`：实现、测试、更新任务状态并收集 `requirementCoverage`、`acceptanceEvidence`、`journeyEvidence` 或合法 `foundationExemption`。
+- `09.review.spec-consistency`：检查规划产物一致性和 Journey Checkpoint 覆盖。
+- `09.review.code-diff`：检查 diff、spec drift 和缺失的 Journey evidence。
+- `09.review.journey-closure`：只判断用户旅程、需求、任务、验收场景和证据是否闭环，不实现功能。
+
+Feature execution 返回 `completed` 时，专用 `result` 必须包含：
+
+```json
+{
+  "requirementCoverage": [],
+  "acceptanceEvidence": [],
+  "journeyEvidence": [],
+  "foundationExemption": null
+}
+```
+
+`SkillOutputContractV1.traceability` 仍只包含 `featureId`。`REQ-*`、任务 ID、验收场景、Journey Checkpoint、截图、日志、测试命令、PR/commit 证据全部放入专用 `result` 或产物摘要中。
+
+若用户旅程未闭环，Scheduler、Execution Record 和 Feature `spec-state.json` 必须投影为 `review_needed`。原因使用：
+
+- `journey_not_closed`
+- `acceptance_gap`
+- `evidence_missing`
+
+Foundation Feature 可以声明 `foundationExemption`，但必须说明为什么没有直接用户旅程、列出下游闭环 Feature，并提供集成验证点。Foundation exemption 不能替代下游用户旅程验收。
+
+---
+
 ## 6.4 HLD
 
 文件：
@@ -2132,6 +2173,7 @@ Skill 应该是：
 ```text
 09.review.spec-consistency
 09.review.code-diff
+09.review.journey-closure
 09.review.security
 09.review.test-coverage
 09.review.evidence-completeness

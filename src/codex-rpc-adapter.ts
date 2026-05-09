@@ -466,6 +466,8 @@ export function buildCodexAppServerAdapterResult(input: CodexAppServerAdapterRes
         : "failed";
   const projectedSummary = nonTerminalContract && exitCode === 0
     ? `Skill output contract review needed: process ended after non-terminal status ${projection.skillOutput?.status}; missing final terminal SkillOutputContractV1.`
+    : failedContract
+    ? `Skill output contract review needed: ${contractValidation.reasons.join("; ")}`
     : projection.skillOutput?.summary ?? projection.error ?? (projection.status === "approval_needed" ? "Codex RPC is waiting for approval." : `Codex RPC exit=${exitCode}.`);
   const providerSession: ExecutionAdapterProviderSessionV1 = {
     provider: "codex-rpc",

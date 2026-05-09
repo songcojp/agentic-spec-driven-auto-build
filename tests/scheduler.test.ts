@@ -572,11 +572,8 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
           producedArtifacts: [],
           traceability: {
             featureId: "FEAT-CLI",
-            taskId: "TASK-CLI",
-            requirementIds: [],
-            changeIds: ["CHG-016"],
           },
-          result: { verification: [{ status: "passed" }] },
+          result: validJourneyResult(),
         },
       };
     },
@@ -818,7 +815,7 @@ test("codex.rpc.run blocks when configured Codex RPC adapters are disabled", asy
   assert.match(String(rows[0].summary), /No active Codex RPC adapter/);
 });
 
-test("codex.rpc.run fails when SkillOutputContractV1 validation fails", async () => {
+test("codex.rpc.run routes invalid completed SkillOutputContractV1 to review_needed", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-app-server-run-"));
   prepareSkillWorkspace(root);
   const dbPath = makeDbPath();
@@ -862,11 +859,69 @@ test("codex.rpc.run fails when SkillOutputContractV1 validation fails", async ()
   ]).queries;
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
 
-  assert.equal(result.status, "failed");
-  assert.equal(rows.run[0].status, "failed");
+  assert.equal(result.status, "review_needed");
+  assert.equal(rows.run[0].status, "review_needed");
   assert.match(String(rows.run[0].summary), /executionId mismatch/);
   assert.equal(metadata.contractValidation.valid, false);
   assert.match(String(rows.log[0].stderr), /executionId mismatch/);
+});
+
+test("cli.run routes completed feature execution without journey evidence to review_needed", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-journey-gap-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-JOURNEY-GAP"), () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-JOURNEY-GAP"}\n${skillOutputEvent("RUN-JOURNEY-GAP", { result: {} })}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "run", sql: "SELECT status, summary, metadata_json FROM execution_records WHERE id = 'RUN-JOURNEY-GAP'" },
+    { name: "reviews", sql: "SELECT status, review_needed_reason, trigger_reasons_json, body FROM review_items WHERE run_id = 'RUN-JOURNEY-GAP'" },
+  ]).queries;
+  const metadata = JSON.parse(String(rows.run[0].metadata_json));
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(rows.run[0].status, "review_needed");
+  assert.match(String(rows.run[0].summary), /Journey Closure Gate failed: evidence_missing/);
+  assert.equal(metadata.contractValidation.valid, false);
+  assert.match(metadata.contractValidation.reasons.join("\n"), /journeyEvidence is required/);
+  assert.equal(rows.reviews[0].status, "review_needed");
+  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
+  assert.match(String(rows.reviews[0].trigger_reasons_json), /evidence_missing/);
+  assert.match(String(rows.reviews[0].body), /Journey Closure Gate/);
+});
+
+test("cli.run accepts completed foundation feature with explicit downstream journey exemption", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-foundation-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-FOUNDATION-EXEMPT"), () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-FOUNDATION"}\n${skillOutputEvent("RUN-FOUNDATION-EXEMPT", {
+      result: {
+        foundationExemption: {
+          exempt: true,
+          reason: "Infrastructure-only adapter needed before user journeys can close.",
+          downstreamFeatures: ["FEAT-UI-CLOSURE"],
+          integrationEvidence: ["tests/adapter-contract.test.ts"],
+        },
+      },
+    })}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "run", sql: "SELECT status, metadata_json FROM execution_records WHERE id = 'RUN-FOUNDATION-EXEMPT'" },
+  ]).queries.run;
+  const metadata = JSON.parse(String(rows[0].metadata_json));
+
+  assert.equal(result.status, "completed");
+  assert.equal(rows[0].status, "completed");
+  assert.equal(metadata.contractValidation.valid, true);
 });
 
 function makeDbPath(): string {
@@ -922,6 +977,7 @@ function skillOutputEvent(executionId: string, overrides: {
   changeIds?: string[];
   status?: "completed" | "review_needed" | "blocked" | "failed" | "cancelled";
   summary?: string;
+  result?: Record<string, unknown>;
 } = {}): string {
   const output = {
     contractVersion: "skill-contract/v1",
@@ -938,7 +994,7 @@ function skillOutputEvent(executionId: string, overrides: {
       requirementIds: [],
       changeIds: overrides.changeIds ?? ["CHG-016"],
     },
-    result: {},
+    result: overrides.result ?? validJourneyResult(),
   };
   return JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: JSON.stringify(output) } });
 }
@@ -955,11 +1011,16 @@ function skillOutputObject(executionId: string): Record<string, unknown> {
     producedArtifacts: [],
     traceability: {
       featureId: "FEAT-CLI",
-      taskId: "TASK-CLI",
-      requirementIds: [],
-      changeIds: ["CHG-016"],
     },
-    result: {},
+    result: validJourneyResult(),
+  };
+}
+
+function validJourneyResult(): Record<string, unknown> {
+  return {
+    requirementCoverage: [{ requirementId: "REQ-CLI", status: "passed", evidence: ["tests/scheduler.test.ts"] }],
+    acceptanceEvidence: [{ scenarioId: "AC-CLI", status: "passed", evidence: ["run report"] }],
+    journeyEvidence: [{ userStoryId: "US-CLI", scenario: "user completes feature flow", status: "passed", evidence: ["run report"] }],
   };
 }
 

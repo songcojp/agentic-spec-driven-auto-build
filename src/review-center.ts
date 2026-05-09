@@ -20,7 +20,10 @@ export type ReviewTrigger =
   | "high_impact_ambiguity"
   | "permission_escalation"
   | "constitution_change"
-  | "architecture_change";
+  | "architecture_change"
+  | "journey_not_closed"
+  | "acceptance_gap"
+  | "evidence_missing";
 
 export type ReviewItemStatus = "review_needed" | "approved" | "rejected" | "changes_requested" | "closed";
 export type ReviewDecision =

@@ -5,6 +5,27 @@ description: "Implement bounded coding tasks through Codex. Use when a scheduled
 
 # Feat Implement Skill
 
+## Purpose
+
+Implement bounded Feature Spec work and collect implementation, verification,
+delivery, requirement, acceptance, and journey evidence. This skill does not
+own the final product-completion verdict; `09.review.journey-closure` is the
+independent closure gate.
+
+## Use When
+
+Use this skill when a scheduled Feature or task has approved requirements,
+design constraints, allowed file scope, verification commands, and enough
+repository context to modify code safely.
+
+## Do Not Use
+
+- Do not use it for pure planning, decomposition, or consistency review.
+- Do not return `completed` for evidence-only, report-only, API-only,
+  ViewModel-only, or mock-test-only work when the Feature contains a user-facing
+  journey.
+- Do not treat commit, PR, task status, or tests alone as final product closure.
+
 Use this skill for implementation tasks after planning and scheduling. The skill owns
 the feature implementation lane in the invocation workspace through scoped commit
 and GitHub pull request handoff. Local repository mutations use `git` where needed
@@ -93,6 +114,10 @@ Default delegation plan:
   and `verified`.
 - Do not continue from implementation into test execution until the scoped diff
   has passed code review or all blocking findings have been fixed.
+- Do not return `completed` unless the compact result includes
+  `requirementCoverage`, `acceptanceEvidence`, and `journeyEvidence`, or a valid
+  `foundationExemption` with downstream closure Features and integration
+  evidence.
 - Do not return `completed` unless required Git delivery evidence exists or a
   delivery exemption is explicitly recorded in `result.gitDelivery`.
 - Keep final output compact. Do not hide required evidence inside free-form
@@ -137,7 +162,9 @@ At finalization:
 12. Fix required code review findings before running the test flow. If a finding requires requirement or design changes, route through clarification, risk review, or spec evolution before continuing.
 13. Add or update focused tests when behavior, contracts, state, or user-visible UI changes.
 14. Run targeted verification and capture command results. Use verification subagents only to analyze failures or propose focused recovery; final acceptance evidence must be confirmed by the mainline agent.
-15. After verification passes and the ledger shows every completed task as implemented, reviewed, and verified, synchronize the implemented Feature Spec tasks in `docs/features/<feature-id>/tasks.md` using the existing task block structure. The task file must remain parseable by the Feature Spec Webview task parser (`parseFeatureTasksMarkdown()` in `src/specdrive-ide.ts`) because Feature item task completion counts depend on the parsed task IDs and statuses. Each implemented task must have a parser-compatible heading ID such as `T-001-01`, `T-021-12`, or `TASK-001`, plus a standalone `状态:` or `Status:` line. If the source task file uses compact legacy rows such as `- T001-01: ... Requirements: ... Verification: ...`, first normalize the affected rows into task blocks and normalize IDs to the generated parseable form, for example `T001-01` -> `T-001-01`.
+15. Map implemented work to Journey Checkpoints. For each P1 user story covered by the Feature, capture runtime evidence that the user-visible scenario works. For UI-bearing Features, this means browser-level or equivalent interaction evidence; API, ViewModel, schema, or mock tests are supporting evidence only.
+16. If the Feature is foundation-only, populate `foundationExemption` with the reason, downstream closure Features, and integration evidence. Do not invent an exemption for a user-facing Feature.
+17. After verification passes and the ledger shows every completed task as implemented, reviewed, and verified, synchronize the implemented Feature Spec tasks in `docs/features/<feature-id>/tasks.md` using the existing task block structure. The task file must remain parseable by the Feature Spec Webview task parser (`parseFeatureTasksMarkdown()` in `src/specdrive-ide.ts`) because Feature item task completion counts depend on the parsed task IDs and statuses. Each implemented task must have a parser-compatible heading ID such as `T-001-01`, `T-021-12`, or `TASK-001`, plus a standalone `状态:` or `Status:` line. If the source task file uses compact legacy rows such as `- T001-01: ... Requirements: ... Verification: ...`, first normalize the affected rows into task blocks and normalize IDs to the generated parseable form, for example `T001-01` -> `T-001-01`.
     For each completed task, update its `状态:` or `Status:` line from `todo`, `pending`, `in_progress`, `blocked`, or another non-terminal pending value to `done`. Preserve or recreate the surrounding heading and fields, for example:
     ```md
     ### T-001-01 Task title
@@ -149,13 +176,13 @@ At finalization:
     完成标准: ...
     ```
     Do not mark a task `done` when implementation is blocked, verification fails, or the task was not actually completed. If a task file already defines an explicit blocked-status convention, follow that convention for blocked work; otherwise leave the existing task status unchanged and report the blocker in the skill output.
-16. Inspect run usage artifacts for token/cost observation and record parent-run and subagent visibility in `subagentUsageSummary`.
-17. Confirm the implementation checkout, whether sibling worktree or fallback branch in `workspaceRoot`, contains only scoped changes intended for this task, then commit them on the feature branch with a narrow Conventional Commit message.
-18. Use `gh` for GitHub delivery: authenticate or report the blocker, push/set upstream as needed, create a pull request with traceability, changed files, verification results, deviations, and residual risks, then record the PR URL.
-19. Use `gh pr checks` or the configured equivalent to inspect required checks. If checks or required reviews are pending or failing, stop with `approval_needed`, `review_needed`, or `blocked` instead of claiming delivery is complete.
-20. Use `gh pr merge` only after required checks/reviews pass and project policy allows merge.
-21. After the PR is merged, delete the remote feature branch through `gh` or the PR merge cleanup option when available. Delete the local feature branch only when policy allows and only after confirming no uncommitted changes remain. If a sibling worktree was created, remove it after confirming it is clean.
-22. Report any deviations, blockers, cleanup failures, missing commit evidence, missing PR evidence, token visibility gaps, or required spec evolution.
+18. Inspect run usage artifacts for token/cost observation and record parent-run and subagent visibility in `subagentUsageSummary`.
+19. Confirm the implementation checkout, whether sibling worktree or fallback branch in `workspaceRoot`, contains only scoped changes intended for this task, then commit them on the feature branch with a narrow Conventional Commit message.
+20. Use `gh` for GitHub delivery: authenticate or report the blocker, push/set upstream as needed, create a pull request with traceability, changed files, verification results, deviations, and residual risks, then record the PR URL.
+21. Use `gh pr checks` or the configured equivalent to inspect required checks. If checks or required reviews are pending or failing, stop with `approval_needed`, `review_needed`, or `blocked` instead of claiming delivery is complete.
+22. Use `gh pr merge` only after required checks/reviews pass and project policy allows merge.
+23. After the PR is merged, delete the remote feature branch through `gh` or the PR merge cleanup option when available. Delete the local feature branch only when policy allows and only after confirming no uncommitted changes remain. If a sibling worktree was created, remove it after confirming it is clean.
+24. Report any deviations, blockers, cleanup failures, missing commit evidence, missing PR evidence, token visibility gaps, missing Journey Checkpoint evidence, or required spec evolution.
 
 ## Review Gates
 
@@ -191,6 +218,7 @@ At finalization:
 - Pull request, merge, and branch cleanup summary with `gh` command evidence for GitHub-facing actions.
 - Return a `SkillOutputContractV1` JSON object with `contractVersion`, `executionId`, `skillSlug`, `requestedAction`, `status`, `summary`, `producedArtifacts`, and Feature-level `traceability`.
 - Put verification command results in `summary`, `producedArtifacts[].summary`, or `result` fields; do not add extra top-level output fields.
+- `completed` only means implementation evidence is ready for projection; the Scheduler or review flow still applies the independent Journey Closure Gate.
 
 ## Output Contract
 
@@ -208,6 +236,10 @@ logs instead of duplicating them here.
 Required compact fields:
 
 - `changedFiles`: array of changed file paths only.
+- `requirementCoverage`: array of `{ requirementId, status, evidence }`.
+- `acceptanceEvidence`: array of `{ scenarioId, status, evidence }`.
+- `journeyEvidence`: array of `{ userStoryId, scenario, status, evidence }`.
+- `foundationExemption`: `null` or `{ exempt, reason, downstreamFeatures, integrationEvidence }`.
 - `verification`: array of `{ command, status, summary }`, where `status` is
   `passed`, `failed`, or `skipped`.
 - `tasks`: object with `done` and `blocked` arrays of normalized task IDs. When

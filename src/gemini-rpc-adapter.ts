@@ -286,6 +286,8 @@ export function buildGeminiAcpAdapterResult(input: GeminiAcpAdapterResultInput):
         : "failed";
   const projectedSummary = nonTerminalContract && exitCode === 0
     ? `Skill output contract review needed: process ended after non-terminal status ${projection.skillOutput?.status}; missing final terminal SkillOutputContractV1.`
+    : failedContract
+    ? `Skill output contract review needed: ${contractValidation.reasons.join("; ")}`
     : projection.skillOutput?.summary ?? projection.error ?? (projection.status === "approval_needed" ? "Gemini ACP is waiting for permission." : `Gemini ACP exit=${exitCode}.`);
   const commandArgs = input.commandArgs ?? DEFAULT_GEMINI_ACP_ADAPTER_CONFIG.args;
   const providerSession: ExecutionAdapterProviderSessionV1 = {

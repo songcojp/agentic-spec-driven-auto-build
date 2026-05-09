@@ -133,7 +133,16 @@ function skillOutput(): SkillOutputContract {
     traceability: {
       featureId: "FEAT-016",
     },
-    result: { changedFiles: ["src/example.ts"] },
+    result: validJourneyResult(),
+  };
+}
+
+function validJourneyResult(): Record<string, unknown> {
+  return {
+    changedFiles: ["src/example.ts"],
+    requirementCoverage: [{ requirementId: "REQ-VSC-010", status: "passed", evidence: ["tests/gemini-rpc-adapter.test.ts"] }],
+    acceptanceEvidence: [{ scenarioId: "AC-GEMINI", status: "passed", evidence: ["Gemini ACP event projection"] }],
+    journeyEvidence: [{ userStoryId: "US-GEMINI", scenario: "run feature through Gemini ACP adapter", status: "passed", evidence: ["Gemini ACP event projection"] }],
   };
 }
 

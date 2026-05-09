@@ -347,6 +347,12 @@ export type SkillContractValidationResult = {
   reasons: string[];
 };
 
+export type JourneyClosureGate = {
+  passed: boolean;
+  reason?: "journey_not_closed" | "acceptance_gap" | "evidence_missing";
+  details: string[];
+};
+
 export type WorkspaceValidationResult = {
   valid: boolean;
   workspaceRoot?: string;
@@ -943,6 +949,8 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- Do not satisfy feature_execution by only creating a report JSON file or by only summarizing planned work.",
         "- If the Feature Spec tasks cannot be implemented from the available source paths, return status blocked with the missing decision or file scope.",
         "- producedArtifacts must list the actual code, test, config, or documentation files created or updated while executing the Feature Spec.",
+        "- For completed feature_execution, result must include requirementCoverage, acceptanceEvidence, and journeyEvidence, unless result.foundationExemption explicitly names downstream closure Features and integration evidence.",
+        "- Passing tests or a commit alone is not sufficient for completed; close the Journey Checkpoint or return review_needed with journey_not_closed, acceptance_gap, or evidence_missing.",
       ]
     : [];
   const clarificationRules = instruction.skillSlug === "10.change.impact-analysis" || instruction.requestedAction === "resolve_clarification"
@@ -1084,7 +1092,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
     const skillOutput = extractSkillOutputContract(events, adapterConfig.outputMapping.responseTextPaths);
     const contractValidation = validateSkillOutputContract(input.executionInvocation, skillOutput);
     const projectedStatus = projectAdapterRunStatus(result.status, skillOutput, contractValidation);
-    const projectedSummary = projectAdapterRunSummary(adapterConfig.id, result.status, skillOutput, projectedStatus);
+    const projectedSummary = projectAdapterRunSummary(adapterConfig.id, result.status, skillOutput, projectedStatus, contractValidation);
     const usage = extractUsage(events);
     writeCliOutputLog(logFiles, {
       status: result.status,
@@ -1184,7 +1192,11 @@ function projectAdapterRunSummary(
   exitCode: number | null | undefined,
   skillOutput: SkillOutputContract | undefined,
   status: RunnerQueueStatus,
+  contractValidation?: SkillContractValidationResult,
 ): string {
+  if (contractValidation && !contractValidation.valid) {
+    return `Skill output contract review needed: ${contractValidation.reasons.join("; ")}`;
+  }
   if (skillOutput && !isTerminalSkillOutputStatus(skillOutput.status) && (exitCode ?? 1) === 0) {
     return `Skill output contract review needed: process ended after non-terminal status ${skillOutput.status}; missing final terminal SkillOutputContractV1.`;
   }
@@ -1313,6 +1325,10 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
   if (output.skillSlug !== instruction.skillSlug) reasons.push(`Skill output skillSlug mismatch: ${output.skillSlug}.`);
   if (output.requestedAction !== instruction.requestedAction) reasons.push(`Skill output requestedAction mismatch: ${output.requestedAction}.`);
   if (!sameOptionalString(output.traceability.featureId, invocation.featureId ?? invocation.traceability.featureId)) reasons.push("Skill output traceability.featureId mismatch.");
+  const journeyClosure = assessJourneyClosureGate(invocation, output);
+  if (!journeyClosure.passed) {
+    reasons.push(`Journey Closure Gate failed: ${journeyClosure.reason ?? "journey_not_closed"}${journeyClosure.details.length ? ` (${journeyClosure.details.join("; ")})` : ""}.`);
+  }
   for (const artifact of instruction.expectedArtifacts.filter((entry) => entry.required && isMaterializedSpecArtifact(entry.path))) {
     const produced = output.producedArtifacts.find((entry) => entry.path === artifact.path && entry.status !== "missing" && entry.status !== "skipped");
     const existsOnDisk = existsSync(join(invocation.workspaceRoot, artifact.path));
@@ -1321,6 +1337,73 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
     }
   }
   return { valid: reasons.length === 0, reasons };
+}
+
+export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV1 | undefined, output: SkillOutputContract | undefined): JourneyClosureGate {
+  if (!invocation || !output || output.status !== "completed" || !isFeatureExecutionInvocation(invocation, output)) {
+    return { passed: true, details: [] };
+  }
+  const result = output.result;
+  const foundationExemption = isValidFoundationExemption(result.foundationExemption);
+  const journeyEvidence = Array.isArray(result.journeyEvidence) ? result.journeyEvidence : [];
+  const acceptanceEvidence = Array.isArray(result.acceptanceEvidence) ? result.acceptanceEvidence : [];
+  const requirementCoverage = Array.isArray(result.requirementCoverage) ? result.requirementCoverage : [];
+  if (foundationExemption) {
+    return { passed: true, details: ["foundationExemption accepted"] };
+  }
+  const missing: string[] = [];
+  if (journeyEvidence.length === 0) missing.push("journeyEvidence is required");
+  if (acceptanceEvidence.length === 0) missing.push("acceptanceEvidence is required");
+  if (requirementCoverage.length === 0) missing.push("requirementCoverage is required");
+  if (missing.length > 0) {
+    return { passed: false, reason: "evidence_missing", details: missing };
+  }
+  const failedJourneys = journeyEvidence.filter((entry) => !isPassedEvidence(entry));
+  const failedAcceptance = acceptanceEvidence.filter((entry) => !isPassedEvidence(entry));
+  const failedRequirements = requirementCoverage.filter((entry) => !isPassedEvidence(entry));
+  if (failedJourneys.length > 0) {
+    return { passed: false, reason: "journey_not_closed", details: failedJourneys.map(describeEvidence) };
+  }
+  if (failedAcceptance.length > 0 || failedRequirements.length > 0) {
+    return { passed: false, reason: "acceptance_gap", details: [...failedAcceptance, ...failedRequirements].map(describeEvidence) };
+  }
+  return { passed: true, details: ["journeyEvidence, acceptanceEvidence, and requirementCoverage passed"] };
+}
+
+function isFeatureExecutionInvocation(invocation: ExecutionAdapterInvocationV1, output: SkillOutputContract): boolean {
+  return invocation.operation === "feature_execution"
+    || invocation.skillInstruction.requestedAction === "feature_execution"
+    || output.requestedAction === "feature_execution"
+    || output.skillSlug === "07.execution.dispatch-adapter";
+}
+
+function isValidFoundationExemption(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  if (record.exempt !== true) return false;
+  return nonEmptyString(record.reason)
+    && nonEmptyArray(record.downstreamFeatures)
+    && nonEmptyArray(record.integrationEvidence);
+}
+
+function isPassedEvidence(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const status = String((value as Record<string, unknown>).status ?? "").toLowerCase();
+  return ["passed", "complete", "completed", "covered", "verified"].includes(status);
+}
+
+function describeEvidence(value: unknown): string {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return "unknown evidence";
+  const record = value as Record<string, unknown>;
+  return String(record.userStoryId ?? record.requirementId ?? record.check ?? record.scenario ?? record.id ?? "unnamed evidence");
+}
+
+function nonEmptyString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function nonEmptyArray(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0;
 }
 
 function sameOptionalString(left: string | undefined, right: string | undefined): boolean {

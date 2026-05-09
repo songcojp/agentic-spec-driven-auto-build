@@ -17,6 +17,35 @@ The common contract is optimized for the Execution Workbench display:
 
 Do not add extra top-level fields. Put command output, verification details, decisions, blockers, coverage, and execution results in `summary`, `producedArtifacts[].summary`, `nextAction`, or `result`.
 
+## Common vs Specialized Result Boundary
+
+The common `SkillOutputContractV1.traceability` field intentionally stays small:
+it carries only `featureId`. Requirement IDs, task IDs, acceptance rows, journey
+checkpoints, test commands, screenshots, PR links, and review decisions belong
+in the skill-specific `result` object or produced artifact summaries.
+
+For `07.execution.dispatch-adapter` with `requestedAction =
+"feature_execution"`, `status = "completed"` is valid only when `result`
+contains all of the following closure evidence:
+
+- `requirementCoverage`: non-empty coverage rows for the implemented
+  requirements.
+- `acceptanceEvidence`: non-empty acceptance scenario evidence.
+- `journeyEvidence`: non-empty user story or Journey Checkpoint evidence.
+
+A foundation-only Feature may omit direct journey evidence only when
+`result.foundationExemption` is present and includes:
+
+- `exempt: true`
+- `reason`
+- `downstreamFeatures`
+- `integrationEvidence`
+
+Passing tests, creating a commit, opening a PR, or marking tasks done is not by
+itself enough for a completed feature execution. Missing or failed closure
+evidence must produce `review_needed` with `journey_not_closed`,
+`acceptance_gap`, or `evidence_missing`.
+
 Use `status = "queued"` before execution starts, `status = "running"` while reading, analyzing, writing, or verifying, `status = "waiting_input"` when user information is required, and `status = "approval_needed"` when command, permission, or risk approval is required. Final status must be `completed`, `review_needed`, `blocked`, `failed`, or `cancelled`. Use `status = "completed"` when the skill produced a valid decision or artifact, even if the decision is "none" or "no change". Use `status = "blocked"` for missing inputs or unresolved required decisions, `status = "review_needed"` only when a real human or risk review gate must resolve the next step, and include the review reason in `summary` or `result.reviewNeededReason`. Use `status = "failed"` for execution errors that prevented a valid skill result.
 
 Do not return shorthand JSON such as `{"summary": "...", "status": "...", "evidence": [...]}`. Any progress or final response must be the complete contract object below, with invocation-owned execution fields echoed exactly. Progress objects must not use `review_needed` as a placeholder for work in progress.

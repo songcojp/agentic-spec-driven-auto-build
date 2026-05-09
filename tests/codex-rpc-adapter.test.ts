@@ -141,12 +141,12 @@ test("Codex RPC adapter extracts the final Skill output from streamed assistant 
   const progress = {
     ...skillOutput(),
     summary: "Progress update.",
-    result: { resultSummary: "in_progress", details: "Still working.", items: [], openQuestions: [] },
+    result: { ...validJourneyResult(), resultSummary: "in_progress", details: "Still working.", items: [], openQuestions: [] },
   };
   const final = {
     ...skillOutput(),
     summary: "Feature completed.",
-    result: { resultSummary: "done", details: "All tasks complete.", items: ["T001"], openQuestions: [] },
+    result: { ...validJourneyResult(), resultSummary: "done", details: "All tasks complete.", items: ["T001"], openQuestions: [] },
   };
   const result = buildCodexAppServerAdapterResult({
     runId: "RUN-APP",
@@ -431,7 +431,16 @@ function skillOutput(): SkillOutputContract {
     traceability: {
       featureId: "FEAT-016",
     },
-    result: { changedFiles: ["src/example.ts"] },
+    result: validJourneyResult(),
+  };
+}
+
+function validJourneyResult(): Record<string, unknown> {
+  return {
+    changedFiles: ["src/example.ts"],
+    requirementCoverage: [{ requirementId: "REQ-VSC-010", status: "passed", evidence: ["tests/codex-rpc-adapter.test.ts"] }],
+    acceptanceEvidence: [{ scenarioId: "AC-RPC", status: "passed", evidence: ["Codex RPC event projection"] }],
+    journeyEvidence: [{ userStoryId: "US-RPC", scenario: "run feature through RPC adapter", status: "passed", evidence: ["Codex RPC event projection"] }],
   };
 }
 

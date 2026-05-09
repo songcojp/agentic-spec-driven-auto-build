@@ -685,6 +685,9 @@ function executionReviewNeededReason(
   metadata?: Record<string, unknown>,
 ): "approval_needed" | "clarification_needed" | "risk_review_needed" {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (text.includes("journey closure gate") || text.includes("journey_not_closed") || text.includes("acceptance_gap") || text.includes("evidence_missing")) {
+    return "risk_review_needed";
+  }
   if (/\b(clarif|ambigu|question|unknown|unclear)\b/.test(text)) return "clarification_needed";
   if (/\b(approve|approval|authorize|permission|commit|pull request|\bpr\b|agents\.md)\b/.test(text)) return "approval_needed";
   return "risk_review_needed";
@@ -692,6 +695,9 @@ function executionReviewNeededReason(
 
 function executionReviewTriggers(summary: string, metadata?: Record<string, unknown>): ReviewTrigger[] {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (text.includes("journey_not_closed")) return ["journey_not_closed"];
+  if (text.includes("acceptance_gap")) return ["acceptance_gap"];
+  if (text.includes("evidence_missing") || text.includes("journey closure gate")) return ["evidence_missing"];
   if (/\b(approve|approval|authorize|permission|commit|pull request|\bpr\b|agents\.md)\b/.test(text)) {
     return ["permission_escalation"];
   }
@@ -967,7 +973,7 @@ export async function runCodexAppServerRunJob(
   const finalStatus = appServerResultStatus(adapterResult);
   const finalSummary = finalStatus === "approval_needed"
     ? "Codex RPC is waiting for approval; autonomous execution is paused for this Feature."
-    : finalStatus === "failed" && adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
+    : (finalStatus === "failed" || finalStatus === "review_needed") && adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
     ? `Skill output contract validation failed: ${adapterResult.result.contractValidation.reasons.join("; ")}`
     : adapterResult.result.skillOutput?.summary ?? (adapterResult.rawLog.stderr || `Codex RPC ${finalStatus}.`);
   const finalMetadata = {
@@ -1285,7 +1291,7 @@ export async function runGeminiAcpRunJob(
   const finalStatus = appServerResultStatus(adapterResult);
   const finalSummary = finalStatus === "approval_needed"
     ? "Gemini ACP is waiting for permission; autonomous execution is paused for this Feature."
-    : finalStatus === "failed" && adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
+    : (finalStatus === "failed" || finalStatus === "review_needed") && adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
     ? `Skill output contract validation failed: ${adapterResult.result.contractValidation.reasons.join("; ")}`
     : adapterResult.result.skillOutput?.summary ?? (adapterResult.rawLog.stderr || `Gemini ACP ${finalStatus}.`);
   const finalMetadata = {
@@ -1537,9 +1543,10 @@ async function dispatchSchedulerJob(
   }
 }
 
-function appServerResultStatus(result: { session: { exitCode: number | null }; result: { skillOutput?: SkillOutputContract; events?: Array<Record<string, unknown>> } }): RunnerQueueStatus {
+function appServerResultStatus(result: { session: { exitCode: number | null }; result: { skillOutput?: SkillOutputContract; contractValidation?: { valid: boolean }; events?: Array<Record<string, unknown>> } }): RunnerQueueStatus {
   if (hasApprovalRequest(result.result.events)) return "approval_needed";
   if (result.result.events?.some((event) => String(event.type ?? "") === "prompt/result" && String(event.stopReason ?? "") === "cancelled")) return "blocked";
+  if (result.result.contractValidation && !result.result.contractValidation.valid) return "review_needed";
   if ((result.session.exitCode ?? 0) !== 0) return "failed";
   const status = result.result.skillOutput?.status;
   if (status === "review_needed" || status === "blocked" || status === "failed" || status === "completed") {
