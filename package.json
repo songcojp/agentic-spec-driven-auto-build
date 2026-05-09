@@ -17,6 +17,7 @@
     "ide:package": "bash scripts/package-vsix.sh package",
     "ide:install": "bash scripts/package-vsix.sh",
     "ide:test": "node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts",
+    "skills:validate": "node scripts/validate-agentic-spec-skills.mjs",
     "update:codex": "bash scripts/update-codex.sh",
     "test": "node --test tests/*.test.ts"
   },

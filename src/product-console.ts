@@ -428,7 +428,7 @@ type FeatureSelectionDecision = {
   dependencyFindings: string[];
   resumeRequiredFeatures: string[];
   skippedFeatures: string[];
-  source: "feature-selection-skill" | "deterministic-fallback";
+  source: "06.planning.replan" | "deterministic-fallback";
 };
 
 function listFeatureSpecsFromDocs(
@@ -817,7 +817,7 @@ function featureSelectionDecisionFromPayload(payload: Record<string, unknown>): 
     dependencyFindings: optionalStringArray(result.dependencyFindings),
     resumeRequiredFeatures: optionalStringArray(result.resumeRequiredFeatures).map((id) => id.toUpperCase()),
     skippedFeatures: optionalStringArray(result.skippedFeatures).map((id) => id.toUpperCase()),
-    source: "feature-selection-skill",
+    source: "06.planning.replan",
   };
 }
 
@@ -854,7 +854,7 @@ function validateFeatureSelectionDecision(input: FeaturePoolSelectionInput, deci
       dependencies: entry.dependencies,
       blockedReasons,
       nextAction: "Feature selection skill chose this Feature, but code safety checks blocked execution.",
-    }, { now: input.now, source: "feature-selection-skill", summary: blockedReasons.join(" ") }));
+    }, { now: input.now, source: "06.planning.replan", summary: blockedReasons.join(" ") }));
     return { blockedReasons, decision };
   }
   return { selected: entry, blockedReasons: [], decision };
@@ -3018,7 +3018,7 @@ function executeScheduleCommand(
     };
   }
   const executionId = randomUUID();
-  const skillSlug = optionalString(payload.skillSlug) ?? (operation === "feature_execution" ? "feat-implement-skill" : undefined);
+  const skillSlug = optionalString(payload.skillSlug) ?? (operation === "feature_execution" ? "07.execution.dispatch-adapter" : undefined);
   const projectId = trigger.projectId ?? optionalString(payload.projectId);
   const project = projectId ? getProject(dbPath, projectId) : undefined;
   const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, projectId, project?.targetRepoPath);
@@ -3027,7 +3027,7 @@ function executeScheduleCommand(
   const specState = workspaceRoot && featureFolder && featureId
     ? readFileSpecState(workspaceRoot, featureFolder, featureId, new Date(acceptedAt))
     : undefined;
-  if (operation === "feature_execution" && skillSlug === "feat-implement-skill") {
+  if (operation === "feature_execution" && skillSlug === "07.execution.dispatch-adapter") {
     const conflict = activeManualScheduleConflict(dbPath, {
       projectId,
       featureId,
@@ -3960,10 +3960,10 @@ function enqueueNextFeatureExecutionFromQueue(
     ],
     expectedArtifacts: [runReportArtifactPath(executionId)],
     workspaceRoot: project.targetRepoPath,
-    skillSlug: "feat-implement-skill",
+    skillSlug: "07.execution.dispatch-adapter",
     skillPhase: "feature_execution",
     selection: selection.decision ? {
-      skillSlug: "feature-selection-skill",
+      skillSlug: "06.planning.replan",
       requestedAction: "select_next_feature",
       source: selection.decision.source,
       reason: selection.decision.reason,
@@ -4125,12 +4125,12 @@ function executeSpecSkillCommand(
 }
 
 function skillSlugForSpecAction(action: ConsoleCommandAction): string {
-  if (action === "intake_requirement") return "requirement-intake-skill";
-  if (action === "resolve_clarification") return "ambiguity-clarification-skill";
-  if (action === "generate_ears") return "pr-ears-requirement-decomposition-skill";
-  if (action === "generate_hld") return "create-project-hld";
-  if (action === "generate_ui_spec") return "ui-spec-skill";
-  return "task-slicing-skill";
+  if (action === "intake_requirement") return "10.change.create-request";
+  if (action === "resolve_clarification") return "10.change.impact-analysis";
+  if (action === "generate_ears") return "02.requirements.convert-ears";
+  if (action === "generate_hld") return "03.hld.generate";
+  if (action === "generate_ui_spec") return "04.ui.generate-spec";
+  return "05.feature.decompose";
 }
 
 function sourcePathsForSpecAction(
@@ -4657,7 +4657,7 @@ function executeBoardCommand(
               featureId: task.featureId,
               taskId,
               taskName: task.name,
-              skillSlug: "feat-implement-skill",
+              skillSlug: "07.execution.dispatch-adapter",
               skillPhase: "task_execution",
             }),
             "queued",
@@ -4674,7 +4674,7 @@ function executeBoardCommand(
           featureId: task.featureId,
           taskId,
           taskName: task.name,
-          skillSlug: "feat-implement-skill",
+          skillSlug: "07.execution.dispatch-adapter",
           skillPhase: "task_execution",
         },
         requestedAction: "task_execution",
@@ -5607,14 +5607,14 @@ function schedulerJobName(
 }
 
 function schedulerOperationName(operation?: string, skillSlug?: string, skillPhase?: string): string | undefined {
-  if (skillSlug === "feat-implement-skill" || skillPhase === "task_execution") return "Execute task";
-  if (skillSlug === "create-project-hld" || operation === "generate_hld") return "Generate project HLD";
-  if (skillSlug === "requirement-intake-skill" || operation === "intake_requirement") return "Intake requirement";
-  if (skillSlug === "ambiguity-clarification-skill" || operation === "resolve_clarification") return "Resolve clarification";
-  if (skillSlug === "pr-ears-requirement-decomposition-skill" || operation === "generate_ears") return "Generate EARS requirements";
-  if (skillSlug === "task-slicing-skill" || operation === "split_feature_specs") return "Split Feature Specs";
-  if (skillSlug === "ui-spec-skill" || operation === "generate_ui_spec") return "Generate UI Spec";
-  if (skillSlug === "technical-context-skill") return "Collect technical context";
+  if (skillSlug === "07.execution.dispatch-adapter" || skillPhase === "task_execution") return "Execute task";
+  if (skillSlug === "03.hld.generate" || operation === "generate_hld") return "Generate project HLD";
+  if (skillSlug === "10.change.create-request" || operation === "intake_requirement") return "Intake requirement";
+  if (skillSlug === "10.change.impact-analysis" || operation === "resolve_clarification") return "Resolve clarification";
+  if (skillSlug === "02.requirements.convert-ears" || operation === "generate_ears") return "Generate EARS requirements";
+  if (skillSlug === "05.feature.decompose" || operation === "split_feature_specs") return "Split Feature Specs";
+  if (skillSlug === "04.ui.generate-spec" || operation === "generate_ui_spec") return "Generate UI Spec";
+  if (skillSlug === "07.execution.prepare-context") return "Collect technical context";
   if (operation === "feature_execution") return "Execute feature work";
   return undefined;
 }

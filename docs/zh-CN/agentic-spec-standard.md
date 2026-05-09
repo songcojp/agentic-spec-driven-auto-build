@@ -1,0 +1,2646 @@
+# Agentic Spec Standard v1.2
+
+> 面向 AI Agent 自动化软件开发的通用规范。
+> 目标：让 AI Agent 的需求、设计、任务、执行、审批、恢复、审计、验收全过程具备标准化、可追踪、可恢复、可治理能力。
+> 本规范同时区分：
+>
+> 1. **Agentic Spec Standard**：通用标准。
+> 2. **agentic-spec-driven-auto-build**：基于该标准实现的管理、调度、可视化产品。
+
+---
+
+# 0. v1.2 修订摘要
+
+相对 v1.0，v1.2 主要优化如下：
+
+## 0.1 标准与产品解耦
+
+v1.0 中混入了较多 `agentic-spec-driven-auto-build` 项目自身的产品功能。
+v1.2 明确拆分为：
+
+```text
+Agentic Spec Standard
+  = 通用标准、目录、状态机、审计模型、Adapter Contract、Checkpoint 恢复机制、Skill Contract
+
+agentic-spec-driven-auto-build
+  = 实现 / 管理 / 可视化 / 调度 Agentic Spec 的具体产品
+```
+
+标准不绑定任何具体 Web Console、看板、VSCode Webview、Codex CLI 或自研调度系统。
+这些能力属于实现层或产品层。
+
+---
+
+## 0.2 High-fidelity Concept / Prototype 修正
+
+v1.2 将 `High-fidelity Concept` 明确升级为：
+
+```text
+High-fidelity Concept / Prototype
+```
+
+并规定必须包含以下至少一种产物：
+
+```text
+PNG 高保真原型图
+或
+HTML 高保真交互原型
+```
+
+不能只写文字说明。
+
+---
+
+## 0.3 输入输出简化
+
+v1.2 不再要求 Agent / Adapter / Skill 输入输出中重复携带大量文档正文。
+
+原因是：
+
+```text
+Execution Adapter 集成的 CLI / RPC / MCP / Sandbox / Codex 等工具，本身通常具备上下文读取、文件访问、会话状态和工具调用能力。
+```
+
+因此标准改为：
+
+```text
+传引用，不传全文；
+传约束，不传冗余；
+传状态，不传重复上下文；
+传 Evidence，不传不可验证叙述。
+```
+
+---
+
+## 0.4 补齐完整过程链路
+
+v1.0 的阶段设计较完整，但状态流转没有完全串联。
+v1.2 新增：
+
+1. 端到端过程链路。
+2. 主流程状态流。
+3. 澄清流程。
+4. 新增需求流程。
+5. 变更流程。
+6. 执行失败恢复流程。
+7. 审批中断恢复流程。
+8. Spec 与代码不一致修复流程。
+9. 任务重规划流程。
+
+---
+
+## 0.5 Subagent 与 Skill 对齐 OpenAI 标准
+
+v1.2 对 Subagent 和 Skill 做标准化约束：
+
+1. Subagent 应遵循 Agent / Tool / Handoff / Guardrail / Session / Run State 模型。
+2. Skill 应作为可复用工作流，而不是项目专用提示词碎片。
+3. Skill 不应内置 `agentic-spec-driven-auto-build` 的产品逻辑。
+4. Skill 必须具备规范命名、触发条件、输入引用、输出契约和验收规则。
+
+OpenAI Agents SDK 中，Agent 是由 instructions、tools、handoffs、guardrails、structured outputs 等能力配置出来的运行单元；handoffs 用于将任务委派给专门 Agent；tools 用于让 Agent 执行外部动作；RunState 可用于中断后恢复运行。Agentic Spec v1.2 的 Agent / Subagent / Adapter 设计应兼容这类模型。([openai.github.io][1])
+
+OpenAI 对 Skills 的定义是可复用、可共享的工作流，可包含 instructions、examples、code，并遵循 Agent Skills open standard；因此 Agentic Spec 的 Skill 也应保持通用、可迁移、可组合，而不是绑定某一个具体产品。([OpenAI Help Center][2])
+
+---
+
+# 1. 规范定位
+
+## 1.1 名称
+
+```text
+Agentic Spec Standard v1.2
+```
+
+中文名称：
+
+```text
+Agentic Spec 标准规范 v1.2
+```
+
+---
+
+## 1.2 适用范围
+
+本规范适用于：
+
+1. AI Agent 自动软件开发。
+2. Spec-driven Coding。
+3. Spec-driven Auto-build。
+4. 多 Agent 协同开发。
+5. 长时间运行任务。
+6. 可恢复 Agent 执行。
+7. 可审批 Agent 工作流。
+8. 可审计 Agent 工程过程。
+9. CLI / RPC / MCP / Sandbox / Codex 等执行工具的统一编排。
+10. 基于 Spec 的自动化开发管理平台。
+
+---
+
+## 1.3 不适用范围
+
+Agentic Spec Standard 不规定：
+
+1. 必须使用哪种前端框架。
+2. 必须使用哪种后端框架。
+3. 必须使用哪种数据库。
+4. 必须使用 Codex CLI。
+5. 必须使用 OpenAI Agents SDK。
+6. 必须实现 Web Console。
+7. 必须实现 VSCode 插件。
+8. 必须实现看板。
+9. 必须采用某种特定 UI。
+10. 必须使用某个具体产品形态。
+
+这些属于实现层选择。
+
+---
+
+# 2. 标准分层
+
+Agentic Spec v1.2 分为五层。
+
+```text
+L1. Spec Layer
+L2. State Layer
+L3. Execution Layer
+L4. Governance Layer
+L5. Product Implementation Layer
+```
+
+---
+
+## 2.1 L1：Spec Layer
+
+负责定义事实源。
+
+包括：
+
+1. Project Intake。
+2. PRD。
+3. EARS Requirements。
+4. HLD。
+5. UI Specification。
+6. High-fidelity Concept / Prototype。
+7. Feature Spec。
+8. Task Spec。
+9. Change Request。
+10. ADR。
+
+---
+
+## 2.2 L2：State Layer
+
+负责定义所有对象的状态。
+
+包括：
+
+1. Document State。
+2. Requirement State。
+3. Feature State。
+4. Task State。
+5. Agent Run State。
+6. Adapter Run State。
+7. Approval State。
+8. Change State。
+9. Checkpoint State。
+10. Release State。
+
+---
+
+## 2.3 L3：Execution Layer
+
+负责执行任务。
+
+包括：
+
+1. Agent。
+2. Subagent。
+3. Skill。
+4. Execution Adapter。
+5. CLI Adapter。
+6. RPC Adapter。
+7. MCP Adapter。
+8. Sandbox Adapter。
+9. Codex Adapter。
+10. Test Runner。
+11. Evidence Collector。
+
+---
+
+## 2.4 L4：Governance Layer
+
+负责治理。
+
+包括：
+
+1. 审批。
+2. 变更控制。
+3. 权限控制。
+4. 审计日志。
+5. Evidence Pack。
+6. Traceability Matrix。
+7. Checkpoint。
+8. Recovery。
+9. Human-in-the-loop。
+10. Policy / Guardrail。
+
+---
+
+## 2.5 L5：Product Implementation Layer
+
+负责具体产品实现。
+
+例如：
+
+```text
+agentic-spec-driven-auto-build
+```
+
+它可以实现：
+
+1. 标准管理。
+2. Spec 管理。
+3. Feature 管理。
+4. Agent Run 调度。
+5. 看板。
+6. 审批台。
+7. 审计台。
+8. 可视化状态流。
+9. Web Console。
+10. VSCode / IDE 插件。
+
+但这些不是 Agentic Spec Standard 的一部分。
+
+---
+
+# 3. 核心原则
+
+## P1. Spec 是事实源
+
+Agent 不应仅凭聊天上下文执行开发。
+
+所有正式开发必须基于：
+
+```text
+Approved Spec
+```
+
+包括：
+
+1. Approved PRD。
+2. Approved Requirements。
+3. Approved HLD。
+4. Approved UI Spec。
+5. Approved Prototype。
+6. Approved Feature Spec。
+7. Approved Task Spec。
+
+---
+
+## P2. 先治理，后执行
+
+任何影响范围、需求、设计、验收、任务边界的变化，必须先进入治理流程。
+
+```text
+Change / Clarification / New Requirement
+  → Impact Analysis
+  → Spec Update
+  → Task Re-plan
+  → Execution
+```
+
+---
+
+## P3. Spec 约束，Skill 执行，Adapter 落地
+
+```text
+Spec = 定义目标、边界、验收
+Skill = 定义可复用工作流
+Agent = 推理、规划、调用 Skill
+Adapter = 连接真实执行环境
+Evidence = 证明结果
+```
+
+---
+
+## P4. 传引用，不传全文
+
+Agentic Spec v1.2 的输入输出应尽量使用引用。
+
+推荐：
+
+```yaml
+spec_refs:
+  - specs/mainline/01-prd.md#8.1
+  - specs/features/FEAT-001/requirements.md
+```
+
+不推荐：
+
+```yaml
+full_prd_content: "..."
+full_hld_content: "..."
+full_ui_spec_content: "..."
+```
+
+---
+
+## P5. 所有执行必须可恢复
+
+每个长时间任务必须具备：
+
+1. Run ID。
+2. State。
+3. Checkpoint。
+4. Resume Point。
+5. Adapter State。
+6. Evidence。
+7. Audit Log。
+
+---
+
+## P6. 所有完成必须可证明
+
+不能只说“已完成”。
+
+必须证明：
+
+1. 改了什么。
+2. 为什么改。
+3. 根据哪个 Spec 改。
+4. 执行了哪些命令。
+5. 通过了哪些测试。
+6. 未通过哪些测试。
+7. 是否满足验收标准。
+8. 是否产生风险。
+9. 是否需要人工审批。
+
+---
+
+# 4. 核心对象模型
+
+## 4.1 Project
+
+项目是 Agentic Spec 的顶层对象。
+
+```yaml
+project:
+  id: PROJ-001
+  name: example-project
+  spec_version: "1.2"
+  status: active
+```
+
+---
+
+## 4.2 Spec
+
+Spec 是规范化文档单元。
+
+```yaml
+spec:
+  id: SPEC-PRD-001
+  type: prd
+  path: specs/mainline/01-prd.md
+  status: approved
+  version: "1.0.0"
+```
+
+---
+
+## 4.3 Requirement
+
+Requirement 是可测试需求单元。
+
+```yaml
+requirement:
+  id: REQ-001
+  type: functional
+  priority: must
+  status: approved
+  source: PRD-8.1
+```
+
+---
+
+## 4.4 Feature
+
+Feature 是可独立实现和验收的功能单元。
+
+```yaml
+feature:
+  id: FEAT-001
+  name: Project Intake Generator
+  status: ready
+  requirements:
+    - REQ-001
+    - REQ-002
+```
+
+---
+
+## 4.5 Task
+
+Task 是 Agent 可执行的最小工作单元。
+
+```yaml
+task:
+  id: TASK-001
+  feature_id: FEAT-001
+  status: ready
+  adapter: codex-cli
+```
+
+---
+
+## 4.6 Agent Run
+
+Agent Run 是一次 Agent 执行实例。
+
+```yaml
+agent_run:
+  id: RUN-20260509-0001
+  task_id: TASK-001
+  status: executing
+  checkpoint_policy: enabled
+```
+
+---
+
+## 4.7 Adapter Run
+
+Adapter Run 是某个执行适配器的一次调用。
+
+```yaml
+adapter_run:
+  id: ADP-20260509-0001
+  run_id: RUN-20260509-0001
+  adapter_type: cli
+  status: running
+```
+
+---
+
+## 4.8 Evidence Pack
+
+Evidence Pack 是验收和审计证据包。
+
+```yaml
+evidence:
+  id: EVD-20260509-0001
+  run_id: RUN-20260509-0001
+  feature_id: FEAT-001
+  status: complete
+```
+
+---
+
+# 5. 标准目录结构
+
+## 5.1 通用标准目录
+
+```text
+.
+├── specs/
+│   ├── mainline/
+│   │   ├── 00-project-intake.md
+│   │   ├── 01-prd.md
+│   │   ├── 02-ears-requirements.md
+│   │   ├── 03-hld.md
+│   │   ├── 04-ui-specification.md
+│   │   ├── 05-high-fidelity-prototype/
+│   │   │   ├── prototype-index.md
+│   │   │   ├── screens/
+│   │   │   │   ├── dashboard.png
+│   │   │   │   ├── feature-detail.png
+│   │   │   │   └── run-detail.png
+│   │   │   └── html/
+│   │   │       ├── index.html
+│   │   │       ├── assets/
+│   │   │       └── README.md
+│   │   └── 06-feature-index.md
+│   │
+│   ├── features/
+│   │   └── FEAT-001-example-feature/
+│   │       ├── requirements.md
+│   │       ├── design.md
+│   │       ├── tasks.md
+│   │       ├── status.yaml
+│   │       └── evidence.md
+│   │
+│   ├── changes/
+│   │   └── CR-001.md
+│   │
+│   ├── adr/
+│   │   └── ADR-001-example.md
+│   │
+│   └── traceability/
+│       ├── requirement-matrix.md
+│       ├── feature-matrix.md
+│       └── change-matrix.md
+│
+├── runs/
+│   └── RUN-20260509-0001/
+│       ├── run.yaml
+│       ├── checkpoint.yaml
+│       ├── adapter-events.jsonl
+│       ├── audit.jsonl
+│       ├── evidence.md
+│       └── result.yaml
+│
+└── .agentic-spec/
+    ├── config.yaml
+    ├── workflow.yaml
+    ├── skills.yaml
+    ├── adapters.yaml
+    ├── policies.yaml
+    └── state.yaml
+```
+
+---
+
+## 5.2 标准目录不得包含产品专属功能
+
+标准目录中不应出现：
+
+```text
+web-console/
+kanban/
+vscode-webview/
+admin-dashboard/
+billing/
+user-management/
+```
+
+这些属于具体产品实现，不属于标准。
+
+---
+
+# 6. 主线文档规范
+
+## 6.1 Project Intake
+
+文件：
+
+```text
+specs/mainline/00-project-intake.md
+```
+
+用途：
+
+收集项目目标、背景、边界、技术约束和初始问题。
+
+必须包含：
+
+```markdown
+# Project Intake
+
+## 1. Project Name
+
+## 2. Product Vision
+
+## 3. Problem Statement
+
+## 4. Target Users
+
+## 5. Business Goals
+
+## 6. Technical Goals
+
+## 7. Constraints
+
+## 8. Existing Assets
+
+## 9. Out of Scope
+
+## 10. Open Questions
+```
+
+---
+
+## 6.2 PRD
+
+文件：
+
+```text
+specs/mainline/01-prd.md
+```
+
+必须包含：
+
+```markdown
+# Product Requirements Document
+
+## 1. Overview
+
+## 2. Background
+
+## 3. Goals
+
+## 4. Non-goals
+
+## 5. Target Users
+
+## 6. User Scenarios
+
+## 7. User Journeys
+
+## 8. Functional Requirements
+
+## 9. Non-functional Requirements
+
+## 10. Data Requirements
+
+## 11. Permission & Security Requirements
+
+## 12. Integration Requirements
+
+## 13. UI / UX Requirements
+
+## 14. Operational Requirements
+
+## 15. Acceptance Criteria
+
+## 16. Milestones
+
+## 17. Risks
+
+## 18. Open Questions
+```
+
+---
+
+## 6.3 EARS Requirements
+
+文件：
+
+```text
+specs/mainline/02-ears-requirements.md
+```
+
+Requirement 模板：
+
+```markdown
+## REQ-001: Requirement Title
+
+- Type: Functional | Non-functional | Security | UI | Data | Integration
+- Source: PRD Section X.X
+- Priority: Must | Should | Could
+- Status: Draft | Review | Approved | Changed | Deprecated
+
+### EARS
+
+When <trigger>,
+the system shall <response>.
+
+### Acceptance Criteria
+
+- [ ] ...
+- [ ] ...
+
+### Traceability
+
+- PRD:
+- HLD:
+- UI:
+- Feature:
+- Test:
+```
+
+---
+
+## 6.4 HLD
+
+文件：
+
+```text
+specs/mainline/03-hld.md
+```
+
+必须包含：
+
+```markdown
+# High Level Design
+
+## 1. Architecture Overview
+
+## 2. System Context
+
+## 3. Module Decomposition
+
+## 4. Module Responsibilities
+
+## 5. Data Flow
+
+## 6. State Flow
+
+## 7. Agent Model
+
+## 8. Skill Model
+
+## 9. Execution Adapter Model
+
+## 10. Scheduling Model
+
+## 11. Approval Model
+
+## 12. Recovery Model
+
+## 13. Audit Model
+
+## 14. Storage Model
+
+## 15. Security Model
+
+## 16. Observability
+
+## 17. Risks & Trade-offs
+
+## 18. Requirement Mapping
+```
+
+---
+
+## 6.5 UI Specification
+
+文件：
+
+```text
+specs/mainline/04-ui-specification.md
+```
+
+必须包含：
+
+```markdown
+# UI Specification
+
+## 1. Design Goals
+
+## 2. Information Architecture
+
+## 3. Page List
+
+## 4. Navigation Model
+
+## 5. Layout Rules
+
+## 6. Component Rules
+
+## 7. Interaction Rules
+
+## 8. State Rules
+
+## 9. Empty State
+
+## 10. Loading State
+
+## 11. Error State
+
+## 12. Permission State
+
+## 13. Approval Interaction
+
+## 14. Recovery Interaction
+
+## 15. Audit Interaction
+
+## 16. Responsive Rules
+
+## 17. Accessibility Rules
+```
+
+---
+
+## 6.6 High-fidelity Concept / Prototype
+
+文件夹：
+
+```text
+specs/mainline/05-high-fidelity-prototype/
+```
+
+### 6.6.1 必须包含 PNG 或 HTML
+
+每个核心页面必须至少提供：
+
+```text
+PNG 高保真原型图
+```
+
+或者：
+
+```text
+HTML 高保真交互原型
+```
+
+推荐两者同时存在：
+
+```text
+screens/*.png
+html/index.html
+```
+
+---
+
+### 6.6.2 PNG 原型要求
+
+PNG 文件要求：
+
+1. 页面尺寸明确。
+2. 页面名称明确。
+3. 状态明确。
+4. 与 UI Spec 页面 ID 对应。
+5. 与 Requirement / Feature 可追踪。
+6. 包含关键组件、布局、视觉层级。
+7. 对复杂交互提供多状态截图。
+
+示例：
+
+```text
+screens/
+  dashboard-default.png
+  dashboard-loading.png
+  dashboard-empty.png
+  dashboard-error.png
+  feature-detail-approved.png
+  agent-run-failed.png
+```
+
+---
+
+### 6.6.3 HTML 原型要求
+
+HTML 原型要求：
+
+1. 可以本地打开。
+2. 能表达核心交互。
+3. 不要求生产级代码。
+4. 不应混入业务后端逻辑。
+5. 不应替代正式前端实现。
+6. 必须在 README 中说明使用方式。
+
+结构：
+
+```text
+html/
+  index.html
+  assets/
+  README.md
+```
+
+---
+
+### 6.6.4 Prototype Index 模板
+
+```markdown
+# High-fidelity Prototype Index
+
+## 1. Overview
+
+## 2. Prototype Type
+
+- PNG: Yes / No
+- HTML: Yes / No
+
+## 3. Screen Mapping
+
+| Screen ID | Screen Name | PNG | HTML Route | Related Requirement | Related Feature |
+|---|---|---|---|---|---|
+
+## 4. Interaction Mapping
+
+| Interaction | Source UI Spec | Prototype Evidence |
+|---|---|---|
+
+## 5. State Mapping
+
+| State | Screen | Prototype File |
+|---|---|---|
+
+## 6. Notes
+```
+
+---
+
+# 7. Feature Spec 规范
+
+每个 Feature 必须独立成目录。
+
+```text
+specs/features/FEAT-001-example-feature/
+  requirements.md
+  design.md
+  tasks.md
+  status.yaml
+  evidence.md
+```
+
+---
+
+## 7.1 requirements.md
+
+```markdown
+# FEAT-001: Feature Requirements
+
+## 1. Overview
+
+## 2. Source Mapping
+
+| Source Type | Source ID | Description |
+|---|---|---|
+| PRD | Section 8.1 | ... |
+| EARS | REQ-001 | ... |
+| HLD | Module X | ... |
+| UI Spec | Screen X | ... |
+| Prototype | dashboard-default.png | ... |
+
+## 3. Functional Requirements
+
+### FR-001
+
+When <trigger>,
+the system shall <response>.
+
+## 4. Non-functional Requirements
+
+## 5. Edge Cases
+
+## 6. Acceptance Criteria
+
+- [ ] ...
+
+## 7. Out of Scope
+
+## 8. Open Questions
+```
+
+---
+
+## 7.2 design.md
+
+```markdown
+# FEAT-001: Feature Design
+
+## 1. Design Overview
+
+## 2. Related Architecture
+
+## 3. Components
+
+## 4. Data Model
+
+## 5. API / Interface
+
+## 6. State Transitions
+
+## 7. Execution Adapter Usage
+
+## 8. Error Handling
+
+## 9. Security Considerations
+
+## 10. Test Strategy
+
+## 11. Implementation Notes
+
+## 12. Alternatives Considered
+```
+
+---
+
+## 7.3 tasks.md
+
+v1.2 中 Task 输入输出不再冗余复制完整上下文。
+
+```markdown
+# FEAT-001: Feature Tasks
+
+## Metadata
+
+- Feature ID: FEAT-001
+- Status: Ready
+- Priority: Must
+- Depends On:
+- Adapter: codex-cli | cli | rpc | mcp | sandbox | manual
+- Approval Required: true | false
+
+## Tasks
+
+### TASK-001: Implement core service
+
+- Type: Implementation
+- Status: Ready
+- Spec Refs:
+  - specs/features/FEAT-001/requirements.md#FR-001
+  - specs/features/FEAT-001/design.md#components
+- Allowed Paths:
+  - src/intake/**
+  - tests/intake/**
+- Forbidden Paths:
+  - src/auth/**
+  - src/billing/**
+- Adapter:
+  - type: codex-cli
+  - profile: default
+- Acceptance:
+  - [ ] Implementation satisfies FR-001
+  - [ ] Unit tests pass
+  - [ ] Evidence Pack updated
+  - [ ] No forbidden paths changed
+```
+
+---
+
+## 7.4 status.yaml
+
+```yaml
+feature_id: FEAT-001
+name: Example Feature
+status: ready
+
+spec:
+  requirements: approved
+  design: approved
+  tasks: approved
+
+traceability:
+  requirements:
+    - REQ-001
+  prototype:
+    - specs/mainline/05-high-fidelity-prototype/screens/dashboard-default.png
+
+execution:
+  current_task: null
+  current_run: null
+  adapter: codex-cli
+
+quality:
+  tests_passing: false
+  evidence_ready: false
+  accepted: false
+
+audit:
+  created_at: ""
+  updated_at: ""
+  last_run_id: ""
+```
+
+---
+
+# 8. 端到端过程链路
+
+## 8.1 总流程
+
+```text
+User Input
+  ↓
+Project Intake
+  ↓
+PRD Draft
+  ↓
+EARS Requirements Draft
+  ↓
+HLD Draft
+  ↓
+UI Specification Draft
+  ↓
+High-fidelity Prototype
+  ↓
+Mainline Spec Review
+  ↓
+Mainline Spec Approved
+  ↓
+Feature Decomposition
+  ↓
+Feature Requirements
+  ↓
+Feature Design
+  ↓
+Feature Tasks
+  ↓
+Feature Ready Gate
+  ↓
+Task Scheduling
+  ↓
+Execution Adapter Dispatch
+  ↓
+Agent / Subagent / Skill Execution
+  ↓
+Checkpoint / Audit / Evidence Collection
+  ↓
+Test & Verification
+  ↓
+Review Gate
+  ↓
+Acceptance
+  ↓
+Release
+```
+
+---
+
+## 8.2 主流程状态流
+
+```text
+Drafting
+  → Reviewing
+  → Approved
+  → Planning
+  → Ready
+  → Scheduled
+  → Running
+  → Checkpointed
+  → Implemented
+  → Verifying
+  → Reviewed
+  → Accepted
+  → Released
+```
+
+---
+
+## 8.3 异常分支总览
+
+主流程中任何阶段都可能进入异常分支。
+
+```text
+Any Stage
+  → Needs Clarification
+  → Clarification Resolved
+  → Return to Previous Stage
+```
+
+```text
+Any Stage
+  → Change Requested
+  → Impact Analysis
+  → Spec Updated
+  → Re-plan
+  → Return to Execution
+```
+
+```text
+Any Stage
+  → New Requirement
+  → Requirement Intake
+  → Mainline Spec Update
+  → Feature Re-decomposition
+  → Re-plan
+```
+
+```text
+Running
+  → Failed
+  → Recovery Analysis
+  → Restore Checkpoint
+  → Resume / Retry / Blocked
+```
+
+```text
+Running
+  → Approval Required
+  → Human Review
+  → Approved / Rejected
+  → Resume / Abort / Re-plan
+```
+
+---
+
+# 9. 状态机规范
+
+## 9.1 Document State
+
+```text
+Draft
+  → Review
+  → Approved
+  → Changed
+  → Re-review
+  → Re-approved
+  → Deprecated
+```
+
+说明：
+
+| 状态          | 含义       |
+| ----------- | -------- |
+| Draft       | 初稿       |
+| Review      | 待审查      |
+| Approved    | 已批准      |
+| Changed     | 已发生变更    |
+| Re-review   | 变更后待重新审查 |
+| Re-approved | 重新批准     |
+| Deprecated  | 废弃       |
+
+---
+
+## 9.2 Requirement State
+
+```text
+Proposed
+  → Draft
+  → Approved
+  → Implemented
+  → Verified
+  → Accepted
+```
+
+异常状态：
+
+```text
+Clarification Needed
+Changed
+Deprecated
+Rejected
+```
+
+---
+
+## 9.3 Feature State
+
+```text
+Proposed
+  → Analyzing
+  → Spec Draft
+  → Spec Review
+  → Ready
+  → Scheduled
+  → In Progress
+  → Implemented
+  → Verifying
+  → Verified
+  → Accepted
+  → Released
+```
+
+异常状态：
+
+```text
+Blocked
+Change Required
+Re-planning
+Deprecated
+```
+
+---
+
+## 9.4 Task State
+
+```text
+Todo
+  → Ready
+  → Dispatching
+  → Running
+  → Done
+  → Verified
+```
+
+异常状态：
+
+```text
+Waiting Clarification
+Waiting Approval
+Paused
+Failed
+Recovering
+Cancelled
+```
+
+---
+
+## 9.5 Agent Run State
+
+```text
+Created
+  → Context Bound
+  → Adapter Prepared
+  → Executing
+  → Checkpointed
+  → Completed
+  → Verified
+  → Archived
+```
+
+异常状态：
+
+```text
+Interrupted
+Pending Approval
+Failed
+Recovering
+Blocked
+Aborted
+```
+
+---
+
+## 9.6 Adapter Run State
+
+```text
+Created
+  → Prepared
+  → Invoked
+  → Streaming
+  → Completed
+```
+
+异常状态：
+
+```text
+Tool Error
+Timeout
+Permission Denied
+Approval Required
+Failed
+Cancelled
+```
+
+---
+
+## 9.7 Approval State
+
+```text
+Not Required
+Required
+Pending
+Approved
+Rejected
+Expired
+Superseded
+```
+
+---
+
+## 9.8 Change State
+
+```text
+Proposed
+  → Impact Analysis
+  → Approved
+  → Applied
+  → Verified
+  → Closed
+```
+
+异常状态：
+
+```text
+Rejected
+Deferred
+Superseded
+```
+
+---
+
+## 9.9 Checkpoint State
+
+```text
+Captured
+  → Validated
+  → Restoring
+  → Replayed
+  → Resumed
+```
+
+异常状态：
+
+```text
+Invalid
+Expired
+Abandoned
+```
+
+---
+
+# 10. Spec 流程扩展
+
+v1.2 明确：真实开发不会只有正常主线流程。
+必须支持以下交叉流程。
+
+---
+
+## 10.1 澄清流程
+
+适用于：
+
+1. 需求含糊。
+2. 验收标准不明确。
+3. UI 行为不确定。
+4. 技术边界不明确。
+5. Agent 无法安全推断。
+
+流程：
+
+```text
+Agent detects ambiguity
+  ↓
+Create Clarification Item
+  ↓
+Mark Requirement / Feature / Task as Waiting Clarification
+  ↓
+Human or Product Agent answers
+  ↓
+Update Spec
+  ↓
+Update Traceability
+  ↓
+Resume Planning / Execution
+```
+
+Clarification Item 模板：
+
+```markdown
+# Clarification: CLAR-001
+
+## 1. Context
+
+## 2. Ambiguous Point
+
+## 3. Affected Specs
+
+## 4. Options
+
+## 5. Decision
+
+## 6. Required Spec Updates
+
+## 7. Resume Target
+```
+
+---
+
+## 10.2 新增需求流程
+
+适用于：
+
+1. 用户新增功能。
+2. 发现遗漏能力。
+3. 新增业务规则。
+4. 新增集成对象。
+5. 新增 UI 页面。
+
+流程：
+
+```text
+New Requirement Submitted
+  ↓
+Requirement Intake
+  ↓
+PRD Update
+  ↓
+EARS Update
+  ↓
+HLD / UI Spec Impact Check
+  ↓
+Feature Index Update
+  ↓
+Feature Spec Create / Update
+  ↓
+Task Re-plan
+  ↓
+Execution
+```
+
+规则：
+
+1. 新增需求不得直接进入编码。
+2. 必须有 Requirement ID。
+3. 必须进入 Traceability Matrix。
+4. 必须判断是否影响已有 Feature。
+5. 必须判断是否影响已完成任务。
+6. 若影响已接受 Feature，必须创建 Change Request。
+
+---
+
+## 10.3 需求变更流程
+
+适用于：
+
+1. 改变原需求。
+2. 调整业务规则。
+3. 调整验收标准。
+4. 调整范围。
+5. 改变优先级。
+
+流程：
+
+```text
+Change Request
+  ↓
+Impact Analysis
+  ↓
+Approval
+  ↓
+Update Mainline Specs
+  ↓
+Update Feature Specs
+  ↓
+Update Tasks
+  ↓
+Invalidate Affected Evidence
+  ↓
+Re-run Affected Tasks
+  ↓
+Re-verify
+```
+
+核心规则：
+
+```text
+凡是影响已批准 Spec 的变更，都必须进入 Change Request。
+```
+
+---
+
+## 10.4 设计变更流程
+
+适用于：
+
+1. 架构调整。
+2. 数据模型调整。
+3. 模块边界调整。
+4. Adapter 变更。
+5. 状态机变更。
+
+流程：
+
+```text
+Design Change Proposed
+  ↓
+HLD Impact Analysis
+  ↓
+ADR Required?
+  ↓
+Update HLD
+  ↓
+Update Feature Design
+  ↓
+Update Tasks
+  ↓
+Review
+  ↓
+Execution
+```
+
+需要 ADR 的情况：
+
+1. 架构方向变化。
+2. 数据库选择变化。
+3. 执行框架变化。
+4. 安全边界变化。
+5. 成本模型变化。
+6. 影响多个 Feature 的设计决策。
+
+---
+
+## 10.5 UI / Prototype 变更流程
+
+适用于：
+
+1. 页面结构变化。
+2. 交互变化。
+3. 状态展示变化。
+4. 高保真原型变化。
+5. HTML 原型变化。
+
+流程：
+
+```text
+UI Change Requested
+  ↓
+Update UI Specification
+  ↓
+Update PNG / HTML Prototype
+  ↓
+Update Prototype Index
+  ↓
+Update Feature Mapping
+  ↓
+Update UI Tasks
+  ↓
+Re-verify
+```
+
+规则：
+
+```text
+有 UI 的功能，不能只有文字 Spec，必须有 PNG 或 HTML 原型证据。
+```
+
+---
+
+## 10.6 执行失败恢复流程
+
+流程：
+
+```text
+Agent Run Failed
+  ↓
+Capture Failure Evidence
+  ↓
+Read Last Checkpoint
+  ↓
+Classify Failure
+  ↓
+Recoverable?
+  ├─ Yes → Restore Checkpoint → Resume
+  └─ No  → Mark Blocked → Human Review / Re-plan
+```
+
+失败分类：
+
+| 类型                    | 说明                   |
+| --------------------- | -------------------- |
+| Tool Failure          | CLI / RPC / MCP 工具失败 |
+| Test Failure          | 测试失败                 |
+| Permission Failure    | 权限不足                 |
+| Spec Conflict         | Spec 冲突              |
+| Context Missing       | 上下文缺失                |
+| Adapter Timeout       | 适配器超时                |
+| Unsafe Operation      | 触发安全策略               |
+| Human Approval Needed | 需要人工批准               |
+
+---
+
+## 10.7 审批中断恢复流程
+
+流程：
+
+```text
+Execution Requires Approval
+  ↓
+Run State = Pending Approval
+  ↓
+Serialize Run State
+  ↓
+Human Approves / Rejects
+  ↓
+Resume with Decision
+```
+
+OpenAI Agents SDK 的 RunResult 可暴露 pending approvals，并可通过 `to_state()` 捕获可恢复 RunState，再在审批后继续运行；Agentic Spec 的审批恢复流程应兼容这种“中断—序列化—审批—恢复”的模式。([openai.github.io][3])
+
+---
+
+# 11. Execution Adapter Contract
+
+Execution Adapter 是 Agentic Spec 与真实执行环境之间的接口。
+
+它可以连接：
+
+1. CLI。
+2. RPC 服务。
+3. MCP Server。
+4. Sandbox。
+5. Codex CLI。
+6. Codex Cloud。
+7. 自研 Agent Runtime。
+8. CI / Test Runner。
+9. Git Provider。
+10. Deployment Tool。
+
+Codex CLI 本身可以在本地终端读取代码、修改文件、运行命令，并支持审批模式、subagents、MCP、脚本化执行等能力；因此 Agentic Spec 的 Adapter 不应重复实现这些能力，而应通过契约进行编排。([OpenAI Developers][4])
+
+---
+
+## 11.1 Adapter 类型
+
+```yaml
+adapter_types:
+  cli:
+    description: "Run local shell commands or CLI tools"
+
+  rpc:
+    description: "Call remote procedure services"
+
+  mcp:
+    description: "Connect to MCP tools and context providers"
+
+  sandbox:
+    description: "Run in isolated workspace"
+
+  codex_cli:
+    description: "Delegate implementation or review to Codex CLI"
+
+  codex_cloud:
+    description: "Delegate implementation to remote Codex environment"
+
+  manual:
+    description: "Human-executed task"
+```
+
+---
+
+## 11.2 Adapter Input Contract
+
+v1.2 使用精简输入。
+
+```yaml
+adapter_input:
+  run_id: RUN-20260509-0001
+  task_id: TASK-001
+  feature_id: FEAT-001
+
+  spec_refs:
+    - specs/features/FEAT-001/requirements.md#FR-001
+    - specs/features/FEAT-001/design.md#components
+    - specs/features/FEAT-001/tasks.md#TASK-001
+
+  workspace:
+    root: "."
+    branch: "feat/feat-001"
+
+  scope:
+    allowed_paths:
+      - src/intake/**
+      - tests/intake/**
+    forbidden_paths:
+      - src/auth/**
+      - src/billing/**
+
+  policies:
+    approval_mode: on-request
+    network_access: restricted
+    destructive_actions: deny
+    checkpoint_required: true
+
+  output_contract:
+    format: agentic_spec_result_v1
+    evidence_required: true
+    test_required: true
+```
+
+---
+
+## 11.3 Adapter Output Contract
+
+```yaml
+adapter_output:
+  run_id: RUN-20260509-0001
+  adapter_run_id: ADP-20260509-0001
+  status: completed
+
+  summary:
+    - "Implemented intake schema"
+    - "Added tests"
+
+  changed_files:
+    - path: src/intake/schema.ts
+      change_type: created
+    - path: tests/intake/schema.test.ts
+      change_type: created
+
+  commands:
+    - command: "npm test -- tests/intake/schema.test.ts"
+      status: passed
+
+  checkpoints:
+    - runs/RUN-20260509-0001/checkpoint.yaml
+
+  evidence:
+    - runs/RUN-20260509-0001/evidence.md
+
+  state_delta:
+    task: done
+    feature: implemented
+
+  risks:
+    - "No integration test yet"
+```
+
+---
+
+## 11.4 Adapter Event Stream
+
+Adapter 应输出事件流。
+
+```json
+{"type":"adapter.started","run_id":"RUN-001","timestamp":"..."}
+{"type":"context.bound","spec_refs":["..."],"timestamp":"..."}
+{"type":"command.started","command":"npm test","timestamp":"..."}
+{"type":"command.finished","status":"passed","timestamp":"..."}
+{"type":"checkpoint.captured","path":"runs/RUN-001/checkpoint.yaml","timestamp":"..."}
+{"type":"adapter.completed","status":"completed","timestamp":"..."}
+```
+
+---
+
+# 12. Agent / Subagent 标准
+
+## 12.1 Agent 定义
+
+Agent 是具备以下能力的执行单元：
+
+1. Instructions。
+2. Tools。
+3. Optional Handoffs。
+4. Optional Guardrails。
+5. Optional Structured Output。
+6. Optional Memory / Session State。
+7. Optional Adapter Access。
+
+---
+
+## 12.2 Subagent 定义
+
+Subagent 是被主 Agent 委派的专门 Agent。
+
+Subagent 应用于：
+
+1. 大任务拆分。
+2. 专业领域隔离。
+3. 并行执行。
+4. 审查任务。
+5. 测试任务。
+6. UI 任务。
+7. 安全分析。
+8. 恢复分析。
+
+---
+
+## 12.3 Subagent 调用方式
+
+推荐两种方式：
+
+### 方式一：Handoff
+
+适用于主控权转移。
+
+```text
+Orchestrator Agent
+  → handoff
+  → Specialist Agent
+```
+
+OpenAI Agents SDK 中 handoffs 用于将任务委派给专门 Agent，并以工具形式暴露给模型；Agentic Spec 的 Subagent Handoff 应使用明确的职责描述、输入约束和返回契约。([openai.github.io][5])
+
+---
+
+### 方式二：Agent as Tool
+
+适用于主 Agent 保持控制权。
+
+```text
+Orchestrator Agent
+  → call Reviewer Agent as Tool
+  → receive structured result
+```
+
+---
+
+## 12.4 Subagent Input Contract
+
+```yaml
+subagent_input:
+  parent_run_id: RUN-001
+  sub_run_id: RUN-001-SUB-001
+  role: test-agent
+
+  objective: "Generate and run unit tests for FEAT-001"
+
+  spec_refs:
+    - specs/features/FEAT-001/requirements.md
+    - specs/features/FEAT-001/design.md
+
+  scope:
+    allowed_paths:
+      - tests/intake/**
+    readonly_paths:
+      - src/intake/**
+    forbidden_paths:
+      - src/auth/**
+
+  expected_output:
+    schema: subagent_result_v1
+```
+
+---
+
+## 12.5 Subagent Output Contract
+
+```yaml
+subagent_result:
+  sub_run_id: RUN-001-SUB-001
+  status: completed
+
+  findings:
+    - "Unit test added for valid intake schema"
+
+  changed_files:
+    - tests/intake/schema.test.ts
+
+  evidence:
+    - runs/RUN-001/subagents/RUN-001-SUB-001/evidence.md
+
+  risks: []
+```
+
+---
+
+# 13. Skill 标准
+
+## 13.1 Skill 定义
+
+Skill 是可复用、可组合、可迁移的工作流能力。
+
+Skill 不等于：
+
+1. 一段临时 prompt。
+2. 某个项目的硬编码流程。
+3. 某个产品的功能模块。
+4. 某个 UI 页面。
+5. 某个 Agent 的私有提示词。
+
+Skill 应该是：
+
+```text
+可复用工作流 + 输入契约 + 输出契约 + 触发条件 + 约束 + 验收规则
+```
+
+---
+
+## 13.2 Skill 命名规范
+
+格式：
+
+```text
+<phase>.<domain>.<action>
+```
+
+示例：
+
+```text
+01.prd.generate
+02.requirements.convert-ears
+05.feature.decompose
+07.execution.dispatch-adapter
+12.recovery.restore-checkpoint
+```
+
+---
+
+## 13.3 阶段前缀
+
+| 前缀 | 阶段             |
+| -- | -------------- |
+| 00 | Intake         |
+| 01 | PRD            |
+| 02 | Requirements   |
+| 03 | HLD            |
+| 04 | UI / Prototype |
+| 05 | Feature        |
+| 06 | Planning       |
+| 07 | Execution      |
+| 08 | Test           |
+| 09 | Review         |
+| 10 | Change         |
+| 11 | Approval       |
+| 12 | Recovery       |
+| 13 | Audit          |
+| 14 | Release        |
+| 15 | Maintenance    |
+
+---
+
+## 13.4 Agentic Spec 必备 Skill 清单
+
+### 00 Intake Skills
+
+```text
+00.intake.collect-context
+00.intake.normalize-input
+00.intake.identify-constraints
+00.intake.extract-open-questions
+00.intake.generate-project-intake
+```
+
+---
+
+### 01 PRD Skills
+
+```text
+01.prd.generate
+01.prd.refine
+01.prd.validate-completeness
+01.prd.extract-goals
+01.prd.extract-non-goals
+01.prd.map-user-journeys
+01.prd.define-acceptance
+```
+
+---
+
+### 02 Requirements Skills
+
+```text
+02.requirements.convert-ears
+02.requirements.normalize
+02.requirements.assign-ids
+02.requirements.validate-testability
+02.requirements.detect-conflicts
+02.requirements.update-traceability
+```
+
+---
+
+### 03 HLD Skills
+
+```text
+03.hld.generate
+03.hld.decompose-modules
+03.hld.define-state-flow
+03.hld.define-data-flow
+03.hld.define-adapter-model
+03.hld.review-architecture
+03.hld.generate-adr
+```
+
+---
+
+### 04 UI / Prototype Skills
+
+```text
+04.ui.generate-spec
+04.ui.generate-page-list
+04.ui.define-interactions
+04.ui.define-states
+04.prototype.generate-png
+04.prototype.generate-html
+04.prototype.generate-index
+04.prototype.validate-mapping
+```
+
+---
+
+### 05 Feature Skills
+
+```text
+05.feature.decompose
+05.feature.generate-requirements
+05.feature.generate-design
+05.feature.generate-tasks
+05.feature.validate-scope
+05.feature.update-index
+05.feature.update-status
+```
+
+---
+
+### 06 Planning Skills
+
+```text
+06.planning.build-task-dag
+06.planning.resolve-dependencies
+06.planning.estimate-risk
+06.planning.select-adapter
+06.planning.prepare-execution-plan
+06.planning.replan
+```
+
+---
+
+### 07 Execution Skills
+
+```text
+07.execution.prepare-context
+07.execution.bind-spec-refs
+07.execution.dispatch-adapter
+07.execution.monitor-run
+07.execution.capture-events
+07.execution.collect-result
+07.execution.update-state
+```
+
+---
+
+### 08 Test Skills
+
+```text
+08.test.generate-plan
+08.test.generate-unit-tests
+08.test.generate-integration-tests
+08.test.run-tests
+08.test.analyze-failures
+08.test.map-to-acceptance
+```
+
+---
+
+### 09 Review Skills
+
+```text
+09.review.spec-consistency
+09.review.code-diff
+09.review.security
+09.review.test-coverage
+09.review.evidence-completeness
+09.review.release-readiness
+```
+
+---
+
+### 10 Change Skills
+
+```text
+10.change.create-request
+10.change.classify
+10.change.impact-analysis
+10.change.update-mainline-spec
+10.change.update-feature-spec
+10.change.invalidate-evidence
+10.change.trigger-replan
+```
+
+---
+
+### 11 Approval Skills
+
+```text
+11.approval.prepare-gate
+11.approval.request-human-review
+11.approval.record-decision
+11.approval.resume-run
+11.approval.reject-and-replan
+```
+
+---
+
+### 12 Recovery Skills
+
+```text
+12.recovery.capture-checkpoint
+12.recovery.validate-checkpoint
+12.recovery.classify-failure
+12.recovery.restore-checkpoint
+12.recovery.resume-run
+12.recovery.mark-blocked
+```
+
+---
+
+### 13 Audit Skills
+
+```text
+13.audit.write-log
+13.audit.collect-evidence
+13.audit.update-requirement-matrix
+13.audit.update-feature-matrix
+13.audit.update-change-matrix
+13.audit.generate-evidence-pack
+```
+
+---
+
+### 14 Release Skills
+
+```text
+14.release.prepare-pr
+14.release.generate-release-notes
+14.release.verify-release-gate
+14.release.archive-run
+14.release.mark-released
+```
+
+---
+
+# 14. Change Request 规范
+
+## 14.1 Change Request 模板
+
+```markdown
+# Change Request: CR-001
+
+## 1. Summary
+
+## 2. Type
+
+- Clarification
+- New Requirement
+- Requirement Change
+- Scope Extension
+- Scope Reduction
+- Design Change
+- UI Change
+- Prototype Change
+- Technical Constraint Change
+- Bug-driven Change
+- Test-driven Change
+
+## 3. Reason
+
+## 4. Current Spec
+
+## 5. Proposed Change
+
+## 6. Impact Analysis
+
+### PRD Impact
+
+### EARS Impact
+
+### HLD Impact
+
+### UI Spec Impact
+
+### Prototype Impact
+
+### Feature Impact
+
+### Task Impact
+
+### Test Impact
+
+### Evidence Impact
+
+### Release Impact
+
+## 7. Required Updates
+
+- [ ] Update PRD
+- [ ] Update EARS Requirements
+- [ ] Update HLD
+- [ ] Update UI Specification
+- [ ] Update Prototype
+- [ ] Update Feature Spec
+- [ ] Update Tasks
+- [ ] Update Tests
+- [ ] Invalidate Evidence
+- [ ] Re-run Verification
+
+## 8. Decision
+
+- Status:
+- Decided By:
+- Date:
+
+## 9. Resume Plan
+```
+
+---
+
+# 15. Checkpoint 恢复机制
+
+## 15.1 Checkpoint 内容
+
+```yaml
+checkpoint:
+  id: CKPT-001
+  run_id: RUN-001
+  task_id: TASK-001
+  feature_id: FEAT-001
+  state: captured
+
+spec_refs:
+  - specs/features/FEAT-001/requirements.md
+  - specs/features/FEAT-001/design.md
+
+progress:
+  completed:
+    - "Created schema"
+  current:
+    - "Adding tests"
+  remaining:
+    - "Run tests"
+    - "Update evidence"
+
+workspace:
+  branch: feat/feat-001
+  changed_files:
+    - src/intake/schema.ts
+
+adapter:
+  type: codex-cli
+  adapter_run_id: ADP-001
+  resume_supported: true
+
+recovery:
+  resume_from: "Adding tests"
+  safe_to_retry: true
+  idempotency_key: "TASK-001-tests"
+```
+
+---
+
+## 15.2 恢复流程
+
+```text
+Read Failed Run
+  ↓
+Read Last Valid Checkpoint
+  ↓
+Validate Workspace
+  ↓
+Validate Spec Version
+  ↓
+Validate Changed Files
+  ↓
+Detect Partial Work
+  ↓
+Restore / Resume
+  ↓
+Run Verification
+  ↓
+Update Evidence
+```
+
+---
+
+## 15.3 不可恢复条件
+
+以下情况不得自动恢复：
+
+1. Spec 已变更且未重新批准。
+2. 关键文件被人工修改且无法判断意图。
+3. Checkpoint 已失效。
+4. Adapter 不支持恢复且工作区不一致。
+5. 触发安全策略。
+6. 涉及破坏性操作。
+7. 需要人工审批但未审批。
+
+---
+
+# 16. Evidence Pack 规范
+
+## 16.1 Evidence Pack 模板
+
+```markdown
+# Evidence Pack
+
+## 1. Metadata
+
+- Evidence ID:
+- Run ID:
+- Feature ID:
+- Task ID:
+- Adapter:
+- Created At:
+
+## 2. Spec References
+
+## 3. Work Summary
+
+## 4. Files Changed
+
+| File | Change Type | Reason |
+|---|---|---|
+
+## 5. Commands Run
+
+| Command | Result | Notes |
+|---|---|---|
+
+## 6. Test Results
+
+| Test | Result | Related Requirement |
+|---|---|---|
+
+## 7. Acceptance Check
+
+| Criteria | Status | Evidence |
+|---|---|---|
+
+## 8. Prototype Evidence
+
+| Screen / HTML | Related Feature | Status |
+|---|---|---|
+
+## 9. Spec Consistency Check
+
+## 10. Risks
+
+## 11. Follow-ups
+
+## 12. Final Status
+```
+
+---
+
+# 17. Traceability Matrix
+
+## 17.1 Requirement Matrix
+
+```markdown
+# Requirement Traceability Matrix
+
+| Requirement ID | PRD | HLD | UI Spec | Prototype | Feature | Task | Test | Status |
+|---|---|---|---|---|---|---|---|---|
+| REQ-001 | 8.1 | Module A | Screen A | dashboard.png | FEAT-001 | TASK-001 | test-001 | Verified |
+```
+
+---
+
+## 17.2 Feature Matrix
+
+```markdown
+# Feature Traceability Matrix
+
+| Feature ID | Requirements | Design | Tasks | Code | Tests | Evidence | Status |
+|---|---|---|---|---|---|---|---|
+| FEAT-001 | REQ-001 | design.md | tasks.md | src/intake | tests/intake | evidence.md | Accepted |
+```
+
+---
+
+## 17.3 Change Matrix
+
+```markdown
+# Change Traceability Matrix
+
+| Change ID | Type | Affected Specs | Affected Features | Affected Tasks | Status |
+|---|---|---|---|---|---|
+| CR-001 | Requirement Change | PRD, EARS | FEAT-001 | TASK-001 | Applied |
+```
+
+---
+
+# 18. Definition of Ready
+
+Feature 进入执行前必须满足：
+
+```markdown
+# Definition of Ready
+
+- [ ] Feature 已登记
+- [ ] 需求已批准
+- [ ] 设计已批准
+- [ ] 任务已批准
+- [ ] 有明确 Spec Refs
+- [ ] 有明确 Allowed Paths
+- [ ] 有明确 Forbidden Paths
+- [ ] 有明确 Adapter
+- [ ] 有明确验收标准
+- [ ] 有测试策略
+- [ ] 有审批策略
+- [ ] 有 Checkpoint 策略
+- [ ] 无阻塞 Open Questions
+```
+
+---
+
+# 19. Definition of Done
+
+Feature 完成必须满足：
+
+```markdown
+# Definition of Done
+
+- [ ] 所有任务完成
+- [ ] 所有任务验证通过
+- [ ] 所有验收标准通过
+- [ ] 测试通过
+- [ ] Evidence Pack 完整
+- [ ] Audit Log 完整
+- [ ] Traceability Matrix 已更新
+- [ ] Prototype 证据已更新，若适用
+- [ ] 无 forbidden paths 违规
+- [ ] 无未处理 Change Request
+- [ ] Review Gate 通过
+- [ ] Feature 状态为 Accepted
+```
+
+---
+
+# 20. agentic-spec-driven-auto-build 产品章节
+
+本章不是 Agentic Spec Standard 的一部分，而是基于该标准的一个具体产品实现建议。
+
+产品名称：
+
+```text
+agentic-spec-driven-auto-build
+```
+
+定位：
+
+```text
+实现 / 管理 / 可视化 / 调度 Agentic Spec 的自动化构建管理系统。
+```
+
+---
+
+## 20.1 产品边界
+
+agentic-spec-driven-auto-build 可以实现：
+
+1. Agentic Spec 项目初始化。
+2. 主线文档管理。
+3. Feature Spec 管理。
+4. Skill Registry。
+5. Adapter Registry。
+6. Agent Run 调度。
+7. Subagent 调度。
+8. Task DAG。
+9. 状态看板。
+10. 审批中心。
+11. Checkpoint 管理。
+12. Recovery 控制台。
+13. Audit Log 查看。
+14. Evidence Pack 查看。
+15. Traceability Matrix 可视化。
+16. Web Console。
+17. IDE 插件。
+18. CLI。
+19. RPC API。
+20. 与 Codex CLI / MCP / CI / Git Provider 集成。
+
+---
+
+## 20.2 产品功能模块
+
+```text
+agentic-spec-driven-auto-build
+  ├── Spec Manager
+  ├── Feature Manager
+  ├── Task Planner
+  ├── Workflow Engine
+  ├── Skill Registry
+  ├── Adapter Registry
+  ├── Agent Runtime Orchestrator
+  ├── Subagent Dispatcher
+  ├── Checkpoint Manager
+  ├── Recovery Manager
+  ├── Approval Center
+  ├── Evidence Center
+  ├── Audit Center
+  ├── Traceability Viewer
+  ├── Web Console
+  ├── IDE Extension
+  └── CLI / API
+```
+
+---
+
+## 20.3 不应混入标准的内容
+
+以下内容不得写入 Agentic Spec Standard 的通用模板：
+
+1. 产品自己的页面设计。
+2. 产品自己的数据库表。
+3. 产品自己的用户角色。
+4. 产品自己的商业模式。
+5. 产品自己的部署方案。
+6. 产品自己的看板交互。
+7. 产品自己的权限模型。
+8. 产品自己的运营后台。
+9. 产品自己的菜单结构。
+10. 产品自己的 UI 组件库。
+
+这些应进入：
+
+```text
+agentic-spec-driven-auto-build 的 PRD / HLD / UI Spec / Feature Spec
+```
+
+---
+
+# 21. 最小合规标准
+
+一个项目符合 Agentic Spec Standard v1.2，至少需要：
+
+```text
+specs/mainline/00-project-intake.md
+specs/mainline/01-prd.md
+specs/mainline/02-ears-requirements.md
+specs/mainline/03-hld.md
+specs/mainline/06-feature-index.md
+specs/features/<FEATURE-ID>/requirements.md
+specs/features/<FEATURE-ID>/design.md
+specs/features/<FEATURE-ID>/tasks.md
+specs/features/<FEATURE-ID>/status.yaml
+specs/features/<FEATURE-ID>/evidence.md
+.agentic-spec/config.yaml
+.agentic-spec/workflow.yaml
+.agentic-spec/skills.yaml
+.agentic-spec/adapters.yaml
+runs/<RUN-ID>/checkpoint.yaml
+runs/<RUN-ID>/audit.jsonl
+runs/<RUN-ID>/evidence.md
+```
+
+如果项目包含 UI，还必须包含：
+
+```text
+specs/mainline/04-ui-specification.md
+specs/mainline/05-high-fidelity-prototype/
+```
+
+并且 `05-high-fidelity-prototype/` 中必须至少包含：
+
+```text
+PNG 高保真原型
+或
+HTML 高保真原型
+```
+
+---
+
+# 22. 一句话总结
+
+**Agentic Spec Standard v1.2 是一套面向 AI Agent 自动化软件开发的通用工程标准：它以 Spec 为事实源，以状态机串联全过程，以 Skill 规范化复用能力，以 Execution Adapter 连接真实工具，以 Checkpoint 实现恢复，以 Evidence Pack 和 Audit Log 保证可验收、可追踪、可审计；而 agentic-spec-driven-auto-build 是该标准的一个具体管理和调度产品实现，不应与标准本身混淆。**
+
+[1]: https://openai.github.io/openai-agents-python/agents/?utm_source=chatgpt.com "OpenAI Agents SDK"
+[2]: https://help.openai.com/en/articles/20001066-skills-in-chatgpt?utm_source=chatgpt.com "Skills in ChatGPT"
+[3]: https://openai.github.io/openai-agents-python/results/?utm_source=chatgpt.com "Results - OpenAI Agents SDK"
+[4]: https://developers.openai.com/codex/cli?utm_source=chatgpt.com "Codex CLI"
+[5]: https://openai.github.io/openai-agents-python/handoffs/?utm_source=chatgpt.com "Handoffs - OpenAI Agents SDK"

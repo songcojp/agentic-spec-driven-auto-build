@@ -64,7 +64,7 @@ MVP 采用本地优先的控制面架构：
 | REQ-040 | 4.12, 7.6, 12 | Status Checker 检测 diff、构建、测试、安全和完成度。 |
 | REQ-041 | 4.12, 7.6, 12 | Spec Alignment Checker 检查 diff 与需求、验收、文件边界一致性。 |
 | REQ-042 | 4.12, 8, 9 | Status Decision Engine 输出 Done、Ready、Review Needed、Blocked 或 Failed。 |
-| REQ-043 | 4.13, 7.8, 9 | Recovery Manager 生成恢复任务并调用 failure-recovery-skill。 |
+| REQ-043 | 4.13, 7.8, 9 | Recovery Manager 生成恢复任务并调用 12.recovery.classify-failure。 |
 | REQ-044 | 4.13, 7.8, 9 | Recovery Agent 执行修复、回滚、拆分、降级、审批或 Spec 更新。 |
 | REQ-045 | 4.13, 5, 9 | Failure Fingerprint Registry 控制最多 3 次指数退避重试。 |
 | REQ-046 | 4.15, 9, 10 | Review Router 根据风险、权限、diff 和失败触发 Review Needed。 |
@@ -536,7 +536,7 @@ Dependencies:
 
 Responsibilities:
 
-- 为可恢复失败生成恢复任务并调用 `failure-recovery-skill`。
+- 为可恢复失败生成恢复任务并调用 `12.recovery.classify-failure`。
 - 支持自动修复、回滚当前任务修改、拆分任务、降级只读分析、请求人工审批、更新 Spec 或更新任务依赖。
 - 记录失败模式指纹、禁止重复策略、失败次数和指数退避计划。
 
@@ -988,7 +988,7 @@ Skill 注册最小接口：
 
 ```json
 {
-  "name": "task-slicing-skill",
+  "name": "05.feature.decompose",
   "description": "Convert feature plan into dependency-aware executable task graph",
   "trigger": "feature_planning.task_slicing",
   "phase": "tasking",
@@ -1006,7 +1006,7 @@ Skill 执行接口：
 
 ```json
 {
-  "skill_name": "architecture-plan-skill",
+  "skill_name": "03.hld.review-architecture",
   "skill_version": "1.0.0",
   "input": {
     "schema_version": "1.0.0",
@@ -1142,9 +1142,9 @@ sequenceDiagram
   participant Store as Persistent Store
 
   U->>S: submit source requirement
-  S->>K: requirement-intake-skill
+  S->>K: 10.change.create-request
   K-->>S: Feature candidate
-  S->>K: pr-ears-requirement-decomposition-skill
+  S->>K: 02.requirements.convert-ears
   K-->>S: EARS requirements + traceability
   S->>C: run requirement checklist
   alt checklist passed
@@ -1298,7 +1298,7 @@ sequenceDiagram
   FR-->>SC: count + forbidden retries
   alt attempts < 3 and strategy allowed
     SC->>RC: create recovery task
-    RC->>K: failure-recovery-skill
+    RC->>K: 12.recovery.classify-failure
     K-->>RC: recovery plan/evidence
   else repeated or unsafe
     SC->>RV: route manual review

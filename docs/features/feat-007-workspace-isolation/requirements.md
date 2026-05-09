@@ -30,7 +30,7 @@
 ## Requirements
 
 - 任意并行写入都必须追踪到独立 worktree、分支、任务标识和合并目标。
-- Workspace Manager / 调度入口负责创建或验证隔离 worktree，并在交付后按 clean/dirty 状态安全清理；`feat-implement-skill` 不创建 sibling worktree，也不要求 worktree 证据作为完成条件。
+- Workspace Manager / 调度入口负责创建或验证隔离 worktree，并在交付后按 clean/dirty 状态安全清理；`07.execution.dispatch-adapter` 不创建 sibling worktree，也不要求 worktree 证据作为完成条件。
 - 只读 Subagent 可以并行；不同文件的 Coding Agent 可以并行；同一文件、同一分支写任务默认串行；高风险任务必须由单 Agent 执行。
 - 互相影响文件或依赖的 Feature 不得并行 implementing。
 - 合并前必须执行冲突检测、Spec Alignment Check 和必要测试。

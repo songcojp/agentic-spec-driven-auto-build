@@ -712,7 +712,7 @@ export function isTrustedDirectWriteInvocation(invocation?: ExecutionAdapterInvo
   if (!isSafeSkillSlug(instruction.skillSlug)) return false;
 
   const safeAllowedFiles = allowedFiles.filter(isSafeWorkspaceWritePath);
-  if (instruction.skillSlug === "feat-implement-skill") {
+  if (instruction.skillSlug === "07.execution.dispatch-adapter") {
     return safeAllowedFiles.length > 0 && safeAllowedFiles.length === allowedFiles.length;
   }
 
@@ -927,7 +927,7 @@ export function validateWorkspaceRoot(workspaceRoot: string | undefined): Worksp
 
 export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvocationV1, _context = ""): string {
   const instruction = invocation.skillInstruction;
-  const taskSlicingRules = instruction.skillSlug === "task-slicing-skill"
+  const taskSlicingRules = instruction.skillSlug === "05.feature.decompose"
     ? [
         "- For split_feature_specs, decompose PRD, EARS requirements, and HLD into implementation-ready Feature Spec package directories.",
         "- Do not treat .autobuild/specs/FEAT-INTAKE-*.json as a Feature Spec package; it is only an intake artifact.",
@@ -936,7 +936,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- In the task-slicing result, include features, queuePlan, dependencyGraph, userStoryMapping, verificationPlan, and openQuestions.",
       ]
     : [];
-  const featureCodingRules = instruction.skillSlug === "feat-implement-skill" && invocation.operation === "feature_execution"
+  const featureCodingRules = instruction.skillSlug === "07.execution.dispatch-adapter" && invocation.operation === "feature_execution"
     ? [
         "- For feature_execution, treat the Feature Spec directory in sourcePaths as the implementation scope.",
         "- Read requirements.md, design.md, and tasks.md from that Feature Spec directory, then implement the concrete tasks described there.",
@@ -945,7 +945,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- producedArtifacts must list the actual code, test, config, or documentation files created or updated while executing the Feature Spec.",
       ]
     : [];
-  const clarificationRules = instruction.skillSlug === "ambiguity-clarification-skill" || instruction.requestedAction === "resolve_clarification"
+  const clarificationRules = instruction.skillSlug === "10.change.impact-analysis" || instruction.requestedAction === "resolve_clarification"
     ? [
         "- For resolve_clarification, treat operatorInput.clarificationText or operatorInput.comment as an operator-provided answer/decision, not as a new question to ask back.",
         "- Apply the operator-provided answer to the most relevant expected spec artifact or source path when it resolves an existing ambiguity.",
@@ -2313,7 +2313,7 @@ function isMaterializedSpecArtifact(artifact: string): boolean {
 }
 
 function outputSchemaForExecutionInvocation(schema: Record<string, unknown>, invocation: ExecutionAdapterInvocationV1 | undefined): Record<string, unknown> {
-  if (invocation?.skillInstruction.skillSlug !== "task-slicing-skill") return schema;
+  if (invocation?.skillInstruction.skillSlug !== "05.feature.decompose") return schema;
   const cloned = JSON.parse(JSON.stringify(schema)) as Record<string, unknown>;
   const properties = cloned.properties;
   if (properties && typeof properties === "object" && !Array.isArray(properties)) {
@@ -2523,7 +2523,7 @@ function normalizePath(path: string): string {
 }
 
 function isSafeSkillSlug(value: string): boolean {
-  return /^[a-z0-9][a-z0-9-]*$/.test(value);
+  return /^\d{2}\.[a-z0-9-]+\.[a-z0-9-]+(?:\.[a-z0-9-]+)?$/.test(value);
 }
 
 function isSafeWorkspaceWritePath(value: string): boolean {

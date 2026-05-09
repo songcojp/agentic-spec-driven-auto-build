@@ -1377,9 +1377,9 @@ function updateFeatureSpecFileState(input: {
   const effectiveSkillSlug = optionalString(input.context.skillSlug)
     ?? input.skillOutput?.skillSlug
     ?? (featureSpecPath && (input.context.skillPhase === "feature_execution" || input.context.operation === "feature_execution")
-      ? "feat-implement-skill"
+      ? "07.execution.dispatch-adapter"
       : undefined);
-  if (!input.workspaceRoot || !input.featureId || effectiveSkillSlug !== "feat-implement-skill") return;
+  if (!input.workspaceRoot || !input.featureId || effectiveSkillSlug !== "07.execution.dispatch-adapter") return;
   if (!featureSpecPath?.startsWith("docs/features/")) return;
   const featureFolder = featureSpecPath.slice("docs/features/".length);
   try {
@@ -1856,7 +1856,7 @@ function buildExecutionInvocation(input: {
   approvalPolicy?: string;
 }): ExecutionAdapterInvocationV1 {
   const context = input.payload.context ?? {};
-  const skillSlug = optionalString(context.skillSlug) ?? (input.featureId ? "feat-implement-skill" : "technical-context-skill");
+  const skillSlug = optionalString(context.skillSlug) ?? (input.featureId ? "07.execution.dispatch-adapter" : "07.execution.prepare-context");
   const requestedAction = input.payload.requestedAction ?? optionalString(context.skillPhase) ?? input.payload.operation;
   const contextSourcePaths = optionalStringArray(context.sourcePaths);
   const contextImagePaths = optionalStringArray(context.imagePaths);

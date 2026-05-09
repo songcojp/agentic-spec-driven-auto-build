@@ -58,8 +58,8 @@ Feature ID: FEAT-021
 
 ### T-021-11 需求新增 Skill 同步 Feature index
 状态: done
-描述: 修改 `requirement-intake-skill` 流程，要求新增或更新 Feature Spec 后必须同步 `docs/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
-验证: `git diff --check`，检查 `.agents/skills/requirement-intake-skill/SKILL.md` 明确 Feature index 同步责任。
+描述: 修改 `10.change.create-request` 流程，要求新增或更新 Feature Spec 后必须同步 `docs/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
+验证: `git diff --check`，检查 `.agents/skills/10.change.create-request/SKILL.md` 明确 Feature index 同步责任。
 
 ### T-021-12 Feature 详情 tasks.md 任务解析
 状态: done
@@ -93,7 +93,7 @@ Feature ID: FEAT-021
 
 ### T-021-18 Clarification 技能队列路由
 状态: done
-描述: VSCode Spec Workspace / Feature Review 的 `clarification` 提交由 Control Plane 路由为 `resolve_clarification`，并在任务队列中创建 `ambiguity-clarification-skill` 技能调用任务。
+描述: VSCode Spec Workspace / Feature Review 的 `clarification` 提交由 Control Plane 路由为 `resolve_clarification`，并在任务队列中创建 `10.change.impact-analysis` 技能调用任务。
 验证: `node --test tests/specdrive-ide.test.ts` 覆盖 `clarification` receipt、scheduler job 和技能上下文。
 
 ### T-021-19 Execution Workbench 选中任务操作

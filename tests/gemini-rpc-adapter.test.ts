@@ -112,7 +112,7 @@ function executionInvocation(): ExecutionAdapterInvocationV1 {
     },
     outputSchema: {},
     skillInstruction: {
-      skillSlug: "feat-implement-skill",
+      skillSlug: "07.execution.dispatch-adapter",
       requestedAction: "feature_execution",
       sourcePaths: ["docs/features/feat-016/requirements.md"],
       expectedArtifacts: [],
@@ -124,7 +124,7 @@ function skillOutput(): SkillOutputContract {
   return {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-APP",
-    skillSlug: "feat-implement-skill",
+    skillSlug: "07.execution.dispatch-adapter",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Implemented.",

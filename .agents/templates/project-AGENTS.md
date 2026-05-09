@@ -23,15 +23,15 @@ Use this file as the target project's SpecDrive operating contract.
 
 ## Spec Operations
 
-- Requirement addition or change: follow `.agents/skills/change-requirement/SKILL.md`, then route to `requirement-intake-skill` for new IDs or `spec-evolution-skill` for existing IDs.
-- PRD to EARS: use `pr-ears-requirement-decomposition-skill`.
-- HLD generation: use `create-project-hld`.
-- UI Spec generation: use `ui-spec-skill` after PRD, requirements, and HLD exist.
-- Feature splitting: use `task-slicing-skill` after planning context, architecture, data model, contracts, quickstart validation, and consistency checks are complete.
-- Feature execution: use `feat-implement-skill` only for bounded tasks with approved requirements, design constraints, allowed scope, and verification commands.
-- Verification: use `test-execution-skill` for targeted, regression, browser, build, or acceptance checks.
-- Review: use `review-report-skill` for spec drift, code risk, test gaps, delivery risk, or approval findings.
-- Delivery: use `pr-generation-skill` only after implementation, verification, and review are complete.
+- Requirement addition or change: follow `.agents/skills/10.change.classify/SKILL.md`, then route to `10.change.create-request` for new IDs or `10.change.update-mainline-spec` for existing IDs.
+- PRD to EARS: use `02.requirements.convert-ears`.
+- HLD generation: use `03.hld.generate`.
+- UI Spec generation: use `04.ui.generate-spec` after PRD, requirements, and HLD exist.
+- Feature splitting: use `05.feature.decompose` after planning context, architecture, data model, contracts, quickstart validation, and consistency checks are complete.
+- Feature execution: use `07.execution.dispatch-adapter` only for bounded tasks with approved requirements, design constraints, allowed scope, and verification commands.
+- Verification: use `08.test.run-tests` for targeted, regression, browser, build, or acceptance checks.
+- Review: use `09.review.code-diff` for spec drift, code risk, test gaps, delivery risk, or approval findings.
+- Delivery: use `14.release.prepare-pr` only after implementation, verification, and review are complete.
 
 ## Spec Workflow
 
@@ -54,27 +54,27 @@ Use this file as the target project's SpecDrive operating contract.
 
 ## Skill Reference
 
-- `change-requirement`: Triage requirement additions, changes, deprecations, clarifications, traceability fixes, and coverage gaps through the active change-management protocol.
-- `requirement-intake-skill`: Add brand-new `REQ-*`, `NFR-*`, or `EDGE-*` requirements with traceability and downstream sync.
-- `spec-evolution-skill`: Change, correct, supersede, deprecate, clarify, or re-trace existing requirements and specs.
-- `ambiguity-clarification-skill`: Resolve unclear product intent, acceptance criteria, or technical boundaries.
-- `requirements-checklist-skill`: Check requirement quality, readiness, and traceability.
-- `technical-context-skill`: Gather repository facts and implementation constraints for planning.
-- `research-decision-skill`: Record bounded technical decisions and rejected alternatives.
-- `architecture-plan-skill`: Produce feature-level architecture plans.
-- `data-model-skill`: Design persistence, state, event, and ownership changes.
-- `contract-design-skill`: Design API, CLI, event, file, UI view-model, and integration contracts.
-- `quickstart-validation-skill`: Check startability, commands, environment, and blockers before slicing tasks.
-- `task-slicing-skill`: Split product scope into Feature Specs or executable tasks.
-- `spec-consistency-analysis-skill`: Verify planning outputs agree before implementation.
-- `feature-selection-skill`: Select the next executable Feature from queue, dependencies, state, and operator hints.
-- `feat-implement-skill`: Implement bounded tasks through Codex while preserving scope and evidence.
-- `test-execution-skill`: Run and analyze verification commands.
-- `review-report-skill`: Produce review findings and delivery-risk reports.
-- `failure-recovery-skill`: Plan bounded recovery for failed tasks.
-- `workflow-hook-skill`: Perform deterministic lifecycle side effects for state transitions.
-- `project-constitution-skill`: Create or update project governance.
-- `pr-generation-skill`: Prepare delivery commits and pull requests after review and verification.
+- `10.change.classify`: Triage requirement additions, changes, deprecations, clarifications, traceability fixes, and coverage gaps through the active change-management protocol.
+- `10.change.create-request`: Add brand-new `REQ-*`, `NFR-*`, or `EDGE-*` requirements with traceability and downstream sync.
+- `10.change.update-mainline-spec`: Change, correct, supersede, deprecate, clarify, or re-trace existing requirements and specs.
+- `10.change.impact-analysis`: Resolve unclear product intent, acceptance criteria, or technical boundaries.
+- `02.requirements.validate-testability`: Check requirement quality, readiness, and traceability.
+- `07.execution.prepare-context`: Gather repository facts and implementation constraints for planning.
+- `06.planning.estimate-risk`: Record bounded technical decisions and rejected alternatives.
+- `03.hld.review-architecture`: Produce feature-level architecture plans.
+- `03.hld.define-data-flow`: Design persistence, state, event, and ownership changes.
+- `03.hld.define-adapter-model`: Design API, CLI, event, file, UI view-model, and integration contracts.
+- `06.planning.prepare-execution-plan`: Check startability, commands, environment, and blockers before slicing tasks.
+- `05.feature.decompose`: Split product scope into Feature Specs or executable tasks.
+- `09.review.spec-consistency`: Verify planning outputs agree before implementation.
+- `06.planning.replan`: Select the next executable Feature from queue, dependencies, state, and operator hints.
+- `07.execution.dispatch-adapter`: Implement bounded tasks through Codex while preserving scope and evidence.
+- `08.test.run-tests`: Run and analyze verification commands.
+- `09.review.code-diff`: Produce review findings and delivery-risk reports.
+- `12.recovery.classify-failure`: Plan bounded recovery for failed tasks.
+- `07.execution.update-state`: Perform deterministic lifecycle side effects for state transitions.
+- `00.intake.generate-project-intake`: Create or update project governance.
+- `14.release.prepare-pr`: Prepare delivery commits and pull requests after review and verification.
 
 ## Implementation Rules
 

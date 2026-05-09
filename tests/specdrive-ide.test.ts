@@ -734,7 +734,7 @@ test("SpecDrive IDE view scopes queue and latest executions to the current works
           executionId: "RUN-CURRENT-ONLY",
           operation: "feature_execution",
           projectId: "project-ide",
-          context: { featureId: "FEAT-016", taskId: "TASK-CURRENT", skillSlug: "feat-implement-skill" },
+          context: { featureId: "FEAT-016", taskId: "TASK-CURRENT", skillSlug: "07.execution.dispatch-adapter" },
         }),
         "2026-05-02T12:02:00.000Z",
       ],
@@ -751,7 +751,7 @@ test("SpecDrive IDE view scopes queue and latest executions to the current works
   assert.equal(view.queue.groups.queued[0].schedulerJobId, "JOB-CURRENT-ONLY");
   assert.equal(view.queue.groups.queued[0].featureId, "FEAT-016");
   assert.equal(view.queue.groups.queued[0].taskId, "TASK-CURRENT");
-  assert.equal(view.queue.groups.queued[0].adapter, "feat-implement-skill");
+  assert.equal(view.queue.groups.queued[0].adapter, "07.execution.dispatch-adapter");
   assert.equal(JSON.stringify(view.queue.groups).includes("RUN-OTHER"), false);
   assert.equal(JSON.stringify(view.queue.groups).includes("JOB-OTHER-ONLY"), false);
 });
@@ -816,7 +816,7 @@ test("SpecDrive IDE queue actions operate on schedule-only jobs", async () => {
           projectId: "project-ide",
           operation: "feature_execution",
           requestedAction: "feature_execution",
-          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-SCHEDULE-ONLY", skillSlug: "feat-implement-skill" },
+          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-SCHEDULE-ONLY", skillSlug: "07.execution.dispatch-adapter" },
         }),
         "2026-05-02T12:07:00.000Z",
       ],
@@ -886,7 +886,7 @@ test("SpecDrive IDE queue actions can pause and cancel another job while a run i
           projectId: "project-ide",
           operation: "feature_execution",
           requestedAction: "feature_execution",
-          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-WAITING", skillSlug: "feat-implement-skill" },
+          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-WAITING", skillSlug: "07.execution.dispatch-adapter" },
         }),
         "2026-05-02T12:10:00.000Z",
       ],
@@ -1285,7 +1285,7 @@ test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill
     { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [scheduler.jobs[0].schedulerJobId] },
   ]).queries.jobs[0].payload_json));
   assert.equal(payload.operation, "resolve_clarification");
-  assert.equal(payload.context.skillSlug, "ambiguity-clarification-skill");
+  assert.equal(payload.context.skillSlug, "10.change.impact-analysis");
   assert.equal(payload.context.skillPhase, "resolve_clarification");
   assert.equal(payload.context.clarificationText, "Clarify whether the review gate should block scheduling.");
   assert.equal(payload.context.featureId, "FEAT-016");
@@ -1652,7 +1652,7 @@ test("SpecDrive IDE execution detail includes projection logs, artifacts, contra
   assert.deepEqual(detail?.skillOutputContract, {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-APPROVAL",
-    skillSlug: "feat-implement-skill",
+    skillSlug: "07.execution.dispatch-adapter",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Approval requested.",
@@ -1849,7 +1849,7 @@ function makeConfig(workspaceRoot: string, dbPath: string): AppConfig {
 function makeWorkspace(): string {
   const root = mkdtempSync(join(tmpdir(), "specdrive-ide-workspace-"));
   mkdirSync(join(root, ".autobuild"), { recursive: true });
-  mkdirSync(join(root, ".agents/skills/requirement-intake-skill"), { recursive: true });
+  mkdirSync(join(root, ".agents/skills/10.change.create-request"), { recursive: true });
   mkdirSync(join(root, "docs"), { recursive: true });
   mkdirSync(join(root, "docs/ui"), { recursive: true });
   mkdirSync(join(root, "docs/features/feat-016-specdrive-ide-foundation"), { recursive: true });
@@ -1857,7 +1857,7 @@ function makeWorkspace(): string {
   writeFileSync(join(root, "docs/requirements.md"), "# Requirements\n");
   writeFileSync(join(root, "docs/hld.md"), "# HLD\n");
   writeFileSync(join(root, "docs/ui/ui-spec.md"), "# UI Spec\n");
-  writeFileSync(join(root, ".agents/skills/requirement-intake-skill/SKILL.md"), "# Requirement intake\n");
+  writeFileSync(join(root, ".agents/skills/10.change.create-request/SKILL.md"), "# Requirement intake\n");
   writeFileSync(join(root, "docs/features/README.md"), [
     "# Feature Spec Index",
     "",
@@ -2052,7 +2052,7 @@ function seedRuntimeState(dbPath: string): void {
         "running",
         "2026-05-02T12:00:00.000Z",
         "Running IDE foundation.",
-        JSON.stringify({ threadId: "thread-1", turnId: "turn-1", skillSlug: "feat-implement-skill" }),
+        JSON.stringify({ threadId: "thread-1", turnId: "turn-1", skillSlug: "07.execution.dispatch-adapter" }),
       ],
     },
   ]);
@@ -2110,7 +2110,7 @@ function seedApprovalRuntimeState(dbPath: string, workspaceRoot: string): void {
         JSON.stringify({
           threadId: "thread-approval",
           turnId: "turn-approval",
-          skillSlug: "feat-implement-skill",
+          skillSlug: "07.execution.dispatch-adapter",
           rawLogRefs: [
             join(workspaceRoot, ".autobuild", "runs", "RUN-APPROVAL", "cli-input.json"),
             join(workspaceRoot, ".autobuild", "runs", "RUN-APPROVAL", "stdout.log"),
@@ -2118,7 +2118,7 @@ function seedApprovalRuntimeState(dbPath: string, workspaceRoot: string): void {
           skillOutputContract: {
             contractVersion: "skill-contract/v1",
             executionId: "RUN-APPROVAL",
-            skillSlug: "feat-implement-skill",
+            skillSlug: "07.execution.dispatch-adapter",
             requestedAction: "feature_execution",
             status: "completed",
             summary: "Approval requested.",

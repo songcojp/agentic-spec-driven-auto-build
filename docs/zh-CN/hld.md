@@ -22,7 +22,7 @@ SpecDrive AutoBuild 是一个面向软件团队的长时间自主编程系统。
 
 2026-05-03 VSCode Execution Workbench：VSCode 插件 UI 必须作为独立 Webview Web UI 开发，不复用当前 Product Console 的页面、路由、导航、App Shell 或组件实现。插件 Web UI 的首要产品目标是任务调度和自动执行，默认第一屏围绕 Job 队列、当前运行、下一步动作、阻塞原因、自动执行控制、审批待办和执行结果观察组织。
 
-2026-05-03 Feature Selection Skill：Project Scheduler 的下一 Feature 选择由 `feature-selection-skill` 推理完成，输入为 Feature Pool Queue、Feature index、各 Feature `spec-state.json`、依赖完成情况、最近 Execution Record 和 operator resume/skip hints。Control Plane 只信任通过代码安全校验的技能决策，并负责创建 `<executor>.run` Job 与 Execution Record。`approval_needed`、`blocked`、`review_needed`、`failed` 等非可持续 CLI/app-server 状态必须投影回 Feature `spec-state.json`，阻止自动循环继续越权推进。
+2026-05-03 Feature Selection Skill：Project Scheduler 的下一 Feature 选择由 `06.planning.replan` 推理完成，输入为 Feature Pool Queue、Feature index、各 Feature `spec-state.json`、依赖完成情况、最近 Execution Record 和 operator resume/skip hints。Control Plane 只信任通过代码安全校验的技能决策，并负责创建 `<executor>.run` Job 与 Execution Record。`approval_needed`、`blocked`、`review_needed`、`failed` 等非可持续 CLI/app-server 状态必须投影回 Feature `spec-state.json`，阻止自动循环继续越权推进。
 
 2026-05-03 Execution Adapter Layer 重构：平台不再使用 Runner 作为核心架构概念。执行层统一称为 Execution Adapter Layer，下分 CLI Adapter 与 RPC Adapter。CLI Adapter 适配 `codex exec`、Gemini headless CLI 或其他本机编码 CLI；RPC Adapter 适配 `codex app-server`、app-server HTTP/JSON-RPC、WebSocket、stdio 或后续远程执行服务。Scheduler 只创建 `cli.run`、`rpc.run` 等 executor job；Execution Adapter Layer 负责把统一的 `ExecutionAdapterInvocationV1` 转换为具体 provider 调用，并把 provider events 投影为 `ExecutionAdapterResultV1`、Execution Record、raw logs、approval request 和 Feature `spec-state.json`。
 
@@ -257,7 +257,7 @@ Collaborates With:
 Responsibilities:
 
 - Scheduler Trigger 从 `feature-pool-queue.json` 读取已规划 Feature 队列，并接收立即执行、指定时间、周期巡检、依赖完成、CI 失败和审批通过等触发模式。
-- Auto Run Controller 调用 `feature-selection-skill` 执行 `select_next_feature`，由技能推理候选 Feature、依赖、状态和执行历史；代码随后校验返回 Feature 是否属于队列、三件套完整、依赖满足、已显式 resume 且同项目没有 active `feature_execution`。
+- Auto Run Controller 调用 `06.planning.replan` 执行 `select_next_feature`，由技能推理候选 Feature、依赖、状态和执行历史；代码随后校验返回 Feature 是否属于队列、三件套完整、依赖满足、已显式 resume 且同项目没有 active `feature_execution`。
 - Scheduler Trigger 创建 `<executor>.run` Job；当前为 `cli.run`，后续可扩展 `native.run`。
 - Feature/Task/Project 不作为 Job 顶层属性，只进入 payload context。
 - 平台不维护 Feature 内 TaskGraph / tasks 执行表；Feature 内任务排序、并行和完成状态由执行 LLM 读取 Feature Spec 目录中的 `requirements.md`、`design.md` 和 `tasks.md` 后自行管理。
@@ -420,7 +420,7 @@ Collaborates With:
 
 Responsibilities:
 
-- 对可恢复失败生成恢复任务并调用 `failure-recovery-skill`。
+- 对可恢复失败生成恢复任务并调用 `12.recovery.classify-failure`。
 - 支持自动修复、回滚当前任务修改、拆分任务、降级只读分析、请求审批、更新 Spec 或更新任务依赖。
 - 记录失败模式指纹、禁止重复策略、失败次数和指数退避计划。
 
@@ -684,12 +684,12 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  PRD[PRD / 自然语言需求源] --> EARS["[Skill] pr-ears-requirement-decomposition-skill\nEARS 需求拆解"]
-  EARS --> HLD["[Skill] create-project-hld\nHLD：系统架构 + 一级页面清单"]
-  HLD --> UISpec["[Skill] ui-spec-skill\nUI Spec + 主要页面概念图"]
-  UISpec --> Split["[Skill] task-slicing-skill（Feature 级）\n+ [Code] Feature 记录写入 SQLite\nFeature Spec 拆分"]
+  PRD[PRD / 自然语言需求源] --> EARS["[Skill] 02.requirements.convert-ears\nEARS 需求拆解"]
+  EARS --> HLD["[Skill] 03.hld.generate\nHLD：系统架构 + 一级页面清单"]
+  HLD --> UISpec["[Skill] 04.ui.generate-spec\nUI Spec + 主要页面概念图"]
+  UISpec --> Split["[Skill] 05.feature.decompose（Feature 级）\n+ [Code] Feature 记录写入 SQLite\nFeature Spec 拆分"]
   Split --> Pool[Feature Spec Pool\nN 个 Feature 候选]
-  Pool --> Checklist["[Skill] requirements-checklist-skill\n+ ambiguity-clarification-skill\n需求质量检查 / 澄清"]
+  Pool --> Checklist["[Skill] 02.requirements.validate-testability\n+ 10.change.impact-analysis\n需求质量检查 / 澄清"]
   Checklist -->|通过| Ready["[Code] Feature 状态 → ready"]
   Checklist -->|歧义| Draft["[Code] Feature → draft / review_needed\n写入 ClarificationLog"]
   Draft -->|澄清完成| Ready
@@ -699,12 +699,12 @@ flowchart TD
   MemInject --> 执行结果["[Code] Execution Result 生成"]
   execution result --> StatusCheck["[Code] Status Checker\ndiff / build / test / lint / security\n+ [Skill] Spec Alignment 语义比对"]
   StatusCheck -->|Done| Merge["[Code] Result Merger\n→ Feature Aggregator"]
-  StatusCheck -->|Review Needed| ReviewC["[Code] ReviewItem 写入\n+ [Skill] review-report-skill"]
-  StatusCheck -->|Failed| Recover["[Code] 失败指纹 / 退避\n+ [Skill] failure-recovery-skill"]
+  StatusCheck -->|Review Needed| ReviewC["[Code] ReviewItem 写入\n+ [Skill] 09.review.code-diff"]
+  StatusCheck -->|Failed| Recover["[Code] 失败指纹 / 退避\n+ [Skill] 12.recovery.classify-failure"]
   StatusCheck -->|Blocked| BlockedTask["[Code] Blocker Record"]
   ReviewC --> Seq
   Recover --> Seq
-  Merge -->|Feature done| Delivery["[Code] gh CLI 创建 PR\n+ [Skill] pr-generation-skill\n+ [Skill] spec-evolution-skill"]
+  Merge -->|Feature done| Delivery["[Code] gh CLI 创建 PR\n+ [Skill] 14.release.prepare-pr\n+ [Skill] 10.change.update-mainline-spec"]
   Merge -->|Continue| Seq
   Delivery --> Pool
 ```
@@ -713,16 +713,16 @@ flowchart TD
 
 | 阶段 | 触发方式 | 实现归因 | 输入产物 | 输出产物 | 关联 Skill |
 |---|---|---|---|---|---|
-| EARS 需求拆解 | 用户上传 PRD / Spec Sources 扫描 | **Skill** | PRD / 自然语言需求 | EARS Requirements（`requirements.md`） | `pr-ears-requirement-decomposition-skill` |
-| HLD 生成 | EARS 完成后手动或受控命令触发 | **Skill**（内容）+ **Code**（artifact 落地） | PRD + EARS Requirements | HLD 文档（`docs/zh-CN/hld.md`）+ **一级页面清单** | `create-project-hld` |
-| UI Spec + 主要页面概念图 | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + EARS Requirements + HLD + 一级页面清单 | UI Spec 文档（`docs/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ 主要页面概念图（`docs/ui/concepts/*.png`） | `ui-spec-skill` |
-| Feature Spec 拆分 | UI Specs 完成（或 HLD 完成）后触发 | **Skill** | HLD + UI Specs | Feature Spec 候选集（`docs/features/<feat-id>/`） | `task-slicing-skill`（Feature 级） |
-| 启动项目级任务调度 | `schedule_run(project)` 或 `start_auto_run` 触发 | **Code + Skill** | 已生成的 `docs/features/*` + Skill 产出的 `docs/features/feature-pool-queue.json` + Feature `spec-state.json` | SQLite Feature 候选记录 + BullMQ `<executor>.run` Job + Execution Record；Job payload 指向 Feature Spec 目录 | `feature-selection-skill` |
-| 需求质量检查 | Feature Spec 创建后 | **Skill** | Feature Spec requirements.md | 通过 → `ready`；歧义 → ClarificationLog + `draft` | `requirements-checklist-skill`、`ambiguity-clarification-skill` |
-| Feature 执行 | `<executor>.run` Job Worker 消费 | **Code**（Execution Adapter / Memory）+ **CLI/RPC** | Job payload + Project Memory + Feature Spec `requirements.md` / `design.md` / `tasks.md` | 代码/测试/配置/文档变更、Execution Record、心跳、RawLog、Execution Result | `feat-implement-skill` |
+| EARS 需求拆解 | 用户上传 PRD / Spec Sources 扫描 | **Skill** | PRD / 自然语言需求 | EARS Requirements（`requirements.md`） | `02.requirements.convert-ears` |
+| HLD 生成 | EARS 完成后手动或受控命令触发 | **Skill**（内容）+ **Code**（artifact 落地） | PRD + EARS Requirements | HLD 文档（`docs/zh-CN/hld.md`）+ **一级页面清单** | `03.hld.generate` |
+| UI Spec + 主要页面概念图 | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + EARS Requirements + HLD + 一级页面清单 | UI Spec 文档（`docs/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ 主要页面概念图（`docs/ui/concepts/*.png`） | `04.ui.generate-spec` |
+| Feature Spec 拆分 | UI Specs 完成（或 HLD 完成）后触发 | **Skill** | HLD + UI Specs | Feature Spec 候选集（`docs/features/<feat-id>/`） | `05.feature.decompose`（Feature 级） |
+| 启动项目级任务调度 | `schedule_run(project)` 或 `start_auto_run` 触发 | **Code + Skill** | 已生成的 `docs/features/*` + Skill 产出的 `docs/features/feature-pool-queue.json` + Feature `spec-state.json` | SQLite Feature 候选记录 + BullMQ `<executor>.run` Job + Execution Record；Job payload 指向 Feature Spec 目录 | `06.planning.replan` |
+| 需求质量检查 | Feature Spec 创建后 | **Skill** | Feature Spec requirements.md | 通过 → `ready`；歧义 → ClarificationLog + `draft` | `02.requirements.validate-testability`、`10.change.impact-analysis` |
+| Feature 执行 | `<executor>.run` Job Worker 消费 | **Code**（Execution Adapter / Memory）+ **CLI/RPC** | Job payload + Project Memory + Feature Spec `requirements.md` / `design.md` / `tasks.md` | 代码/测试/配置/文档变更、Execution Record、心跳、RawLog、Execution Result | `07.execution.dispatch-adapter` |
 | Status 检查 | Execution Record 结束 | **Code**（确定性检查）+ **Skill**（Spec Alignment） | Execution Result | StatusCheckResult（Done / Review Needed / Failed / Blocked） | — |
-| Review / Recovery | Status 触发 | **Code**（状态）+ **Skill**（内容） | StatusCheckResult + execution result | ReviewItem / RecoveryTask | `review-report-skill`、`failure-recovery-skill` |
-| Feature 交付 | Feature Aggregator 判断 done | **Code**（PR / Delivery）+ **Skill**（内容） | execution result + Task 结果 | PR、Delivery Report、Spec Evolution 建议 | `pr-generation-skill`、`spec-evolution-skill` |
+| Review / Recovery | Status 触发 | **Code**（状态）+ **Skill**（内容） | StatusCheckResult + execution result | ReviewItem / RecoveryTask | `09.review.code-diff`、`12.recovery.classify-failure` |
+| Feature 交付 | Feature Aggregator 判断 done | **Code**（PR / Delivery）+ **Skill**（内容） | execution result + Task 结果 | PR、Delivery Report、Spec Evolution 建议 | `14.release.prepare-pr`、`10.change.update-mainline-spec` |
 
 ### 10.6 Feature Spec 内部执行阶段
 
@@ -895,20 +895,20 @@ Decomposition rules:
 | 创建项目 | **Code** | 配置需跨 session 持久化，被 Scheduler / Dashboard / Memory 机器查询 |
 | 连接 Git 仓库 | **Code** | `git` 命令输出需结构化存储，健康检查结果需机器可查 |
 | 初始化 Spec Protocol | **Code** | 一次性目录与 schema 建立，是结构不变式；目标项目 `AGENTS.md` 必须从 agent runtime 模板生成，并与 `.agents/skills/` 一起作为 Spec Protocol 操作规范落地，代码不得内嵌完整 AGENTS 文案。 |
-| 导入或创建项目宪章 | **Skill** | `project-constitution-skill`；提示驱动生成，文件落地即持久化 |
+| 导入或创建项目宪章 | **Skill** | `00.intake.generate-project-intake`；提示驱动生成，文件落地即持久化 |
 | 初始化 Project Memory | **Code**（创建文件）+ **Skill**（初始内容摘要） | 文件创建是结构副作用；初始摘要内容是 LLM 推理 |
 
 ### 阶段 2：需求录入
 
 | 用户流程步骤 | 实现方式 | 理由 |
 |---|---|---|
-| Spec 来源扫描与上传 | **Skill** | `repo-probe-skill`；CLI 已提供文件读取机制。Product Console 在同一个阶段内步骤中显示“扫描”和“上传”两个动作。 |
-| 识别需求格式 | **Skill** | LLM 分类推理，是 `pr-ears-requirement-decomposition-skill` 前置步骤 |
-| 生成 EARS | **Skill** | `pr-ears-requirement-decomposition-skill` 只生成 EARS requirements 文档，不拆分 Feature Spec、不启动调度 |
-| Feature Spec 拆分 | **Skill** | `task-slicing-skill` 只负责生成或更新 `docs/features/*` Feature Spec 文档和 `feature-pool-queue.json`，不负责启动调度 |
-| 启动项目级任务调度 | **Code + Skill** | Product Console / VSCode 通过 `schedule_run(project)` 或 `start_auto_run` 触发；Control Plane 调用 `feature-selection-skill`，校验后创建 `<executor>.run` Job 和 Execution Record |
-| 完成关键澄清 | **Skill** | `ambiguity-clarification-skill` |
-| 需求质量检查 | **Skill** | `requirements-checklist-skill` |
+| Spec 来源扫描与上传 | **Skill** | `00.intake.collect-context`；CLI 已提供文件读取机制。Product Console 在同一个阶段内步骤中显示“扫描”和“上传”两个动作。 |
+| 识别需求格式 | **Skill** | LLM 分类推理，是 `02.requirements.convert-ears` 前置步骤 |
+| 生成 EARS | **Skill** | `02.requirements.convert-ears` 只生成 EARS requirements 文档，不拆分 Feature Spec、不启动调度 |
+| Feature Spec 拆分 | **Skill** | `05.feature.decompose` 只负责生成或更新 `docs/features/*` Feature Spec 文档和 `feature-pool-queue.json`，不负责启动调度 |
+| 启动项目级任务调度 | **Code + Skill** | Product Console / VSCode 通过 `schedule_run(project)` 或 `start_auto_run` 触发；Control Plane 调用 `06.planning.replan`，校验后创建 `<executor>.run` Job 和 Execution Record |
+| 完成关键澄清 | **Skill** | `10.change.impact-analysis` |
+| 需求质量检查 | **Skill** | `02.requirements.validate-testability` |
 | Feature 状态 → `ready` | **Code** | 状态迁移必须强制、持久化、可审计；CLI 无法保证 |
 
 ### 阶段 3：自主执行循环
@@ -917,8 +917,8 @@ Decomposition rules:
 |---|---|---|
 | Project Scheduler 选择 ready Feature | **Code**（BullMQ job + SQLite 事实源） | 优先级算法 + 去重 + 崩溃恢复，不能靠 LLM 推理替代 |
 | Feature 状态 → `planning` | **Code** | 状态机迁移 |
-| 生成技术计划、研究结论、数据模型、接口契约 | **Skill**（bridge 未实现时 blocked） | 规划流水线应通过编码 CLI 执行 `technical-context-skill` → `research-decision-skill` → `architecture-plan-skill` → `data-model-skill` → `contract-design-skill` → `quickstart-validation-skill` → `spec-consistency-analysis-skill`；未接 bridge 前不得伪造输出 |
-| 维护 Feature Spec `tasks.md` | **Skill**（任务分解） | `task-slicing-skill` 生成或更新 `tasks.md`；平台不再写入 Feature 内 TaskGraph / tasks 执行表 |
+| 生成技术计划、研究结论、数据模型、接口契约 | **Skill**（bridge 未实现时 blocked） | 规划流水线应通过编码 CLI 执行 `07.execution.prepare-context` → `06.planning.estimate-risk` → `03.hld.review-architecture` → `03.hld.define-data-flow` → `03.hld.define-adapter-model` → `06.planning.prepare-execution-plan` → `09.review.spec-consistency`；未接 bridge 前不得伪造输出 |
+| 维护 Feature Spec `tasks.md` | **Skill**（任务分解） | `05.feature.decompose` 生成或更新 `tasks.md`；平台不再写入 Feature 内 TaskGraph / tasks 执行表 |
 | Feature 状态 → `tasked`，兼容看板展示 | **Code** | 状态机迁移 + 兼容看板投影持久化 |
 | 调度 Feature 执行 | **Code**（状态迁移 + `cli.run` 入队） | 完整 Feature Spec 目录校验、去重、重试限制和 Job/Execution Record 创建，是结构不变式 |
 | Project Memory 注入 CLI 上下文 | **Code** | 会话启动前注入文件，是触发侧副作用 |
@@ -926,11 +926,11 @@ Decomposition rules:
 | Project Memory 更新 | **Code** | Execution Result 驱动的结构化文件更新，含 token 预算压缩逻辑 |
 | Status Checker 判断任务状态 | **Code**（diff / build / test / lint / security 命令执行）+ **Skill**（Spec Alignment 语义比对） | 确定性检查是 Code；语义对齐是 LLM 推理 |
 | Done → 更新 Feature / Execution 状态 | **Code** | 状态机迁移 |
-| Review Needed → 审批流 | **Code**（状态记录 + 通知）+ **Skill**（`review-report-skill` 生成 review 内容） | 状态和入口是 Code；review 分析内容是 Skill |
+| Review Needed → 审批流 | **Code**（状态记录 + 通知）+ **Skill**（`09.review.code-diff` 生成 review 内容） | 状态和入口是 Code；review 分析内容是 Skill |
 | Blocked → 记录阻塞 | **Code** | 阻塞持久化；无法解除时任务回退是状态机 |
-| Failed → 生成恢复任务 | **Code**（指纹 / 去重 / 退避）+ **Skill**（`failure-recovery-skill` 恢复策略推理） | 重试不变式是 Code；恢复推理是 Skill |
-| Feature done → PR / Delivery Report | **Code**（`gh` CLI 调用 + 交付记录）+ **Skill**（`pr-generation-skill` 生成 PR 内容） | — |
-| Spec Evolution | **Skill** | `spec-evolution-skill` |
+| Failed → 生成恢复任务 | **Code**（指纹 / 去重 / 退避）+ **Skill**（`12.recovery.classify-failure` 恢复策略推理） | 重试不变式是 Code；恢复推理是 Skill |
+| Feature done → PR / Delivery Report | **Code**（`gh` CLI 调用 + 交付记录）+ **Skill**（`14.release.prepare-pr` 生成 PR 内容） | — |
+| Spec Evolution | **Skill** | `10.change.update-mainline-spec` |
 | 回到 Feature Selector | **Code** | 调度器循环闭合 |
 
 ### CLI Skill Invocation Bridge
@@ -953,16 +953,16 @@ invocation contract 至少包含 `projectId`、`workspaceRoot`、`skillSlug`、`
 
 **Skill 负责（10 类）：**
 
-1. 项目宪章生成 → `project-constitution-skill`
-2. PRD 扫描 / 格式识别 → `repo-probe-skill`
-3. EARS 生成 → `pr-ears-requirement-decomposition-skill`
-4. Feature Spec 拆分 → `task-slicing-skill`
-5. 澄清 → `ambiguity-clarification-skill`
-6. 需求质量检查 → `requirements-checklist-skill`
-7. 全规划流水线 → `technical-context-skill` / `research-decision-skill` / `architecture-plan-skill` / `data-model-skill` / `contract-design-skill` / `quickstart-validation-skill` / `spec-consistency-analysis-skill`
-8. 任务分解 → `task-slicing-skill`
+1. 项目宪章生成 → `00.intake.generate-project-intake`
+2. PRD 扫描 / 格式识别 → `00.intake.collect-context`
+3. EARS 生成 → `02.requirements.convert-ears`
+4. Feature Spec 拆分 → `05.feature.decompose`
+5. 澄清 → `10.change.impact-analysis`
+6. 需求质量检查 → `02.requirements.validate-testability`
+7. 全规划流水线 → `07.execution.prepare-context` / `06.planning.estimate-risk` / `03.hld.review-architecture` / `03.hld.define-data-flow` / `03.hld.define-adapter-model` / `06.planning.prepare-execution-plan` / `09.review.spec-consistency`
+8. 任务分解 → `05.feature.decompose`
 9. Spec Alignment 语义比对（Status Checker 子步骤）
-10. Review 内容 / 恢复策略 / PR 内容 / Spec 演进 → `review-report-skill` / `failure-recovery-skill` / `pr-generation-skill` / `spec-evolution-skill`
+10. Review 内容 / 恢复策略 / PR 内容 / Spec 演进 → `09.review.code-diff` / `12.recovery.classify-failure` / `14.release.prepare-pr` / `10.change.update-mainline-spec`
 
 **现有代码中可削减的部分：**
 

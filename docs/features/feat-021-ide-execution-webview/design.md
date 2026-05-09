@@ -45,7 +45,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - 查询输入：`projectId`、`workspaceRoot`、status filter、featureId、executionId。
 - 命令输入：`IdeCommandReceiptV1` 支持的 queue action、auto run / pause automation / resume automation 意图、Spec lifecycle controlled command 和 Feature schedule/open artifact intent。
 - 输出：Webview 只消费 Control Plane 返回的轻量 view model；完整 raw logs、diff、执行输出、evidence 和 Feature artifacts 通过引用或分页查询加载。
-- Execution Workbench 不自行选择下一 Feature；它展示 Control Plane 返回的 `feature-selection-skill` 决策、代码安全校验结果、approval pending、blocked/review_needed/failed 投影和可执行恢复动作。
+- Execution Workbench 不自行选择下一 Feature；它展示 Control Plane 返回的 `06.planning.replan` 决策、代码安全校验结果、approval pending、blocked/review_needed/failed 投影和可执行恢复动作。
 - Execution Workbench 队列分类展示只影响 VSCode Webview 投影，不改变 Scheduler / Execution 状态机；分类 panel 使用可折叠结构，`running` 和 `queued` 作为优先操作上下文固定置顶并默认展开，其它异常、暂停、取消、跳过和完成类状态默认折叠；`ready` 不作为独立分类 panel 出现。
 - Execution Workbench 默认不要求用户阅读大段 JSON；`SkillOutputContractV1.result` 中的 `commands`、`verification`、`decision`、`blockers`、`findings`、`risks`、`coverage`、`openQuestions`、`updatedDocuments` 等常见字段按分组展示，未识别字段放入 Additional Result JSON，完整 contract JSON 仍保留用于审计。
 - Execution Workbench 顶部任务按钮不得默认作用于未确认任务；除全局自动执行和刷新外，任务动作必须绑定当前选中的 queue item。全局自动执行入口根据 Control Plane 的项目自动执行启用标记在 `Start Auto Run` 和 `Pause Auto Run` 之间切换；该按钮表达是否启用自动续跑，不表达当前队列是否 idle / running。点击 Start 必须先启用项目自动执行，再尝试在队列为空时选择可执行 Feature；选不到 Feature 只记录为 selection blocked，不得阻止启用状态切换。点击 Pause 必须禁用项目自动执行；禁用后已有队列任务仍可继续执行，但完成后不得自动从 Feature 选择下一项。Pause / Resume 使用同一个任务级双态入口：选中任务为 `paused` 时显示 Resume，其它允许暂停状态显示 Pause；状态不允许该动作时按钮必须禁用并保留提示。
@@ -54,9 +54,9 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Product Console 与三组 VSCode Webview 共用持久事实源，但不共用 UI ViewModel 作为事实源。
 - Spec Workspace 的全流程操作通过 `runControlledCommand` 或 Spec change request 进入 extension host，由 Control Plane 决定是否生成任务、记录审批或拒绝动作。
 - Feature Spec 的调度、打开文档和刷新动作在 VSCode extension host 内执行；调度类动作必须进入 Control Plane command API。
-- New Feature 提交使用 Spec change request 或等价受控命令进入需求处理链路，payload 包含 workspaceRoot、source surface、freeform content、current feature selection、visible Feature index snapshot 和 traceability hints；模型负责判定 `requirement-intake-skill` 或 `spec-evolution-skill`，前端不得硬编码路由规则。
+- New Feature 提交使用 Spec change request 或等价受控命令进入需求处理链路，payload 包含 workspaceRoot、source surface、freeform content、current feature selection、visible Feature index snapshot 和 traceability hints；模型负责判定 `10.change.create-request` 或 `10.change.update-mainline-spec`，前端不得硬编码路由规则。
 - Review 通过提交使用 Product Console 相同的 ReviewItem 审批命令，payload 至少包含 ReviewItem ID；Control Plane 负责写 `approval_records`、更新 `review_items.status`，并按 ReviewItem 保存的 paused Feature/Task 状态恢复到原阶段入口。
-- Review 澄清提交使用 Spec change request，payload 包含 workspaceRoot、Feature ID、Feature status、来源 Feature Spec 文档和澄清文本；前端固定提交 `clarification` 意图，Control Plane 将其路由为 `resolve_clarification` 并排入 `ambiguity-clarification-skill`，不直接生成需求变更、需求新增或 Review 结论。
+- Review 澄清提交使用 Spec change request，payload 包含 workspaceRoot、Feature ID、Feature status、来源 Feature Spec 文档和澄清文本；前端固定提交 `clarification` 意图，Control Plane 将其路由为 `resolve_clarification` 并排入 `10.change.impact-analysis`，不直接生成需求变更、需求新增或 Review 结论。
 - Ready 提交使用 `mark_feature_ready` 受控命令，payload 包含 `projectId` 和 Feature ID；Control Plane 必须校验目标 Feature 不是 completed / delivered 终态，再更新 Feature `spec-state.json.status`、blocked reasons、nextAction 和 features 表。Webview 不得直接写 `spec-state.json` 或 SQLite。
 - Pass / `mark_feature_complete` 仅用于临时状态重置，不作为 Webview 默认操作。若被运维调用，Control Plane 必须校验目标 Feature 当前为 blocked 或 review-needed 状态，再更新 Feature `spec-state.json.status`、`executionStatus`、blocked reasons、lastResult、features 表、当前或最近 `feature_execution` Execution Record 和对应 Scheduler Job。Webview 不得直接写 `spec-state.json`、SQLite 或 Scheduler 内部队列。
 - Feature Spec 刷新返回的 view model 必须以 index rows 生成 Feature 节点；folder scan 仅用于校验 index 中的 folder 是否存在、读取 `requirements.md` / `design.md` / `tasks.md` / `spec-state.json` 和生成 missing-folder / missing-file blocked reason。未写入 index 的目录、数据库 Feature 记录和历史同步残留不得生成 Feature 节点；Webview 不渲染独立 `Feature Index Sync` 区块。
@@ -73,7 +73,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Node tests 覆盖 IDE query/command contract、queue action payload 和 controlled command receipt。
 - Webview 级验证覆盖桌面尺寸下的三组入口可打开、第一屏关键区域可见、审批卡片、失败/阻塞状态和 Feature 卡片详情。
 - Webview 级验证覆盖 New Feature 弹窗提交、模型路由 receipt、刷新时 Feature 身份只来自 index、非 index 目录不进入 Feature 列表、界面不显示 `Feature Index Sync` 信息区块，以及 Feature 详情 `tasks.md` 任务状态解析。
-- Webview 级验证覆盖 `need review` / `review_needed` Feature 的 Review 审批入口、`approve_review` 受控命令、澄清提交 receipt、任务队列中的 `ambiguity-clarification-skill` 调用，以及 Feature 详情不再出现 Evidence 验收项。
+- Webview 级验证覆盖 `need review` / `review_needed` Feature 的 Review 审批入口、`approve_review` 受控命令、澄清提交 receipt、任务队列中的 `10.change.impact-analysis` 调用，以及 Feature 详情不再出现 Evidence 验收项。
 - Command 级验证覆盖 blocked 与 review-needed Feature 的临时 `mark_feature_complete` 命令、`spec-state.json` 状态投影、Execution Record 状态和 Scheduler Job 状态同步为 `completed`，但 Webview 默认不展示 Pass 按钮。
 - Webview / command 级验证覆盖选中非 ready Feature 后的 `Ready` 入口、`mark_feature_ready` 受控命令、`spec-state.json.status` 和 features 表状态同步为 `ready`。
 - Webview 级验证覆盖 Feature 分类 panel 顺序、折叠/展开行为、展开/折叠状态图标、Done 默认折叠，以及 panel 内 Feature list 自适应换行且不出现水平滚动条。

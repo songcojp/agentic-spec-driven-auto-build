@@ -698,12 +698,12 @@ THE SYSTEM SHALL 展示独立于 Product Console 的 Execution Workbench Webview
     "input": [
       {
         "type": "text",
-        "text": "$spec-evolution-skill 根据以下 ExecutionAdapterInvocationV1.skillInstruction 修改文档..."
+        "text": "$10.change.update-mainline-spec 根据以下 ExecutionAdapterInvocationV1.skillInstruction 修改文档..."
       },
       {
         "type": "skill",
-        "name": "spec-evolution-skill",
-        "path": "/path/to/.agents/skills/spec-evolution-skill/SKILL.md"
+        "name": "10.change.update-mainline-spec",
+        "path": "/path/to/.agents/skills/10.change.update-mainline-spec/SKILL.md"
       }
     ],
     "outputSchema": {}

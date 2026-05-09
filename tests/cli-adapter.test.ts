@@ -74,7 +74,7 @@ function executionInvocation(overrides: Partial<{
     },
     outputSchema: {},
     skillInstruction: {
-      skillSlug: overrides.skillSlug ?? "pr-ears-requirement-decomposition-skill",
+      skillSlug: overrides.skillSlug ?? "02.requirements.convert-ears",
       requestedAction: overrides.requestedAction ?? "generate_ears",
       sourcePaths: overrides.sourcePaths ?? ["docs/PRD.md"],
       expectedArtifacts: overrides.expectedArtifacts ?? [{ path: "docs/requirements.md", kind: "markdown", required: true }],
@@ -96,7 +96,7 @@ function skillOutputEvent(overrides: Partial<{
   const output = {
     contractVersion: "skill-contract/v1",
     executionId: overrides.executionId ?? "RUN-SKILL",
-    skillSlug: overrides.skillSlug ?? "pr-ears-requirement-decomposition-skill",
+    skillSlug: overrides.skillSlug ?? "02.requirements.convert-ears",
     requestedAction: overrides.requestedAction ?? "generate_ears",
     status: overrides.status ?? "completed",
     summary: overrides.summary ?? "Skill completed.",
@@ -327,7 +327,7 @@ test("SkillOutputContract validation requires common fields but allows skill-spe
   const valid = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-VALIDATE",
-    skillSlug: "pr-ears-requirement-decomposition-skill",
+    skillSlug: "02.requirements.convert-ears",
     requestedAction: "generate_ears",
     status: "completed",
     summary: "Generated requirements.",
@@ -618,7 +618,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     prompt: "Implement the bounded task.",
     files: ["src/index.ts", "tests/index.test.ts"],
     executionInvocation: executionInvocation({
-      skillSlug: "feat-implement-skill",
+      skillSlug: "07.execution.dispatch-adapter",
       operation: "task_execution",
       sourcePaths: ["docs/features/FEAT-001/tasks.md"],
       expectedArtifacts: [{ path: ".autobuild/reports/cli-adapter.json", kind: "json", required: true }],
@@ -633,7 +633,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     policy: docsDirectWritePolicy,
     prompt: "Implement the task without file scope.",
     executionInvocation: executionInvocation({
-      skillSlug: "feat-implement-skill",
+      skillSlug: "07.execution.dispatch-adapter",
       operation: "task_execution",
       sourcePaths: ["docs/features/FEAT-001/tasks.md"],
       expectedArtifacts: [{ path: ".autobuild/reports/cli-adapter.json", kind: "json", required: true }],
@@ -648,7 +648,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     policy: docsDirectWritePolicy,
     prompt: "Generate a risky artifact.",
     executionInvocation: executionInvocation({
-      skillSlug: "technical-context-skill",
+      skillSlug: "07.execution.prepare-context",
       expectedArtifacts: [{ path: "../outside.md", kind: "markdown", required: true }],
       requestedAction: "feature_planning",
     }),
@@ -708,7 +708,7 @@ test("feature-level coding prompt requires Feature Spec execution instead of rep
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "feature_execution",
-      skillSlug: "feat-implement-skill",
+      skillSlug: "07.execution.dispatch-adapter",
       requestedAction: "feature_execution",
       sourcePaths: [
         "docs/features/FEAT-001/requirements.md",
@@ -732,7 +732,7 @@ test("task-slicing prompt requires the full SkillOutputContract result", () => {
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "split_feature_specs",
-      skillSlug: "task-slicing-skill",
+      skillSlug: "05.feature.decompose",
       requestedAction: "split_feature_specs",
       sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
       expectedArtifacts: [
@@ -754,7 +754,7 @@ test("generic skill invocation prompt does not include Codex CLI image generatio
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "generate_ui_spec",
-      skillSlug: "ui-spec-skill",
+      skillSlug: "04.ui.generate-spec",
       requestedAction: "generate_ui_spec",
       sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
       expectedArtifacts: [
@@ -785,7 +785,7 @@ test("task-slicing runs receive a strict specialized result output schema", asyn
     executionInvocation: executionInvocation({
       executionId: "RUN-TASK-SCHEMA",
       operation: "split_feature_specs",
-      skillSlug: "task-slicing-skill",
+      skillSlug: "05.feature.decompose",
       requestedAction: "split_feature_specs",
       sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
       expectedArtifacts: [
@@ -796,7 +796,7 @@ test("task-slicing runs receive a strict specialized result output schema", asyn
     runner: (_command, args) => {
       const schemaFlagIndex = args.indexOf("--output-schema");
       schema = JSON.parse(readFileSync(args[schemaFlagIndex + 1], "utf8")) as Record<string, unknown>;
-      return { status: 0, stdout: skillOutputEvent({ executionId: "RUN-TASK-SCHEMA", skillSlug: "task-slicing-skill", requestedAction: "split_feature_specs" }), stderr: "" };
+      return { status: 0, stdout: skillOutputEvent({ executionId: "RUN-TASK-SCHEMA", skillSlug: "05.feature.decompose", requestedAction: "split_feature_specs" }), stderr: "" };
     },
   });
 
@@ -819,7 +819,7 @@ test("Codex CLI adapter augments image artifact prompts with imagegen rules", as
     executionId: "RUN-CODEX-IMAGE",
     workspaceRoot,
     operation: "generate_ui_spec",
-    skillSlug: "ui-spec-skill",
+    skillSlug: "04.ui.generate-spec",
     requestedAction: "generate_ui_spec",
     sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
     expectedArtifacts: [
@@ -847,7 +847,7 @@ test("Codex CLI adapter augments image artifact prompts with imagegen rules", as
           JSON.stringify({ type: "session.created", session_id: "SESSION-IMAGE" }),
           skillOutputEvent({
             executionId: "RUN-CODEX-IMAGE",
-            skillSlug: "ui-spec-skill",
+            skillSlug: "04.ui.generate-spec",
             requestedAction: "generate_ui_spec",
             summary: "UI Spec image prompt rules applied.",
             producedArtifacts: [
@@ -870,7 +870,7 @@ test("clarification skill prompt treats operator input as an answer to apply", (
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "resolve_clarification",
-      skillSlug: "ambiguity-clarification-skill",
+      skillSlug: "10.change.impact-analysis",
       requestedAction: "resolve_clarification",
       sourcePaths: ["docs/zh-CN/requirements.md"],
       expectedArtifacts: [{ path: "docs/zh-CN/requirements.md", kind: "markdown", required: true }],
@@ -1012,7 +1012,7 @@ test("Gemini CLI adapter extracts session, usage, and SkillOutputContract from s
   const output = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-GEMINI",
-    skillSlug: "pr-ears-requirement-decomposition-skill",
+    skillSlug: "02.requirements.convert-ears",
     requestedAction: "generate_ears",
     status: "completed",
     summary: "Gemini completed.",
