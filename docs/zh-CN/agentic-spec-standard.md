@@ -803,6 +803,32 @@ specs/mainline/03-hld.md
 
 ---
 
+### 6.4.1 HLD / Feature Design / LLD Policy
+
+主线 HLD 是项目级架构事实源，只负责系统地图和跨 Feature 约束：
+
+- 系统边界、运行拓扑、信任边界和外部依赖。
+- 模块/子系统职责、事实源、状态流、数据域和集成策略。
+- 安全、审批、恢复、审计、可观测性、测试质量策略。
+- Feature Spec 拆分边界、依赖顺序和需求覆盖方向。
+
+主线 HLD 不生成主线 LLD，不创建 `docs/lld.md`、`docs/<language>/lld.md`，也不承载以下内容：
+
+- 函数签名、字段级 payload、数据库迁移细节。
+- UI 组件内部结构、页面局部布局实现细节。
+- 单个 Feature 的任务步骤、文件编辑清单或算法实现。
+- 可直接交给编码 Agent 执行的低层实现计划。
+
+低层设计只在需要时进入 Feature 级文档或规划结果：
+
+- Feature `requirements.md` 负责可验收对象：`User Story Coverage`、`User Journey Coverage`、REQ/US/Acceptance 映射、Foundation Exemption。
+- Feature `design.md` 负责闭环实现路径：用户旅程如何落到 UI/API/状态/数据/错误/恢复/证据；高风险 Feature 的低层设计也写在这里。
+- Feature `tasks.md` 负责可执行闭环任务：按 P1/P2/P3 用户故事纵切，包含 Journey Checkpoint 和 evidence expectation。
+
+如果实现、评审或规划发现需要改变项目级架构边界，应走 HLD / requirements 的 Spec Evolution；如果只是 Feature 内部实现细化，不得回写主线 HLD 或创建主线 LLD。
+
+---
+
 ## 6.5 UI Specification
 
 文件：

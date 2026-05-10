@@ -5,7 +5,10 @@ description: "Check planning outputs against the active Feature Spec. Use at the
 
 # Spec Consistency Analysis Skill
 
-Use this skill as the final planning gate before a feature moves to `tasked`.
+Use this skill as the final planning gate before a Feature moves to `tasked`.
+It checks both horizontal consistency and document-layer boundaries: project
+HLD stays project-level, Feature design carries Feature-level implementation
+detail, and tasks carry executable Journey Checkpoints.
 
 ## Workflow
 
@@ -13,14 +16,19 @@ Use this skill as the final planning gate before a feature moves to `tasked`.
 2. Verify every requirement has a design path, task coverage, user journey coverage, and acceptance verification plan.
 3. Verify every task maps to an approved requirement, design decision, or explicit follow-up.
 4. Verify every P1 user story has a Journey Checkpoint in `tasks.md` and that UI-bearing Features include browser-level or equivalent runtime evidence expectations.
-5. Check that data model, contracts, quickstart validation, and task slicing do not contradict each other.
-6. List stale status, dependency, milestone, or feature-index entries that must be corrected.
+5. Verify HLD-vs-Feature boundaries:
+   - HLD does not contain Feature task steps, function signatures, component internals, or field-level payloads.
+   - Feature design does not redefine project-level architecture, source-of-truth ownership, runtime topology, or security policy.
+   - Feature design carries any needed Feature-scoped low-level design instead of relying on a mainline LLD.
+6. Check that data model, contracts, quickstart validation, and task slicing do not contradict each other.
+7. List stale status, dependency, milestone, or feature-index entries that must be corrected.
 
 ## Output
 
 - Consistency decision.
 - Requirement-to-task coverage table.
 - Journey coverage table.
+- HLD/Feature boundary findings.
 - Contradictions or stale assumptions.
 - Required fixes before implementation.
 
@@ -37,6 +45,7 @@ Use this skill as the final planning gate before a feature moves to `tasked`.
 - `decision`: `"consistent"` or `"inconsistent"`.
 - `coverage`: requirement-to-task coverage rows.
 - `journeyCoverage`: user story to Journey Checkpoint and acceptance coverage rows.
+- `boundaryFindings`: HLD-vs-Feature boundary findings and required destination fixes.
 - `contradictions`: array of conflicts across requirements, design, data model, contracts, quickstart, or tasks.
 - `staleAssumptions`: assumptions that no longer match current artifacts.
 - `requiredFixes`: fixes required before implementation.

@@ -5,22 +5,24 @@ description: "Validate that a planned feature can be started and tested before t
 
 # Quickstart Validation Skill
 
-Use this skill as the pre-task-slicing feasibility gate. Its purpose is to confirm the implementation path is **startable**, **testable**, and **constitution-compliant** before task slicing commits to a task graph. It does not produce a spec artifact—it produces a go/no-go decision with a verification summary.
+Use this skill as the pre-task-slicing feasibility gate. Its purpose is to confirm the implementation path is **startable**, **testable**, **journey-checkpoint executable**, and **constitution-compliant** before task slicing commits to a task graph. It does not produce a spec artifact—it produces a go/no-go decision with a verification summary.
 
 ## Workflow
 
 1. Read the feature requirements, architecture plan, data model plan, contract plan, and repository commands.
 2. Verify the expected runtime, package manager, test command, build command, and target files are available.
 3. Identify the smallest command or inspection that proves the implementation path is startable and testable.
-4. **Check constitution compliance**: read `memory/constitution.md` (or equivalent project constitution) and confirm the planned architecture does not violate its gates (e.g., project count limit, framework-direct usage, test-first ordering, integration-first testing). Record any violations with the relevant article and a proposed resolution.
-5. Record blockers explicitly instead of producing tasks that cannot run.
-6. Do not modify source files unless the caller explicitly asks for a setup fix.
+4. Confirm that every P1 Journey Checkpoint expected by Feature requirements/design can be executed or verified in the current repository/environment. If browser, integration, or external-service evidence is required, identify the command/tooling or mark the path blocked.
+5. **Check constitution compliance**: read `memory/constitution.md` (or equivalent project constitution) and confirm the planned architecture does not violate its gates (e.g., project count limit, framework-direct usage, test-first ordering, integration-first testing). Record any violations with the relevant article and a proposed resolution.
+6. Record blockers explicitly instead of producing tasks that cannot run.
+7. Do not modify source files unless the caller explicitly asks for a setup fix.
 
 ## Output
 
 - Startability decision (go / blocked).
 - Commands checked and expected working directory.
 - Testability decision.
+- Journey Checkpoint executability decision.
 - Constitution compliance: pass or list of violations with article reference.
 - Blockers and required remediation.
 
@@ -37,6 +39,7 @@ Use this skill as the pre-task-slicing feasibility gate. Its purpose is to confi
 - `startability`: `"go"` or `"blocked"`.
 - `commandsChecked`: array with command, cwd, found/expected status, and summary.
 - `testability`: pass/fail decision with smallest meaningful test command.
+- `journeyCheckpointReadiness`: pass/fail decision with each P1 checkpoint, required evidence, and command/tool availability.
 - `constitutionCompliance`: pass/fail plus article references.
 - `blockers`: array of blockers and required remediation.
 

@@ -7,6 +7,22 @@ description: "Split product scope into implementation-ready Feature Specs and sl
 
 This is the design-named entry point for Feature Spec decomposition and task graph generation.
 
+## Collaboration Boundary
+
+`05.feature.decompose` may create the complete Feature Spec triad when the
+caller asks for a full split, but it should treat the three focused generation
+skills as the canonical templates:
+
+- `05.feature.generate-requirements` owns Feature `requirements.md`.
+- `05.feature.generate-design` owns Feature `design.md` and any
+  Feature-scoped low-level design.
+- `05.feature.generate-tasks` owns parser-compatible `tasks.md` and Journey
+  Checkpoints.
+
+Do not put project-level HLD detail into Feature design, and do not generate a
+mainline LLD. When a Feature needs low-level design, place it in that Feature's
+`design.md` or the relevant planning result.
+
 ## Workflow
 
 1. Read the PRD, EARS requirements, project-level HLD, feature requirements, feature design, architecture plan, data model plan, contract plan, quickstart validation, and existing `tasks.md` if available.

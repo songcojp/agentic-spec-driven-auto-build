@@ -5,15 +5,19 @@ description: "Design or validate feature-level data model changes. Use when plan
 
 # Data Model Skill
 
-Use this skill in planning when a feature reads, writes, migrates, or presents durable data.
+Use this skill in planning when a Feature reads, writes, migrates, or presents
+durable data. Its output is Feature-level data design input for Feature
+`design.md` and `tasks.md`; it does not change project HLD unless it discovers
+an architecture-level contradiction that must route through spec evolution.
 
 ## Workflow
 
 1. Read requirements, feature design, HLD data domains, and existing schema/model code.
 2. Identify owned entities, fields, lifecycle states, invariants, indexes, migrations, and retention/audit needs.
-3. Preserve compatibility with existing schema versioning and migration strategy.
-4. Define validation, idempotency, concurrency, and rollback behavior.
-5. Map each data change to requirements and tests.
+3. Map data reads/writes to the user journeys and acceptance scenarios they support.
+4. Preserve compatibility with existing schema versioning and migration strategy.
+5. Define validation, idempotency, concurrency, and rollback behavior.
+6. Map each data change to requirements, Journey Checkpoints, and tests.
 
 ## Output
 
@@ -21,6 +25,7 @@ Use this skill in planning when a feature reads, writes, migrates, or presents d
 - Migration and compatibility plan.
 - Validation and lifecycle rules.
 - Test and verification-summary requirements.
+- Feature design and task notes that must consume the data plan.
 
 ## Output Contract
 
@@ -36,6 +41,9 @@ Use this skill in planning when a feature reads, writes, migrates, or presents d
 - `fields`: array of field-level changes with compatibility notes.
 - `migrations`: array of required migrations, rollback notes, and data-loss risks.
 - `lifecycleRules`: array of validation, state transition, concurrency, or retention rules.
+- `journeyDataUsage`: user story or acceptance scenario to data read/write rows.
+- `featureDesignNotes`: data-design notes that must be copied into Feature `design.md`.
+- `taskInputs`: task-slicing notes for migrations, model updates, tests, and verification.
 - `verification`: array of required data, migration, or query checks.
 
 ## Failure Routing

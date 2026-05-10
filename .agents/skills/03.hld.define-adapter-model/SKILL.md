@@ -5,14 +5,17 @@ description: "Design feature-level contracts. Use when planning requires API, CL
 
 # Contract Design Skill
 
-Use this skill to define the interfaces a feature exposes or consumes.
+Use this skill to define the interfaces a Feature exposes or consumes. Its
+output is Feature-level contract design input for Feature `design.md` and
+`tasks.md`; it does not redefine project HLD integration strategy or create a
+mainline LLD.
 
 ## Workflow
 
 1. Read feature requirements, design, HLD integration strategy, technical context, and existing interface patterns.
 2. Identify contract type: HTTP API, CLI command, file format, event, view model, skill input, verification package, or internal function boundary.
-3. Define required fields, validation, status codes or outcomes, error cases, compatibility promises, and examples.
-4. Map contracts to consumers and tests.
+3. Define required fields, validation, status codes or outcomes, error cases, compatibility promises, and examples at the minimum detail needed for implementation.
+4. Map contracts to user journeys, consumers, Journey Checkpoints, and tests.
 5. Flag breaking changes before task slicing.
 
 ## Output
@@ -21,6 +24,7 @@ Use this skill to define the interfaces a feature exposes or consumes.
 - Validation and error behavior.
 - Backward-compatibility notes.
 - Required contract tests.
+- Feature design and task notes that must consume the contract plan.
 
 ## Output Contract
 
@@ -35,6 +39,9 @@ Use this skill to define the interfaces a feature exposes or consumes.
 - `contracts`: array of contract definitions with `type`, `name`, `consumer`, `producer`, and payload/status summary.
 - `validationRules`: array of field, status, error, or compatibility rules.
 - `examples`: array of compact request/response, file, event, or CLI examples when useful.
+- `journeyContractUsage`: user story or acceptance scenario to contract rows.
+- `featureDesignNotes`: contract-design notes that must be copied into Feature `design.md`.
+- `taskInputs`: task-slicing notes for implementation and verification.
 - `requiredTests`: array of contract tests to add or run.
 - `breakingChanges`: array of backward-incompatible changes, empty when none.
 

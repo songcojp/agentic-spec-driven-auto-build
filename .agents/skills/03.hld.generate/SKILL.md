@@ -7,6 +7,25 @@ description: "Create or regenerate the project-level HLD from PRD, EARS requirem
 
 Use this skill to create or regenerate the project-level High Level Design. This is not a feature design skill and must not write `docs/features/<feature-id>/design.md`.
 
+## HLD vs Feature Design vs No Mainline LLD
+
+The project HLD is the system-level architecture source of truth. It owns
+architecture maps, subsystem boundaries, source-of-truth data ownership,
+cross-feature state flows, integration strategy, runtime topology, security,
+observability, testing strategy, and Feature decomposition guidance.
+
+The project HLD must not become a mainline Low Level Design. Do not generate
+`docs/lld.md`, `docs/<language>/lld.md`, or a project-wide LLD section as part
+of this skill. Low-level design belongs in the affected Feature Spec
+`design.md` or in planning-stage result objects such as architecture, data-flow,
+or adapter-model plans.
+
+Do not put function signatures, field-level payload definitions, component
+internals, task steps, implementation file edits, or per-Feature algorithm
+details in the HLD. If those details are needed, route them to
+`05.feature.generate-design`, `03.hld.review-architecture`,
+`03.hld.define-data-flow`, or `03.hld.define-adapter-model`.
+
 ## Inputs
 
 Read the available project-level sources:
@@ -24,7 +43,7 @@ Use localized project-level sources such as `docs/en/*`, `docs/zh-CN/*`, or `doc
 1. Identify the product scope, phase boundaries, and current requirement set.
 2. Confirm the technology stack from repository facts. Repository facts and explicit PRD constraints take precedence. If the project has UI and no existing stack is determined from sources, default to the React-family stack that fits the primary application type; do not mark the frontend stack as `TBD` or defer it to implementation when this default can satisfy the product shape. If a non-UI or backend/runtime decision cannot be made from sources, mark it as `TBD` with the exact missing decision.
 3. Preserve project-level architecture boundaries: subsystems, data domains, integration strategy, workflows, security, observability, deployment, testing strategy, and feature decomposition guidance.
-4. Keep feature-specific implementation details out of the project HLD. Route feature API fields, component internals, and task-level details to feature specs instead.
+4. Keep feature-specific implementation details out of the project HLD. Route feature API fields, component internals, task-level details, and low-level design decisions to Feature Specs or planning-stage result objects instead.
 5. Reconcile stale `design.md` content only when it is consistent with PRD, requirements, and the current HLD direction.
 6. Write the output to `docs/hld.md` unless the invocation explicitly provides another HLD path or localized lane.
 7. When creating a new HLD, initialize the document header with a document version such as `版本：V1.0`; do not invent or copy a `CHG-*` change identifier as the initial document identity. Use `CHG-*` only when the invocation explicitly includes a real spec-evolution change ID for an existing change.
@@ -79,6 +98,7 @@ Use localized project-level sources such as `docs/en/*`, `docs/zh-CN/*`, or `doc
    - Unit, integration, browser/E2E, contract, migration, safety, and acceptance verification strategy.
 16. Feature Spec Decomposition Guidance
    - Suggested feature groups, dependency tree, delivery order, and which requirements each feature owns.
+   - Keep this guidance at boundary and sequencing level. Do not write Feature task lists, function names, component internals, field-level contracts, or low-level implementation plans here.
 17. Risks, Tradeoffs, and Open Questions
    - Architecture risks, accepted tradeoffs, unresolved decisions, and follow-up validation.
 
@@ -119,6 +139,7 @@ Use these patterns when the source documents support them. They are reusable HLD
 - The HLD must describe runtime/deployment and test strategy, even for a local-first application.
 - The HLD must preserve existing valid architecture decisions during regeneration and explicitly call out superseded or stale content instead of silently dropping it.
 - Avoid weak placeholders such as "具体技术栈由实现层决定" when source documents or repository facts can support a decision.
+- The HLD must explicitly preserve the no-mainline-LLD policy. If low-level design is needed, identify the owning Feature Spec or planning skill instead of writing it into the HLD.
 
 ## Output
 
@@ -141,6 +162,9 @@ Use these patterns when the source documents support them. They are reusable HLD
 - `inputFiles`: source files consumed.
 - `technologyDecisions`: key stack/runtime/persistence decisions or explicit `TBD` items.
 - `coverage`: requirement and required-section coverage summary.
+- `architectureBoundaries`: project-level subsystem, state, data, and integration boundaries that downstream Feature Specs must preserve.
+- `featureDesignGuidance`: Feature-level design areas that must be handled outside the HLD.
+- `lldPolicy`: `"no_mainline_lld"` plus a short note naming the Feature Spec or planning-result destination for low-level decisions.
 - `unresolvedQuestions`: architecture questions that remain open.
 
 ## Example Skill Invocation Contract
