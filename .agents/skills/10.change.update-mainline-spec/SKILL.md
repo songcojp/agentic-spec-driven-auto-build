@@ -5,7 +5,7 @@ description: "Manage requirement changes and spec evolution caused by user decis
 
 # Spec Evolution Skill
 
-Before editing, follow the governed requirement-change protocol in `.agents/skills/10.change.classify/SKILL.md`. That protocol makes `docs/zh-CN/change-management.md` or the active-lane `docs/change-management.md` authoritative for triage, mainline updates, downstream Feature Spec sync, review routing, and commit expectations. This skill is the design-named entry point for source-driven requirement and spec changes after the 10.change.classify triage classifies the item as `CHANGE`, `DEPRECATE`, `CLARIFY`, or `TRACEABILITY_FIX`.
+Before editing, follow the governed requirement-change protocol in `.agents/skills/10.change.classify/SKILL.md`. That protocol is owned by the skill catalog; do not create target-project `change-management.md` or `change-disposition-checklist.md` documents to hold protocol rules or pending items. This skill is the design-named entry point for source-driven requirement and spec changes after the 10.change.classify triage classifies the item as `CHANGE`, `DEPRECATE`, `CLARIFY`, or `TRACEABILITY_FIX`.
 
 ## When to Use This Skill vs. `10.change.create-request`
 

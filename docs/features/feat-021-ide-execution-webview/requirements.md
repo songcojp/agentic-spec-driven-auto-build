@@ -50,6 +50,7 @@ Feature 名称: IDE Workbench Webviews
 - CHG-054（2026-05-07）：用户澄清 `Pass` 只用于临时重置状态；VSCode Feature Spec Webview 在 `need review` / `review_needed` 状态必须提供与 Product Console 一致的 ReviewItem 审批入口，审批通过后恢复继续执行；默认 Webview 不再显示 `Pass` 按钮。影响 REQ-046、REQ-047、REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-055（2026-05-07）：用户要求 Job / Project 历史累计总费用保留两位小数并四舍五入；该规则只影响累计总费用，不改变单次执行费用的精度。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-057（2026-05-10）：用户要求 VSCode IDE 补齐 Spec 全操作入口：需求变更、澄清、新增、审批、恢复、重试等按钮必须按 Spec、Feature Spec、Job 的对象状态显示和启用。影响 REQ-084 和 FEAT-021，作为状态流转 UI follow-up 修订。
+- CHG-058（2026-05-10）：用户澄清需求新增/变更协议应固化在 `.agents/skills/10.change.*` 中，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；New Requirement 成功后只代表主线需求入口完成，Feature Spec 拆分/同步由后续 `split_feature_specs` / `05.feature.decompose` 继续。影响 REQ-063、REQ-084 和 FEAT-021，作为目标项目协议边界 follow-up 修订。
 
 ## UI 概念图
 
@@ -73,6 +74,8 @@ Feature 名称: IDE Workbench Webviews
 - [x] Webview 可以复用 shared contract/type 定义和 query/command API，但不得把 Product Console ViewModel 作为插件 UI 的事实源。
 - [x] `Feature Spec` 顶部提供 New Feature 按钮，点击后弹出输入框；输入自然语言内容并提交后，Webview 只提交受控需求输入，后续由模型判定进入 `10.change.create-request` 或 `10.change.update-mainline-spec` 流程。
 - [x] New Feature 提交必须展示 command receipt、路由结论、影响文档和阻塞原因；前端不得用关键字、是否填写 requirement id 等规则硬编码新增/变更判定。
+- [x] New Requirement / New Feature 的需求入口不得在目标项目创建 `change-management.md` 或 `change-disposition-checklist.md`；协议规则由 `.agents/skills/10.change.*` 承载，新增事实进入 PRD、`requirements.md`、HLD、Feature Specs 或状态/证据记录。
+- [x] New Requirement / New Feature 只完成需求追加或规格更新时，后续 Feature Spec 创建、拆分、同步和队列计划必须继续通过 `split_feature_specs` / `05.feature.decompose` 或受影响 Feature Spec 同步完成，不得依赖遗留待处置清单。
 - [x] `Feature Spec` 刷新时必须以 `docs/features/README.md` 作为 Feature 身份来源；数据库 Feature 记录和未写入 index 的目录不得生成 Feature 列表项。刷新仍读取 index 中 folder 对应的 `requirements.md` / `design.md` / `tasks.md`，并识别缺失 folder、缺失三件套和状态冲突。
 - [x] 因需求新增流程未经过 Feature 拆分而导致 `docs/features/README.md` 未更新时，Feature Spec Webview 不显示该目录为 Feature 列表项，也不显示独立 `Feature Index Sync` 信息区块；应由需求新增 Skill 或后续规格同步补齐 Feature index。
 - [x] 需求新增 Skill 创建或更新 Feature Spec 时必须同步 `docs/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。

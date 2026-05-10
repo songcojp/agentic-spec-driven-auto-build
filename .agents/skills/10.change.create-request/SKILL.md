@@ -5,7 +5,7 @@ description: "Intake and add new product requirements into the SpecDrive documen
 
 # Requirement Intake Skill
 
-Before editing, follow the governed requirement-change protocol in `.agents/skills/10.change.classify/SKILL.md`. That protocol makes `docs/zh-CN/change-management.md` or the active-lane `docs/change-management.md` authoritative for triage, mainline updates, downstream Feature Spec sync, review routing, and commit expectations. This skill is the design-named requirement intake entry point and owns new requirement propagation after the 10.change.classify triage classifies the item as `ADD`.
+Before editing, follow the governed requirement-change protocol in `.agents/skills/10.change.classify/SKILL.md`. That protocol is owned by the skill catalog; do not create target-project `change-management.md` or `change-disposition-checklist.md` documents to hold protocol rules or pending items. This skill is the design-named requirement intake entry point and owns new requirement propagation after the 10.change.classify triage classifies the item as `ADD`.
 
 ## When to Use This Skill vs. `10.change.update-mainline-spec`
 
@@ -45,7 +45,8 @@ Before editing, follow the governed requirement-change protocol in `.agents/skil
    - If it is independently deliverable, create a new feature folder and update `docs/features/README.md`.
    - Always update `docs/features/README.md` when creating or changing Feature information, even when the intake did not run the Feature splitting flow. Add or update the Feature ID, Feature name, folder, status, primary requirements, suggested milestone, and dependencies so IDE refresh and downstream execution do not see orphan Feature folders.
    - Keep dependencies, milestone, status, and source `REQ-*`/`NFR-*`/`EDGE-*` mapping aligned between the Feature folder and the index.
-10. Re-check downstream references: traceability matrix, phase mapping, feature index, HLD split/dependency mapping, and open questions.
+10. When the intake only appends mainline requirements and no Feature Spec is created or updated, report `downstreamSync` as pending and route the next step to `05.feature.decompose` / `split_feature_specs`; do not invent a checklist document to remember the pending split.
+11. Re-check downstream references: traceability matrix, phase mapping, feature index, HLD split/dependency mapping, and open questions.
 
 ## Versioning
 
@@ -64,6 +65,7 @@ Before editing, follow the governed requirement-change protocol in `.agents/skil
 
 - Preserve the source language unless the user asks otherwise.
 - Prefer in-place edits to the current formal docs over creating scratch files.
+- Do not create or update target-project `change-management.md` or `change-disposition-checklist.md`; protocol lives in `.agents/skills/10.change.*`, while change facts live in PRD, requirements, HLD, Feature Specs, and state/evidence records.
 - Update the mainline requirements document for the active lane; do not create `docs/features/requirements.md` for project-level requirements unless the protocol explicitly defines it.
 - Keep IDs stable; append new IDs instead of renumbering existing requirements unless the user explicitly asks for a rebase.
 - Keep implementation details out of requirements unless the PRD states them as hard constraints.

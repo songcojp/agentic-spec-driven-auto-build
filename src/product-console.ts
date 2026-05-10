@@ -5093,7 +5093,7 @@ function reviewTargetToFileSpecStatus(targetStatus: RecordApprovalInput["targetS
 function reviewDecisionNextAction(decision: RecordApprovalInput["decision"], targetStatus: FileSpecResumeTargetStatus): string {
   if (decision === "approve_continue") return `Review approved; resume ${targetStatus}.`;
   if (decision === "request_changes") return `Review requested changes; resume ${targetStatus} after updates.`;
-  if (decision === "update_spec") return "Update the affected Spec through the change-management flow before resuming.";
+  if (decision === "update_spec") return "Update the affected Spec through the skill-owned change protocol before resuming.";
   if (decision === "split_task") return `Split or re-plan the Feature from ${targetStatus}.`;
   if (decision === "rollback") return "Rollback decision recorded; inspect failure evidence before retrying.";
   if (decision === "reject") return "Review rejected; resolve the blocked reason before scheduling.";

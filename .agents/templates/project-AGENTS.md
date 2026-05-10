@@ -48,7 +48,7 @@ State fact ownership:
 
 ## Spec Operations
 
-- Requirement addition or change: follow `.agents/skills/10.change.classify/SKILL.md`, then route to `10.change.create-request` for new IDs or `10.change.update-mainline-spec` for existing IDs.
+- Requirement addition or change: follow the skill-owned protocol in `.agents/skills/10.change.classify/SKILL.md`, then route to `10.change.create-request` for new IDs or `10.change.update-mainline-spec` for existing IDs.
 - PRD to EARS: use `02.requirements.convert-ears`.
 - HLD generation: use `03.hld.generate`.
 - UI Spec generation: use `04.ui.generate-spec` after PRD, requirements, and HLD exist.
@@ -60,7 +60,8 @@ State fact ownership:
 
 ## Change And Drift Protocol
 
-- Any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix must go through the active change-management protocol before implementation.
+- Any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix must go through the skill-owned change protocol before implementation.
+- Do not create target-project `docs/change-management.md`, `docs/zh-CN/change-management.md`, or `docs/*/change-disposition-checklist.md`; those protocol/checklist documents are legacy SpecDrive repository artifacts. Store change facts in PRD, `requirements.md`, `hld.md`, affected Feature Specs, `spec-state.json`, and runtime/review evidence.
 - If a repository fact conflicts with the approved spec, do not silently code around it. Classify the conflict as either a code fix or spec evolution, then update the governing spec lane first when the spec changes.
 - If implementation, tests, review, or delivery evidence invalidates an active or completed Feature, record the affected evidence, update traceability, and reopen, follow up, or re-plan the affected Feature.
 - If a Feature is `blocked`, `failed`, `review_needed`, or `approval_needed`, do not repeatedly auto-select it unless there is an explicit resume or skip instruction.
@@ -68,7 +69,7 @@ State fact ownership:
 
 ## Spec Workflow
 
-1. Intake or evolve requirements through the active change-management protocol.
+1. Intake or evolve requirements through the skill-owned change protocol.
 2. Update mainline docs first: PRD when product scope changes, then `requirements.md`, then `hld.md` when architecture or system boundaries change.
 3. Sync downstream Feature Specs: update `docs/features/README.md`, affected feature `requirements.md`, `design.md`, `tasks.md`, and feature state notes.
 4. Run consistency checks before planning or implementation consumes changed specs.
@@ -95,7 +96,7 @@ State fact ownership:
 
 ## Skill Reference
 
-- `10.change.classify`: Triage requirement additions, changes, deprecations, clarifications, traceability fixes, and coverage gaps through the active change-management protocol.
+- `10.change.classify`: Triage requirement additions, changes, deprecations, clarifications, traceability fixes, and coverage gaps through the skill-owned change protocol.
 - `10.change.create-request`: Add brand-new `REQ-*`, `NFR-*`, or `EDGE-*` requirements with traceability and downstream sync.
 - `10.change.update-mainline-spec`: Change, correct, supersede, deprecate, clarify, or re-trace existing requirements and specs.
 - `10.change.impact-analysis`: Resolve unclear product intent, acceptance criteria, or technical boundaries.

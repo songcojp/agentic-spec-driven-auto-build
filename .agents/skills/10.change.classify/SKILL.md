@@ -1,6 +1,6 @@
 ---
 name: 10.change.classify
-description: "Govern requirement additions and changes through the SpecDrive change-management protocol before routing to requirement intake or spec evolution."
+description: "Govern requirement additions and changes through the SpecDrive skill-owned change protocol before routing to requirement intake or spec evolution."
 ---
 
 # Change Requirement Skill
@@ -9,11 +9,7 @@ This skill is the protocol entry point for requirement additions, requirement ch
 
 ## Governing Protocol
 
-Before editing any spec or code, read and follow the active change-management protocol:
-
-1. Use `docs/zh-CN/change-management.md` when the active project lane is Chinese or when the request is in Chinese.
-2. Use `docs/change-management.md` when it exists and the active lane is root English docs.
-3. For explicit multilingual projects, use the localized protocol that matches the active lane.
+Before editing any spec or code, apply this skill-owned change protocol. Do not create project-level protocol documents such as `docs/change-management.md`, `docs/zh-CN/change-management.md`, or `docs/*/change-disposition-checklist.md` in target projects. Those files are legacy SpecDrive repository artifacts, not managed-project sources of truth.
 
 The protocol is authoritative for:
 
@@ -26,6 +22,14 @@ The protocol is authoritative for:
 - active/done/delivered Feature handling;
 - review and blocking rules;
 - commit and verification expectations.
+
+Target-project change facts belong in the mainline spec lane and affected Feature Specs:
+
+- product intent and scope -> PRD;
+- stable `REQ-*`, `NFR-*`, and `EDGE-*` IDs -> `requirements.md`;
+- architecture or state/interface ownership -> `hld.md`;
+- executable delivery scope -> `docs/features/README.md` and `docs/features/<feature-id>/{requirements.md,design.md,tasks.md}`;
+- lifecycle state -> `spec-state.json` or runtime/review records where the project supports them.
 
 ## Required Triage Record
 

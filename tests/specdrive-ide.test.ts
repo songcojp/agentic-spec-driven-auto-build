@@ -1275,8 +1275,10 @@ test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown a
     { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [scheduler.jobs[0].schedulerJobId] },
   ]).queries.jobs[0].payload_json));
   assert.equal(payload.operation, "intake_requirement");
+  assert.equal(payload.context.skillSlug, "10.change.create-request");
   assert.equal(payload.context.requirementText, "Top New Feature request that may add or change existing scope.");
   assert.deepEqual(payload.context.expectedArtifacts, ["docs/requirements.md"]);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/requirements.md"), false);
 });
 
 test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill", () => {

@@ -61,6 +61,11 @@ Feature ID: FEAT-021
 描述: 修改 `10.change.create-request` 流程，要求新增或更新 Feature Spec 后必须同步 `docs/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
 验证: `git diff --check`，检查 `.agents/skills/10.change.create-request/SKILL.md` 明确 Feature index 同步责任。
 
+### T-021-11A 目标项目变更协议收拢到技能
+状态: done
+描述: 修改 `10.change.classify`、`10.change.create-request`、`10.change.update-mainline-spec` 和目标项目 `AGENTS.md` 模板，要求需求新增/变更协议由技能承载，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；当 New Requirement 仅完成主线需求追加时，将 Feature Spec 拆分/同步作为后续 `split_feature_specs` / `05.feature.decompose` 工作。
+验证: `node --test tests/projects.test.ts tests/specdrive-ide.test.ts`，`git diff --check`。
+
 ### T-021-12 Feature 详情 tasks.md 任务解析
 状态: done
 描述: 点击 Feature 后在详情面板解析对应 `tasks.md`，展示任务 ID、标题、状态、描述和验证命令；缺失或无法解析时显示 blocked reason，并保留打开原始 `tasks.md` 的操作。

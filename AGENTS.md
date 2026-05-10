@@ -19,7 +19,7 @@ This repository is a spec-driven autonomous coding system. Treat the spec artifa
 - When a repository fact conflicts with a spec, update the spec through the spec-evolution path instead of silently coding around it.
 - If implementation intent, acceptance criteria, or file scope is unclear, stop for clarification before making risky changes.
 - For Chinese docs, preserve Chinese structure, numbering, and terminology unless the user asks for a language or tone change.
-- For any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix, treat `.agents/skills/10.change.classify/SKILL.md` and the active `change-management.md` document as the Spec protocol. Triage through that protocol before editing, update the mainline spec lane first, and do not create project-level scratch requirement files under `docs/features/`.
+- For any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix, treat `.agents/skills/10.change.classify/SKILL.md` as the Spec protocol. Triage through that skill-owned protocol before editing, update the mainline spec lane first, and do not create project-level scratch requirement files under `docs/features/` or target-project `change-management.md` / `change-disposition-checklist.md` documents.
 
 ## Skill-vs-Code Decision
 
