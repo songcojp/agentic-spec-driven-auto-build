@@ -337,9 +337,12 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /restoreWorkbenchFormState\(\)/);
   assert.match(extensionSource, /textarea id="workbench-form-input"/);
   assert.match(webviewSource, /class="workbench-chat"/);
-  assert.match(webviewSource, /class="workbench-dialog system"/);
-  assert.match(webviewSource, /class="workbench-dialog user"/);
-  assert.match(webviewSource, /\.workbench-dialog\.user/);
+  assert.match(webviewSource, /class="workbench-compose"/);
+  assert.match(webviewSource, /\.workbench-chat\{display:grid;gap:0\}/);
+  assert.match(webviewSource, /\.workbench-compose\{display:grid;width:100%/);
+  assert.doesNotMatch(webviewSource, /class="workbench-dialog system"/);
+  assert.doesNotMatch(webviewSource, /id="workbench-form-prompt"/);
+  assert.doesNotMatch(webviewSource, /workbench-dialog-label">You/);
   assert.match(extensionSource, /commandButton\("New Feature", "openWorkbenchForm", \{ formMode: "newFeature" \}\)/);
   assert.match(extensionSource, /intent: "requirement_change_or_intake"/);
   assert.match(extensionSource, /intent: "clarification"/);
