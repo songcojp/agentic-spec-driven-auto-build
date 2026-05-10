@@ -381,6 +381,9 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /entityType: "review_item"/);
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
   assert.match(webviewSource, /renderFeatureStateFlow\(feature\)/);
+  assert.match(webviewSource, /renderFeatureStateRow/);
+  assert.match(webviewSource, /<div class="feature-state-row"><span>\$\{escapeHtml\(label\)\}<\/span><span>\$\{escapeHtml\(value\)\}<\/span><\/div>/);
+  assert.match(webviewSource, /\.feature-state-row\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
   assert.match(webviewSource, /featureExecutionLabel\(feature\)/);
