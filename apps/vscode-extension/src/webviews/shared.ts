@@ -16,7 +16,7 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
     .result-summary{display:grid;gap:7px;margin-bottom:8px}.result-status{display:flex;gap:8px;align-items:flex-start;min-width:0}.result-status strong{min-width:0;overflow-wrap:anywhere}.chip-row{display:flex;gap:6px;flex-wrap:wrap}.result-group{border-top:1px solid var(--border);padding-top:4px;margin-top:6px}.token-consumption-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}.token-consumption-grid div{border:1px solid var(--border);border-radius:5px;padding:6px;min-width:0}.token-consumption-grid span{display:block;color:var(--muted);font-size:11px}.token-consumption-grid strong{display:block;min-width:0;overflow-wrap:anywhere;font-size:12px}.compact-list{margin:0;padding-left:16px}.compact-list li{margin:2px 0}.artifact-table{width:100%;border-collapse:collapse;font-size:12px}.artifact-table th,.artifact-table td{border-top:1px solid var(--border);padding:5px;text-align:left;vertical-align:top;overflow-wrap:anywhere}.artifact-table th{color:var(--muted);font-weight:650}.artifact-table code{white-space:pre-wrap}
     .stage-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px;margin-bottom:10px}.stage{display:grid;place-items:center;gap:3px;background:linear-gradient(180deg,var(--panel),var(--panel-strong));color:var(--vscode-foreground);min-height:64px}.stage .button-icon{color:var(--accent)}.stage span{display:block;color:var(--accent)}.stage.active,.stage[aria-pressed="true"]{border-color:var(--accent);background:linear-gradient(180deg,var(--accent-soft),color-mix(in srgb,var(--vscode-list-activeSelectionBackground,#123846) 72%,var(--panel)));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 38%,transparent)}.spec-stage-panel{width:100%;min-height:320px}
     .concept-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}.concept-card{padding:0;text-align:left;background:var(--panel-strong);color:var(--vscode-foreground);overflow:hidden}.concept-card img{display:block;width:100%;height:96px;object-fit:cover;background:var(--bg);border-bottom:1px solid var(--border)}.concept-card span{display:block;padding:7px 8px;color:var(--muted);font-size:12px}.concept-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(0,0,0,.72);padding:18px}.concept-modal[hidden]{display:none!important}.concept-dialog{width:min(1100px,96vw);max-height:94vh;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);overflow:hidden}.concept-dialog header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border)}.concept-dialog img{display:block;width:100%;max-height:calc(94vh - 54px);object-fit:contain;background:#000}
-    .hidden{display:none!important}.workbench-form{margin-bottom:10px}.workbench-form textarea,.settings-editor{width:100%;max-width:100%;min-height:96px;resize:vertical;background:var(--bg-elevated);color:var(--vscode-input-foreground);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font:inherit}.settings-editor{min-height:170px;font-family:var(--vscode-editor-font-family,"SFMono-Regular",Consolas,monospace);font-size:12px;line-height:1.45}.settings-editor-compact{min-height:110px}.settings-toolbar{display:flex;gap:10px;align-items:center;justify-content:flex-start;margin-bottom:12px;flex-wrap:wrap}.settings-toolbar .status-text{margin-left:auto}.settings-shell{display:grid;grid-template-columns:minmax(220px,260px) minmax(0,1fr);gap:12px;align-items:start}.settings-main{display:grid;gap:12px;min-width:0}.settings-rail,.settings-panel{border:1px solid var(--border);background:linear-gradient(180deg,var(--panel),var(--panel-strong));border-radius:var(--radius);min-width:0;box-shadow:var(--shadow)}.settings-rail{position:sticky;top:12px;padding:10px}.settings-panel{padding:10px}.settings-panel p.muted{font-size:12px;margin:6px 0 8px}.settings-panel .issue{font-size:12px;padding:7px}.settings-rail-title,.settings-panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:8px}.settings-rail-title h2,.settings-panel-title h2{min-width:0;overflow-wrap:anywhere}.settings-rail-title span,.settings-panel-title span{color:var(--muted);font-size:12px}.settings-adapter-matrix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.settings-summary-list,.settings-source-list,.settings-meta-grid{display:grid;gap:0}.settings-summary-row,.settings-meta-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,max-content);gap:10px;align-items:center;min-width:0;border-top:1px solid var(--border-soft);padding:7px 0;font-size:12px}.settings-summary-row:first-child,.settings-meta-row:first-child{border-top:0}.settings-summary-row span,.settings-meta-row span{min-width:0;overflow-wrap:anywhere}.settings-summary-row>span:first-child,.settings-meta-row>span:first-child{color:var(--muted)}.settings-summary-row strong,.settings-meta-row code{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}.settings-status-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid currentColor;border-radius:999px;padding:2px 7px;font-size:11px;text-transform:uppercase;background:color-mix(in srgb,currentColor 10%,transparent)}.settings-source-item{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);padding:6px 7px;margin-top:6px;font-size:12px}.settings-source-item span{min-width:0;overflow-wrap:anywhere}.settings-source-item strong{font-size:11px;font-weight:600}.settings-preset-row,.settings-chip-row,.settings-actionbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.settings-preset-row button,.settings-actionbar button{padding:5px 8px;font-size:12px}.settings-actionbar{justify-content:flex-end;margin:9px 0 0}.settings-chip-row{margin-bottom:0}.pricing-editor{display:grid;grid-template-columns:repeat(5,minmax(92px,1fr));gap:8px;margin-bottom:8px}.settings-field{display:grid;gap:4px;min-width:0;color:var(--muted);font-size:12px}.settings-field input{min-width:0;width:100%;background:var(--bg-elevated);color:var(--vscode-input-foreground);border:1px solid var(--border);border-radius:var(--radius);padding:5px 7px;font:inherit}.workbench-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}.dependency-panel{margin-bottom:10px}.dependency-tree,.dependency-tree ul{list-style:none;margin:0;padding-left:18px}.dependency-tree{padding-left:0}.dependency-tree li{position:relative;margin:4px 0;padding-left:14px}.dependency-tree li::before{content:"";position:absolute;left:0;top:13px;width:9px;border-top:1px solid var(--border)}.dependency-tree ul{border-left:1px solid var(--border);margin-left:8px}.dependency-branch>summary{list-style:none;cursor:pointer}.dependency-branch>summary::-webkit-details-marker{display:none}.dependency-branch>summary::before{content:"+";display:inline-flex;width:16px;color:var(--muted)}.dependency-branch[open]>summary::before{content:"-"}.dependency-leaf{margin-left:16px}.dependency-node{display:inline-flex;align-items:center;gap:7px;min-height:26px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);color:var(--vscode-foreground);padding:4px 7px}.dependency-node button{padding:2px 6px}.dependency-node.missing{color:var(--warn)}.dependency-node .muted{font-size:11px}
+    .hidden{display:none!important}.workbench-form{margin-bottom:10px}.workbench-chat{display:grid;gap:8px}.workbench-dialog{display:grid;gap:5px;max-width:min(100%,760px);border:1px solid var(--border-soft);border-radius:var(--radius);padding:8px;background:var(--bg-elevated)}.workbench-dialog.system{justify-self:start}.workbench-dialog.user{justify-self:end;width:min(100%,760px);background:color-mix(in srgb,var(--accent-soft) 62%,var(--bg-elevated))}.workbench-dialog-label{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:650}.workbench-dialog p{margin:0;color:var(--vscode-foreground);overflow-wrap:anywhere}.workbench-form textarea,.settings-editor{width:100%;max-width:100%;min-height:96px;resize:vertical;background:color-mix(in srgb,var(--bg-elevated) 82%,#000);color:var(--vscode-input-foreground);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font:inherit}.workbench-form textarea{border-color:color-mix(in srgb,var(--accent) 42%,var(--border));background:var(--vscode-input-background,var(--bg-elevated))}.settings-editor{min-height:170px;font-family:var(--vscode-editor-font-family,"SFMono-Regular",Consolas,monospace);font-size:12px;line-height:1.45}.settings-editor-compact{min-height:110px}.settings-toolbar{display:flex;gap:10px;align-items:center;justify-content:flex-start;margin-bottom:12px;flex-wrap:wrap}.settings-toolbar .status-text{margin-left:auto}.settings-shell{display:grid;grid-template-columns:minmax(220px,260px) minmax(0,1fr);gap:12px;align-items:start}.settings-main{display:grid;gap:12px;min-width:0}.settings-rail,.settings-panel{border:1px solid var(--border);background:linear-gradient(180deg,var(--panel),var(--panel-strong));border-radius:var(--radius);min-width:0;box-shadow:var(--shadow)}.settings-rail{position:sticky;top:12px;padding:10px}.settings-panel{padding:10px}.settings-panel p.muted{font-size:12px;margin:6px 0 8px}.settings-panel .issue{font-size:12px;padding:7px}.settings-rail-title,.settings-panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:8px}.settings-rail-title h2,.settings-panel-title h2{min-width:0;overflow-wrap:anywhere}.settings-rail-title span,.settings-panel-title span{color:var(--muted);font-size:12px}.settings-adapter-matrix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.settings-summary-list,.settings-source-list,.settings-meta-grid{display:grid;gap:0}.settings-summary-row,.settings-meta-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,max-content);gap:10px;align-items:center;min-width:0;border-top:1px solid var(--border-soft);padding:7px 0;font-size:12px}.settings-summary-row:first-child,.settings-meta-row:first-child{border-top:0}.settings-summary-row span,.settings-meta-row span{min-width:0;overflow-wrap:anywhere}.settings-summary-row>span:first-child,.settings-meta-row>span:first-child{color:var(--muted)}.settings-summary-row strong,.settings-meta-row code{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}.settings-status-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid currentColor;border-radius:999px;padding:2px 7px;font-size:11px;text-transform:uppercase;background:color-mix(in srgb,currentColor 10%,transparent)}.settings-source-item{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);padding:6px 7px;margin-top:6px;font-size:12px}.settings-source-item span{min-width:0;overflow-wrap:anywhere}.settings-source-item strong{font-size:11px;font-weight:600}.settings-preset-row,.settings-chip-row,.settings-actionbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.settings-preset-row button,.settings-actionbar button{padding:5px 8px}.settings-actionbar{justify-content:flex-end;margin:9px 0 0}.settings-chip-row{margin-bottom:0}.pricing-editor{display:grid;grid-template-columns:repeat(5,minmax(92px,1fr));gap:8px;margin-bottom:8px}.settings-field{display:grid;gap:4px;min-width:0;color:var(--muted);font-size:12px}.settings-field input{min-width:0;width:100%;background:var(--bg-elevated);color:var(--vscode-input-foreground);border:1px solid var(--border);border-radius:var(--radius);padding:5px 7px;font:inherit}.workbench-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}.dependency-panel{margin-bottom:10px}.dependency-tree,.dependency-tree ul{list-style:none;margin:0;padding-left:18px}.dependency-tree{padding-left:0}.dependency-tree li{position:relative;margin:4px 0;padding-left:14px}.dependency-tree li::before{content:"";position:absolute;left:0;top:13px;width:9px;border-top:1px solid var(--border)}.dependency-tree ul{border-left:1px solid var(--border);margin-left:8px}.dependency-branch>summary{list-style:none;cursor:pointer}.dependency-branch>summary::-webkit-details-marker{display:none}.dependency-branch>summary::before{content:"+";display:inline-flex;width:16px;color:var(--muted)}.dependency-branch[open]>summary::before{content:"-"}.dependency-leaf{margin-left:16px}.dependency-node{display:inline-flex;align-items:center;gap:7px;min-height:26px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);color:var(--vscode-foreground);padding:4px 7px}.dependency-node button{padding:2px 6px}.dependency-node.missing{color:var(--warn)}.dependency-node .muted{font-size:11px}
     .feature-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,34vw);gap:10px}.feature-board{display:flex;flex-direction:column;gap:10px;min-width:0}.feature-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);min-width:0;overflow:hidden;box-shadow:var(--shadow)}.feature-panel summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;cursor:pointer;background:linear-gradient(90deg,var(--accent-soft),transparent 74%);user-select:none;list-style:none}.feature-panel summary::-webkit-details-marker{display:none}.feature-panel summary::before{content:"+";display:inline-flex;width:16px;color:var(--muted);font-weight:650}.feature-panel[open] summary::before{content:"-"}.feature-panel summary h2{display:flex;gap:8px;align-items:center;margin-right:auto}.feature-panel summary span{color:var(--muted);font-size:12px}.feature-panel-items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));justify-content:stretch;gap:8px;align-items:stretch;padding:9px;overflow:visible}.feature-panel-items .muted{padding:2px}.feature-card{width:100%;min-width:0;min-height:154px;text-align:left;background:linear-gradient(180deg,var(--bg-elevated),var(--panel-strong));color:var(--vscode-foreground);border:1px solid var(--border-soft);border-radius:var(--radius);padding:9px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}.feature-card.current{background:linear-gradient(180deg,color-mix(in srgb,var(--vscode-list-activeSelectionBackground,#123846) 72%,var(--accent-soft)),var(--panel-strong));box-shadow:inset 4px 0 0 var(--accent),0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent)}.feature-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 65%,transparent)}.feature-card.current.selected{box-shadow:inset 4px 0 0 var(--accent),0 0 0 2px color-mix(in srgb,var(--accent) 65%,transparent)}.feature-card header{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.feature-card-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}.feature-select{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}.feature-select input{margin:0}.metric{display:grid;grid-template-columns:1fr auto;gap:6px;font-size:12px;color:var(--muted)}.bar{grid-column:1/-1;height:5px;background:color-mix(in srgb,var(--vscode-progressBar-background,#334155) 76%,#000);border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--ok))}.detail-panel{position:sticky;top:12px;height:calc(100vh - 32px);overflow:auto}.feature-state-row{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;padding:7px 8px;border-top:1px solid var(--border-soft);font-size:12px;min-width:0}.feature-state-row span{min-width:0;overflow-wrap:anywhere}.feature-state-row span:first-child{color:var(--muted);font-size:11px;font-weight:650;text-transform:uppercase}.feature-artifacts{display:grid;gap:5px}.artifact-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(72px,max-content) auto;align-items:center;gap:8px;border:1px solid var(--border-soft);border-radius:var(--radius);padding:5px 6px;font-size:12px;background:var(--bg-elevated)}.artifact-row strong{min-width:0;overflow-wrap:anywhere}.artifact-row button{padding:3px 7px}.task-chip-row{display:flex;flex-wrap:wrap;gap:6px}.task-chip{display:inline-flex;align-items:center;gap:6px;min-width:0;border:1px solid var(--border);border-radius:999px;padding:3px 7px;font-size:12px;background:var(--bg-elevated)}.task-chip strong{min-width:0;overflow-wrap:anywhere}.token-mini-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.token-mini-grid div{border:1px solid var(--border-soft);border-radius:var(--radius);padding:6px;min-width:0;background:var(--bg-elevated)}.token-mini-grid span{display:block;color:var(--muted);font-size:11px}.token-mini-grid strong{display:block;min-width:0;overflow-wrap:anywhere;font-size:12px}
     @media (max-width:1100px){.feature-layout{grid-template-columns:minmax(0,1fr) minmax(360px,36vw)}.feature-panel-items{grid-template-columns:repeat(2,minmax(0,1fr))}.concept-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.settings-shell{grid-template-columns:minmax(190px,220px) minmax(0,1fr)}.settings-adapter-matrix{grid-template-columns:minmax(0,1fr)}.pricing-editor{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:980px){.grid,.feature-layout,.execution-layout{display:block}.panel,.feature-panel{margin-bottom:10px}.current-selected-column{max-height:none;overflow:visible}.detail-panel{position:static;height:auto}.stage-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.feature-panel-items{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}.concept-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-shell{display:block}.settings-rail{position:static;margin-bottom:10px}.settings-panel{margin-bottom:10px}.settings-toolbar .status-text{margin-left:0}.pricing-editor{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -27,16 +27,59 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       const status = document.getElementById("workbench-status");
       if (status) status.textContent = message;
     };
-    const openWorkbenchForm = (mode, featureId, intent) => {
+    const workbenchState = () => vscode.getState() || {};
+    const workbenchFormState = () => {
+      const source = workbenchState().workbenchForm;
+      return source && typeof source === "object" ? source : {drafts: {}};
+    };
+    const writeWorkbenchFormState = (formState) => {
+      vscode.setState({...workbenchState(), workbenchForm: formState});
+    };
+    const workbenchDraftKey = (mode, featureId, intent) => [mode || "newFeature", featureId || "", intent || ""].join("::");
+    const workbenchDraftFor = (key) => {
+      const drafts = workbenchFormState().drafts || {};
+      const value = drafts[key];
+      return typeof value === "string" ? value : "";
+    };
+    const saveWorkbenchFormState = () => {
+      const form = document.getElementById("workbench-form");
+      const input = document.getElementById("workbench-form-input");
+      if (!form || !input) return;
+      const key = form.dataset.draftKey || workbenchDraftKey(form.dataset.formMode, form.dataset.featureId, form.dataset.intent);
+      const previous = workbenchFormState();
+      writeWorkbenchFormState({
+        ...previous,
+        current: {
+          open: !form.hidden,
+          mode: form.dataset.formMode || "newFeature",
+          featureId: form.dataset.featureId || "",
+          intent: form.dataset.intent || "",
+        },
+        drafts: {
+          ...(previous.drafts || {}),
+          [key]: input.value || "",
+        },
+      });
+    };
+    const clearWorkbenchFormDraft = (key) => {
+      const previous = workbenchFormState();
+      const drafts = {...(previous.drafts || {})};
+      if (key) delete drafts[key];
+      writeWorkbenchFormState({...previous, current: {...(previous.current || {}), open: false}, drafts});
+    };
+    const openWorkbenchForm = (mode, featureId, intent, options = {}) => {
       const form = document.getElementById("workbench-form");
       const title = document.getElementById("workbench-form-title");
       const subtitle = document.getElementById("workbench-form-subtitle");
+      const prompt = document.getElementById("workbench-form-prompt");
       const input = document.getElementById("workbench-form-input");
       if (!form || !title || !subtitle || !input) return;
       form.hidden = false;
       form.dataset.formMode = mode;
       form.dataset.featureId = featureId || "";
       form.dataset.intent = intent || "";
+      const draftKey = workbenchDraftKey(mode, featureId, intent);
+      form.dataset.draftKey = draftKey;
       const copy = {
         clarify: ["Clarify Feature", "Clarification", "Enter clarification content."],
         featureSpecChange: ["Feature Spec Change", "Feature request", "Enter the Feature-scoped requirement change."],
@@ -47,13 +90,20 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       }[mode] || ["New Feature", "Add or change", "Enter add-or-change content."];
       title.textContent = copy[0];
       subtitle.textContent = copy[1];
-      input.value = "";
-      input.focus();
+      if (prompt) prompt.textContent = copy[2];
+      input.value = typeof options.initialContent === "string" ? options.initialContent : workbenchDraftFor(draftKey);
+      if (options.focus !== false) input.focus();
+      saveWorkbenchFormState();
       setWorkbenchStatus(copy[2]);
+    };
+    const restoreWorkbenchFormState = () => {
+      const current = workbenchFormState().current;
+      if (current?.open) openWorkbenchForm(current.mode, current.featureId, current.intent, {focus: false});
     };
     const closeWorkbenchForm = () => {
       const form = document.getElementById("workbench-form");
       if (form) form.hidden = true;
+      saveWorkbenchFormState();
     };
     const parseSettingsJson = (editor) => {
       if (!editor || typeof editor.value !== "string") return undefined;
@@ -167,7 +217,12 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
         return;
       }
       const pricingTarget = event.target.closest("[data-pricing-field]");
-      if (pricingTarget) updatePricingRate(pricingTarget);
+      if (pricingTarget) {
+        updatePricingRate(pricingTarget);
+        return;
+      }
+      const workbenchInput = event.target.closest("#workbench-form-input");
+      if (workbenchInput) saveWorkbenchFormState();
     });
     document.addEventListener("click", (event) => {
       const featureCard = event.target.closest("[data-feature-card]");
@@ -219,6 +274,8 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
           setWorkbenchStatus("Submitting add-or-change request...");
           vscode.postMessage({command:"newFeature", content});
         }
+        clearWorkbenchFormDraft(form?.dataset.draftKey);
+        if (input) input.value = "";
         closeWorkbenchForm();
         return;
       }
@@ -330,6 +387,7 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       }
       vscode.postMessage(payload);
     });
+    restoreWorkbenchFormState();
   </script></body></html>`;
 }
 
@@ -440,7 +498,10 @@ export function autoRefreshSwitch(enabled: boolean): string {
 export function renderWorkbenchInputForm(): string {
   return `<section id="workbench-form" class="panel workbench-form" hidden data-form-mode="newFeature">
     <div class="panel-title"><h2 id="workbench-form-title">New Feature</h2><span id="workbench-form-subtitle">Add or change</span></div>
-    <textarea id="workbench-form-input" aria-label="Feature input"></textarea>
+    <div class="workbench-chat">
+      <div class="workbench-dialog system"><span class="workbench-dialog-label">SpecDrive</span><p id="workbench-form-prompt">Enter add-or-change content.</p></div>
+      <label class="workbench-dialog user"><span class="workbench-dialog-label">You</span><textarea id="workbench-form-input" aria-label="Feature input"></textarea></label>
+    </div>
     <div class="workbench-form-actions">
       ${commandButton("Cancel", "closeWorkbenchForm", {})}
       ${commandButton("Submit", "submitWorkbenchForm", {})}
@@ -560,7 +621,8 @@ export function executionFieldsHtml(item: SpecDriveIdeQueueItem): string {
       ["Status", item.status],
       ["Operation", item.operation],
       ["Execution", item.executionId],
-      ["Feature", item.featureId],
+      ["Feature Spec", featureSpecLabel(item)],
+      ["Feature ID", item.featureId],
       ["Task", item.taskId],
       ["Adapter", item.adapter],
       ["Run Mode", item.runMode],
@@ -574,7 +636,8 @@ export function executionFieldsHtml(item: SpecDriveIdeQueueItem): string {
       ["Schedule job type", item.jobType],
       ["Schedule action", item.operation],
       ["Scheduler job", item.schedulerJobId],
-      ["Feature", item.featureId],
+      ["Feature Spec", featureSpecLabel(item)],
+      ["Feature ID", item.featureId],
       ["Task", item.taskId],
       ["Adapter", item.adapter],
       ["Run Mode", item.runMode],
@@ -583,10 +646,18 @@ export function executionFieldsHtml(item: SpecDriveIdeQueueItem): string {
       ["Completed", item.completedAt],
       ["Updated", item.updatedAt],
     ];
-  return `<ul>${fields
+  const featureDescription = item.featureDescription
+    ? `<h2>Feature Spec Description</h2><p>${escapeHtml(item.featureDescription)}</p>`
+    : "";
+  return `${featureDescription}<ul>${fields
     .filter(([, value]) => typeof value === "string" && value.length > 0)
     .map(([label, value]) => `<li>${escapeHtml(String(label))}: <code>${escapeHtml(String(value))}</code></li>`)
     .join("")}</ul><h2>Summary</h2><p>${escapeHtml(item.summary ?? "No summary recorded yet.")}</p>`;
+}
+
+function featureSpecLabel(item: SpecDriveIdeQueueItem): string | undefined {
+  if (item.featureTitle && item.featureId) return `${item.featureTitle} (${item.featureId})`;
+  return item.featureTitle ?? item.featureId;
 }
 
 export function jsonBlock(value: unknown): string {

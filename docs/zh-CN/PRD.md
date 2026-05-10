@@ -1162,6 +1162,8 @@ VSCode 插件能力包括：
 * 在插件 Webview 中展示独立 Execution Workbench，默认聚焦 Job 队列、当前运行、下一步动作、阻塞原因、自动执行控制、审批待办和执行结果观察。
 * 在 System Settings 中按项目保存系统级执行默认值，包括 `cli` / `rpc` run mode 和对应 Execution Adapter provider；在 Execution Workbench 创建新 Job 前允许用户选择 Job 级 run mode 与 provider 覆盖项目默认。
 * 在 Feature Spec Webview 顶部提供 New Feature 弹出输入框；用户提交自然语言内容后，插件只提交受控需求输入，由模型判定进入需求新增流程或需求变更流程。
+* Feature Spec 和 Execution Workbench 的详情区域必须展示 Feature Spec 标题和描述信息，不得只显示 Feature 编号作为任务意图说明。
+* 需求新增、需求变更和澄清输入在 Webview 中以聊天对话框形态展示；Webview 自动刷新或手动刷新不得清空尚未提交的输入草稿。
 * 刷新 Feature Spec Webview 时同时读取 `docs/features/README.md` 和 `docs/features/*` 目录，发现需求新增流程未同步 index 时补齐 Feature index 或展示同步阻塞原因。
 * 点击 Feature 后在详情面板解析对应 `tasks.md`，展示任务列表、任务状态、描述和验证命令。
 * 在 PRD、requirements、HLD 和 Feature Spec 中提供 Hover、CodeLens、Comments 和 Diagnostics。

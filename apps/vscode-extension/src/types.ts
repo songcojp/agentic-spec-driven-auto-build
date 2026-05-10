@@ -9,6 +9,7 @@ export type SpecDriveIdeFeatureNode = {
   id: string;
   folder: string;
   title: string;
+  description?: string;
   status: string;
   priority?: string;
   dependencies: string[];
@@ -64,6 +65,8 @@ export type SpecDriveIdeQueueItem = {
   completedAt?: string;
   updatedAt?: string;
   summary?: string;
+  featureTitle?: string;
+  featureDescription?: string;
   stateReason?: string;
   resumeTarget?: SpecDriveIdeResumeTarget;
   reviewItemId?: string;

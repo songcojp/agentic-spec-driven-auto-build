@@ -176,3 +176,13 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 状态: done
 描述: VSCode IDE Webview 按操作对象和对象状态补齐需求新增、需求变更、澄清、审批、恢复、重试、取消、跳过、暂停、继续和重新排期入口；Spec Workspace 区分 New Requirement / Requirement Change / Clarification，Feature 详情按 `spec-state.json`、最新 Job / Execution Record 和 ReviewItem 投影显示或禁用 Feature 级动作，Execution Workbench Review 决策覆盖 approve / reject / request changes / rollback / split task / update spec。
 验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts tests/specdrive-ide.test.ts`，`git diff --check`。
+
+### T-021-33 Webview 输入草稿刷新恢复
+状态: done
+描述: 将共享 Workbench 输入面板改为聊天对话框形态，并使用 VSCode Webview state 按表单模式、Feature 和 intent 保存 New Requirement、Requirement Change、Clarification、New Feature 和 Feature-scoped Requirement Change 的未提交草稿；自动刷新、手动刷新和 Webview 重新渲染后恢复当前打开表单与输入内容。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-34 详情显示 Feature Spec 描述
+状态: done
+描述: Feature Spec 详情和 Execution Workbench 选中 Job 详情显示 Feature Spec 标题与描述信息；Control Plane 从 Feature `spec-state.json.description` 或 Feature `requirements.md` 的目标 / 用户价值 / Scope 等段落提取描述，并随 Feature / Queue ViewModel 投影到 VSCode Webview，避免详情只显示 Feature 编号。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。

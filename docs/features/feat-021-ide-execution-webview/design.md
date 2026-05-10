@@ -20,7 +20,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 | Execution Workbench | Queue Timeline | 按 `running`、`queued`、`approval / review`（合并 `approval_needed`、`approval_answered` 与 `review_needed`）、`blocked / failed`（合并 `blocked` 与 `failed`）、`paused`、`cancelled`、`skipped`、`completed` 展示可折叠 Job 分类 panel；不展示独立 `ready` 分类；`running` 和 `queued` 默认展开，其它分类默认折叠。 |
 | Execution Workbench | Auto Run Control | 提供 start auto run、pause automation、resume automation、stop、并发策略和下一步动作预览。 |
 | Execution Workbench | Selected Task Actions | 队列行支持显式选中；顶部自动执行入口在 Start Auto Run / Pause Auto Run 间切换；Run Now、Pause / Resume、Retry、Cancel、Skip、Reprioritize、Enqueue 默认禁用，只对选中任务可用，并根据选中任务状态启用、禁用或切换按钮文案。 |
-| Execution Workbench | Current Execution | 展示当前 Execution Record、thread/turn、步骤进度、raw log refs、diff 摘要和输出校验状态。 |
+| Execution Workbench | Current Execution | 展示当前 Execution Record、Feature Spec 标题和描述、thread/turn、步骤进度、raw log refs、diff 摘要和输出校验状态。 |
 | Execution Workbench | Blockers and Approvals | 汇总 blocked reason、approval pending、失败原因和可执行恢复动作。 |
 | Execution Workbench | Result Projection | 摘要优先展示结构化 Skill 输出：状态、summary、nextAction、traceability、produced artifacts 表格、常见 result 分组、Additional Result 和完整 JSON 审计视图。 |
 | Spec Workspace | Lifecycle Pipeline | 展示 PRD 到 Delivery 的 Spec 全流程阶段、阶段状态、当前阶段和下一步动作。 |
@@ -29,7 +29,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 | Spec Workspace | Evidence & Traceability | 以表格展示 requirement、feature、artifact、evidence、validation result 和更新时间。 |
 | Spec Workspace | UI Spec Concept Grid | `UI Spec Concept Images` 使用响应式图片网格，每行最多 8 张，超过 8 张自动换行，窄宽度下减少为 4 列或 2 列。 |
 | Feature Spec | Feature Category Panels | 通过可折叠分类 panel 展示 Feature；顺序固定为 `Blocked`、`In-Process`、`Todo`、`Ready`、`Done`，其中 Done 默认折叠，其它默认展开；panel header 显示展开/折叠状态图标；panel 内 Feature list 自适应换行，不显示水平滚动条。 |
-| Feature Spec | Feature Detail Drawer | 展示选中 Feature 的 artifacts、latest run、token/cost、tasks、blockers、traceability 和可执行动作；acceptance 状态合并到 artifacts。 |
+| Feature Spec | Feature Detail Drawer | 展示选中 Feature 的标题、描述、artifacts、latest run、token/cost、tasks、blockers、traceability 和可执行动作；acceptance 状态合并到 artifacts。 |
 | Feature Spec | New Feature Dialog | 顶部 New Feature 按钮打开弹出输入框，提交自然语言需求；Webview 只提交受控需求输入，模型按需求新增/变更边界自行判定后续流程。 |
 | Feature Spec | Feature Index Source | 刷新时以 `docs/features/README.md` 作为 Feature 身份来源；只读取 index 中 folder 对应的三件套事实，非 index 目录和数据库 Feature 记录不生成 Feature 列表项。 |
 | Feature Spec | View Toggle | 顶部第一个控件是单个视图切换按钮；Feature List 视图下按钮显示 `Dependency Graph`，Dependency Graph 视图下按钮显示 `Feature List`。 |

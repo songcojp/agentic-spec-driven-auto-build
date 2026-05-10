@@ -143,8 +143,9 @@ function renderFeatureCard(feature: SpecDriveIdeFeatureNode, current: boolean): 
 
 function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: string): string {
   const actions = featureDetailActions(feature, projectId);
-  return `<div class="panel-title selected-title"><div><h2>${escapeHtml(feature.id)}</h2><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></div><div class="title-actions">${actions}</div></div>
-    <h3>${escapeHtml(feature.title)}</h3>
+  return `<div class="panel-title selected-title"><div><h2>${escapeHtml(feature.title)}</h2><span>${escapeHtml(feature.id)} · </span><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></div><div class="title-actions">${actions}</div></div>
+    <h3>Feature Spec Description</h3>
+    ${renderFeatureDescription(feature)}
     <div class="row"><span>Priority</span><strong>${escapeHtml(feature.priority ?? "-")}</strong></div>
     <div class="row"><span>Latest Run</span><strong>${escapeHtml(feature.latestExecutionId ?? "-")}</strong></div>
     <div class="row"><span>Execution</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
@@ -160,6 +161,10 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
     ${feature.blockedReasons.length === 0 ? emptyState("No blockers.") : feature.blockedReasons.map((reason) => `<div class="issue bad">${escapeHtml(reason)}</div>`).join("")}
     <h3>Traceability</h3>
     <div class="row"><span>Dependencies</span><strong>${escapeHtml(feature.dependencies.join(", ") || "-")}</strong></div>`;
+}
+
+function renderFeatureDescription(feature: SpecDriveIdeFeatureNode): string {
+  return `<div class="issue"><strong>${escapeHtml(feature.title)}</strong><br><span>${escapeHtml(feature.description ?? "No Feature Spec description found.")}</span></div>`;
 }
 
 function featureDetailActions(feature: SpecDriveIdeFeatureNode, projectId?: string): string {

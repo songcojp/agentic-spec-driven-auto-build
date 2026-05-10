@@ -39,6 +39,7 @@ export type SpecDriveIdeFeatureNode = {
   id: string;
   folder: string;
   title: string;
+  description?: string;
   status: string;
   priority?: string;
   dependencies: string[];
@@ -94,6 +95,8 @@ export type SpecDriveIdeQueueItem = {
   completedAt?: string;
   updatedAt?: string;
   summary?: string;
+  featureTitle?: string;
+  featureDescription?: string;
   stateReason?: string;
   resumeTarget?: SpecDriveIdeResumeTarget;
   reviewItemId?: string;
@@ -1416,6 +1419,9 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         tasks: [],
         blockedReasons: [`Feature index references missing folder: docs/features/${folder}`],
       };
+      const description = folderExists
+        ? optionalString(state.description) ?? readFeatureDescription(workspaceRoot, folder)
+        : undefined;
       const documents = [
         document("feature-requirements", "requirements.md", `docs/features/${folder}/requirements.md`, workspaceRoot),
         document("feature-design", "design.md", `docs/features/${folder}/design.md`, workspaceRoot),
@@ -1459,6 +1465,7 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         id: featureId,
         folder,
         title: optionalString(state.title) ?? indexEntry?.title ?? titleFromFolder(folder),
+        description,
         status,
         priority: optionalString(queueEntry?.priority),
         dependencies: stringArray(queueEntry?.dependencies),
@@ -2367,6 +2374,8 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
       completedAt: optionalString(row.execution_completed_at),
       updatedAt: optionalString(row.execution_updated_at) ?? optionalString(row.job_updated_at),
       summary: optionalString(row.summary),
+      featureTitle: feature?.title,
+      featureDescription: feature?.description,
       stateReason: queueStateReason({ status, summary: optionalString(row.summary), metadata, resumeTarget, reviewNeededReason }),
       resumeTarget,
       reviewItemId: review?.id,
@@ -2375,6 +2384,67 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     groups[status] = [...(groups[status] ?? []), item];
   }
   return { groups };
+}
+
+function readFeatureDescription(workspaceRoot: string, folder: string): string | undefined {
+  const requirementsPath = join(workspaceRoot, "docs/features", folder, "requirements.md");
+  if (existsSync(requirementsPath)) {
+    const description = firstMarkdownSectionText(readFileSync(requirementsPath, "utf8"), [
+      "目标",
+      "User Value",
+      "Goal",
+      "Goals",
+      "Overview",
+      "Purpose",
+      "Scope",
+      "Decision",
+      "Replacement Scope",
+    ]);
+    if (description) return description;
+  }
+
+  const designPath = join(workspaceRoot, "docs/features", folder, "design.md");
+  if (existsSync(designPath)) {
+    return firstMarkdownSectionText(readFileSync(designPath, "utf8"), [
+      "Overview",
+      "目标",
+      "架构决策",
+      "主要视图",
+      "Purpose",
+    ]);
+  }
+  return undefined;
+}
+
+function firstMarkdownSectionText(content: string, headings: string[]): string | undefined {
+  const accepted = new Set(headings.map(normalizeHeading));
+  const lines = content.split(/\r?\n/);
+  let collecting = false;
+  const collected: string[] = [];
+  for (const line of lines) {
+    const heading = line.match(/^##\s+(.+?)\s*$/)?.[1];
+    if (heading) {
+      if (collecting) break;
+      collecting = accepted.has(normalizeHeading(heading));
+      continue;
+    }
+    if (!collecting) continue;
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (collected.length > 0) break;
+      continue;
+    }
+    if (trimmed.startsWith("|")) continue;
+    collected.push(trimmed.replace(/^[-*]\s+/, ""));
+    if (collected.join(" ").length >= 240) break;
+  }
+  const text = collected.join(" ").replace(/\s+/g, " ").trim();
+  if (!text) return undefined;
+  return text.length > 320 ? `${text.slice(0, 317).trimEnd()}...` : text;
+}
+
+function normalizeHeading(value: string): string {
+  return value.replace(/[：:]+$/, "").trim().toLowerCase();
 }
 
 function isCompletedScheduleOnlyStatus(status: string): boolean {

@@ -1939,7 +1939,13 @@ async function fetchExecutionDetail(item: SpecDriveIdeQueueItem): Promise<SpecDr
   const controlPlaneUrl = await ensureControlPlaneReady();
   const response = await fetchJson(new URL(`/ide/executions/${encodeURIComponent(item.executionId)}`, controlPlaneUrl));
   if (!response.ok) return item;
-  return await response.json() as SpecDriveIdeExecutionDetail;
+  const detail = await response.json() as SpecDriveIdeExecutionDetail;
+  return {
+    ...item,
+    ...detail,
+    featureTitle: detail.featureTitle ?? item.featureTitle,
+    featureDescription: detail.featureDescription ?? item.featureDescription,
+  };
 }
 
 function configuredControlPlaneUrl(): string {

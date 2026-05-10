@@ -162,6 +162,11 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /<h2>Summary<\/h2>/);
   assert.match(webviewSource, /<h3>Raw Log Refs<\/h3>/);
   assert.match(webviewSource, /<h3>Token Consumption<\/h3>/);
+  assert.match(webviewSource, /Feature Spec Description/);
+  assert.match(webviewSource, /featureSpecLabel\(item\)/);
+  assert.match(webviewSource, /item\.featureDescription/);
+  assert.match(extensionSource, /featureTitle: detail\.featureTitle \?\? item\.featureTitle/);
+  assert.match(extensionSource, /featureDescription: detail\.featureDescription \?\? item\.featureDescription/);
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
   assert.match(webviewSource, /renderStateFlow\(selectedItem\)/);
   assert.match(webviewSource, /Resume Target/);
@@ -325,7 +330,16 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /specChange: \["Requirement Change", "Global Spec request", "Enter the requirement change\."\]/);
   assert.match(extensionSource, /newRequirement: \["New Requirement", "Global Spec request", "Enter the new requirement\."\]/);
   assert.match(extensionSource, /featureSpecChange: \["Feature Spec Change", "Feature request", "Enter the Feature-scoped requirement change\."\]/);
+  assert.match(extensionSource, /const workbenchState = \(\) => vscode\.getState\(\) \|\| \{\}/);
+  assert.match(extensionSource, /vscode\.setState\(\{\.\.\.workbenchState\(\), workbenchForm: formState\}\)/);
+  assert.match(extensionSource, /const workbenchDraftKey = \(mode, featureId, intent\) => \[mode \|\| "newFeature", featureId \|\| "", intent \|\| ""\]\.join\("::"\)/);
+  assert.match(extensionSource, /saveWorkbenchFormState\(\)/);
+  assert.match(extensionSource, /restoreWorkbenchFormState\(\)/);
   assert.match(extensionSource, /textarea id="workbench-form-input"/);
+  assert.match(webviewSource, /class="workbench-chat"/);
+  assert.match(webviewSource, /class="workbench-dialog system"/);
+  assert.match(webviewSource, /class="workbench-dialog user"/);
+  assert.match(webviewSource, /\.workbench-dialog\.user/);
   assert.match(extensionSource, /commandButton\("New Feature", "openWorkbenchForm", \{ formMode: "newFeature" \}\)/);
   assert.match(extensionSource, /intent: "requirement_change_or_intake"/);
   assert.match(extensionSource, /intent: "clarification"/);
@@ -381,6 +395,9 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /entityType: "review_item"/);
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
   assert.match(webviewSource, /renderFeatureStateFlow\(feature\)/);
+  assert.match(webviewSource, /function renderFeatureDescription\(feature: SpecDriveIdeFeatureNode\): string/);
+  assert.match(webviewSource, /feature\.description \?\? "No Feature Spec description found\."/);
+  assert.match(webviewSource, /<h3>Feature Spec Description<\/h3>/);
   assert.match(webviewSource, /renderFeatureStateRow/);
   assert.match(webviewSource, /<div class="feature-state-row"><span>\$\{escapeHtml\(label\)\}<\/span><span>\$\{escapeHtml\(value\)\}<\/span><\/div>/);
   assert.match(webviewSource, /\.feature-state-row\{display:grid;grid-template-columns:minmax\(0,1fr\)/);

@@ -46,6 +46,7 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
 
   const feature = view.features.find((entry) => entry.id === "FEAT-016");
   assert.equal(feature?.status, "ready");
+  assert.equal(feature?.description, "Build and verify the VSCode IDE foundation so operators can inspect SpecDrive workspace facts from inside VSCode.");
   assert.equal(feature?.priority, "P1");
   assert.deepEqual(feature?.dependencies, ["FEAT-013"]);
   assert.equal(feature?.latestExecutionId, "RUN-IDE");
@@ -56,6 +57,8 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
 
   assert.equal(view.queue.groups.running[0].executionId, "RUN-IDE");
   assert.equal(view.queue.groups.running[0].featureId, "FEAT-016");
+  assert.equal(view.queue.groups.running[0].featureTitle, "SpecDrive IDE Foundation");
+  assert.equal(view.queue.groups.running[0].featureDescription, feature?.description);
   assert.deepEqual(view.diagnostics, []);
   assert.equal(view.factSources.includes("execution_records"), true);
 });
@@ -1996,6 +1999,10 @@ function makeWorkspace(): string {
   ].join("\n"));
   writeFileSync(join(root, "docs/features/feat-016-specdrive-ide-foundation/requirements.md"), [
     "# FEAT-016 requirements",
+    "",
+    "## Goal",
+    "",
+    "Build and verify the VSCode IDE foundation so operators can inspect SpecDrive workspace facts from inside VSCode.",
     "",
     "REQ-074 supports a VSCode IDE foundation.",
     "",
