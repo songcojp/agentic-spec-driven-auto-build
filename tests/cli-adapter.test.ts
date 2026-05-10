@@ -109,6 +109,28 @@ function skillOutputEvent(overrides: Partial<{
   return JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: JSON.stringify(output) } });
 }
 
+function featureExecutionResult(): Record<string, unknown> {
+  return {
+    resultSummary: "Feature implemented and verified.",
+    details: "Focused checks passed.",
+    items: ["Structured closure evidence is present."],
+    openQuestions: [],
+    changedFiles: ["src/runtime.ts"],
+    requirementCoverage: [{ requirementId: "REQ-001", status: "passed", evidence: ["unit test"] }],
+    acceptanceEvidence: [{ scenarioId: "AC-001", status: "passed", evidence: ["integration test"] }],
+    journeyEvidence: [{ userStoryId: "US-001", scenario: "primary flow", status: "passed", evidence: ["browser evidence"] }],
+    foundationExemption: null,
+    verification: [{ command: "npm test", status: "passed", summary: "Tests passed." }],
+    tasks: { done: ["TASK-001"], blocked: [] },
+    gates: { requirements: "passed", design: "passed", codeReview: "passed" },
+    delegation: [{ role: "owner-thread", status: "completed", files: ["src/runtime.ts"], note: "No subagents used." }],
+    git: { branch: null, commit: null, pr: null, checks: null, merge: null, cleanup: null, exemption: "delivery not requested" },
+    tokenUsage: { parentUsagePresent: true, subagentUsageObservable: false },
+    risks: [],
+    blockedReason: null,
+  };
+}
+
 function assertStrictSchemaObjects(schema: unknown, path = "$"): void {
   if (!schema || typeof schema !== "object" || Array.isArray(schema)) return;
   const record = schema as Record<string, unknown>;
@@ -400,11 +422,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
     nextAction: null,
     producedArtifacts: [],
     traceability: { featureId: "FEAT-008" },
-    result: {
-      requirementCoverage: [{ requirementId: "REQ-001", status: "passed", evidence: ["unit test"] }],
-      acceptanceEvidence: [{ scenarioId: "AC-001", status: "passed", evidence: ["browser screenshot"] }],
-      journeyEvidence: [{ userStoryId: "US-001", scenario: "primary flow", status: "passed", evidence: ["browser screenshot"] }],
-    },
+    result: featureExecutionResult(),
   } as const;
 
   assert.equal(validateSkillOutputContract(invocation, valid).valid, true);
@@ -413,6 +431,22 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   assert.equal(missingJourney.valid, false);
   assert.match(missingJourney.reasons.join("\n"), /Journey Closure Gate failed: evidence_missing/);
   assert.match(missingJourney.reasons.join("\n"), /journeyEvidence is required/);
+
+  const textOnlyEvidence = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      resultSummary: "Implemented.",
+      details: "Evidence is summarized in prose.",
+      items: [
+        "requirementCoverage: REQ-001 passed.",
+        "acceptanceEvidence: AC-001 passed.",
+        "journeyEvidence: US-001 passed.",
+      ],
+      openQuestions: [],
+    },
+  });
+  assert.equal(textOnlyEvidence.valid, false);
+  assert.match(textOnlyEvidence.reasons.join("\n"), /evidence was provided as text, but structured result arrays are required/);
 
   const mockOnlyUi = validateSkillOutputContract(invocation, {
     ...valid,
@@ -437,6 +471,70 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
     },
   });
   assert.equal(foundation.valid, true);
+});
+
+test("feature execution runs receive a strict closure-evidence result output schema", async () => {
+  const policy = resolveRunnerPolicy({
+    runId: "RUN-FEATURE-SCHEMA",
+    risk: "low",
+    workspaceRoot: makeWorkspacePath(),
+    now: stableDate,
+  });
+  let schema: Record<string, unknown> | undefined;
+  const output = {
+    contractVersion: "skill-contract/v1",
+    executionId: "RUN-FEATURE-SCHEMA",
+    skillSlug: "07.execution.dispatch-adapter",
+    requestedAction: "feature_execution",
+    status: "completed",
+    summary: "Feature execution completed.",
+    nextAction: null,
+    producedArtifacts: [],
+    traceability: { featureId: "FEAT-001" },
+    result: featureExecutionResult(),
+  };
+
+  await runCliAdapter({
+    policy,
+    prompt: "Implement Feature Spec",
+    executionInvocation: executionInvocation({
+      executionId: "RUN-FEATURE-SCHEMA",
+      operation: "feature_execution",
+      skillSlug: "07.execution.dispatch-adapter",
+      requestedAction: "feature_execution",
+      featureId: "FEAT-001",
+      expectedArtifacts: [],
+    }),
+    runner: (_command, args) => {
+      const schemaFlagIndex = args.indexOf("--output-schema");
+      schema = JSON.parse(readFileSync(args[schemaFlagIndex + 1], "utf8")) as Record<string, unknown>;
+      return { status: 0, stdout: JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: JSON.stringify(output) } }), stderr: "" };
+    },
+  });
+
+  const properties = schema?.properties as Record<string, unknown>;
+  const result = properties.result as Record<string, unknown>;
+  assert.equal(result.additionalProperties, false);
+  assert.deepEqual(result.required, [
+    "resultSummary",
+    "details",
+    "items",
+    "openQuestions",
+    "changedFiles",
+    "requirementCoverage",
+    "acceptanceEvidence",
+    "journeyEvidence",
+    "foundationExemption",
+    "verification",
+    "tasks",
+    "gates",
+    "delegation",
+    "git",
+    "tokenUsage",
+    "risks",
+    "blockedReason",
+  ]);
+  assertStrictSchemaObjects(schema);
 });
 
 test("CLI adapter validation rejects configs with missing or empty executable", () => {

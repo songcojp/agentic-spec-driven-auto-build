@@ -118,6 +118,10 @@ Default delegation plan:
   `requirementCoverage`, `acceptanceEvidence`, and `journeyEvidence`, or a valid
   `foundationExemption` with downstream closure Features and integration
   evidence.
+- Do not put `requirementCoverage`, `acceptanceEvidence`, or `journeyEvidence`
+  only inside `details`, `items`, report prose, or produced artifact summaries.
+  They must be direct structured arrays on `result` so the Journey Closure Gate
+  can validate them.
 - Do not return `completed` unless required Git delivery evidence exists or a
   delivery exemption is explicitly recorded in `result.gitDelivery`.
 - Keep final output compact. Do not hide required evidence inside free-form

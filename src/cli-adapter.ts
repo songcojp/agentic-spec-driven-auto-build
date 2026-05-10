@@ -597,6 +597,158 @@ const TASK_SLICING_RESULT_SCHEMA = {
     openQuestions: { type: "array", items: { type: "string" } },
   },
 };
+const FEATURE_EXECUTION_RESULT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "resultSummary",
+    "details",
+    "items",
+    "openQuestions",
+    "changedFiles",
+    "requirementCoverage",
+    "acceptanceEvidence",
+    "journeyEvidence",
+    "foundationExemption",
+    "verification",
+    "tasks",
+    "gates",
+    "delegation",
+    "git",
+    "tokenUsage",
+    "risks",
+    "blockedReason",
+  ],
+  properties: {
+    resultSummary: { type: ["string", "null"] },
+    details: { type: ["string", "null"] },
+    items: { type: "array", items: { type: "string" } },
+    openQuestions: { type: "array", items: { type: "string" } },
+    changedFiles: { type: "array", items: { type: "string" } },
+    requirementCoverage: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["requirementId", "status", "evidence"],
+        properties: {
+          requirementId: { type: "string" },
+          status: { type: "string" },
+          evidence: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    acceptanceEvidence: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["scenarioId", "status", "evidence"],
+        properties: {
+          scenarioId: { type: "string" },
+          status: { type: "string" },
+          evidence: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    journeyEvidence: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["userStoryId", "scenario", "status", "evidence"],
+        properties: {
+          userStoryId: { type: "string" },
+          scenario: { type: "string" },
+          status: { type: "string" },
+          evidence: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    foundationExemption: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      required: ["exempt", "reason", "downstreamFeatures", "integrationEvidence"],
+      properties: {
+        exempt: { type: "boolean" },
+        reason: { type: "string" },
+        downstreamFeatures: { type: "array", items: { type: "string" } },
+        integrationEvidence: { type: "array", items: { type: "string" } },
+      },
+    },
+    verification: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["command", "status", "summary"],
+        properties: {
+          command: { type: "string" },
+          status: { type: "string", enum: ["passed", "failed", "skipped"] },
+          summary: { type: "string" },
+        },
+      },
+    },
+    tasks: {
+      type: "object",
+      additionalProperties: false,
+      required: ["done", "blocked"],
+      properties: {
+        done: { type: "array", items: { type: "string" } },
+        blocked: { type: "array", items: { type: "string" } },
+      },
+    },
+    gates: {
+      type: "object",
+      additionalProperties: false,
+      required: ["requirements", "design", "codeReview"],
+      properties: {
+        requirements: { type: "string" },
+        design: { type: "string" },
+        codeReview: { type: "string" },
+      },
+    },
+    delegation: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["role", "status", "files", "note"],
+        properties: {
+          role: { type: "string" },
+          status: { type: "string" },
+          files: { type: "array", items: { type: "string" } },
+          note: { type: "string" },
+        },
+      },
+    },
+    git: {
+      type: "object",
+      additionalProperties: false,
+      required: ["branch", "commit", "pr", "checks", "merge", "cleanup", "exemption"],
+      properties: {
+        branch: { type: ["string", "null"] },
+        commit: { type: ["string", "null"] },
+        pr: { type: ["string", "null"] },
+        checks: { type: ["string", "null"] },
+        merge: { type: ["string", "null"] },
+        cleanup: { type: ["string", "null"] },
+        exemption: { type: ["string", "null"] },
+      },
+    },
+    tokenUsage: {
+      type: "object",
+      additionalProperties: false,
+      required: ["parentUsagePresent", "subagentUsageObservable"],
+      properties: {
+        parentUsagePresent: { type: "boolean" },
+        subagentUsageObservable: { type: "boolean" },
+      },
+    },
+    risks: { type: "array", items: { type: "string" } },
+    blockedReason: { type: ["string", "null"] },
+  },
+};
 const FORBIDDEN_FILE_PATTERNS = [
   /(^|\/)\.env($|\.)/,
   /(^|\/)secrets?\//i,
@@ -950,6 +1102,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- If the Feature Spec tasks cannot be implemented from the available source paths, return status blocked with the missing decision or file scope.",
         "- producedArtifacts must list the actual code, test, config, or documentation files created or updated while executing the Feature Spec.",
         "- For completed feature_execution, result must include requirementCoverage, acceptanceEvidence, and journeyEvidence, unless result.foundationExemption explicitly names downstream closure Features and integration evidence.",
+        "- Do not hide requirementCoverage, acceptanceEvidence, or journeyEvidence inside details, items, or other prose-only fields; they must be direct structured arrays on result.",
         "- Passing tests or a commit alone is not sufficient for completed; close the Journey Checkpoint or return review_needed with journey_not_closed, acceptance_gap, or evidence_missing.",
       ]
     : [];
@@ -1355,6 +1508,9 @@ export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV
   if (journeyEvidence.length === 0) missing.push("journeyEvidence is required");
   if (acceptanceEvidence.length === 0) missing.push("acceptanceEvidence is required");
   if (requirementCoverage.length === 0) missing.push("requirementCoverage is required");
+  if (missing.length > 0 && resultItemsMentionStructuredEvidence(result)) {
+    missing.push("evidence was provided as text, but structured result arrays are required");
+  }
   if (missing.length > 0) {
     return { passed: false, reason: "evidence_missing", details: missing };
   }
@@ -1368,6 +1524,16 @@ export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV
     return { passed: false, reason: "acceptance_gap", details: [...failedAcceptance, ...failedRequirements].map(describeEvidence) };
   }
   return { passed: true, details: ["journeyEvidence, acceptanceEvidence, and requirementCoverage passed"] };
+}
+
+function resultItemsMentionStructuredEvidence(result: Record<string, unknown>): boolean {
+  const items = Array.isArray(result.items) ? result.items : [];
+  return items.some((entry) => {
+    const text = String(entry).toLowerCase();
+    return text.includes("journeyevidence")
+      || text.includes("acceptanceevidence")
+      || text.includes("requirementcoverage");
+  });
 }
 
 function isFeatureExecutionInvocation(invocation: ExecutionAdapterInvocationV1, output: SkillOutputContract): boolean {
@@ -2396,11 +2562,15 @@ function isMaterializedSpecArtifact(artifact: string): boolean {
 }
 
 function outputSchemaForExecutionInvocation(schema: Record<string, unknown>, invocation: ExecutionAdapterInvocationV1 | undefined): Record<string, unknown> {
-  if (invocation?.skillInstruction.skillSlug !== "05.feature.decompose") return schema;
+  if (invocation?.skillInstruction.skillSlug !== "05.feature.decompose"
+    && !(invocation?.skillInstruction.skillSlug === "07.execution.dispatch-adapter"
+      && (invocation.operation === "feature_execution" || invocation.skillInstruction.requestedAction === "feature_execution"))) return schema;
   const cloned = JSON.parse(JSON.stringify(schema)) as Record<string, unknown>;
   const properties = cloned.properties;
   if (properties && typeof properties === "object" && !Array.isArray(properties)) {
-    (properties as Record<string, unknown>).result = TASK_SLICING_RESULT_SCHEMA;
+    (properties as Record<string, unknown>).result = invocation?.skillInstruction.skillSlug === "05.feature.decompose"
+      ? TASK_SLICING_RESULT_SCHEMA
+      : FEATURE_EXECUTION_RESULT_SCHEMA;
   }
   return cloned;
 }
