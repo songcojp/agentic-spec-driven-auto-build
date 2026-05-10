@@ -25,7 +25,8 @@ export function renderSpecWorkspaceWebview(
   const active = stages.find((stage) => stage.active) ?? stages[0];
   return renderWorkbenchPage("Spec Workspace", nonce, `
     <section class="toolbar">
-      ${commandButton("Spec Change", "openWorkbenchForm", { formMode: "specChange", intent: "requirement_change_or_intake" })}
+      ${commandButton("New Requirement", "openWorkbenchForm", { formMode: "newRequirement", intent: "requirement_intake" })}
+      ${commandButton("Requirement Change", "openWorkbenchForm", { formMode: "specChange", intent: "spec_evolution" })}
       ${commandButton("Clarification", "openWorkbenchForm", { formMode: "specClarification", intent: "clarification" })}
       ${commandButton("Refresh", "refresh", {})}
       ${autoRefreshSwitch(autoRefreshEnabled)}

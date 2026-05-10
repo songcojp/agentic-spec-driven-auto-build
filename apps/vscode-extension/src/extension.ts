@@ -1254,7 +1254,14 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
     }
     if (isWorkbenchMessage(message) && message.command === "reviewFeature" && typeof message.featureId === "string" && typeof message.comment === "string") {
       const feature = provider.currentView()?.features.find((entry) => entry.id === message.featureId);
-      if (feature) await submitFeatureReviewClarification(feature, message.comment, provider);
+      if (feature) await submitFeatureSpecRequest(feature, message.comment, "clarification", provider, "Feature Review");
+      await render();
+      return;
+    }
+    if (isWorkbenchMessage(message) && message.command === "featureSpecRequest" && typeof message.featureId === "string" && typeof message.content === "string") {
+      const feature = provider.currentView()?.features.find((entry) => entry.id === message.featureId);
+      const intent: SpecChangeRequestIntent = isSpecChangeRequestIntent(message.intent) ? message.intent : "spec_evolution";
+      if (feature) await submitFeatureSpecRequest(feature, message.content, intent, provider, "Feature Detail");
       await render();
       return;
     }
@@ -1539,20 +1546,22 @@ async function submitSpecWorkspaceRequest(content: string, intent: unknown, prov
   await provider.refresh();
 }
 
-async function submitFeatureReviewClarification(
+async function submitFeatureSpecRequest(
   feature: SpecDriveIdeFeatureNode,
-  comment: string,
+  content: string,
+  intent: SpecChangeRequestIntent,
   provider: SpecExplorerProvider,
+  sourceLabel: string,
 ): Promise<void> {
   const view = provider.currentView();
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!view?.project?.id || !workspaceRoot) {
-    await vscode.window.showErrorMessage("SpecDrive Feature review requires a recognized project.");
+    await vscode.window.showErrorMessage("SpecDrive Feature request requires a recognized project.");
     return;
   }
-  const trimmed = comment.trim();
+  const trimmed = content.trim();
   if (!trimmed) {
-    await vscode.window.showErrorMessage("SpecDrive Feature review clarification is empty.");
+    await vscode.window.showErrorMessage("SpecDrive Feature request input is empty.");
     return;
   }
   const sourcePath = preferredFeatureReviewSource(feature);
@@ -1572,11 +1581,11 @@ async function submitFeatureReviewClarification(
       },
       textHash: hashText(firstLine),
     },
-    intent: "clarification",
+    intent,
     comment: trimmed,
     traceability: [
       "VSCode Feature Spec Webview",
-      "Feature Review",
+      sourceLabel,
       feature.id,
       feature.status,
     ],
@@ -1587,7 +1596,7 @@ async function submitFeatureReviewClarification(
   const blocked = Array.isArray(response.blockedReasons) && response.blockedReasons.length > 0
     ? ` blocked=${response.blockedReasons.join("; ")}`
     : "";
-  await vscode.window.showInformationMessage(`SpecDrive Feature review ${status}.${routed}${blocked}`);
+  await vscode.window.showInformationMessage(`SpecDrive Feature request ${status}.${routed}${blocked}`);
   await provider.refresh();
 }
 

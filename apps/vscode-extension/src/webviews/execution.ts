@@ -200,8 +200,7 @@ function renderStateFlowCard(item: SpecDriveIdeQueueItem): string {
 function stateFlowCardActions(item: SpecDriveIdeQueueItem): string {
   const status = item.status.toLowerCase();
   if (status === "review_needed") {
-    const review = reviewItemButton(item);
-    return `${review}${item.executionId ? queueButton("Retry", item, "retry") : ""}`;
+    return `${reviewDecisionButtons(item, "Execution Workbench state card")}${item.executionId ? queueButton("Retry", item, "retry") : ""}`;
   }
   if (status === "approval_needed") {
     return `${queueButton("Accept", item, "approve").replace("data-action=\"approve\"", "data-action=\"approve\" data-approval-decision=\"accept\"")}${queueButton("Decline", item, "approve").replace("data-action=\"approve\"", "data-action=\"approve\" data-approval-decision=\"decline\"")}${item.executionId ? queueButton("Retry", item, "retry") : ""}`;
@@ -252,7 +251,7 @@ function selectedTaskActionButtons(selectedItem: SpecDriveIdeQueueItem | undefin
     queueActionButton("Skip", selectedItem, "skip", ["queued", "waiting_input", "approval_needed", "review_needed", "blocked", "failed", "paused"]),
     queueActionButton("Reprioritize", selectedItem, "reprioritize", ["ready", "queued", "blocked", "paused"]),
     queueActionButton("Enqueue", selectedItem, "enqueue", ["ready", "blocked"]),
-    reviewItemButton(selectedItem),
+    reviewDecisionButtons(selectedItem, "Execution Workbench"),
   ].join("");
 }
 
@@ -388,16 +387,50 @@ function pauseResumeButton(item: SpecDriveIdeQueueItem | undefined): string {
   return queueActionButton("Pause", item, "pause", ["queued", "running"]);
 }
 
-function reviewItemButton(item: SpecDriveIdeQueueItem | undefined): string {
+function reviewDecisionButtons(item: SpecDriveIdeQueueItem | undefined, source: string): string {
   if (item?.status.toLowerCase() !== "review_needed") return "";
-  const label = item.reviewNeededReason === "approval_needed" ? "Approve" : "Review";
+  const buttons: Array<[string, string, string]> = reviewActionsForReason(item.reviewNeededReason);
+  return buttons.map(([label, action, icon]) => reviewDecisionButton(label, action, icon, item, source)).join("");
+}
+
+function reviewActionsForReason(reason: SpecDriveIdeQueueItem["reviewNeededReason"]): Array<[string, string, string]> {
+  if (reason === "clarification_needed") {
+    return [
+      ["Request Changes", "request_review_changes", "edit"],
+      ["Update Spec", "update_spec", "file"],
+    ];
+  }
+  if (reason === "risk_review_needed") {
+    return [
+      ["Approve", "approve_review", "check"],
+      ["Reject", "reject_review", "x"],
+      ["Rollback", "rollback_review", "undo"],
+      ["Split Task", "split_review_task", "branch"],
+      ["Request Changes", "request_review_changes", "edit"],
+      ["Update Spec", "update_spec", "file"],
+    ];
+  }
+  return [
+    ["Approve", "approve_review", "check"],
+    ["Reject", "reject_review", "x"],
+    ["Request Changes", "request_review_changes", "edit"],
+  ];
+}
+
+function reviewDecisionButton(
+  label: string,
+  action: string,
+  icon: string,
+  item: SpecDriveIdeQueueItem,
+  source: string,
+): string {
   if (!item.reviewItemId) return disabledButton(label, "No Review Center item has been recorded for this run.");
   return commandButton(label, "controlled", {
-    action: "approve_review",
+    action,
     entityType: "review_item",
     entityId: item.reviewItemId,
-    reason: `${label} ${item.featureId ?? item.executionId ?? "selected run"} from Execution Workbench.`,
-  }, { icon: "check" });
+    reason: `${label} ${item.featureId ?? item.executionId ?? "selected run"} from ${source}.`,
+  }, { icon });
 }
 
 function reviewReasonLabel(reason: SpecDriveIdeQueueItem["reviewNeededReason"]): string {

@@ -18,6 +18,7 @@ export type SpecDriveIdeFeatureNode = {
   nextAction?: string;
   documents: SpecDriveIdeDocument[];
   latestExecutionId?: string;
+  latestSchedulerJobId?: string;
   latestExecutionStatus?: string;
   latestReviewItemId?: string;
   latestReviewStatus?: string;

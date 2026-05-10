@@ -1,4 +1,4 @@
-import type { SpecDriveIdeDocument, SpecDriveIdeFeatureNode, SpecDriveIdeTokenConsumption, SpecDriveIdeView } from "../types";
+import type { QueueAction, SpecDriveIdeDocument, SpecDriveIdeFeatureNode, SpecDriveIdeTokenConsumption, SpecDriveIdeView } from "../types";
 import {
   autoRefreshSwitch,
   buttonContent,
@@ -163,35 +163,34 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
 }
 
 function featureDetailActions(feature: SpecDriveIdeFeatureNode, projectId?: string): string {
-  if (isDoneFeature(feature)) return "";
+  if (isDoneFeature(feature)) return featureSpecChangeButton(feature);
   const reviewReason = feature.latestReviewNeededReason;
+  const specActions = `${featureSpecChangeButton(feature)}${clarifyFeatureButton(feature)}`;
+  const queueActions = featureQueueActionButtons(feature);
   if (isApprovalPendingFeature(feature)) {
-    return disabledButtonHtml("Approval", "Resolve the adapter approval request in Execution Workbench.", "check");
+    return `${specActions}${disabledButtonHtml("Approval", "Resolve the adapter approval request in Execution Workbench.", "check")}${queueActions}`;
   }
   if (isWaitingInputFeature(feature)) {
-    return `${clarifyFeatureButton(feature)}${markFeatureReadyButton("Ready", feature, projectId, "Feature Detail")}`;
+    return `${specActions}${markFeatureReadyButton("Ready", feature, projectId, "Feature Detail")}${queueActions}`;
   }
   if (isActiveExecutionFeature(feature)) {
-    return "";
+    return queueActions;
   }
   if (isReadyFeature(feature)) {
-    return scheduleFeatureButton("Schedule", feature, projectId, "Feature Detail");
+    return `${scheduleFeatureButton("Schedule", feature, projectId, "Feature Detail")}${specActions}${queueActions}`;
   }
 
   if (isReviewNeededFeature(feature)) {
-    if (reviewReason === "approval_needed") return reviewFeatureButton("Approve", feature, "Feature Detail");
-    if (reviewReason === "clarification_needed") return clarifyFeatureButton(feature);
-    if (reviewReason === "risk_review_needed") return reviewFeatureButton("Review", feature, "Feature Detail");
-    return reviewFeatureButton("Review", feature, "Feature Detail");
+    return `${reviewDecisionButtons(feature, reviewReason, "Feature Detail")}${specActions}${queueActions}`;
   }
   if (isBlockedFeature(feature)) {
     const blockedReviewReason = feature.latestReviewNeededReason;
-    const reviewAction = blockedReviewReason === "risk_review_needed" || blockedReviewReason === "approval_needed"
-      ? reviewFeatureButton(blockedReviewReason === "approval_needed" ? "Approve" : "Review", feature, "Feature Detail")
+    const reviewAction = blockedReviewReason
+      ? reviewDecisionButtons(feature, blockedReviewReason, "Feature Detail")
       : "";
-    return `${reviewAction}${clarifyFeatureButton(feature)}${markFeatureReadyButton("Ready", feature, projectId, "Feature Detail")}`;
+    return `${reviewAction}${specActions}${markFeatureReadyButton("Ready", feature, projectId, "Feature Detail")}${queueActions}`;
   }
-  return "";
+  return `${specActions}${markFeatureReadyButton("Ready", feature, projectId, "Feature Detail")}${queueActions}`;
 }
 
 function featureExecutionLabel(feature: SpecDriveIdeFeatureNode): string {
@@ -234,6 +233,10 @@ function clarifyFeatureButton(feature: SpecDriveIdeFeatureNode): string {
   return commandButton("Clarify", "openWorkbenchForm", { formMode: "clarify", featureId: feature.id });
 }
 
+function featureSpecChangeButton(feature: SpecDriveIdeFeatureNode): string {
+  return commandButton("Requirement Change", "openWorkbenchForm", { formMode: "featureSpecChange", intent: "spec_evolution", featureId: feature.id });
+}
+
 function scheduleFeatureButton(label: string, feature: SpecDriveIdeFeatureNode, projectId: string | undefined, source: string): string {
   return commandButton(label, "controlled", {
     action: "schedule_run",
@@ -245,16 +248,48 @@ function scheduleFeatureButton(label: string, feature: SpecDriveIdeFeatureNode, 
   });
 }
 
-function reviewFeatureButton(label: string, feature: SpecDriveIdeFeatureNode, source: string): string {
+function reviewDecisionButtons(
+  feature: SpecDriveIdeFeatureNode,
+  reason: SpecDriveIdeFeatureNode["latestReviewNeededReason"],
+  source: string,
+): string {
+  return reviewActionsForReason(reason).map(([label, action, icon]) => reviewFeatureButton(label, action, icon, feature, source)).join("");
+}
+
+function reviewActionsForReason(reason: SpecDriveIdeFeatureNode["latestReviewNeededReason"]): Array<[string, string, string]> {
+  if (reason === "clarification_needed") {
+    return [
+      ["Request Changes", "request_review_changes", "edit"],
+      ["Update Spec", "update_spec", "file"],
+    ];
+  }
+  if (reason === "risk_review_needed") {
+    return [
+      ["Approve", "approve_review", "check"],
+      ["Reject", "reject_review", "x"],
+      ["Rollback", "rollback_review", "undo"],
+      ["Split Task", "split_review_task", "branch"],
+      ["Request Changes", "request_review_changes", "edit"],
+      ["Update Spec", "update_spec", "file"],
+    ];
+  }
+  return [
+    ["Approve", "approve_review", "check"],
+    ["Reject", "reject_review", "x"],
+    ["Request Changes", "request_review_changes", "edit"],
+  ];
+}
+
+function reviewFeatureButton(label: string, action: string, icon: string, feature: SpecDriveIdeFeatureNode, source: string): string {
   if (!feature.latestReviewItemId) {
     return disabledButtonHtml(label, "No Review Center item has been recorded for this Feature.", "check");
   }
   return commandButton(label, "controlled", {
-    action: "approve_review",
+    action,
     entityType: "review_item",
     entityId: feature.latestReviewItemId,
-    reason: `Approve ${feature.id} review from ${source}.`,
-  }, { icon: "check" });
+    reason: `${label} ${feature.id} review from ${source}.`,
+  }, { icon });
 }
 
 function markFeatureReadyButton(label: string, feature: SpecDriveIdeFeatureNode, projectId: string | undefined, source: string): string {
@@ -266,6 +301,57 @@ function markFeatureReadyButton(label: string, feature: SpecDriveIdeFeatureNode,
     featureId: feature.id,
     reason: `Mark ${feature.id} ready from ${source}.`,
   });
+}
+
+function featureQueueActionButtons(feature: SpecDriveIdeFeatureNode): string {
+  return [
+    featurePauseResumeButton(feature),
+    featureQueueActionButton("Retry", feature, "retry", ["failed", "cancelled", "skipped", "blocked"], true),
+    featureQueueActionButton("Cancel", feature, "cancel", ["queued", "running", "waiting input", "approval needed", "review needed", "blocked", "paused"], false),
+    featureQueueActionButton("Skip", feature, "skip", ["queued", "waiting input", "approval needed", "review needed", "blocked", "failed", "paused"], false),
+    featureQueueActionButton("Reprioritize", feature, "reprioritize", ["queued", "blocked", "paused"], false),
+  ].join("");
+}
+
+function featurePauseResumeButton(feature: SpecDriveIdeFeatureNode): string {
+  if (featureStatusTokens(feature).includes("paused")) {
+    return featureQueueActionButton("Resume", feature, "resume", ["paused"], false);
+  }
+  return featureQueueActionButton("Pause", feature, "pause", ["queued", "running"], false);
+}
+
+function featureQueueActionButton(
+  label: string,
+  feature: SpecDriveIdeFeatureNode,
+  action: QueueAction,
+  enabledStatuses: string[],
+  requiresExecution: boolean,
+): string {
+  const target = featureQueueTarget(feature, requiresExecution);
+  if (!target) return disabledButtonHtml(label, `${label} requires a latest Job or Execution Record for this Feature.`);
+  const statuses = featureStatusTokens(feature);
+  if (!statuses.some((status) => enabledStatuses.includes(status))) {
+    return disabledButtonHtml(label, `${label} is not available while ${feature.id} is ${feature.latestExecutionStatus ?? feature.status}.`);
+  }
+  return commandButton(label, "queue", {
+    action,
+    entityType: target.entityType,
+    entityId: target.entityId,
+    reason: `${label} ${feature.id} from Feature Detail.`,
+  });
+}
+
+function featureQueueTarget(feature: SpecDriveIdeFeatureNode, requiresExecution: boolean): { entityType: "run" | "job"; entityId: string } | undefined {
+  if (feature.latestExecutionId) return { entityType: "run", entityId: feature.latestExecutionId };
+  if (!requiresExecution && feature.latestSchedulerJobId) return { entityType: "job", entityId: feature.latestSchedulerJobId };
+  return undefined;
+}
+
+function featureStatusTokens(feature: SpecDriveIdeFeatureNode): string[] {
+  return [
+    normalizedRawFeatureStatus(feature),
+    normalizedExecutionStatus(feature),
+  ].filter((status) => status.length > 0);
 }
 
 function executionPreferenceControls(view: SpecDriveIdeView | undefined): string {

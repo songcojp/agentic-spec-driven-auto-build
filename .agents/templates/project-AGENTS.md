@@ -1,6 +1,6 @@
 # Agent Guidelines
 
-This project is managed by SpecDrive AutoBuild. This file explains the SpecDrive spec standard and the skill-driven workflow that agents must follow inside this target project.
+This project is managed by SpecDrive AutoBuild. This file explains the SpecDrive spec standard and the workflow skills that managing agents may use while operating this target project. It does not require the target product to implement its own features as Skills.
 
 Use this file as the target project's SpecDrive operating contract.
 
@@ -8,8 +8,9 @@ Use this file as the target project's SpecDrive operating contract.
 
 - Treat `docs/PRD.md`, `docs/requirements.md`, `docs/hld.md`, `docs/ui/ui-spec.md`, and `docs/features/<feature-id>/` as the governed product and delivery source of truth.
 - Use localized docs such as `docs/zh-CN/*`, `docs/en/*`, or `docs/ja/*` only when the project declares a localized or multilingual spec lane.
-- Treat `docs/features/feature-pool-queue.json` and `docs/features/<feature-id>/spec-state.json` as machine-readable Feature state when they exist.
-- Treat `.autobuild/` as local runtime state. Keep `.autobuild/runs/` ignored by Git unless the user explicitly asks to inspect or preserve run evidence.
+- Treat `docs/features/feature-pool-queue.json` as the Feature dependency, priority, and queue fact source.
+- Treat `docs/features/<feature-id>/spec-state.json` as the file-backed lifecycle fact source for one Feature, including `status`, `executionStatus`, `currentJob`, `lastResult`, `blockedReasons`, `resumeTarget`, `nextAction`, and `history` when present.
+- Treat `.autobuild/` as local runtime state. Runtime databases and run artifacts are evidence sources, not mainline specs. Keep `.autobuild/runs/` ignored by Git unless the user explicitly asks to inspect or preserve run evidence.
 - Preserve user edits. Inspect the worktree before changing files and do not revert unrelated changes.
 
 ## Spec Standard
@@ -20,6 +21,30 @@ Use this file as the target project's SpecDrive operating contract.
 - `docs/ui/ui-spec.md` and `docs/ui/concepts/*.png` guide page layout, visual hierarchy, state messaging, and browser verification when UI exists.
 - Each `docs/features/<feature-id>/` folder should contain feature-local `requirements.md`, `design.md`, `tasks.md`, and optional `spec-state.json`.
 - Do not create project-level scratch requirement files under `docs/features/`. Project-level additions and changes belong in the active mainline `requirements.md`.
+- Feature-local `tasks.md` is an execution-agent work plan and UI projection source. Do not introduce a platform task table or make parsed tasks a scheduling prerequisite unless the active project spec explicitly requires it.
+
+## State Protocol
+
+Every state transition must be reviewable by both humans and machines. A transition record, audit note, history entry, or equivalent evidence must identify:
+
+- `from` and `to` states.
+- Trigger event: user instruction, Skill output, Adapter event, Status Check, Review decision, Recovery result, delivery action, or controlled command.
+- Fact source: spec file, `spec-state.json`, runtime record, approval/review record, audit entry, or run artifact.
+- Evidence references: report, raw log, produced artifact, diff, test output, approval record, or review item.
+- Allowed side effects: the exact writes or commands permitted by the transition.
+- Recovery entry: `resumeTarget` for interrupt states such as `waiting_input`, `approval_needed`, `review_needed`, `blocked`, `failed`, or `paused`.
+- Terminal condition: how the state exits, resumes, retries, skips, cancels, or becomes final.
+
+Use the common execution statuses without folding them into unrelated states: `queued`, `running`, `waiting_input`, `approval_needed`, `review_needed`, `blocked`, `failed`, `cancelled`, and `completed`. Feature file lifecycle may additionally use `draft`, `ready`, `paused`, `skipped`, and `delivered` when the project supports them.
+
+State fact ownership:
+
+- `feature-pool-queue.json` owns dependencies, priority, and queue selection facts.
+- Feature `spec-state.json` owns operator-facing Feature lifecycle and recovery hints.
+- Runtime execution records own actual run facts.
+- Scheduler job records own queue job facts.
+- Review and approval records own Review Needed and human decision facts.
+- Product Console, VSCode Webviews, dashboards, and other UIs are projections and controlled-command entrypoints only; they must not directly own or silently rewrite state facts.
 
 ## Spec Operations
 
@@ -33,6 +58,14 @@ Use this file as the target project's SpecDrive operating contract.
 - Review: use `09.review.code-diff` for spec drift, code risk, test gaps, delivery risk, or approval findings.
 - Delivery: use `14.release.prepare-pr` only after implementation, verification, and review are complete.
 
+## Change And Drift Protocol
+
+- Any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix must go through the active change-management protocol before implementation.
+- If a repository fact conflicts with the approved spec, do not silently code around it. Classify the conflict as either a code fix or spec evolution, then update the governing spec lane first when the spec changes.
+- If implementation, tests, review, or delivery evidence invalidates an active or completed Feature, record the affected evidence, update traceability, and reopen, follow up, or re-plan the affected Feature.
+- If a Feature is `blocked`, `failed`, `review_needed`, or `approval_needed`, do not repeatedly auto-select it unless there is an explicit resume or skip instruction.
+- `paused` must keep a `resumeTarget`; `cancelled` must record actor, reason, and retry policy; `skipped` must preserve history and let the scheduler select the next Feature.
+
 ## Spec Workflow
 
 1. Intake or evolve requirements through the active change-management protocol.
@@ -43,14 +76,22 @@ Use this file as the target project's SpecDrive operating contract.
 6. Verify with the smallest meaningful command first, then broader checks when shared behavior, state, persistence, contracts, or UI are affected.
 7. Record evidence, known risks, and follow-up work in the affected Feature Spec or delivery notes.
 
-## Skill Workflow
+## SpecDrive Workflow Skills
 
 - Project-local skills live under `.agents/skills/*/SKILL.md`.
-- Read the relevant `SKILL.md` before using a skill. Follow its source paths, output contract, risk routing, and verification expectations.
-- Use skills for governed SpecDrive workflows, requirement handling, planning, implementation, verification, review, recovery, and delivery.
+- Skills are SpecDrive workflow tools for the managing agent and control plane. They encode governed spec operations such as requirement handling, planning, implementation dispatch, verification, review, recovery, and delivery.
+- Skills are not the target project's product architecture and are not the default implementation form for target-project business capabilities.
+- Read the relevant `SKILL.md` before using a skill. Follow its source paths, output contract, risk routing, state protocol, and verification expectations.
 - Use normal agent behavior for ordinary questions, exploratory reading, simple edits, simple commands, and direct bug fixes when no governed workflow is needed.
 - If a requested change conflicts with current specs, evolve the spec first instead of silently coding around it.
 - If intent, acceptance criteria, file scope, safety, or approval boundary is unclear, stop for clarification.
+
+## Target Implementation Boundary
+
+- Implement target-project product behavior in the target project's code, configuration, documentation, or other artifacts according to its PRD, requirements, HLD, Feature Spec, and technology stack.
+- Do not convert target-project business features into `.agents/skills/` unless the approved Feature Spec explicitly says the target product itself is a Skill package, workflow package, agent runtime, or similar developer-tooling artifact.
+- Treat changes to `.agents/skills/` as changes to the SpecDrive workflow contract, not as the normal path for delivering target-project functionality.
+- If the target project already contains Skills as governed product artifacts, edit them like any other target-project files: trace the change to requirements, update the relevant Feature Spec, and verify the declared behavior.
 
 ## Skill Reference
 
@@ -82,6 +123,16 @@ Use this file as the target project's SpecDrive operating contract.
 - Keep edits scoped to the requested requirement, Feature Spec, or task.
 - Prefer existing project patterns, package managers, scripts, and helper APIs.
 - Add durable state or machine-queryable behavior in code only when persistence, structural enforcement, or programmatic querying is required.
-- Use skills or docs for prompt-driven reasoning, planning, review, decomposition, or analysis.
+- Use SpecDrive workflow Skills only for the managing agent's governed workflow steps; implement target-product behavior in the target project's governed artifacts.
+- Use controlled commands or approved code paths for writes to runtime state, Feature state, Review/Approval facts, and delivery records.
+- Keep UI and reports as projections of source facts. If a UI value looks wrong, inspect the fact source before patching the view.
+- Preserve execution evidence for verification, review, recovery, and delivery. Do not replace real run history with synthetic success.
 - Do not commit unless the user asks for a commit or delivery action.
 - Report commands run, failures, skipped checks, and residual risks.
+
+## Verification And Delivery
+
+- For docs-only changes, run `git diff --check` and inspect affected links, paths, IDs, and terminology.
+- For code changes, run the smallest meaningful targeted verification first, then broader checks when shared state, persistence, contracts, scheduling, recovery, or UI are affected.
+- For UI changes, verify rendered behavior with browser or Webview evidence when practical.
+- Delivery summaries must include affected requirements or Feature Specs, verification evidence, and known follow-ups.

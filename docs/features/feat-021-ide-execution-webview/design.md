@@ -53,9 +53,12 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Execution Workbench 禁用按钮必须在视觉上区别于可用按钮：使用 disabled foreground、次级背景、降低透明度和 `not-allowed` 光标；禁用按钮 hover 状态不得恢复为可用按钮样式。
 - Product Console 与三组 VSCode Webview 共用持久事实源，但不共用 UI ViewModel 作为事实源。
 - Spec Workspace 的全流程操作通过 `runControlledCommand` 或 Spec change request 进入 extension host，由 Control Plane 决定是否生成任务、记录审批或拒绝动作。
+- Spec Workspace 必须把需求新增、需求变更和澄清作为三个清晰入口展示；三者都提交 `SpecChangeRequestV1`，由 Control Plane 和变更流程判定后续 skill / spec evolution 路由。
 - Feature Spec 的调度、打开文档和刷新动作在 VSCode extension host 内执行；调度类动作必须进入 Control Plane command API。
+- Feature Spec 详情操作必须以 Feature `spec-state.json`、最新 `scheduler_job_records` / `execution_records` 和 `review_items` 投影决定显示与启用；没有最新 Run / Job 的恢复、重试、取消、跳过、暂停或重新排期按钮必须禁用并说明原因。
 - New Feature 提交使用 Spec change request 或等价受控命令进入需求处理链路，payload 包含 workspaceRoot、source surface、freeform content、current feature selection、visible Feature index snapshot 和 traceability hints；模型负责判定 `10.change.create-request` 或 `10.change.update-mainline-spec`，前端不得硬编码路由规则。
 - Review 通过提交使用 Product Console 相同的 ReviewItem 审批命令，payload 至少包含 ReviewItem ID；Control Plane 负责写 `approval_records`、更新 `review_items.status`，并按 ReviewItem 保存的 paused Feature/Task 状态恢复到原阶段入口。
+- Review 操作在 VSCode IDE 中必须覆盖 approve、reject、request changes、rollback、split task 和 update spec；Webview 只按 `review_needed_reason` 调整推荐按钮组合，所有决策仍以 ReviewItem 为操作对象。
 - Review、retry、cancel、skip、pause 和 resume 的状态变化必须由 Control Plane 同步 `scheduler_job_records`、`execution_records` 和 Feature `spec-state.json.history`；中断态必须显示 `resumeTarget` 或 blocked / review reason。
 - Review 澄清提交使用 Spec change request，payload 包含 workspaceRoot、Feature ID、Feature status、来源 Feature Spec 文档和澄清文本；前端固定提交 `clarification` 意图，Control Plane 将其路由为 `resolve_clarification` 并排入 `10.change.impact-analysis`，不直接生成需求变更、需求新增或 Review 结论。
 - Ready 提交使用 `mark_feature_ready` 受控命令，payload 包含 `projectId` 和 Feature ID；Control Plane 必须校验目标 Feature 不是 completed / delivered 终态，再更新 Feature `spec-state.json.status`、blocked reasons、nextAction 和 features 表。Webview 不得直接写 `spec-state.json` 或 SQLite。

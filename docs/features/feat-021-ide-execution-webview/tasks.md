@@ -160,3 +160,8 @@ Feature ID: FEAT-021
 状态: done
 描述: pause、resume、retry、cancel、skip 和 Review 审批后的状态变化必须由 Control Plane 同步 Scheduler Job、Execution Record、Feature `spec-state.json.history` 和必要的 `resumeTarget`；Webview 只展示投影和提交受控命令。
 验证: `node --test tests/specdrive-ide-webview-boundary.test.ts tests/specdrive-ide.test.ts` 覆盖 Webview 状态投影、ReviewItem 入口和队列动作；`node --test tests/review-center.test.ts tests/scheduler.test.ts tests/spec-protocol.test.ts` 覆盖 Review 审批、Scheduler 和 `spec-state.json.resumeTarget` 回流。
+
+### T-021-32 Spec / Feature / Job 操作状态协同
+状态: done
+描述: VSCode IDE Webview 按操作对象和对象状态补齐需求新增、需求变更、澄清、审批、恢复、重试、取消、跳过、暂停、继续和重新排期入口；Spec Workspace 区分 New Requirement / Requirement Change / Clarification，Feature 详情按 `spec-state.json`、最新 Job / Execution Record 和 ReviewItem 投影显示或禁用 Feature 级动作，Execution Workbench Review 决策覆盖 approve / reject / request changes / rollback / split task / update spec。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts tests/specdrive-ide.test.ts`，`git diff --check`。

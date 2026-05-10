@@ -39,8 +39,10 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       form.dataset.intent = intent || "";
       const copy = {
         clarify: ["Clarify Feature", "Clarification", "Enter clarification content."],
-        specChange: ["Spec Change", "Global Spec request", "Enter the Spec change or new requirement."],
+        featureSpecChange: ["Feature Spec Change", "Feature request", "Enter the Feature-scoped requirement change."],
+        specChange: ["Requirement Change", "Global Spec request", "Enter the requirement change."],
         specClarification: ["Clarification", "Global Spec request", "Enter the clarification question or decision."],
+        newRequirement: ["New Requirement", "Global Spec request", "Enter the new requirement."],
         newFeature: ["New Feature", "Add or change", "Enter add-or-change content."],
       }[mode] || ["New Feature", "Add or change", "Enter add-or-change content."];
       title.textContent = copy[0];
@@ -204,9 +206,15 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
         if (form?.dataset.formMode === "clarify") {
           setWorkbenchStatus("Submitting clarification...");
           vscode.postMessage({command:"reviewFeature", featureId: form.dataset.featureId, comment: content});
+        } else if (form?.dataset.formMode === "featureSpecChange") {
+          setWorkbenchStatus("Submitting Feature Spec request...");
+          vscode.postMessage({command:"featureSpecRequest", featureId: form.dataset.featureId, intent: form.dataset.intent, content});
         } else if (form?.dataset.formMode === "specChange" || form?.dataset.formMode === "specClarification") {
           setWorkbenchStatus("Submitting Spec Workspace request...");
           vscode.postMessage({command:"specWorkspaceRequest", intent: form.dataset.intent, content});
+        } else if (form?.dataset.formMode === "newRequirement") {
+          setWorkbenchStatus("Submitting new requirement...");
+          vscode.postMessage({command:"specWorkspaceRequest", intent: "requirement_intake", content});
         } else {
           setWorkbenchStatus("Submitting add-or-change request...");
           vscode.postMessage({command:"newFeature", content});
@@ -357,6 +365,10 @@ function iconForButton(label: string, command: string, data: Record<string, stri
   if (action.includes("resume")) return "play";
   if (action.includes("retry") || text.includes("retry")) return "refresh";
   if (action.includes("cancel") || text.includes("cancel") || action.includes("decline") || text.includes("decline")) return "x";
+  if (action.includes("reject")) return "x";
+  if (action.includes("rollback")) return "undo";
+  if (action.includes("update_spec")) return "file";
+  if (action.includes("request_review_changes")) return "edit";
   if (action.includes("skip") || text.includes("skip")) return "skip";
   if (action.includes("reprioritize") || text.includes("priorit")) return "sort";
   if (action.includes("enqueue") || text.includes("enqueue")) return "plus";
@@ -382,7 +394,7 @@ function variantForButton(label: string, command: string, data: Record<string, s
   const action = (data.action ?? command ?? label).toLowerCase();
   const text = label.toLowerCase();
   if (action.includes("start_auto_run") || text.includes("start") || text.includes("run now") || text.includes("schedule") || text.includes("submit") || text.includes("accept") || text === "ready" || text === "pass") return "button-primary";
-  if (action.includes("cancel") || action.includes("decline") || action.includes("disable") || text.includes("cancel") || text.includes("decline") || text.includes("disable")) return "button-danger";
+  if (action.includes("cancel") || action.includes("decline") || action.includes("reject") || action.includes("rollback") || action.includes("disable") || text.includes("cancel") || text.includes("decline") || text.includes("disable")) return "button-danger";
   if (action.includes("retry") || action.includes("skip") || action.includes("reprioritize") || text.includes("retry") || text.includes("skip") || text.includes("priorit") || text.includes("clarif")) return "button-warn";
   if (command === "refresh") return "button-refresh";
   if (command === "openRawLogRef" || command === "openDocument" || text.includes("open")) return "button-open";
@@ -398,7 +410,9 @@ const ICON_PATHS: Record<string, string> = {
   "check-circle": '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
   copy: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>',
   dot: '<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   external: '<path d="M14 4h6v6"/><path d="M10 14L20 4"/><path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/>',
   message: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>',
   pause: '<path d="M8 5v14M16 5v14"/>',
   play: '<path d="M7 5v14l11-7z"/>',
@@ -410,6 +424,7 @@ const ICON_PATHS: Record<string, string> = {
   settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 2l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1 1.63V21a2 2 0 1 1-4 0v-.08a1.8 1.8 0 0 0-1-1.63 1.8 1.8 0 0 0-2 .36l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05a1.8 1.8 0 0 0 .36-2 1.8 1.8 0 0 0-1.63-1H3a2 2 0 1 1 0-4h.08a1.8 1.8 0 0 0 1.63-1 1.8 1.8 0 0 0-.36-2l-.05-.05A2 2 0 1 1 7.13 3.9l.05.05a1.8 1.8 0 0 0 2 .36A1.8 1.8 0 0 0 10.2 2.7V2a2 2 0 1 1 4 0v.08a1.8 1.8 0 0 0 1 1.63 1.8 1.8 0 0 0 2-.36l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05a1.8 1.8 0 0 0-.36 2 1.8 1.8 0 0 0 1.63 1H21a2 2 0 1 1 0 4h-.08a1.8 1.8 0 0 0-1.52 1z"/>',
   skip: '<path d="M5 5l8 7-8 7V5z"/><path d="M19 5v14"/>',
   sort: '<path d="M7 4v16M7 20l-3-3M7 20l3-3M17 4v16M17 4l-3 3M17 4l3 3"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
   warning: '<path d="M10.3 4.5 2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.5a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
 };

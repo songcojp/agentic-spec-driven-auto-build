@@ -49,6 +49,7 @@ Feature 名称: IDE Workbench Webviews
 - CHG-053（2026-05-07）：用户要求 VSCode Feature Spec Webview 顶部操作栏靠右显示当前项目成本总计；总计必须按当前项目的执行历史累计 `token_consumption_records.cost_usd`，不得改变单个 Feature 详情“最新一次执行费用”的语义。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-054（2026-05-07）：用户澄清 `Pass` 只用于临时重置状态；VSCode Feature Spec Webview 在 `need review` / `review_needed` 状态必须提供与 Product Console 一致的 ReviewItem 审批入口，审批通过后恢复继续执行；默认 Webview 不再显示 `Pass` 按钮。影响 REQ-046、REQ-047、REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-055（2026-05-07）：用户要求 Job / Project 历史累计总费用保留两位小数并四舍五入；该规则只影响累计总费用，不改变单次执行费用的精度。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
+- CHG-057（2026-05-10）：用户要求 VSCode IDE 补齐 Spec 全操作入口：需求变更、澄清、新增、审批、恢复、重试等按钮必须按 Spec、Feature Spec、Job 的对象状态显示和启用。影响 REQ-084 和 FEAT-021，作为状态流转 UI follow-up 修订。
 
 ## UI 概念图
 
@@ -97,3 +98,4 @@ Feature 名称: IDE Workbench Webviews
 - [x] `Feature Spec` Webview 自动刷新默认开启；自动刷新状态和定时器由 VSCode extension host 管理，Webview 只渲染 switch 状态并提交 toggle 消息。
 - [x] `Feature Spec` 顶部操作栏靠右展示当前项目成本总计，数据来自当前项目执行历史累计的 `token_consumption_records.cost_usd`；累计总费用保留两位小数并四舍五入，Feature 详情仍只展示选中 Feature 最新一次有效执行的 token/cost。
 - [x] `Spec Workspace` 中的 UI Spec Concept Images 每行最多显示 8 张图片，超出后自动换行，并在窄宽度下自适应减少列数。
+- [x] VSCode IDE Webview 必须按操作对象和当前状态显示 Spec、Feature Spec 与 Job 操作入口：Spec Workspace 区分 New Requirement / Requirement Change / Clarification；Feature 详情按状态显示 Schedule、Ready、Clarify、Requirement Change、Review 决策、Pause / Resume、Retry、Cancel、Skip 和 Reprioritize；Execution Workbench 的 Review 决策覆盖 approve、reject、request changes、rollback、split task 和 update spec。

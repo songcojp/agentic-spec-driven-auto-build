@@ -48,6 +48,7 @@ export type SpecDriveIdeFeatureNode = {
   nextAction?: string;
   documents: SpecDriveIdeDocument[];
   latestExecutionId?: string;
+  latestSchedulerJobId?: string;
   latestExecutionStatus?: string;
   latestReviewItemId?: string;
   latestReviewStatus?: string;
@@ -1437,6 +1438,9 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
       const latestExecutionId = completedFeature
         ? stateExecutionId ?? latestExecutionForProjection?.executionId
         : latestExecutionForProjection?.executionId;
+      const latestSchedulerJobId = completedFeature
+        ? optionalString(stateCurrentJob?.schedulerJobId) ?? latestExecutionForProjection?.schedulerJobId
+        : latestExecutionForProjection?.schedulerJobId;
       const tokenConsumption = latestExecutionForProjection?.tokenConsumption;
       const stateLastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
       const resumeTarget = normalizeIdeResumeTarget(state.resumeTarget);
@@ -1460,6 +1464,7 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         resumeTarget,
         nextAction: optionalString(state.nextAction),
         latestExecutionId,
+        latestSchedulerJobId,
         latestExecutionStatus,
         latestReviewItemId: latestReview?.id,
         latestReviewStatus: latestReview?.status,
@@ -1706,6 +1711,7 @@ function readLatestExecutionsByFeature(
       name: "executions",
       sql: `SELECT
           er.id,
+          er.scheduler_job_id,
           er.status,
           er.context_json,
           tcr.run_id,
@@ -1742,6 +1748,7 @@ function readLatestExecutionsByFeature(
     const existing = latest.get(featureId) ?? {};
     const execution = {
       executionId: String(row.id),
+      schedulerJobId: optionalString(row.scheduler_job_id),
       status: String(row.status),
       tokenConsumption: tokenConsumptionFromRow(row),
     };
@@ -1758,6 +1765,7 @@ function readLatestExecutionsByFeature(
 
 type FeatureExecutionProjection = {
   executionId: string;
+  schedulerJobId?: string;
   status: string;
   tokenConsumption?: SpecDriveIdeTokenConsumption;
 };
