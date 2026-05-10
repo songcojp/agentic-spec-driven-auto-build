@@ -66,7 +66,7 @@ Feature 名称: IDE Workbench Webviews
 - [x] VSCode 插件新增独立 `Execution Workbench`、`Spec Workspace`、`Feature Spec` 三个 Webview，使用独立前端入口、布局和组件，不复用 Product Console 页面、路由、导航或组件实现。
 - [x] `Execution Workbench` 第一屏以任务调度和自动执行为核心，默认展示 Job 队列、当前运行、下一步动作、阻塞原因、自动执行控制和审批待办。
 - [x] `Execution Workbench` 支持 enqueue、run now、auto run、pause automation、resume automation、retry、cancel、skip 和 reprioritize。
-- [x] `Execution Workbench` 展示 Execution Record、raw log refs、diff 摘要、`SkillOutputContractV1` 校验结果和 `spec-state.json` 投影摘要。
+- [x] `Execution Workbench` 展示 Execution Record、raw log refs、diff 摘要、`SkillOutputContractV1` 校验结果、`result.gitDelivery` 生命周期证据和 `spec-state.json` 投影摘要。
 - [x] `Spec Workspace` 展示 PRD、EARS Requirements、HLD、UI Spec、Architecture Plan、Data Model、Contracts、Tasks、Quickstart、Execution、Review、Delivery 的全流程状态，并为当前阶段提供受控推进操作。
 - [x] `Spec Workspace` 展示 guardrails、command approvals、safe action confirmations、spec consistency、evidence 和 traceability，所有推进动作都必须可审计。
 - [x] `Feature Spec` 通过卡片方式按 Planning、Ready、In Execution、Review、Delivered、Blocked 等状态直观展示 Feature 情况，包括需求覆盖、任务进度、执行状态、Review 状态、依赖、阻塞、下一步动作和最新运行。
@@ -85,7 +85,7 @@ Feature 名称: IDE Workbench Webviews
 - [x] 状态为 `need review` / `review_needed` 的 Feature Spec 仍可通过 Clarify 入口提交澄清内容；澄清提交以 `clarification` 意图进入 Spec change request，并由 Control Plane 排入 `10.change.impact-analysis` 技能调用任务，不由前端硬编码需求变更或新增路由。
 - [x] `Pass` 只作为临时状态重置命令保留，不作为 Feature Spec Webview 的默认入口展示；后端 `mark_feature_complete` 仍可通过受控命令将 Feature 状态、`spec-state.json.executionStatus`、当前或最近 `feature_execution` Execution Record 和对应 Scheduler Job 标记为 `completed`，并清空 blocked reasons。
 - [x] pause、resume、retry、cancel、skip 和 Review 审批后的状态变化必须由 Control Plane 同步 Scheduler Job、Execution Record、Feature `spec-state.json.history` 和必要的 `resumeTarget`；Webview 只展示投影和提交受控命令。
-- [x] Feature Spec 详情面板不得展示 Evidence 区域或 Evidence 验收项；详情只展示 artifacts、tasks、blockers、traceability、最新运行 token/cost 和可执行动作。Artifacts 必须合并原 acceptance 状态，每行展示文件名、状态和 Open 按钮。
+- [x] Feature Spec 详情面板不得展示 Evidence 区域或 Evidence 验收项；详情只展示 artifacts、tasks、blockers、traceability、最新运行 token/cost、Git delivery 生命周期摘要和可执行动作。Artifacts 必须合并原 acceptance 状态，每行展示文件名、状态和 Open 按钮。
 - [x] Feature Spec Webview 必须按分类 panel 展示 Feature：依次为 `Blocked`、`In-Process`、`Todo`、`Ready`、`Done`；每组可点击折叠/展开并显示展开/折叠状态图标，Done 默认折叠，其它默认展开；panel 中 Feature list 必须自适应换行，不依赖 panel 内垂直滚动条或水平滚动条展示卡片。
 - [x] Feature Spec Webview 顶部第一个控件必须是单个视图切换按钮；Feature List 视图下按钮文字显示 `Dependency Graph`，点击后切换到 Dependency Graph 视图并将按钮文字改为 `Feature List`；`Dependency Graph` 视图以树状层级展示 Feature 之间的依赖关系，标出缺失依赖，树节点支持折叠和展开，并默认展开到二级节点。
 - [x] `Execution Workbench` 队列任务必须支持选中；Run Now、Pause / Resume、Retry、Cancel、Skip、Reprioritize、Enqueue 等顶部任务按钮必须只在有选中任务且选中任务状态允许该动作时启用；Pause / Resume 作为双态按钮随选中任务状态切换。

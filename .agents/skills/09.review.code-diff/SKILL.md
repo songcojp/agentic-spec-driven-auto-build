@@ -10,9 +10,9 @@ Use this skill for code, spec, or delivery review summaries.
 ## Workflow
 
 1. Read the diff, feature requirements, design, tasks, test results, and review item context.
-2. **Detect spec drift**: for each changed file in the diff, check whether the implemented behavior matches the acceptance criteria of the `REQ-*` or `US-*` requirements it was supposed to fulfill. Flag any divergence—over-implementation, under-implementation, behavioral mismatch, or missing Journey Checkpoint evidence—as a spec drift finding.
+2. **Detect spec drift**: for each changed file in the diff, check whether the implemented behavior matches the acceptance criteria of the `REQ-*` or `US-*` requirements it was supposed to fulfill. Flag any divergence—over-implementation, under-implementation, behavioral mismatch, missing Journey Checkpoint evidence, or missing Git Delivery Checkpoint evidence—as a spec drift finding.
 3. Compare implementation evidence against `User Journey Coverage` and `Journey Checkpoint` sections. For UI-bearing Features, API/ViewModel/mock-only evidence is a blocking under-implementation unless the Feature is explicitly backend-only.
-4. Prioritize real bugs, behavioral regressions, missing tests, missing journey closure, security/privacy risks, and spec drift.
+4. Prioritize real bugs, behavioral regressions, missing tests, missing journey closure, missing Git delivery evidence, security/privacy risks, and spec drift.
 5. Anchor findings to file paths, requirement IDs, Journey Checkpoints, or source references. Every finding must state: location, expected behavior (from spec), actual behavior (from diff), and severity.
 6. Separate blocking findings from suggestions.
 7. Recommend the next state: approve, request fixes, clarify, risk review, rollback, Journey Closure review, or spec evolution.
@@ -28,6 +28,7 @@ Use this skill for code, spec, or delivery review summaries.
 
 - Spec drift findings (requirement ID → expected → actual → severity).
 - Journey closure findings (user story or checkpoint → expected evidence → actual evidence → severity).
+- Git delivery findings (`result.gitDelivery` field → expected evidence → actual evidence → severity).
 - Other findings ordered by severity (blocking first, then suggestions).
 - Verification and source references.
 - Required fixes or approval decision.
@@ -45,6 +46,7 @@ Use this skill for code, spec, or delivery review summaries.
 
 - `specDriftFindings`: array of requirement ID, expected behavior, actual behavior, and severity.
 - `journeyClosureFindings`: array of user story/checkpoint ID, expected evidence, actual evidence, and severity.
+- `gitDeliveryFindings`: array of `result.gitDelivery` field, expected evidence, actual evidence, and severity.
 - `findings`: array of other review findings ordered by severity.
 - `verificationReferences`: commands, files, lines, or evidence used.
 - `requiredFixes`: blocking fixes or approval decisions.

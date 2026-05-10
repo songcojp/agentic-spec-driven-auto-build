@@ -441,6 +441,24 @@ function validJourneyResult(): Record<string, unknown> {
     requirementCoverage: [{ requirementId: "REQ-VSC-010", status: "passed", evidence: ["tests/codex-rpc-adapter.test.ts"] }],
     acceptanceEvidence: [{ scenarioId: "AC-RPC", status: "passed", evidence: ["Codex RPC event projection"] }],
     journeyEvidence: [{ userStoryId: "US-RPC", scenario: "run feature through RPC adapter", status: "passed", evidence: ["Codex RPC event projection"] }],
+    gitDelivery: validGitDelivery(),
+  };
+}
+
+function validGitDelivery(): Record<string, unknown> {
+  return {
+    ownerWorkspace: "/workspace/project",
+    implementationWorkspace: "/workspace/project.worktrees/feat-016",
+    worktree: "/workspace/project.worktrees/feat-016",
+    branch: "feat/feat-016-specdrive-ide-foundation",
+    commitHash: "abc1234",
+    prUrl: "https://github.com/example/specdrive/pull/16",
+    checks: "passed",
+    merge: "merged",
+    remoteBranchCleanup: "completed",
+    localBranchCleanup: "completed",
+    worktreeCleanup: "cleaned",
+    deliveryExemption: null,
   };
 }
 

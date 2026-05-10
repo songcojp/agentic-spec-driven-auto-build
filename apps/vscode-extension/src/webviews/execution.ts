@@ -293,6 +293,7 @@ function renderResultGroups(result: Record<string, unknown>): string {
     ["Findings", ["findings", "specDriftFindings", "requiredFixes"]],
     ["Risks", ["risks", "residualRisks", "residualRisk"]],
     ["Coverage", ["coverage", "traceabilityMatrix", "userStoryMapping"]],
+    ["Git Delivery", ["gitDelivery"]],
     ["Updated Documents", ["updatedDocuments", "updatedArtifacts", "affectedDocuments"]],
   ];
   const html = groups.map(([title, keys]) => renderResultGroup(title, keys, result)).filter(Boolean).join("");
@@ -307,7 +308,7 @@ function renderResultGroup(title: string, keys: string[], result: Record<string,
 
 function renderAdditionalResult(detail: SpecDriveIdeExecutionDetail | undefined): string {
   const result = resultRecord(skillOutputRecord(detail));
-  const known = new Set(["decision", "reason", "selectedFeature", "featureId", "blockedReason", "commands", "commandsChecked", "verification", "statusChecker", "failureClassification", "recommendedNextAction", "blockers", "blockedReasons", "openQuestions", "residualQuestions", "findings", "specDriftFindings", "requiredFixes", "risks", "residualRisks", "residualRisk", "coverage", "traceabilityMatrix", "userStoryMapping", "updatedDocuments", "updatedArtifacts", "affectedDocuments"]);
+  const known = new Set(["decision", "reason", "selectedFeature", "featureId", "blockedReason", "commands", "commandsChecked", "verification", "statusChecker", "failureClassification", "recommendedNextAction", "blockers", "blockedReasons", "openQuestions", "residualQuestions", "findings", "specDriftFindings", "requiredFixes", "risks", "residualRisks", "residualRisk", "coverage", "traceabilityMatrix", "userStoryMapping", "gitDelivery", "updatedDocuments", "updatedArtifacts", "affectedDocuments"]);
   const additional = Object.fromEntries(Object.entries(result).filter(([key]) => !known.has(key)));
   return Object.keys(additional).length > 0 ? compactJsonBlock(additional) : emptyState("No additional result fields.");
 }

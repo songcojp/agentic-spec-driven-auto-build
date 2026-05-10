@@ -16,7 +16,7 @@
 - 编码 CLI 必须在目标项目 workspace 中启动，workspace root 来自当前项目 repository `local_path` 或 `target_repo_path`。
 - 通过 JSON + JSON Schema 管理 CLI Adapter 配置，隔离 executable、argument template、输出映射和 session resume 逻辑，并符合 HLD 7.8 的 `ExecutionAdapterConfigV1`。
 - 支持 CLI skill invocation contract，将 Spec/UI 操作转换为项目 workspace 内部 Skill prompt。
-- Feature 级 `feature_execution` 通过 `07.execution.dispatch-adapter` 直接读取 Feature Spec 目录执行；CLI Adapter 不要求 `task_graph_tasks` / `tasks` 表存在。
+- Feature 级 `feature_execution` 通过 `07.execution.dispatch-adapter` 直接读取 Feature Spec 目录执行；CLI Adapter 不要求 `task_graph_tasks` / `tasks` 表存在，也不替 Skill 执行 worktree/PR/merge/cleanup。
 - 根据开发阶段策略和任务上下文设置 sandbox mode、approval policy、model、profile、output schema、JSON event stream、workspace root 和 session resume。
 - 开发阶段默认使用 `danger-full-access` 和 `approval=never`，不触发编码 CLI 人工确认。
 - 默认不得使用 bypass approvals；敏感文件、危险命令和 forbidden files 仍由 Safety Gate 阻断。
@@ -26,7 +26,7 @@
 ## Non-Scope
 
 - 不决定任务是否完成；状态判断归属 FEAT-009。
-- 不创建 worktree；workspace 归属 FEAT-007。
+- CLI Adapter 不创建 worktree 或 PR；Feature Git 生命周期由 `07.execution.dispatch-adapter` 管理，workspace 证据记录归属 FEAT-007。
 - 不展示 UI；Execution Console 归属 FEAT-013。
 
 ## User Value
@@ -46,6 +46,7 @@
 - `ExecutionAdapterInvocationV1` 必须携带当前 `specState`，供 Skill 明确读取 Feature 文件状态而不是查询数据库。
 - CLI provider prompt 只说明本次要执行的 Feature 级任务、workspace 路径和输出要求，不得内联源文件内容或序列化完整 invocation。
 - CLI skill output contract 必须使用 `SkillOutputContractV1`，包含 `contractVersion`、`executionId`、`skillSlug`、`requestedAction`、`status`、`summary`、`nextAction`、`producedArtifacts`、Feature 级 `traceability` 和 `result`；`status` 必须覆盖 `queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled` 和 `completed`，其中 `review_needed` 只表示真实人工或风险审查门。
+- 完成状态的 Feature execution 必须校验 `result.gitDelivery`；缺少 worktree、branch、commit、PR、merge 或 cleanup 证据时，CLI Adapter 将结果投影为 `review_needed`，而不是 `completed`。
 - Execution Adapter 校验有效输出后必须把状态、结果摘要、产物和下一步动作投影回 `docs/features/<feature-id>/spec-state.json`。
 - Execution Adapter 必须校验输出 contract 与输入 contract 的 execution、skill、action 和 Feature 级 traceability 是否一致；输出缺失、JSON 不合法、字段不匹配、必需 artifact 缺失，或进程结束后最后一条 contract 仍为非终态时，Execution Record 必须进入 `review_needed` 并保留原因。
 - CLI Adapter 必须以 `execution_records` 作为执行状态主表；不得为 `cli.run` 创建或更新旧 `runs` 记录。

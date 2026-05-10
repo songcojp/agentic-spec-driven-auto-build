@@ -193,6 +193,8 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.doesNotMatch(executionWebviewSource, /Calculated Cost/);
   assert.match(webviewSource, /<h3>Produced Artifacts<\/h3>/);
   assert.match(webviewSource, /renderProducedArtifacts\(executionDetail\)/);
+  assert.match(webviewSource, /\["Git Delivery", \["gitDelivery"\]\]/);
+  assert.match(webviewSource, /"gitDelivery", "updatedDocuments"/);
   assert.match(webviewSource, /<h3>Additional Result<\/h3>/);
   assert.match(webviewSource, /renderAdditionalResult\(executionDetail\)/);
   assert.match(webviewSource, /commandsChecked/);

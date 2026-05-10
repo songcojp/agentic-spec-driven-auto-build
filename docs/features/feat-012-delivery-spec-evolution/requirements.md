@@ -10,9 +10,9 @@
 
 ## Scope
 
-- Feature 达到交付条件后通过本机 `gh` CLI 创建 PR。
+- Feature 达到交付条件后由 `07.execution.dispatch-adapter` 或补交付的 `14.release.prepare-pr` 通过本机 `gh` CLI 创建 PR。
 - PR 内容包含 Feature 摘要、完成任务、关联 requirements、测试结果、风险说明、审批记录、回滚方案和未完成事项。
-- 一轮交付完成后生成 Delivery Report，包含完成内容、变更文件、验收结果、测试摘要、失败和恢复记录、风险项、下一步建议和 Spec 演进建议。
+- 一轮交付完成后生成 Delivery Report，包含完成内容、变更文件、验收结果、测试摘要、Git delivery 生命周期证据、失败和恢复记录、风险项、下一步建议和 Spec 演进建议。
 - 当实现发现需求不准确、验收不可测、代码库现实与计划冲突、审批改变范围、测试暴露边界缺失或运行指标暴露新约束时，生成 Spec Evolution 建议。
 
 ## Non-Scope
@@ -28,14 +28,15 @@
 ## Requirements
 
 - PR 内容必须可以追踪到需求、任务和证据。
+- 默认 Feature execution 的 PR、checks、merge、远程分支清理、本地分支清理和 worktree 清理由执行 Skill 管理；代码只记录和验证 `result.gitDelivery`。
 - 每次 PR 交付都必须有对应交付报告。
 - Spec Evolution 建议必须包含来源证据和影响范围。
 
 ## Acceptance Criteria
 
-- [ ] Feature 达到交付条件后可以生成 PR 草稿或 PR 创建请求。
+- [ ] Feature 达到交付条件后可以通过执行 Skill 生成 PR 草稿或 PR 创建请求。
 - [ ] PR 正文包含需求、任务、测试、风险、审批和回滚信息。
-- [ ] Delivery Report 可以查询关联 Evidence、失败恢复和验收结果。
+- [ ] Delivery Report 可以查询关联 Evidence、失败恢复、验收结果和 Git delivery lifecycle 证据。
 - [ ] Spec Evolution 建议能追踪来源 Evidence 和影响范围。
 
 ## Risks and Open Questions

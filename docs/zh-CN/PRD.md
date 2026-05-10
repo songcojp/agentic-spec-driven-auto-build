@@ -17,6 +17,8 @@
 
 2026-05-03 自主执行选择更新：Project Scheduler 不再仅用代码中的 priority / dependency 过滤作为最终选择结论。启动自动执行或项目级调度运行时，系统应调用 `06.planning.replan` 对 `feature-pool-queue.json`、Feature `spec-state.json`、依赖完成情况、最近 Execution Record、resume/skip hints 和 approval/block 状态进行推理，返回 `select_next_feature` 决策；代码只负责结构校验、安全闸和 `<executor>.run` Job 创建。CLI/app-server 返回的 `approval_needed`、`blocked`、`review_needed`、`failed` 必须投影到 Feature 执行结果，暂停自动继续。
 
+2026-05-10 Git 生命周期边界更新：Feature 实现和交付采用 Skill-first 流程。`07.execution.dispatch-adapter` 负责创建或回退 Feature worktree、分支、提交、PR、检查、合并、远程分支清理、本地分支清理和 worktree 清理；平台代码只负责调度 `feature_execution`、传递 owner workspace 与 Feature Spec 路径、记录 Execution Record / run report / UI 投影，并校验 `SkillOutputContractV1.result.gitDelivery`。项目级并发时默认一个 Feature 一个 PR；Feature 内 worker worktree 只服务于同一个 Feature PR 的内部并发。
+
 ---
 
 ## 1. 产品定义
@@ -620,9 +622,9 @@ Feature `done` 判定不得只依赖任务卡片状态；必须同时满足 Feat
 * 默认项目级单 Feature 串行执行（防止工作区冲突）
 * 项目级 Feature 并行必须由显式开关控制，默认关闭
 * 开关开启后，可允许多个互不影响文件和依赖的 Feature 并行 `implementing`
-* 任意项目级并行写入必须为每个 Feature 创建独立 Git worktree 和隔离分支
+* 任意项目级并行写入必须由 `07.execution.dispatch-adapter` 为每个 Feature 创建独立 Git worktree 和隔离分支
 * Feature 间有依赖关系时，依赖未完成的 Feature 不得进入 `implementing`
-* 多 Feature 并行完成后必须通过 Status Checker、Workspace 冲突检测和 Delivery Gate 汇总 diff、合并 执行结果，并按目标分支顺序合并
+* 多 Feature 并行完成后必须通过 Status Checker、Git Delivery Gate 和 PR 检查汇总 diff、执行结果、PR/merge/cleanup 证据，并按目标分支顺序合并
 
 ### 6.7 任务图与看板
 
@@ -702,7 +704,7 @@ Feature Scheduler
   → Feature 内任务并行必须满足依赖和文件隔离条件
 ```
 
-Project Scheduler 负责读取 `feature-pool-queue.json` 队列规划，调用 `06.planning.replan` 推理选择下一项可执行 Feature，校验技能决策后创建 `<executor>.run` Job、记录 Execution Record 和跨 Feature 资源约束。Feature 内任务排序、并行和 task 状态由 LLM 与 Feature Spec `tasks.md` 管理，平台不再维护二次 TaskGraph。
+Project Scheduler 负责读取 `feature-pool-queue.json` 队列规划，调用 `06.planning.replan` 推理选择下一项可执行 Feature，校验技能决策后创建 `<executor>.run` Job、记录 Execution Record 和跨 Feature 资源约束。Feature 内任务排序、并行、worker worktree 和 task 状态由 `07.execution.dispatch-adapter` 与 Feature Spec `tasks.md` 管理，平台不再维护二次 TaskGraph，也不直接创建 Feature worktree、分支或 PR。
 
 Project Scheduler 的调度 job 类型为 `<executor>.run`，当前为 `cli.run`，后续可扩展 `native.run`。Job payload 必须包含 `operation`、`projectId`、`context`；Feature/Task/Project 只出现在 context 中。Feature 执行统一使用 `operation = "feature_execution"`。
 
@@ -710,7 +712,7 @@ CLI 执行调度由 Runner Worker 消费 `cli.run` Job，写 heartbeat/session/l
 
 #### FR-062 调度策略
 
-**项目级调度**：Project Scheduler 触发 `06.planning.replan` 根据优先级、依赖完成情况、验收风险、就绪状态、最近执行结果、approval pending、blocked/review_needed/failed 状态和人工 resume/skip 选定下一个 Feature；每次调度都从 Feature Pool Queue 动态计算候选集，识别最新优先级、阻塞解除、人工覆盖和 Spec 变更；项目级并行开关关闭时逐个 Feature 串行推进，开启时按 FR-058 选择多个可并行 Feature。技能输出只是选择建议，代码必须再次校验 Feature 属于队列、三件套完整、依赖满足且没有 active `feature_execution`。
+**项目级调度**：Project Scheduler 触发 `06.planning.replan` 根据优先级、依赖完成情况、验收风险、就绪状态、最近执行结果、approval pending、blocked/review_needed/failed 状态、worktree 并发适配性和人工 resume/skip 选定下一个 Feature；每次调度都从 Feature Pool Queue 动态计算候选集，识别最新优先级、阻塞解除、人工覆盖和 Spec 变更；项目级并行开关关闭时逐个 Feature 串行推进，开启时按 FR-058 选择多个可并行 Feature。技能输出只是选择建议，代码必须再次校验 Feature 属于队列、三件套完整、依赖满足且没有 active `feature_execution`。
 
 **Feature 内调度**：Feature Scheduler 在单个 Feature Spec 的任务图内，根据优先级、依赖状态、风险等级、并行能力、Runner 可用性、Git worktree 状态、成本预算、允许执行窗口和审批要求排序。
 
@@ -718,16 +720,16 @@ Console 中的项目级 `schedule_run` 和 `start_auto_run` 返回调度触发 I
 
 #### FR-063 Worktree 并行隔离
 
-项目级并行和 Feature 内写入型任务并行都必须使用 Git worktree：
+项目级并行和 Feature 内写入型任务并行都必须使用 Skill-owned Git worktree：
 
-* 项目级并行：每个并行 Feature 使用独立 worktree。
-* Feature 内并行：每个并行写任务或任务组使用独立 worktree。
+* 项目级并行：每个并行 Feature 由 `07.execution.dispatch-adapter` 使用独立 worktree、独立分支和独立 PR。
+* Feature 内并行：每个并行写任务或任务组可以由该 Feature 的执行技能创建 worker worktree；worker 分支先合回 Feature 分支，最终仍由一个 Feature PR 管理。
 * 只读任务可共享只读工作区，但不得写入文件。
 * 同一文件、同一目录迁移、数据库 schema、锁文件、公共配置等高冲突范围默认串行，不得仅依赖 worktree 并行。
 * 涉及数据库、缓存、消息队列、搜索索引、外部 API、文件上传目录等共享运行时资源的并行任务，必须使用 mock、命名空间隔离、临时容器、独立 schema/database 或一次性测试实例；无法隔离时必须串行执行。
 * 集成测试和端到端测试不得默认共享同一可变本地数据库或缓存实例；测试环境标识、连接串、容器名和清理策略必须写入 workspace schema 和 Execution Result。
-* worktree 创建、分支名、base commit、目标分支、关联 Feature/Task、Runner 和清理状态必须写入 Project Memory 和审计日志。
-* 合并前必须执行冲突检测、Spec Alignment Check 和必要测试；冲突或高风险 diff 进入 Review Needed。
+* worktree 创建、分支名、base commit、目标分支、关联 Feature/Task、Runner、PR、merge 和清理状态必须通过 `result.gitDelivery`、Execution Record、Project Memory 投影和审计日志记录。
+* 合并前必须执行冲突检测、Spec Alignment Check、必要测试和 PR checks；冲突、高风险 diff、缺少 PR/merge/cleanup 证据时进入 Review Needed / Approval Needed / Blocked。
 
 #### FR-064 长时间恢复
 
@@ -759,7 +761,7 @@ Product Console 和 Spec Workspace 的用户操作不直接执行生成、规划
 
 * Stage 2 需求录入操作生成 `00.intake.collect-context`、`02.requirements.convert-ears`、`10.change.create-request` 或 `02.requirements.validate-testability` 的调用提示，并通过 CLI Adapter 在项目 workspace 中执行。
 * Stage 3 planning 操作通过 CLI Skill Planning Bridge 调用 Skill：项目级 HLD 生成使用 `03.hld.generate` 并输出 `docs/zh-CN/hld.md`；UI Spec 生成使用 `04.ui.generate-spec`；per-Feature 规划继续调用 `07.execution.prepare-context`、`06.planning.estimate-risk`、`03.hld.review-architecture`、`03.hld.define-data-flow`、`03.hld.define-adapter-model`、`06.planning.prepare-execution-plan`、`05.feature.decompose` 和 `09.review.spec-consistency`。
-* Task Board 的运行操作通过 `07.execution.dispatch-adapter` 执行已排期任务。
+* Task Board 的运行操作通过 `07.execution.dispatch-adapter` 执行已排期任务；该 Skill 拥有 Feature worktree、分支、提交、PR、merge 和 cleanup 生命周期，平台代码只验证 `result.gitDelivery` 并投影状态。
 
 平台只记录 Console command、scheduler job、Run、执行结果、Status、Review 和 Audit，不恢复 Skill Registry、Skill Center、Skill schema 校验或平台级 SkillRun 表；Skill 发现和执行属于 CLI workspace 内部行为。
 

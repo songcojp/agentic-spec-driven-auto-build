@@ -7,7 +7,7 @@
 1. 普通问答、简单阅读、小范围文档修正和直接缺陷修复，默认使用普通 Codex 工作流。
 2. 只有当用户明确点名 Skill、明确要求项目工作流，或任务需要受治理的 SpecDrive 流程时，才调用项目级 Skill。
 3. 新能力优先判断应写成 Skill 还是代码：
-   - 如果能力是提示驱动的规划、拆解、分析、评审或上下文收集，优先写成 Skill。
+   - 如果能力是提示驱动的规划、拆解、分析、评审、上下文收集或 Git 生命周期编排，优先写成 Skill。
    - 如果能力需要持久状态、结构性约束、状态机、审计记录或可机器查询输出，才写成代码。
 4. Skill 产物必须保持可追踪：需求 ID、Feature Spec、任务、证据和交付记录之间要能互相定位。
 5. 当仓库事实与规格文档冲突时，先走规格演进或需求新增流程，不要绕过规格直接编码。
@@ -22,15 +22,17 @@
 | 需求质量门 | `02.requirements.validate-testability` | 检查需求是否原子、可观察、可测试、可追踪。 |
 | 项目级设计 | `03.hld.generate`, `04.ui.generate-spec` | 生成项目 HLD、页面清单、UI Spec 和概念图；不生成主线 LLD。 |
 | Feature 规划 | `07.execution.prepare-context`, `06.planning.estimate-risk`, `03.hld.review-architecture`, `03.hld.define-data-flow`, `03.hld.define-adapter-model`, `06.planning.prepare-execution-plan`, `05.feature.generate-requirements`, `05.feature.generate-design`, `05.feature.generate-tasks`, `05.feature.decompose`, `09.review.spec-consistency` | 从 Feature Spec 进入技术上下文、决策、架构、数据、契约、可启动性、Feature 三件套生成/维护、任务拆分和一致性检查。 |
-| 自主执行选择 | `06.planning.replan` | 从 Feature Spec Pool 中推理选择下一项可执行 Feature。 |
-| 实现与验证 | `07.execution.dispatch-adapter`, `08.test.run-tests`, `12.recovery.classify-failure` | 在受控范围内实现、运行测试、处理失败恢复。 |
-| 评审与交付 | `09.review.code-diff`, `09.review.journey-closure`, `14.release.prepare-pr`, `07.execution.update-state` | 生成评审结论、用户旅程闭环判定、提交/PR、生命周期副作用和审计证据。 |
+| 自主执行选择 | `06.planning.replan` | 从 Feature Spec Pool 中推理选择下一项可执行 Feature，并说明 worktree 并发适配性。 |
+| 实现与验证 | `07.execution.dispatch-adapter`, `08.test.run-tests`, `12.recovery.classify-failure` | 在受控范围内实现、运行测试、处理失败恢复；默认由实现 Skill 管理 Feature worktree、branch、commit、PR、merge 和 cleanup。 |
+| 评审与交付 | `09.review.code-diff`, `09.review.journey-closure`, `14.release.prepare-pr`, `07.execution.update-state` | 生成评审结论、用户旅程闭环判定、补交付 PR closeout、生命周期副作用和审计证据。 |
 
 ## Spec => Skill Contract
 
 所有由 Spec Workspace、Feature Pool 或 Runner 调起的项目级 Skill 均通过 `ExecutionAdapterInvocationV1.skillInstruction` 接收任务指令。Adapter 输入必须包含 `workspaceRoot`、Feature 级上下文、当前 `specState`、traceability、constraints、输出 schema，以及 `skillInstruction` 中的 `skillSlug`、`requestedAction`、`sourcePaths`、`expectedArtifacts` 和可选操作员输入。Skill 不应从数据库推断 Spec 状态。
 
 Skill 输出必须使用 `SkillOutputContractV1`，包含 `status`、`summary`、`nextAction`、`producedArtifacts`、Feature 级 traceability 和 result。Runner 校验输出后将状态投影回 `docs/features/<feature-id>/spec-state.json`，同时把执行事实保存在 Execution Record、scheduler job、runner heartbeats 和 raw logs 中。`queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`completed` 必须原样进入运行事实；`approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 等中断态必须带可恢复的 `resumeTarget` 或 Review/Recovery 路由。通用输出 Contract 的机器真源在调用端 schema；项目级 Skill 文档只补充本技能 `result` 的专用字段语义，供 Execution Workbench 分组展示执行详情。
+
+Feature execution 的 Git 生命周期属于 Skill result 专用语义：`07.execution.dispatch-adapter` 返回 `completed` 时必须在 `result.gitDelivery` 中提供 owner workspace、implementation worktree、branch、commit、PR、checks、merge、远程分支清理、本地分支清理和 worktree 清理证据。平台代码只调度、记录、校验和展示这些证据；缺少证据时投影为 `review_needed`、`approval_needed` 或 `blocked`。
 
 ## Skill 清单
 

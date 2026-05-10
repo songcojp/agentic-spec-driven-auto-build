@@ -10,9 +10,9 @@
 
 ## Scope
 
-- 为并行 Feature、任务或任务组创建独立 Git worktree 和隔离分支。
+- 为并行 Feature、任务或任务组提供独立 Git worktree 和隔离分支的记录、冲突判定和校验边界。
 - 记录 worktree 路径、分支名、base commit、目标分支、关联 Feature/Task、Runner 和清理状态。
-- 写入型 Feature 执行需要隔离时，Workspace Manager / 调度入口负责创建或验证 worktree；实现技能只在传入的 `workspaceRoot` 中执行，不调用 `git worktree add/remove`。
+- 写入型 Feature 执行需要隔离时，`07.execution.dispatch-adapter` 负责创建、验证和清理实现 worktree；Workspace Manager / 调度入口只记录、分类、校验和投影 `result.gitDelivery`。
 - 判断同文件、锁文件、数据库 schema、公共配置和共享运行时资源是否必须串行。
 - 合并前执行冲突检测、Spec Alignment Check 和必要测试。
 - 支持回滚自动修改和失败任务重放所需的 workspace 边界。
@@ -21,7 +21,7 @@
 
 - 不执行 Codex Run；执行归属 FEAT-008。
 - 不完成 Spec Alignment 算法；检测归属 FEAT-009。
-- 不创建 PR；交付归属 FEAT-012。
+- 不由平台代码创建 PR；Feature 交付归属 `07.execution.dispatch-adapter`，补交付归属 FEAT-012 / `14.release.prepare-pr`。
 
 ## User Value
 
@@ -30,7 +30,7 @@
 ## Requirements
 
 - 任意并行写入都必须追踪到独立 worktree、分支、任务标识和合并目标。
-- Workspace Manager / 调度入口负责创建或验证隔离 worktree，并在交付后按 clean/dirty 状态安全清理；`07.execution.dispatch-adapter` 不创建 sibling worktree，也不要求 worktree 证据作为完成条件。
+- `07.execution.dispatch-adapter` 负责 Feature 实现 worktree、分支、commit、PR、merge 和 cleanup 生命周期；Workspace Manager / 调度入口负责记录、冲突分类、并发适配性和证据校验，不替 Skill 创建 sibling worktree 或 PR。
 - 只读 Subagent 可以并行；不同文件的 Coding Agent 可以并行；同一文件、同一分支写任务默认串行；高风险任务必须由单 Agent 执行。
 - 互相影响文件或依赖的 Feature 不得并行 implementing。
 - 合并前必须执行冲突检测、Spec Alignment Check 和必要测试。
@@ -40,8 +40,8 @@
 
 ## Acceptance Criteria
 
-- [ ] worktree 记录包含路径、分支、base commit、目标分支、Feature/Task、Runner 和清理状态。
-- [ ] 写入型 Runner 使用高权限 sandbox，技能能够创建、验证和清理隔离 worktree，并在失败时输出可审计 blocked reason。
+- [ ] `result.gitDelivery` 和 worktree 记录包含路径、分支、base commit、目标分支、Feature/Task、Runner、PR、merge 和清理状态。
+- [ ] 写入型 Runner 使用高权限 sandbox，执行 Skill 能够创建、验证和清理隔离 worktree，并在失败时输出可审计 blocked reason；平台代码不直接执行 Feature Git 生命周期。
 - [ ] 同文件、高冲突目录、schema、锁文件或公共配置默认串行。
 - [ ] 集成测试和端到端测试使用可审计的测试环境隔离记录。
 - [ ] 合并前检查可以阻止冲突或未通过测试的变更。

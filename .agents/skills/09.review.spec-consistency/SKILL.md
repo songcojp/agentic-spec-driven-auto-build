@@ -13,9 +13,9 @@ detail, and tasks carry executable Journey Checkpoints.
 ## Workflow
 
 1. Read the feature requirements, design, tasks, HLD references, and all planning-stage outputs.
-2. Verify every requirement has a design path, task coverage, user journey coverage, and acceptance verification plan.
+2. Verify every requirement has a design path, task coverage, user journey coverage, delivery checkpoint, and acceptance verification plan.
 3. Verify every task maps to an approved requirement, design decision, or explicit follow-up.
-4. Verify every P1 user story has a Journey Checkpoint in `tasks.md` and that UI-bearing Features include browser-level or equivalent runtime evidence expectations.
+4. Verify every P1 user story has a Journey Checkpoint in `tasks.md`, every implementation Feature has a Git Delivery Checkpoint for `result.gitDelivery`, and UI-bearing Features include browser-level or equivalent runtime evidence expectations.
 5. Verify HLD-vs-Feature boundaries:
    - HLD does not contain Feature task steps, function signatures, component internals, or field-level payloads.
    - Feature design does not redefine project-level architecture, source-of-truth ownership, runtime topology, or security policy.
@@ -28,6 +28,7 @@ detail, and tasks carry executable Journey Checkpoints.
 - Consistency decision.
 - Requirement-to-task coverage table.
 - Journey coverage table.
+- Git delivery checkpoint coverage.
 - HLD/Feature boundary findings.
 - Contradictions or stale assumptions.
 - Required fixes before implementation.
@@ -45,6 +46,7 @@ detail, and tasks carry executable Journey Checkpoints.
 - `decision`: `"consistent"` or `"inconsistent"`.
 - `coverage`: requirement-to-task coverage rows.
 - `journeyCoverage`: user story to Journey Checkpoint and acceptance coverage rows.
+- `gitDeliveryCoverage`: Feature to Git Delivery Checkpoint and expected `result.gitDelivery` evidence rows.
 - `boundaryFindings`: HLD-vs-Feature boundary findings and required destination fixes.
 - `contradictions`: array of conflicts across requirements, design, data model, contracts, quickstart, or tasks.
 - `staleAssumptions`: assumptions that no longer match current artifacts.

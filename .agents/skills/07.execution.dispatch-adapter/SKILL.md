@@ -26,19 +26,23 @@ repository context to modify code safely.
   journey.
 - Do not treat commit, PR, task status, or tests alone as final product closure.
 
-Use this skill for implementation tasks after planning and scheduling. The skill owns
-the feature implementation lane in the invocation workspace through scoped commit
-and GitHub pull request handoff. Local repository mutations use `git` where needed
-for repository state inspection, branch inspection, staging, and commit creation.
-GitHub-facing delivery operations use `gh`, including push setup when available,
-PR creation, PR checks, PR merge, and remote branch cleanup.
+Use this skill for implementation tasks after planning and scheduling. The skill
+owns the Feature implementation lane and the Git delivery lifecycle. Platform code
+only schedules the `feature_execution`, passes the owner workspace and source
+paths, records the returned evidence, and validates the final
+`SkillOutputContractV1`. Local repository mutations use `git` where needed for
+repository state inspection, worktree/branch lifecycle, staging, and commit
+creation. GitHub-facing delivery operations use `gh`, including push setup when
+available, PR creation, PR checks, PR merge, and remote branch cleanup.
 
 The scheduler/runtime should start this skill with a sandbox that can access the
 target repository Git metadata, such as `danger-full-access` in trusted local
 development. Treat invocation `workspaceRoot` as the owner checkout. Before
-editing, try to create a sibling Git worktree for the intended feature branch. If
-worktree creation fails, record the reason and create or switch to the intended
-feature branch in `workspaceRoot` instead.
+editing, create a sibling Git worktree for the intended Feature branch whenever
+the repository supports it. If worktree creation fails, record the reason in
+`result.gitDelivery` and create or switch to the intended feature branch in
+`workspaceRoot` only as an explicit fallback. Platform code must not create the
+implementation worktree on behalf of this skill.
 
 Runtime integration requirements:
 
@@ -106,6 +110,13 @@ Default delegation plan:
    `result.subagentUsageSummary` with the reason, owned files, and token
    visibility status. Do not omit this field.
 
+When a Feature is split into independent implementation slices, the owner thread
+may create worker worktrees and worker branches for those slices. Worker
+worktrees are only implementation isolation boundaries: workers do not create
+PRs, merge PRs, clean remote branches, or decide Feature completion. The owner
+thread integrates worker branches back into the Feature branch, verifies the
+combined diff, and delivers one explainable PR for the Feature.
+
 ## Mainline Guardrails
 
 - Keep the feature execution ledger current after every subagent result and
@@ -149,7 +160,7 @@ At finalization:
 ## Workflow
 
 1. Read the task, related Feature Spec, restrictive requirements, design constraints, allowed file scope, and project constitution constraints.
-2. Inspect the current repository state in invocation `workspaceRoot`, preserve unrelated user changes, and try to create a sibling Git worktree for the intended feature branch before editing. If worktree creation fails, record the failure reason and create or switch to the intended feature branch in `workspaceRoot` instead.
+2. Inspect the current repository state in invocation `workspaceRoot`, preserve unrelated user changes, and create a sibling Git worktree for the intended Feature branch before editing. If worktree creation fails, record the failure reason in `result.gitDelivery` and create or switch to the intended feature branch in `workspaceRoot` only as an explicit fallback.
 3. Run requirements review against the Feature Spec and source requirements. Confirm that each implementation task maps to approved `REQ-*`, `NFR-*`, `EDGE-*`, or task traceability. Stop with `clarification_needed` when material requirement intent is unclear.
 4. Run design review against the Feature Spec design, HLD/design constraints, data/contract boundaries, and allowed file scope. Stop with `risk_review_needed` when the implementation would exceed approved design or scope.
 5. If requirements or design review exposes a question that can be safely resolved by automatic decision, record it in a dedicated clarification and decision section in the corresponding document before implementation. Use the affected document closest to the decision:
@@ -200,7 +211,7 @@ At finalization:
 
 ## Git Delivery
 
-- Treat invocation `workspaceRoot` as the owner checkout. Prefer a sibling Git worktree for feature implementation and delivery. If worktree creation fails, record the blocker and fall back to a new or existing feature branch in `workspaceRoot`.
+- Treat invocation `workspaceRoot` as the owner checkout. Use a sibling Git worktree for feature implementation and delivery when the repository supports it. If worktree creation fails, record the blocker in `result.gitDelivery` and fall back to a new or existing feature branch in `workspaceRoot` only as an explicit fallback.
 - Preserve unrelated changes in the owner checkout and in the implementation checkout.
 - Commit only the scoped implementation, tests, and required spec or decision-record updates. Local staging and commit creation may use `git`; never include unrelated modified files.
 - Subagents must not run delivery commands. The mainline agent owns all `git` and `gh` delivery commands after integrating subagent outputs.
@@ -253,9 +264,14 @@ Required compact fields:
 - `delegation`: array of compact entries `{ role, status, files, note }`.
   Include at least one entry. If no subagent is used, include an owner-thread
   fallback entry with the reason.
-- `git`: object with `branch`, `commit`, `pr`, `checks`, `merge`, `cleanup`, and
-  `exemption`. Use `null` for missing values and return a non-`completed` status
-  when required delivery evidence is missing.
+- `gitDelivery`: object with `ownerWorkspace`, `implementationWorkspace`,
+  `worktree`, `branch`, `commitHash`, `prUrl`, `checks`, `merge`,
+  `remoteBranchCleanup`, `localBranchCleanup`, `worktreeCleanup`, and
+  `deliveryExemption`. Use `null` for missing values and return a
+  non-`completed` status when required delivery evidence is missing. Use
+  `deliveryExemption` only for an explicitly approved delivery exemption with
+  evidence; protected branches, pending checks, failed merge, or unsafe cleanup
+  should return `approval_needed`, `review_needed`, or `blocked`.
 - `tokenUsage`: object with `parentUsagePresent` and
   `subagentUsageObservable` booleans.
 - `risks`: array of concise residual risk strings.

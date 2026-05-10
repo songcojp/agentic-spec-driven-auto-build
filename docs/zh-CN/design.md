@@ -38,7 +38,7 @@ MVP 采用本地优先的控制面架构：
 | REQ-014 | 4.8, 5, 6.4 | Subagent Runtime 按职责创建 agent_type。 |
 | REQ-015 | 4.8, 5, 6.4 | Agent Run Contract 定义边界、验收和输出 schema。 |
 | REQ-016 | 4.4, 4.8, 6.4, 10 | Context Builder 只注入任务所需 Spec、Memory 和文件片段。 |
-| REQ-017 | 4.10, 7.4, 9, 10 | Workspace Manager 为并行写任务创建独立 worktree 和分支。 |
+| REQ-017 | 4.10, 7.4, 9, 10 | Workspace Manager 记录并校验执行 Skill 返回的独立 worktree、分支和 Git delivery evidence。 |
 | REQ-018 | 4.11, 7.6, 8, 11 | Result Merger 合并结果并同步看板和 Project Memory。 |
 | REQ-019 | 4.7, 5, 6.5 | Memory Service 初始化 `.autobuild/memory/project.md`。 |
 | REQ-020 | 4.7, 6.5, 7.5 | Memory Injector 在 Codex CLI 会话前注入 Project Memory。 |
@@ -56,7 +56,7 @@ MVP 采用本地优先的控制面架构：
 | REQ-032 | 4.6, 4.10, 7.4 | Feature 并行开关控制多 Feature 并行和 worktree 隔离。 |
 | REQ-033 | 4.6, 7.3, 8 | Project Scheduler 动态读取候选、推进 Feature。 |
 | REQ-034 | 4.6, 7.4, 8 | Feature Scheduler 根据依赖、风险和资源推进任务。 |
-| REQ-035 | 4.10, 5, 11 | Workspace Manager 记录 worktree 生命周期并合并前检查。 |
+| REQ-035 | 4.10, 5, 11 | Workspace Manager 记录 worktree 生命周期、合并前检查和 Skill-owned cleanup 状态。 |
 | REQ-036 | 4.6, 4.7, 4.10, 9 | Recovery Bootstrap 恢复 Run、任务、心跳、worktree 和 Memory。 |
 | REQ-037 | 4.9, 6.4, 7.5 | Runner CLI Adapter 调用 Codex CLI 并产出 Evidence Pack。 |
 | REQ-038 | 4.9, 6.4, 10 | Runner Policy Resolver 设置 sandbox、approval、model 和 profile。 |
@@ -1088,7 +1088,7 @@ Memory 文件必须包含：
 
 ### 6.6 Delivery Interface
 
-PR 创建命令由 Delivery Manager 生成并通过 Repository Adapter 执行：
+PR 创建、checks、merge 和 cleanup 由 `07.execution.dispatch-adapter` 或补交付 `14.release.prepare-pr` 执行；Delivery Manager 只记录、校验和汇总 `result.gitDelivery`。受控命令示例：
 
 ```bash
 gh pr create --title "<feature title>" --body-file "<delivery-report.md>" --base "<target_branch>" --head "<branch>"
@@ -1344,7 +1344,7 @@ sequenceDiagram
   FA->>D: Feature done
   D->>E: collect evidence and approvals
   D->>D: generate delivery report
-  D->>G: gh pr create
+  D->>G: read PR/check/merge evidence from Skill-owned delivery
   G-->>D: PR url/status
   D->>S: suggest Spec Evolution when constraints changed
   D->>E: persist PR and report evidence

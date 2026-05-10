@@ -356,6 +356,12 @@ export type JourneyClosureGate = {
   details: string[];
 };
 
+export type GitDeliveryGate = {
+  passed: boolean;
+  reason?: "delivery_evidence_missing" | "delivery_not_closed";
+  details: string[];
+};
+
 export type WorkspaceValidationResult = {
   valid: boolean;
   workspaceRoot?: string;
@@ -617,7 +623,7 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
     "tasks",
     "gates",
     "delegation",
-    "git",
+    "gitDelivery",
     "tokenUsage",
     "risks",
     "blockedReason",
@@ -725,18 +731,45 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
         },
       },
     },
-    git: {
+    gitDelivery: {
       type: "object",
       additionalProperties: false,
-      required: ["branch", "commit", "pr", "checks", "merge", "cleanup", "exemption"],
+      required: [
+        "ownerWorkspace",
+        "implementationWorkspace",
+        "worktree",
+        "branch",
+        "commitHash",
+        "prUrl",
+        "checks",
+        "merge",
+        "remoteBranchCleanup",
+        "localBranchCleanup",
+        "worktreeCleanup",
+        "deliveryExemption",
+      ],
       properties: {
+        ownerWorkspace: { type: ["string", "null"] },
+        implementationWorkspace: { type: ["string", "null"] },
+        worktree: { type: ["string", "null"] },
         branch: { type: ["string", "null"] },
-        commit: { type: ["string", "null"] },
-        pr: { type: ["string", "null"] },
+        commitHash: { type: ["string", "null"] },
+        prUrl: { type: ["string", "null"] },
         checks: { type: ["string", "null"] },
         merge: { type: ["string", "null"] },
-        cleanup: { type: ["string", "null"] },
-        exemption: { type: ["string", "null"] },
+        remoteBranchCleanup: { type: ["string", "null"] },
+        localBranchCleanup: { type: ["string", "null"] },
+        worktreeCleanup: { type: ["string", "null"] },
+        deliveryExemption: {
+          type: ["object", "null"],
+          additionalProperties: false,
+          required: ["approved", "reason", "evidence"],
+          properties: {
+            approved: { type: "boolean" },
+            reason: { type: "string" },
+            evidence: { type: "array", items: { type: "string" } },
+          },
+        },
       },
     },
     tokenUsage: {
@@ -1105,8 +1138,9 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- If the Feature Spec tasks cannot be implemented from the available source paths, return status blocked with the missing decision or file scope.",
         "- producedArtifacts must list the actual code, test, config, or documentation files created or updated while executing the Feature Spec.",
         "- For completed feature_execution, result must include requirementCoverage, acceptanceEvidence, and journeyEvidence, unless result.foundationExemption explicitly names downstream closure Features and integration evidence.",
+        "- For completed feature_execution, result.gitDelivery must include ownerWorkspace, implementationWorkspace, worktree, branch, commitHash, prUrl, checks, merge, remoteBranchCleanup, localBranchCleanup, and worktreeCleanup evidence. If PR, merge, or cleanup cannot complete, return review_needed, approval_needed, or blocked instead of completed.",
         "- Do not hide requirementCoverage, acceptanceEvidence, or journeyEvidence inside details, items, or other prose-only fields; they must be direct structured arrays on result.",
-        "- Passing tests or a commit alone is not sufficient for completed; close the Journey Checkpoint or return review_needed with journey_not_closed, acceptance_gap, or evidence_missing.",
+        "- Passing tests or a commit alone is not sufficient for completed; close the Journey Checkpoint and Git delivery lifecycle or return review_needed with journey_not_closed, acceptance_gap, evidence_missing, or delivery_evidence_missing.",
       ]
     : [];
   const clarificationRules = instruction.skillSlug === "10.change.impact-analysis" || instruction.requestedAction === "resolve_clarification"
@@ -1494,6 +1528,10 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
   if (!journeyClosure.passed) {
     reasons.push(`Journey Closure Gate failed: ${journeyClosure.reason ?? "journey_not_closed"}${journeyClosure.details.length ? ` (${journeyClosure.details.join("; ")})` : ""}.`);
   }
+  const gitDelivery = assessGitDeliveryGate(invocation, output);
+  if (!gitDelivery.passed) {
+    reasons.push(`Git Delivery Gate failed: ${gitDelivery.reason ?? "delivery_evidence_missing"}${gitDelivery.details.length ? ` (${gitDelivery.details.join("; ")})` : ""}.`);
+  }
   for (const artifact of instruction.expectedArtifacts.filter((entry) => entry.required && isMaterializedSpecArtifact(entry.path))) {
     const produced = output.producedArtifacts.find((entry) => entry.path === artifact.path && entry.status !== "missing" && entry.status !== "skipped");
     const existsOnDisk = existsSync(join(invocation.workspaceRoot, artifact.path));
@@ -1538,6 +1576,34 @@ export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV
   return { passed: true, details: ["journeyEvidence, acceptanceEvidence, and requirementCoverage passed"] };
 }
 
+export function assessGitDeliveryGate(invocation: ExecutionAdapterInvocationV1 | undefined, output: SkillOutputContract | undefined): GitDeliveryGate {
+  if (!invocation || !output || output.status !== "completed" || !isFeatureExecutionInvocation(invocation, output)) {
+    return { passed: true, details: [] };
+  }
+  const result = output.result;
+  const gitDelivery = result.gitDelivery;
+  if (typeof gitDelivery !== "object" || gitDelivery === null || Array.isArray(gitDelivery)) {
+    return { passed: false, reason: "delivery_evidence_missing", details: ["gitDelivery is required"] };
+  }
+  const record = gitDelivery as Record<string, unknown>;
+  if (isValidDeliveryExemption(record.deliveryExemption)) {
+    return { passed: true, details: ["deliveryExemption accepted"] };
+  }
+
+  const missing: string[] = [];
+  for (const field of ["ownerWorkspace", "implementationWorkspace", "worktree", "branch", "commitHash", "prUrl"]) {
+    if (!nonEmptyString(record[field])) missing.push(`${field} is required`);
+  }
+  for (const field of ["checks", "merge", "remoteBranchCleanup", "localBranchCleanup", "worktreeCleanup"]) {
+    if (!isPassedDeliveryStatus(record[field])) missing.push(`${field} must be passed, completed, cleaned, or merged`);
+  }
+  if (missing.length > 0) {
+    const reason = missing.some((entry) => entry.includes("must be")) ? "delivery_not_closed" : "delivery_evidence_missing";
+    return { passed: false, reason, details: missing };
+  }
+  return { passed: true, details: ["worktree, PR, merge, and cleanup evidence passed"] };
+}
+
 function resultItemsMentionStructuredEvidence(result: Record<string, unknown>): boolean {
   const items = Array.isArray(result.items) ? result.items : [];
   return items.some((entry) => {
@@ -1562,6 +1628,20 @@ function isValidFoundationExemption(value: unknown): boolean {
   return nonEmptyString(record.reason)
     && nonEmptyArray(record.downstreamFeatures)
     && nonEmptyArray(record.integrationEvidence);
+}
+
+function isValidDeliveryExemption(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  if (record.approved !== true) return false;
+  return nonEmptyString(record.reason) && nonEmptyArray(record.evidence);
+}
+
+function isPassedDeliveryStatus(value: unknown): boolean {
+  const status = typeof value === "object" && value !== null && !Array.isArray(value)
+    ? String((value as Record<string, unknown>).status ?? "").toLowerCase()
+    : String(value ?? "").toLowerCase();
+  return ["passed", "complete", "completed", "cleaned", "merged", "success", "succeeded"].includes(status);
 }
 
 function isPassedEvidence(value: unknown): boolean {

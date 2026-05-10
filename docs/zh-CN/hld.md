@@ -24,6 +24,8 @@ SpecDrive AutoBuild 是一个面向软件团队的长时间自主编程系统。
 
 2026-05-03 Feature Selection Skill：Project Scheduler 的下一 Feature 选择由 `06.planning.replan` 推理完成，输入为 Feature Pool Queue、Feature index、各 Feature `spec-state.json`、依赖完成情况、最近 Execution Record 和 operator resume/skip hints。Control Plane 只信任通过代码安全校验的技能决策，并负责创建 `<executor>.run` Job 与 Execution Record。`approval_needed`、`blocked`、`review_needed`、`failed` 等非可持续 CLI/app-server 状态必须投影回 Feature `spec-state.json`，阻止自动循环继续越权推进。
 
+2026-05-10 Skill-owned Git delivery：Feature implementation 的 Git 生命周期由 `07.execution.dispatch-adapter` 和必要时的 `14.release.prepare-pr` 承担。Control Plane / Scheduler / Adapter 只传递 owner workspace 与 Feature Spec source paths、记录 Execution Record、校验 `SkillOutputContractV1.result.gitDelivery`，不得直接创建 Feature worktree、提交、PR、merge 或 cleanup。项目级并发使用一个 Feature 一个 worktree / branch / PR；Feature 内 worker worktree 先合回 Feature branch，再由 owner Feature PR 交付。
+
 2026-05-03 Execution Adapter Layer 重构：平台不再使用 Runner 作为核心架构概念。执行层统一称为 Execution Adapter Layer，下分 CLI Adapter 与 RPC Adapter。CLI Adapter 适配 `codex exec`、Gemini headless CLI 或其他本机编码 CLI；RPC Adapter 适配 `codex app-server`、app-server HTTP/JSON-RPC、WebSocket、stdio 或后续远程执行服务。Scheduler 只创建 `cli.run`、`rpc.run` 等 executor job；Execution Adapter Layer 负责把统一的 `ExecutionAdapterInvocationV1` 转换为具体 provider 调用，并把 provider events 投影为 `ExecutionAdapterResultV1`、Execution Record、raw logs、approval request 和 Feature `spec-state.json`。
 
 本 HLD 定义项目级架构边界、技术栈、核心子系统、数据域、集成方式、运行拓扑、安全治理、可观测性和 Feature Spec 拆分方向。本文不定义具体接口字段、数据库迁移、函数签名、任务实现步骤或单个 Feature 的低层设计。
@@ -281,7 +283,7 @@ Responsibilities:
 - 按 Spec、Clarification、Repo Probe、Architecture、Task、Coding、Test、Review、Recovery 或 State 类型创建 Subagent Run。
 - 生成 Agent Run Contract，冻结目标、上下文切片、允许文件、只读文件、禁止动作、验收标准和输出 schema。
 - 保证 Subagent 默认不继承完整主上下文，只接收当前任务所需上下文。
-- 将写入型任务交给 Workspace Manager 分配隔离 worktree。
+- 将写入型任务交给执行 Skill 管理隔离 worktree，平台只提供冲突判定、记录和审计。
 
 Owns:
 
@@ -313,8 +315,8 @@ Collaborates With:
 
 Responsibilities:
 
-- 为项目级并行 Feature 或 Feature 内并行写任务创建独立 Git worktree 与分支。
-- 记录 worktree 路径、分支名、base commit、目标分支、关联 Feature/Task、执行通道 和清理状态。
+- 记录执行 Skill 返回的 worktree 路径、分支名、base commit、目标分支、关联 Feature/Task、执行通道、PR、merge 和清理状态。
+- 提供冲突分类、并发适配性和 merge-readiness 判断；不作为默认 Feature 执行路径直接创建 worktree、commit、PR 或 merge。
 - 判断同文件、锁文件、数据库 schema、公共配置和共享运行时资源是否必须串行。
 - 合并前执行冲突检测、Spec Alignment Check 和必要测试。
 
@@ -576,8 +578,8 @@ Data ownership rules:
 | BullMQ + Redis | `specdrive:feature-scheduler` 和 Execution Adapter queue 承担 delayed、repeatable 和 Worker job 执行。 | Redis 不保存业务事实；断连时 scheduler health 为 blocked，SQLite 保留 trigger/job/audit。 |
 | Codex CLI / Google Gemini CLI | 由 CLI Adapter 调用 `codex exec`、Gemini headless `stream-json` 或等价执行入口，并要求结构化输出。 | 高风险任务不得自动高权限执行；命令模板和输出映射来自 active JSON adapter 配置。 |
 | Codex RPC / HTTP / JSON-RPC / WebSocket | 由 RPC Adapter 连接或启动 provider，执行 initialize/capability detection、thread/session start/resume、turn/request、interrupt/cancel、approval response 和 event stream 消费。 | RPC provider 不直接写事实源；VSCode 插件只能提交受控命令和订阅状态。 |
-| Git CLI | 由 Repository Adapter 和 Workspace Manager 读取状态、创建分支和管理 worktree。 | Git 状态是代码事实来源。 |
-| GitHub `gh` CLI | 由 Delivery Manager 创建 PR，读取必要 PR 状态。 | MVP 不单独建模 Git 平台权限矩阵。 |
+| Git CLI | 由 Repository Adapter / Workspace Manager 读取状态；Feature 写入生命周期中的 worktree、branch、commit 和 cleanup 由执行 Skill 调用。 | Git 状态是代码事实来源；平台代码不替技能执行 Feature Git 生命周期。 |
+| GitHub `gh` CLI | 由执行 Skill 或补交付 Skill 创建 PR、读取 PR 状态、merge 和清理远程分支。 | MVP 不单独建模 Git 平台权限矩阵。 |
 | Local filesystem | 保存 Project Memory、Spec artifact、执行结果 artifact 和 Delivery Report。 | Artifact root 统一为 `.autobuild/`。 |
 | Build/test tools | 由 Status Checker 和 Execution Adapter 根据项目健康检查发现并执行。 | 命令结果必须进入 执行结果。 |
 
@@ -731,9 +733,9 @@ flowchart TD
 | 阶段 | 触发 | 实现归因 | 状态迁移 | 产出物 |
 |---|---|---|---|---|
 | **intake** | Feature Spec 创建（手动 / Skill 拆分） | Skill（EARS 内容 + Checklist + 澄清）+ Code（Feature 记录写入、状态迁移） | `draft` → `ready`（或 `review_needed`） | EARS Requirements、ClarificationLog、RequirementChecklist |
-| **execution** | `<executor>.run` job 被 Worker 消费 | Code（BullMQ Worker、Project Memory 注入、CLI/native executor、心跳、Execution Record）+ Skill（按 Feature Spec 执行） | `ready` → `implementing`；Execution Record：`running` → `completed/review_needed/failed/blocked` | 代码/测试/配置/文档变更、Execution Record、ExecutionHeartbeat、RawExecutionLog、Execution Result |
+| **execution** | `<executor>.run` job 被 Worker 消费 | Code（BullMQ Worker、Project Memory 注入、CLI/native executor、心跳、Execution Record、`gitDelivery` 校验）+ Skill（按 Feature Spec 执行并管理 worktree/branch/commit/PR/merge/cleanup） | `ready` → `implementing`；Execution Record：`running` → `completed/review_needed/failed/blocked` | 代码/测试/配置/文档变更、Execution Record、ExecutionHeartbeat、RawExecutionLog、Execution Result、`result.gitDelivery` |
 | **checking** | 每次 Execution Record 结束后 Status Checker 触发 | Code（diff/build/test/lint/security 命令执行）+ Skill（Spec Alignment 语义比对） | `running` → `done` / `review_needed` / `blocked` / `failed` | StatusCheckResult、SpecAlignmentResult、ExecutionResult（更新） |
-| **closing** | Feature Aggregator 判断所有任务完成且验收通过 | Code（PR 创建、Delivery Record）+ Skill（PR 内容、Spec Evolution 建议） | `in-progress` → `done` → `delivered`；未通过 → `review_needed` | PullRequestRecord、Delivery Report、SpecEvolutionSuggestion |
+| **closing** | Feature Aggregator 判断所有任务完成且验收通过 | Code（Delivery Record、状态投影）+ Skill（PR 内容、PR merge/cleanup、Spec Evolution 建议） | `in-progress` → `done` → `delivered`；未通过 → `review_needed` / `approval_needed` / `blocked` | PullRequestRecord、Delivery Report、SpecEvolutionSuggestion、Git delivery lifecycle evidence |
 
 **状态机约束**：
 - `blocked`：任意阶段均可发生；恢复后回退到前一阶段的入口并重新入队 `<executor>.run` Job。
@@ -856,7 +858,7 @@ Quality gates:
 | Orchestration and State Machine | Feature/Execution 状态机、Feature Spec `tasks.md` 覆盖、Feature 选择、计划流水线、调度触发模式、兼容看板列。 | REQ-024 至 REQ-034、REQ-060 |
 | Subagent Runtime and Context Broker | Agent 类型、Run Contract、最小上下文、Subagent Console 后端数据层。 | REQ-014 至 REQ-018（REQ-017 写入隔离实现于 feat-007，feat-005 依赖其结果）、REQ-055（后端数据层主导实现于此，UI 由 feat-013 交付）。 |
 | Project Memory and Recovery Projection | Memory 初始化、注入、更新、压缩、版本和状态冲突修复。 | REQ-019 至 REQ-023、REQ-036 |
-| Workspace Isolation | worktree、分支、并行写入隔离、冲突检测和回滚边界。 | REQ-017（主导实现）、REQ-032、REQ-035；REQ-017 同时被 Subagent Runtime and Context Broker 依赖。 |
+| Workspace Isolation | worktree、分支、并行写入隔离、冲突检测、Git delivery 证据记录和回滚边界；Feature worktree 生命周期由执行 Skill 执行，平台负责记录与校验。 | REQ-017（主导实现）、REQ-032、REQ-035；REQ-017 同时被 Subagent Runtime and Context Broker 依赖。 |
 | Execution Adapter Layer | CLI Adapter 调用、Execution Policy、JSON 配置、心跳、session resume、结构化输出。 | REQ-037 至 REQ-039、REQ-056、REQ-065、REQ-066 |
 | Status Checker | 检测项、Spec Alignment、状态判断、Execution Result。 | REQ-040 至 REQ-042、REQ-051 |
 | Failure Recovery | 恢复任务、恢复策略、失败指纹、重试退避和禁止重复。 | REQ-043 至 REQ-045 |

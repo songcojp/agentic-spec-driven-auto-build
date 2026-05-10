@@ -14,8 +14,9 @@ Use this skill when the scheduler must choose the next Feature Spec to run from 
 3. Exclude Features whose dependencies are not completed.
 4. Exclude `blocked`, `failed`, `review_needed`, or `approval_needed` Features unless the input explicitly resumes that Feature.
 5. Exclude Features with active `queued`, `running`, or `approval_needed` `feature_execution` records for the same project.
-6. Prefer the highest-priority runnable Feature, but use reasoning to account for stale states, explicit skips, completed dependencies, and recent terminal execution results.
-7. Return a single decision. Do not create jobs, edit files, write state, or mark Features done.
+6. When project-level parallel execution is enabled, prefer Features whose dependencies, declared file scope, and recent worktree/branch evidence indicate they can run in independent sibling worktrees without overlapping writes.
+7. Prefer the highest-priority runnable Feature, but use reasoning to account for stale states, explicit skips, completed dependencies, recent terminal execution results, and worktree-concurrency fit.
+8. Return a single decision. Do not create jobs, edit files, write state, create worktrees, or mark Features done.
 
 ## Output Contract
 
@@ -34,6 +35,7 @@ For `requestedAction = "select_next_feature"`, the `result` object must contain:
 - `dependencyFindings`: array summarizing dependency status.
 - `resumeRequiredFeatures`: array of Feature ids that require explicit resume.
 - `skippedFeatures`: array of Feature ids skipped by operator instruction.
+- `worktreeConcurrency`: concise summary of whether the selected Feature can be isolated in its own worktree and why it is safe or blocked for parallel execution.
 
 Use `status = "completed"` when the selection decision is valid, even if `decision` is `"none"` or `"blocked"`. Use `status = "blocked"` only when the selection input is unreadable or contradictory.
 
@@ -42,4 +44,5 @@ Use `status = "completed"` when the selection decision is valid, even if `decisi
 - Never select a Feature outside the supplied Feature Pool Queue.
 - Never select a Feature only because it appears in SQLite; Feature identity comes from the Feature index and Feature Spec directory.
 - Never bypass approval pending, review needed, blocked, or failed states without an explicit resume hint.
+- Never create worktrees, branches, commits, or PRs; this skill only selects the next Feature and explains worktree-concurrency suitability.
 - If multiple Features appear runnable, choose one and explain why it is better than the alternatives.

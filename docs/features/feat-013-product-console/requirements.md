@@ -40,12 +40,12 @@ Spec Evolution:
 - Subagent Console 已移除，Console 不展示平台 Subagent 页面或终止/重试动作。
 - Runner Console 展示 Runner 在线状态、active CLI adapter、当前模型、sandbox、approval policy、queue、最近日志、心跳、外部执行状态和证据，并支持暂停或恢复 Runner。
 - Runner Console 的队列状态必须来自 `scheduler_job_records` 与 Runner heartbeat/session/log，而不是静态 recent logs。
-- Runner / Scheduler 页面必须以操作者视角展示当前队列动作、执行结果、blocked reason、Skill 输出、next action 和 Evidence；审计时间线不得作为理解队列状态的主入口。
+- Runner / Scheduler 页面必须以操作者视角展示当前队列动作、执行结果、blocked reason、Skill 输出、next action、Git delivery 生命周期证据和 Evidence；审计时间线不得作为理解队列状态的主入口。
 - Runner Console 必须展示 `cli.run` 与后续 `native.run` 的执行队列，不展示固定 Feature 列或旧流水线卡片。
 - Runner Console 主列表必须展示 Job：执行名称、执行类型、operation、status、execution id、attempts、updatedAt、workspace。
 - Runner Console 的任务队列必须支持按状态和关键词筛选，关键词至少覆盖 job id、job type、operation、execution id、workspace、skill/native 信息、状态和阻塞原因。
 - Runner Console 的任务列表必须优先展示可读执行意图；scheduler job id、BullMQ job id、execution id 等 GUID 只能作为辅助事实。
-- Runner Console 必须提供 scheduler job / execution detail，展示 Job 基础信息、payload/context、Execution Record、CLI skill 或 native handler、Evidence、logs、error/blocked reason。
+- Runner Console 必须提供 scheduler job / execution detail，展示 Job 基础信息、payload/context、Execution Record、CLI skill 或 native handler、`result.gitDelivery`、Evidence、logs、error/blocked reason。
 - Spec Workspace 和 Runner Console 必须展示 workspace-aware skill invocation 反馈，包括 scheduler job、execution id、workspace、skill phase、blocked reason 和最近 Evidence。
 - System Settings 提供 CLI Adapter 配置管理入口，支持 Codex/Gemini adapter preset、原始 JSON 查看/编辑、JSON Schema 表单编辑、token 价格表配置、dry-run 校验、保存草稿、启用/禁用、字段级错误和审计反馈；Runner Console 只展示 active adapter、配置状态和跳转入口。
 - Product Console 的查询接口只读取 ViewModel、Evidence、审计、配置 schema 和状态摘要；任何写入状态、触发 Scheduler / Execution Record、执行 CLI、改变审批/规则/配置或写入 Evidence / Project Memory 的动作都必须通过 Console Command Gateway 产生受控命令回执。
@@ -120,7 +120,7 @@ Spec Evolution:
 - [ ] 系统设置提供 CLI Adapter 配置管理 UI，覆盖 Codex/Gemini preset、原始 JSON 编辑、JSON Schema 表单编辑、token 价格表编辑、dry-run 校验、保存草稿、启用/禁用和字段级错误展示。
 - [ ] 系统设置提供 RPC Adapter token 价格表编辑与摘要展示，并与 CLI Adapter 共享同一套 `defaults.costRates` 表单行为。
 - [ ] Runner Console 只展示 CLI Adapter 配置健康摘要和跳转入口，不直接编辑 CLI 配置。
-- [ ] Runner Console 浏览器级验证覆盖 `cli.run` / `native.run` 执行队列、Job 列表、execution detail、payload context、workspace、Runner heartbeat、blocked reason 或 Evidence 摘要。
+- [ ] Runner Console 浏览器级验证覆盖 `cli.run` / `native.run` 执行队列、Job 列表、execution detail、payload context、workspace、Git delivery 生命周期、Runner heartbeat、blocked reason 或 Evidence 摘要。
 - [ ] Runner Console 浏览器级验证覆盖 Job 队列筛选、执行详情、可读执行描述，以及详情来自真实 ViewModel 字段而不是静态 demo 文案。
 - [ ] Audit Center 浏览器级验证覆盖审计摘要、Audit Timeline、事件详情、阻塞原因、Evidence / Approval 关联记录和英文 `Audit Center` 文案。
 - [ ] CLI Adapter 表单编辑和原始 JSON 编辑共享同一份配置事实源，切换编辑模式不得丢失未保存修改。

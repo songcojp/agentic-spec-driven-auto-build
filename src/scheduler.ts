@@ -696,7 +696,15 @@ function executionReviewNeededReason(
   metadata?: Record<string, unknown>,
 ): "approval_needed" | "clarification_needed" | "risk_review_needed" {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
-  if (text.includes("journey closure gate") || text.includes("journey_not_closed") || text.includes("acceptance_gap") || text.includes("evidence_missing")) {
+  if (
+    text.includes("journey closure gate") ||
+    text.includes("git delivery gate") ||
+    text.includes("journey_not_closed") ||
+    text.includes("acceptance_gap") ||
+    text.includes("evidence_missing") ||
+    text.includes("delivery_evidence_missing") ||
+    text.includes("delivery_not_closed")
+  ) {
     return "risk_review_needed";
   }
   if (/\b(clarif|ambigu|question|unknown|unclear)\b/.test(text)) return "clarification_needed";
@@ -708,6 +716,8 @@ function executionReviewTriggers(summary: string, metadata?: Record<string, unkn
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
   if (text.includes("journey_not_closed")) return ["journey_not_closed"];
   if (text.includes("acceptance_gap")) return ["acceptance_gap"];
+  if (text.includes("delivery_not_closed")) return ["delivery_not_closed"];
+  if (text.includes("delivery_evidence_missing") || text.includes("git delivery gate")) return ["delivery_evidence_missing"];
   if (text.includes("evidence_missing") || text.includes("journey closure gate")) return ["evidence_missing"];
   if (/\b(approve|approval|authorize|permission|commit|pull request|\bpr\b|agents\.md)\b/.test(text)) {
     return ["permission_escalation"];

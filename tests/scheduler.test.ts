@@ -926,6 +926,40 @@ test("cli.run routes completed feature execution without journey evidence to rev
   assert.match(String(rows.reviews[0].body), /Journey Closure Gate/);
 });
 
+test("cli.run routes completed feature execution without Git delivery evidence to review_needed", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-git-gap-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-GIT-GAP"), () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-GIT-GAP"}\n${skillOutputEvent("RUN-GIT-GAP", {
+      result: {
+        requirementCoverage: [{ requirementId: "REQ-CLI", status: "passed", evidence: ["tests/scheduler.test.ts"] }],
+        acceptanceEvidence: [{ scenarioId: "AC-CLI", status: "passed", evidence: ["run report"] }],
+        journeyEvidence: [{ userStoryId: "US-CLI", scenario: "user completes feature flow", status: "passed", evidence: ["run report"] }],
+      },
+    })}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "run", sql: "SELECT status, summary, metadata_json FROM execution_records WHERE id = 'RUN-GIT-GAP'" },
+    { name: "reviews", sql: "SELECT status, review_needed_reason, trigger_reasons_json, body FROM review_items WHERE run_id = 'RUN-GIT-GAP'" },
+  ]).queries;
+  const metadata = JSON.parse(String(rows.run[0].metadata_json));
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(rows.run[0].status, "review_needed");
+  assert.match(String(rows.run[0].summary), /Git Delivery Gate failed: delivery_evidence_missing/);
+  assert.equal(metadata.contractValidation.valid, false);
+  assert.match(metadata.contractValidation.reasons.join("\n"), /gitDelivery is required/);
+  assert.equal(rows.reviews[0].status, "review_needed");
+  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
+  assert.match(String(rows.reviews[0].trigger_reasons_json), /delivery_evidence_missing/);
+  assert.match(String(rows.reviews[0].body), /Git Delivery Gate/);
+});
+
 test("cli.run accepts completed foundation feature with explicit downstream journey exemption", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-foundation-"));
   prepareSkillWorkspace(root);
@@ -942,6 +976,7 @@ test("cli.run accepts completed foundation feature with explicit downstream jour
           downstreamFeatures: ["FEAT-UI-CLOSURE"],
           integrationEvidence: ["tests/adapter-contract.test.ts"],
         },
+        gitDelivery: validGitDelivery(),
       },
     })}`,
     stderr: "",
@@ -1053,6 +1088,24 @@ function validJourneyResult(): Record<string, unknown> {
     requirementCoverage: [{ requirementId: "REQ-CLI", status: "passed", evidence: ["tests/scheduler.test.ts"] }],
     acceptanceEvidence: [{ scenarioId: "AC-CLI", status: "passed", evidence: ["run report"] }],
     journeyEvidence: [{ userStoryId: "US-CLI", scenario: "user completes feature flow", status: "passed", evidence: ["run report"] }],
+    gitDelivery: validGitDelivery(),
+  };
+}
+
+function validGitDelivery(): Record<string, unknown> {
+  return {
+    ownerWorkspace: "/workspace/project",
+    implementationWorkspace: "/workspace/project.worktrees/feat-cli",
+    worktree: "/workspace/project.worktrees/feat-cli",
+    branch: "feat/feat-cli",
+    commitHash: "abc1234",
+    prUrl: "https://github.com/example/specdrive/pull/8",
+    checks: "passed",
+    merge: "merged",
+    remoteBranchCleanup: "completed",
+    localBranchCleanup: "completed",
+    worktreeCleanup: "cleaned",
+    deliveryExemption: null,
   };
 }
 

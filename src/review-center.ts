@@ -23,7 +23,9 @@ export type ReviewTrigger =
   | "architecture_change"
   | "journey_not_closed"
   | "acceptance_gap"
-  | "evidence_missing";
+  | "evidence_missing"
+  | "delivery_evidence_missing"
+  | "delivery_not_closed";
 
 export type ReviewItemStatus = "review_needed" | "approved" | "rejected" | "changes_requested" | "closed";
 export type ReviewDecision =

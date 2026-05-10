@@ -54,6 +54,7 @@
 | CHG-052 | HLD / Feature Spec / LLD 职责边界修复 | 用户讨论：主线 HLD 是否必要、是否需要生成 LLD；后续要求优化 HLD 与 Feature Spec 相关技能 | 已增强 Agentic Spec 标准、Skill 导航和 HLD/Feature 生成/规划/评审 Skill | 保留主线 HLD 作为项目级架构事实源；不生成主线 LLD；低层设计下沉到 Feature `design.md` 或规划结果，Feature requirements/design/tasks 前置承担旅程闭环责任。 |
 | CHG-056 | Agentic Spec 状态流转全流程补齐 | 用户指令：当前项目作为 Agentic Spec 规范的管理系统，需要完善状态流转全流程；实现计划要求标准 + 产品实现同步 | 已增强 Agentic Spec 标准、requirements、HLD、Skill 导航、FEAT-004、FEAT-009、FEAT-010、FEAT-011、FEAT-021 和状态投影代码 | 作为状态机 / 协议覆盖增强：补齐状态迁移事件契约、`resumeTarget`、Scheduler Job 完整状态、Review/Recovery 回流和 UI 受控投影边界。 |
 | CHG-057 | VSCode IDE Spec 全操作入口状态协同 | 用户指令：VSCode IDE 中需要补齐 Spec 的所有操作，需求变更、澄清、新增、审批、恢复、重试等按钮必须与 Spec、Feature Spec、Job 状态协同 | 已增强 REQ-084、FEAT-021 requirements/design/tasks 和 VSCode Webview 状态投影代码 | 作为 FEAT-021 / REQ-084 状态流转 UI follow-up：按操作对象和当前状态显示或禁用 Spec、Feature、Job 动作，所有副作用继续走 SpecChangeRequest、ReviewItem 受控命令或 IdeQueueCommand。 |
+| CHG-058 | Skill-owned Git lifecycle for Feature execution | 用户指令：Spec 流程需要结合 Git，Feature Spec 环节采用 worktree 并发和 PR 管理，Git 生命周期最好由 Skill 实现 | 已增强 PRD、requirements、HLD、skills、FEAT-007、FEAT-008、FEAT-012、FEAT-013、FEAT-021、`05.feature.decompose`、`06.planning.replan`、`07.execution.dispatch-adapter`、`14.release.prepare-pr` 和 SkillOutput 校验 | Feature execution 默认一个 Feature 一个 PR；`07.execution.dispatch-adapter` 管理 worktree / branch / commit / PR / merge / cleanup，代码只调度、记录、展示并校验 `result.gitDelivery`。 |
 
 ## 人工处置顺序建议
 
@@ -110,6 +111,7 @@
 | CHG-052 | HLD 保持项目级架构事实源，不生成主线 LLD；Feature requirements/design/tasks 分别承担验收对象、闭环实现路径和可执行 Journey Checkpoint。 | 已同步 `docs/zh-CN/agentic-spec-standard.md`、`docs/zh-CN/skills.md`、`.agents/skills/03.hld.generate`、`05.feature.generate-requirements`、`05.feature.generate-design`、`05.feature.generate-tasks`、`05.feature.decompose`、`03.hld.review-architecture`、`03.hld.define-data-flow`、`03.hld.define-adapter-model`、`06.planning.prepare-execution-plan`、`09.review.spec-consistency`。 | 已同步实现 |
 | CHG-056 | 状态流转全流程按标准 + 产品实现一起补齐；状态迁移必须可追踪、可恢复、可投影。 | 已同步 `docs/zh-CN/agentic-spec-standard.md`、`requirements.md`、`hld.md`、`skills.md`、FEAT-004 / FEAT-009 / FEAT-010 / FEAT-011 / FEAT-021，并补充 `spec-state.json.resumeTarget`、Scheduler Job 完整状态和 Review 审批回流。 | 已同步实现 |
 | CHG-057 | VSCode IDE Spec 全操作入口按对象状态协同；不新增事实源，不让 Webview 直接写状态。 | 已同步 REQ-084、FEAT-021 requirements/design/tasks、Feature 最新 Job 投影、Spec Workspace New Requirement / Requirement Change / Clarification 入口、Feature 详情状态按钮、Execution Workbench Review 多决策入口和边界测试。 | 已同步实现 |
+| CHG-058 | Feature execution 的 Git 生命周期改为 Skill-owned；worktree 并发和 PR 管理作为 Feature 实现默认交付边界。 | 已同步 PRD、requirements、HLD、skills、FEAT-007、FEAT-008、FEAT-012、FEAT-013、FEAT-021 和执行/发布 Skill，并新增 `result.gitDelivery` 完成校验。 | 已同步实现 |
 
 ## Feature Spec Execute 评估
 

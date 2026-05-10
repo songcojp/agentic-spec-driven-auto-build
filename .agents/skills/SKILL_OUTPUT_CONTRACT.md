@@ -32,6 +32,10 @@ contains all of the following closure evidence:
   requirements.
 - `acceptanceEvidence`: non-empty acceptance scenario evidence.
 - `journeyEvidence`: non-empty user story or Journey Checkpoint evidence.
+- `gitDelivery`: Feature Git lifecycle evidence, including owner workspace,
+  implementation workspace or approved fallback, worktree, branch, commit hash,
+  PR URL, checks, merge, remote branch cleanup, local branch cleanup, and
+  worktree cleanup.
 
 A foundation-only Feature may omit direct journey evidence only when
 `result.foundationExemption` is present and includes:
@@ -42,13 +46,17 @@ A foundation-only Feature may omit direct journey evidence only when
 - `integrationEvidence`
 
 Passing tests, creating a commit, opening a PR, or marking tasks done is not by
-itself enough for a completed feature execution. Missing or failed closure
-evidence must produce `review_needed` with `journey_not_closed`,
-`acceptance_gap`, or `evidence_missing`.
+itself enough for a completed feature execution. Missing or failed journey
+closure evidence must produce `review_needed` with `journey_not_closed`,
+`acceptance_gap`, or `evidence_missing`. Missing or incomplete Git delivery
+evidence must produce `review_needed`, `approval_needed`, or `blocked` with
+`delivery_evidence_missing` or `delivery_not_closed`.
 
-These fields must be direct structured arrays on `result`. Do not provide them
-only as prose in `result.details`, `result.items`, report summaries, or produced
-artifact summaries; the Journey Closure Gate does not parse prose evidence.
+Closure fields must be direct structured arrays on `result`, and `gitDelivery`
+must be a direct structured object on `result`. Do not provide them only as
+prose in `result.details`, `result.items`, report summaries, or produced
+artifact summaries; the Journey Closure Gate and Git Delivery Gate do not parse
+prose evidence.
 
 Use `status = "queued"` before execution starts, `status = "running"` while reading, analyzing, writing, or verifying, `status = "waiting_input"` when user information is required, and `status = "approval_needed"` when command, permission, or risk approval is required. Final status must be `completed`, `review_needed`, `blocked`, `failed`, or `cancelled`. Use `status = "completed"` when the skill produced a valid decision or artifact, even if the decision is "none" or "no change". Use `status = "blocked"` for missing inputs or unresolved required decisions, `status = "review_needed"` only when a real human or risk review gate must resolve the next step, and include the review reason in `summary` or `result.reviewNeededReason`. Use `status = "failed"` for execution errors that prevented a valid skill result.
 
@@ -75,6 +83,24 @@ Do not return shorthand JSON such as `{"summary": "...", "status": "...", "evide
   "traceability": {
     "featureId": null
   },
-  "result": {}
+  "result": {
+    "requirementCoverage": [],
+    "acceptanceEvidence": [],
+    "journeyEvidence": [],
+    "gitDelivery": {
+      "ownerWorkspace": "<owner checkout>",
+      "implementationWorkspace": "<feature worktree or explicit fallback workspace>",
+      "worktree": "<worktree path or fallback reason>",
+      "branch": "<feature branch>",
+      "commitHash": "<commit hash>",
+      "prUrl": "<pull request url>",
+      "checks": "passed",
+      "merge": "merged",
+      "remoteBranchCleanup": "completed",
+      "localBranchCleanup": "completed",
+      "worktreeCleanup": "cleaned",
+      "deliveryExemption": null
+    }
+  }
 }
 ```

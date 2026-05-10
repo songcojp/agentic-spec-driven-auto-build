@@ -124,10 +124,27 @@ function featureExecutionResult(): Record<string, unknown> {
     tasks: { done: ["TASK-001"], blocked: [] },
     gates: { requirements: "passed", design: "passed", codeReview: "passed" },
     delegation: [{ role: "owner-thread", status: "completed", files: ["src/runtime.ts"], note: "No subagents used." }],
-    git: { branch: null, commit: null, pr: null, checks: null, merge: null, cleanup: null, exemption: "delivery not requested" },
+    gitDelivery: validGitDelivery(),
     tokenUsage: { parentUsagePresent: true, subagentUsageObservable: false },
     risks: [],
     blockedReason: null,
+  };
+}
+
+function validGitDelivery(): Record<string, unknown> {
+  return {
+    ownerWorkspace: "/workspace/project",
+    implementationWorkspace: "/workspace/project.worktrees/feat-008",
+    worktree: "/workspace/project.worktrees/feat-008",
+    branch: "feat/feat-008-codex-runner",
+    commitHash: "abc1234",
+    prUrl: "https://github.com/example/specdrive/pull/8",
+    checks: "passed",
+    merge: "merged",
+    remoteBranchCleanup: "completed",
+    localBranchCleanup: "completed",
+    worktreeCleanup: "cleaned",
+    deliveryExemption: null,
   };
 }
 
@@ -430,7 +447,29 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   const missingJourney = validateSkillOutputContract(invocation, { ...valid, result: {} });
   assert.equal(missingJourney.valid, false);
   assert.match(missingJourney.reasons.join("\n"), /Journey Closure Gate failed: evidence_missing/);
-  assert.match(missingJourney.reasons.join("\n"), /journeyEvidence is required/);
+	  assert.match(missingJourney.reasons.join("\n"), /journeyEvidence is required/);
+
+  const missingDelivery = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      ...featureExecutionResult(),
+      gitDelivery: undefined,
+    },
+  });
+  assert.equal(missingDelivery.valid, false);
+  assert.match(missingDelivery.reasons.join("\n"), /Git Delivery Gate failed: delivery_evidence_missing/);
+  assert.match(missingDelivery.reasons.join("\n"), /gitDelivery is required/);
+
+  const unmergedDelivery = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      ...featureExecutionResult(),
+      gitDelivery: { ...validGitDelivery(), merge: "pending" },
+    },
+  });
+  assert.equal(unmergedDelivery.valid, false);
+  assert.match(unmergedDelivery.reasons.join("\n"), /Git Delivery Gate failed: delivery_not_closed/);
+  assert.match(unmergedDelivery.reasons.join("\n"), /merge must be passed, completed, cleaned, or merged/);
 
   const textOnlyEvidence = validateSkillOutputContract(invocation, {
     ...valid,
@@ -468,6 +507,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
         downstreamFeatures: ["FEAT-UI-001"],
         integrationEvidence: ["tests/adapter-contract.test.ts"],
       },
+      gitDelivery: validGitDelivery(),
     },
   });
   assert.equal(foundation.valid, true);
@@ -529,7 +569,7 @@ test("feature execution runs receive a strict closure-evidence result output sch
     "tasks",
     "gates",
     "delegation",
-    "git",
+    "gitDelivery",
     "tokenUsage",
     "risks",
     "blockedReason",

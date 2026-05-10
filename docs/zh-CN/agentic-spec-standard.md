@@ -722,8 +722,8 @@ Agentic Spec 不允许仅凭任务勾选、提交、PR、单元测试或执行 S
 
 职责边界：
 
-- `05.feature.decompose`：按用户故事纵切 Feature，在 `requirements.md` 生成 `User Journey Coverage`，在 `tasks.md` 生成 `Journey Checkpoint`。
-- `07.execution.dispatch-adapter`：实现、测试、更新任务状态并收集 `requirementCoverage`、`acceptanceEvidence`、`journeyEvidence` 或合法 `foundationExemption`。
+- `05.feature.decompose`：按用户故事纵切 Feature，在 `requirements.md` 生成 `User Journey Coverage`，在 `tasks.md` 生成 `Journey Checkpoint` 和 `Git Delivery Checkpoint`。
+- `07.execution.dispatch-adapter`：实现、测试、更新任务状态，管理 Feature worktree / branch / commit / PR / merge / cleanup，并收集 `requirementCoverage`、`acceptanceEvidence`、`journeyEvidence`、`gitDelivery` 或合法 `foundationExemption`。
 - `09.review.spec-consistency`：检查规划产物一致性和 Journey Checkpoint 覆盖。
 - `09.review.code-diff`：检查 diff、spec drift 和缺失的 Journey evidence。
 - `09.review.journey-closure`：只判断用户旅程、需求、任务、验收场景和证据是否闭环，不实现功能。
@@ -735,7 +735,21 @@ Feature execution 返回 `completed` 时，专用 `result` 必须包含：
   "requirementCoverage": [],
   "acceptanceEvidence": [],
   "journeyEvidence": [],
-  "foundationExemption": null
+  "foundationExemption": null,
+  "gitDelivery": {
+    "ownerWorkspace": "...",
+    "implementationWorkspace": "...",
+    "worktree": "...",
+    "branch": "...",
+    "commitHash": "...",
+    "prUrl": "...",
+    "checks": "passed",
+    "merge": "merged",
+    "remoteBranchCleanup": "completed",
+    "localBranchCleanup": "completed",
+    "worktreeCleanup": "cleaned",
+    "deliveryExemption": null
+  }
 }
 ```
 
@@ -746,6 +760,8 @@ Feature execution 返回 `completed` 时，专用 `result` 必须包含：
 - `journey_not_closed`
 - `acceptance_gap`
 - `evidence_missing`
+- `delivery_evidence_missing`
+- `delivery_not_closed`
 
 Foundation Feature 可以声明 `foundationExemption`，但必须说明为什么没有直接用户旅程、列出下游闭环 Feature，并提供集成验证点。Foundation exemption 不能替代下游用户旅程验收。
 
@@ -823,7 +839,7 @@ specs/mainline/03-hld.md
 
 - Feature `requirements.md` 负责可验收对象：`User Story Coverage`、`User Journey Coverage`、REQ/US/Acceptance 映射、Foundation Exemption。
 - Feature `design.md` 负责闭环实现路径：用户旅程如何落到 UI/API/状态/数据/错误/恢复/证据；高风险 Feature 的低层设计也写在这里。
-- Feature `tasks.md` 负责可执行闭环任务：按 P1/P2/P3 用户故事纵切，包含 Journey Checkpoint 和 evidence expectation。
+- Feature `tasks.md` 负责可执行闭环任务：按 P1/P2/P3 用户故事纵切，包含 Journey Checkpoint、Git Delivery Checkpoint 和 evidence expectation。
 
 如果实现、评审或规划发现需要改变项目级架构边界，应走 HLD / requirements 的 Spec Evolution；如果只是 Feature 内部实现细化，不得回写主线 HLD 或创建主线 LLD。
 

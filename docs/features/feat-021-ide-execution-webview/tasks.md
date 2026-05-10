@@ -24,6 +24,7 @@ Feature ID: FEAT-021
 ### T-021-04 Execution Detail Projection
 状态: done
 描述: 在 Webview 中展示 Execution Record、raw log refs、diff 摘要、`SkillOutputContractV1` 校验结果、produced artifacts 和 `spec-state.json` 投影摘要；结构化 Skill 输出默认以摘要、traceability、产物表、常见 result 分组和 Additional Result JSON 展示。
+Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree、branch、commit、PR、checks、merge 和 cleanup 状态作为常见 result 分组展示；缺失证据导致的 contract validation failure 应显示为 review needed / blocked reason。
 验证: view model normalization 单测，日志增量加载测试。
 
 ### T-021-05 独立 UI 边界校验
