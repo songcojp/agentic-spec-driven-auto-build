@@ -1036,7 +1036,7 @@ WHEN 用户在 VSCode Feature Spec Webview 顶部点击 New Feature 并提交自
 THE SYSTEM SHALL 将提交内容转换为受控需求输入，由模型判定进入需求新增流程或需求变更流程，并返回可追踪的 command receipt。
 
 WHEN 用户通过 New Requirement / New Feature 提交新增需求
-THE SYSTEM SHALL 默认只执行主线需求追加或更新；若需要创建、拆分或重排 Feature Spec，后续必须通过 `split_feature_specs` / `05.feature.decompose` 或受影响 Feature Spec 同步步骤继续完成，不得通过遗留处置清单文件暂存后续动作。
+THE SYSTEM SHALL 在需求新增、需求变更或澄清处理完成时同步推进到可直接实现的 Feature Spec：更新主线需求、HLD、`docs/features/README.md`、受影响 Feature Spec 三件套、`docs/features/feature-pool-queue.json` 和 Feature `spec-state.json`；完成后 Feature 必须处于可由 UI 直接调度执行的 `ready` 状态，除非存在明确阻塞原因并返回 blocked / review_needed。
 
 WHEN VSCode Feature Spec Webview 刷新 Feature 列表
 THE SYSTEM SHALL 同步读取 Feature index 和 `docs/features/*` Feature 文件夹，并在发现 index 漏项时更新 Feature index 或返回明确的同步阻塞原因。
@@ -1061,7 +1061,7 @@ THE SYSTEM SHALL 按操作对象和对象当前状态显示或禁用需求新增
 - [ ] ReviewItem 审批入口必须覆盖 approve、reject、request changes、rollback、split task 和 update spec；不同 review_needed reason 可以显示不同推荐动作，但不得绕过 ReviewItem 事实源。
 - [ ] Webview 可以复用 shared contract、TypeScript 类型和 query/command API，但不得把 Product Console ViewModel 作为插件 UI 的事实源。
 - [ ] 顶部 New Feature 以弹出输入框收集自然语言需求，提交后不得由前端硬编码判断新增或变更；必须交给模型按 `10.change.create-request` / `10.change.update-mainline-spec` 边界判定。
-- [ ] New Requirement / New Feature 成功执行需求追加后，如未同步 Feature Spec，command receipt 或 Skill 输出必须把 Feature Spec 拆分/同步标记为后续 `split_feature_specs` / `05.feature.decompose` 工作，而不是生成 `change-management.md` 或 `change-disposition-checklist.md`。
+- [ ] New Requirement、Requirement Change 和 Clarification 成功处理后，Skill 输出必须生成或更新可执行 Feature Spec、Feature index、Feature Pool Queue 和 `spec-state.json`，并将 Feature 置为 `ready`；若无法直接进入 `ready`，必须返回 blocked / review_needed 及缺失决策，UI 不得展示为可调度。
 - [ ] 刷新 Feature Spec 视图时同时扫描 `docs/features/README.md` 和 `docs/features/*` 三件套目录；因需求新增不经过拆分流程导致 index 漏项时，刷新流程必须补齐 Feature index 或报告需要人工处理的冲突。
 - [ ] 需求新增 Skill 在创建或更新 Feature Spec 后必须同步 `docs/features/README.md`，写入 Feature ID、名称、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
 - [ ] 用户点击 Feature 后，右侧详情必须解析对应 `tasks.md`，展示任务列表、任务状态、描述和验证命令；缺失或不可解析时展示 blocked reason。

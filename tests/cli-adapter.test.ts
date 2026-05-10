@@ -1048,6 +1048,37 @@ test("clarification skill prompt treats operator input as an answer to apply", (
   assert.match(prompt, /Return status completed after applying the provided answer/);
 });
 
+test("spec change prompts require Feature Spec ready output for UI scheduling", () => {
+  const prompt = buildExecutionInvocationPrompt(
+    executionInvocation({
+      operation: "evolve_spec",
+      skillSlug: "10.change.update-mainline-spec",
+      requestedAction: "evolve_spec",
+      sourcePaths: ["docs/requirements.md"],
+      expectedArtifacts: [
+        { path: "docs/features/FEAT-021/requirements.md", kind: "markdown", required: true },
+        { path: "docs/features/FEAT-021/design.md", kind: "markdown", required: true },
+        { path: "docs/features/FEAT-021/tasks.md", kind: "markdown", required: true },
+        { path: "docs/features/FEAT-021/spec-state.json", kind: "json", required: true },
+        { path: "docs/features/feature-pool-queue.json", kind: "json", required: true },
+      ],
+      operatorInput: {
+        comment: "Update existing requirement and make it executable.",
+        specChangeIntent: "spec_evolution",
+        desiredOutcome: "feature_spec_ready_for_execution",
+        targetFeatureStatus: "ready",
+        nextUserAction: "schedule_feature_execution_from_ui",
+      },
+    }),
+    "Context",
+  );
+
+  assert.match(prompt, /feature_spec_ready_for_execution/);
+  assert.match(prompt, /do not stop after updating only PRD, requirements, or HLD/);
+  assert.match(prompt, /docs\/features\/feature-pool-queue\.json contains a runnable queue entry/);
+  assert.match(prompt, /spec-state\.json records status ready/);
+});
+
 test("Codex CLI adapter captures JSON events, session id, output, and redacts logs", async () => {
   const workspaceRoot = makeWorkspacePath();
   const policy = resolveRunnerPolicy({

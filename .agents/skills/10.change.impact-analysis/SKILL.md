@@ -39,6 +39,7 @@ When invoked through the scheduler with `requestedAction: "resolve_clarification
 - Treat `Skill Invocation Contract.operatorInput.clarificationText` or `operatorInput.comment` as the operator's answer/decision.
 - Do not ignore the operator answer and rescan unrelated open questions as the primary outcome.
 - Apply the answer to the most relevant source path or expected artifact when it resolves an existing ambiguity.
+- When the invocation asks for `desiredOutcome: feature_spec_ready_for_execution`, continue the resolved clarification into the affected Feature Spec package: update requirements/design/tasks, `docs/features/README.md`, `docs/features/feature-pool-queue.json`, and Feature `spec-state.json` with `status: ready` and cleared blocking reasons so the UI can immediately schedule execution.
 - Return `status: "completed"` after applying the provided answer, even if unrelated open questions remain; summarize unrelated residual questions in `result.residualQuestions`.
 - Return `status: "blocked"` only when the provided answer is empty, conflicts with the source documents, or is insufficient to resolve the targeted clarification.
 

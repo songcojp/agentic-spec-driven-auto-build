@@ -1934,13 +1934,19 @@ function buildSkillOperatorInput(context: ExecutorJobContext): ExecutionAdapterI
   const clarificationText = optionalString(context.clarificationText);
   const comment = optionalString(context.comment);
   const specChangeIntent = optionalString(context.specChangeIntent);
-  if (!clarificationText && !comment && !specChangeIntent) {
+  const desiredOutcome = optionalString(context.desiredOutcome);
+  const targetFeatureStatus = optionalString(context.targetFeatureStatus);
+  const nextUserAction = optionalString(context.nextUserAction);
+  if (!clarificationText && !comment && !specChangeIntent && !desiredOutcome && !targetFeatureStatus && !nextUserAction) {
     return undefined;
   }
   return {
     clarificationText,
     comment,
     specChangeIntent,
+    desiredOutcome,
+    targetFeatureStatus,
+    nextUserAction,
   };
 }
 

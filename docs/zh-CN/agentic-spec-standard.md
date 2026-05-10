@@ -1573,7 +1573,11 @@ Update Spec
   ↓
 Update Traceability
   ↓
-Resume Planning / Execution
+Update Feature Spec / Tasks
+  ↓
+Set Feature Spec Ready
+  ↓
+UI Schedules Execution
 ```
 
 Clarification Item 模板：
@@ -1627,7 +1631,9 @@ Feature Spec Create / Update
   ↓
 Task Re-plan
   ↓
-Execution
+Set Feature Spec Ready
+  ↓
+UI Schedules Execution
 ```
 
 规则：
@@ -1666,6 +1672,10 @@ Update Feature Specs
   ↓
 Update Tasks
   ↓
+Set Feature Spec Ready
+  ↓
+UI Schedules Execution
+  ↓
 Invalidate Affected Evidence
   ↓
 Re-run Affected Tasks
@@ -1677,6 +1687,7 @@ Re-verify
 
 ```text
 凡是影响已批准 Spec 的变更，都必须进入 Change Request。
+需求新增、需求变更和澄清完成后不得停留在主线文档层；必须同步到可直接实现的 Feature Spec、Feature Pool Queue 和 `spec-state.json` ready 状态，除非明确返回 blocked / review_needed。
 ```
 
 ---

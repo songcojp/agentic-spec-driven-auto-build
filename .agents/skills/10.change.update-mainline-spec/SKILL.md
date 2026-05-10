@@ -45,7 +45,8 @@ Before editing, follow the governed requirement-change protocol in `.agents/skil
    - Feature Specs when the change affects executable feature scope, dependencies, tasks, or acceptance.
 7. Preserve existing IDs when the requirement is semantically the same. Mark deprecated or superseded requirements explicitly when replacement is necessary; do not silently reuse an old ID for a different behavior.
 8. If a change affects an active or completed Feature Spec, update the feature status or notes so execution does not continue from stale assumptions.
-9. Re-run consistency checks across PRD, requirements, design/HLD, feature index, affected feature folders, and open questions.
+9. When the invocation asks for `desiredOutcome: feature_spec_ready_for_execution`, update or create the affected Feature Spec package, update `docs/features/README.md`, update `docs/features/feature-pool-queue.json`, and write Feature `spec-state.json` with `status: ready` and cleared blocking reasons so the UI can immediately schedule execution. If the change cannot be made execution-ready, return `blocked` or `review_needed` with the missing decision.
+10. Re-run consistency checks across PRD, requirements, design/HLD, feature index, affected feature folders, and open questions.
 
 ## Output
 

@@ -299,6 +299,9 @@ export type SkillOperatorInputContract = {
   clarificationText?: string;
   comment?: string;
   specChangeIntent?: string;
+  desiredOutcome?: string;
+  targetFeatureStatus?: string;
+  nextUserAction?: string;
 };
 
 export type SkillArtifactContract = {
@@ -1114,6 +1117,14 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- Return status blocked only when the provided answer is empty, conflicts with the source documents, or is insufficient to resolve the targeted clarification.",
       ]
     : [];
+  const featureReadyRules = instruction.operatorInput?.desiredOutcome === "feature_spec_ready_for_execution"
+    ? [
+        "- For this change flow, do not stop after updating only PRD, requirements, or HLD.",
+        "- Create or update the affected Feature Spec package so it can be scheduled from the UI immediately after this run completes.",
+        "- Ensure docs/features/README.md lists the affected Feature with status ready, docs/features/feature-pool-queue.json contains a runnable queue entry, and the Feature spec-state.json records status ready with cleared blocking reasons unless a real blocker remains.",
+        "- If the change cannot produce a ready Feature Spec, return status blocked or review_needed with the exact missing decision instead of reporting a partial documentation-only success.",
+      ]
+    : [];
   return [
     "Execute this SpecDrive task inside the current workspace.",
     "",
@@ -1146,6 +1157,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     ...taskSlicingRules,
     ...featureCodingRules,
     ...clarificationRules,
+    ...featureReadyRules,
   ].join("\n");
 }
 

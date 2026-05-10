@@ -992,6 +992,9 @@ function commandForSpecChangeRequest(
     traceability: request.traceability ?? [],
     specChangeRequest: request,
     acceptedAt,
+    desiredOutcome: "feature_spec_ready_for_execution",
+    targetFeatureStatus: "ready",
+    nextUserAction: "schedule_feature_execution_from_ui",
   };
   if (routedIntent === "requirement_intake") {
     return {
@@ -1057,9 +1060,9 @@ function commandForSpecChangeRequest(
   }
   const featureId = request.traceability?.find((item) => /^FEAT-\d+/i.test(item));
   return {
-    action: "write_spec_evolution",
-    entityType: "spec",
-    entityId: request.targetRequirementId ?? request.source.file.replace(/[^A-Za-z0-9_.-]+/g, "-"),
+    action: "evolve_spec",
+    entityType: "project",
+    entityId: request.projectId,
     requestedBy: "vscode-extension",
     reason: request.comment,
     payload: {

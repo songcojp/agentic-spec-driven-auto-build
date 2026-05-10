@@ -1195,7 +1195,12 @@ test("SpecDrive IDE SpecChangeRequest validates textHash and routes requirement 
   const result = runSqlite(dbPath, [], [
     { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [scheduler.jobs[0].schedulerJobId] },
   ]);
-  assert.equal(JSON.parse(String(result.queries.jobs[0].payload_json)).operation, "intake_requirement");
+  const payload = JSON.parse(String(result.queries.jobs[0].payload_json));
+  assert.equal(payload.operation, "intake_requirement");
+  assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
+  assert.equal(payload.context.targetFeatureStatus, "ready");
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/tasks.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
 
   const staleReceipt = submitIdeSpecChangeRequest(dbPath, {
     schemaVersion: 1,
@@ -1241,8 +1246,16 @@ test("SpecDrive IDE SpecChangeRequest routes existing requirement changes to spe
 
   assert.equal(receipt.status, "accepted");
   assert.equal(receipt.routedIntent, "spec_evolution");
-  assert.equal(receipt.action, "write_spec_evolution");
-  assert.equal(receipt.schedulerJobId, undefined);
+  assert.equal(receipt.action, "evolve_spec");
+  assert.equal(receipt.schedulerJobId, scheduler.jobs[0].schedulerJobId);
+  const payload = JSON.parse(String(runSqlite(dbPath, [], [
+    { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [scheduler.jobs[0].schedulerJobId] },
+  ]).queries.jobs[0].payload_json));
+  assert.equal(payload.operation, "evolve_spec");
+  assert.equal(payload.context.skillSlug, "10.change.update-mainline-spec");
+  assert.equal(payload.context.targetRequirementId, "REQ-076");
+  assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-017/spec-state.json"), true);
 });
 
 test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown add-or-change routing", () => {
@@ -1277,8 +1290,12 @@ test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown a
   assert.equal(payload.operation, "intake_requirement");
   assert.equal(payload.context.skillSlug, "10.change.create-request");
   assert.equal(payload.context.requirementText, "Top New Feature request that may add or change existing scope.");
-  assert.deepEqual(payload.context.expectedArtifacts, ["docs/requirements.md"]);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/requirements.md"), false);
+  assert.equal(payload.context.targetFeatureStatus, "ready");
+  assert.equal(payload.context.nextUserAction, "schedule_feature_execution_from_ui");
+  assert.equal(payload.context.expectedArtifacts.includes("docs/requirements.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/requirements.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/spec-state.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
 });
 
 test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill", () => {
@@ -1317,6 +1334,10 @@ test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill
   assert.equal(payload.context.clarificationText, "Clarify whether the review gate should block scheduling.");
   assert.equal(payload.context.featureId, "FEAT-016");
   assert.equal(payload.context.targetRequirementId, "REQ-074");
+  assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
+  assert.equal(payload.context.targetFeatureStatus, "ready");
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-016/spec-state.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
 });
 
 test("SpecDrive IDE pass review command marks review-needed Feature completed", () => {

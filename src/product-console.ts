@@ -79,6 +79,7 @@ export type ConsoleCommandAction =
   | "scan_prd_source"
   | "upload_prd_source"
   | "intake_requirement"
+  | "evolve_spec"
   | "resolve_clarification"
   | "generate_ears"
   | "generate_hld"
@@ -124,6 +125,7 @@ const CONSOLE_COMMAND_ACTIONS = new Set<ConsoleCommandAction>([
   "scan_prd_source",
   "upload_prd_source",
   "intake_requirement",
+  "evolve_spec",
   "resolve_clarification",
   "generate_ears",
   "generate_hld",
@@ -4039,7 +4041,7 @@ function executeSpecSkillCommand(
   scheduler: SchedulerClient,
   specIntakeResult?: ({ blockedReasons: string[] } & Record<string, unknown>),
 ): { executionId: string; schedulerJobId: string; skillSlug: string; workspaceRoot?: string } | undefined {
-  if (!["intake_requirement", "resolve_clarification", "generate_ears", "generate_hld", "generate_ui_spec", "split_feature_specs"].includes(input.action)) {
+  if (!["intake_requirement", "evolve_spec", "resolve_clarification", "generate_ears", "generate_hld", "generate_ui_spec", "split_feature_specs"].includes(input.action)) {
     return undefined;
   }
   const payload = parseJsonObject(input.payload);
@@ -4063,6 +4065,9 @@ function executeSpecSkillCommand(
   const sourcePaths = sourcePathsForSpecAction(input.action, payload, featureId, project.targetRepoPath);
   const imagePaths = imagePathsForSpecAction(input.action, payload);
   const expectedArtifacts = expectedArtifactsForSpecAction(input.action, featureId, sourcePaths, project.targetRepoPath);
+  const shouldPrepareFeatureSpec = input.action === "intake_requirement"
+    || input.action === "evolve_spec"
+    || input.action === "resolve_clarification";
   const context = {
     featureId,
     sourcePaths,
@@ -4077,6 +4082,9 @@ function executeSpecSkillCommand(
     targetRequirementId: optionalString(payload.targetRequirementId),
     traceability: optionalStringArray(payload.traceability),
     specChangeIntent: isRecord(payload.specChangeRequest) ? optionalString(payload.specChangeRequest.intent) : undefined,
+    desiredOutcome: optionalString(payload.desiredOutcome) ?? (shouldPrepareFeatureSpec ? "feature_spec_ready_for_execution" : undefined),
+    targetFeatureStatus: optionalString(payload.targetFeatureStatus) ?? (shouldPrepareFeatureSpec ? "ready" : undefined),
+    nextUserAction: optionalString(payload.nextUserAction) ?? (shouldPrepareFeatureSpec ? "schedule_feature_execution_from_ui" : undefined),
   };
   const job = scheduler.enqueueCliRun({
     executionId,
@@ -4128,6 +4136,7 @@ function executeSpecSkillCommand(
 
 function skillSlugForSpecAction(action: ConsoleCommandAction): string {
   if (action === "intake_requirement") return "10.change.create-request";
+  if (action === "evolve_spec") return "10.change.update-mainline-spec";
   if (action === "resolve_clarification") return "10.change.impact-analysis";
   if (action === "generate_ears") return "02.requirements.convert-ears";
   if (action === "generate_hld") return "03.hld.generate";
@@ -4148,7 +4157,7 @@ function sourcePathsForSpecAction(
     optionalString(payload.resolvedSourcePath),
     workspaceRoot,
   );
-  if (action === "intake_requirement" || action === "resolve_clarification" || action === "generate_ears") {
+  if (action === "intake_requirement" || action === "evolve_spec" || action === "resolve_clarification" || action === "generate_ears") {
     return [payloadSourcePath ?? projectSpecPaths(workspaceRoot).prd];
   }
   if (action === "split_feature_specs") {
@@ -4279,13 +4288,31 @@ function expectedArtifactsForSpecAction(
   sourcePaths: string[] = [],
   workspaceRoot?: string,
 ): string[] {
-  if (action === "intake_requirement" || action === "generate_ears") {
-    return [requirementsArtifactForSource(sourcePaths[0], workspaceRoot)];
+  if (action === "intake_requirement" || action === "evolve_spec" || action === "resolve_clarification") {
+    const projectDocs = projectSpecPaths(workspaceRoot);
+    const featureArtifacts = featureId
+      ? [
+          `docs/features/${featureId}/requirements.md`,
+          `docs/features/${featureId}/design.md`,
+          `docs/features/${featureId}/tasks.md`,
+          `docs/features/${featureId}/spec-state.json`,
+        ]
+      : [
+          "docs/features/<feature-id>/requirements.md",
+          "docs/features/<feature-id>/design.md",
+          "docs/features/<feature-id>/tasks.md",
+          "docs/features/<feature-id>/spec-state.json",
+        ];
+    return [
+      requirementsArtifactForSource(sourcePaths[0], workspaceRoot),
+      projectDocs.hld,
+      "docs/features/README.md",
+      ...featureArtifacts,
+      "docs/features/feature-pool-queue.json",
+    ];
   }
-  if (action === "resolve_clarification") {
-    return featureId
-      ? [`docs/features/${featureId}/requirements.md`, `docs/features/${featureId}/design.md`]
-      : [requirementsArtifactForSource(sourcePaths[0], workspaceRoot)];
+  if (action === "generate_ears") {
+    return [requirementsArtifactForSource(sourcePaths[0], workspaceRoot)];
   }
   if (action === "split_feature_specs") {
     return [
@@ -5703,6 +5730,7 @@ function schedulerOperationName(operation?: string, skillSlug?: string, skillPha
   if (skillSlug === "07.execution.dispatch-adapter" || skillPhase === "task_execution") return "Execute task";
   if (skillSlug === "03.hld.generate" || operation === "generate_hld") return "Generate project HLD";
   if (skillSlug === "10.change.create-request" || operation === "intake_requirement") return "Intake requirement";
+  if (skillSlug === "10.change.update-mainline-spec" || operation === "evolve_spec") return "Update Spec and Feature Specs";
   if (skillSlug === "10.change.impact-analysis" || operation === "resolve_clarification") return "Resolve clarification";
   if (skillSlug === "02.requirements.convert-ears" || operation === "generate_ears") return "Generate EARS requirements";
   if (skillSlug === "05.feature.decompose" || operation === "split_feature_specs") return "Split Feature Specs";

@@ -66,6 +66,11 @@ Feature ID: FEAT-021
 描述: 修改 `10.change.classify`、`10.change.create-request`、`10.change.update-mainline-spec` 和目标项目 `AGENTS.md` 模板，要求需求新增/变更协议由技能承载，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；当 New Requirement 仅完成主线需求追加时，将 Feature Spec 拆分/同步作为后续 `split_feature_specs` / `05.feature.decompose` 工作。
 验证: `node --test tests/projects.test.ts tests/specdrive-ide.test.ts`，`git diff --check`。
 
+### T-021-11B Spec 变更入口生成可调度 Feature Spec
+状态: done
+描述: 调整 New Requirement、Requirement Change 和 Clarification 的后端路由，要求技能调用以 `feature_spec_ready_for_execution` 为目标，输出可执行 Feature Spec 三件套、Feature index、Feature Pool Queue 和 `spec-state.json` ready 状态；Requirement Change 不再只写 `spec_evolution` 记录，而是排入 `10.change.update-mainline-spec` 技能任务。
+验证: `node --test tests/specdrive-ide.test.ts tests/cli-adapter.test.ts`，`npm run ide:build`，`git diff --check`。
+
 ### T-021-12 Feature 详情 tasks.md 任务解析
 状态: done
 描述: 点击 Feature 后在详情面板解析对应 `tasks.md`，展示任务 ID、标题、状态、描述和验证命令；缺失或无法解析时显示 blocked reason，并保留打开原始 `tasks.md` 的操作。

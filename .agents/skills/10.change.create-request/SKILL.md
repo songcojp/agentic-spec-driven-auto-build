@@ -45,7 +45,7 @@ Before editing, follow the governed requirement-change protocol in `.agents/skil
    - If it is independently deliverable, create a new feature folder and update `docs/features/README.md`.
    - Always update `docs/features/README.md` when creating or changing Feature information, even when the intake did not run the Feature splitting flow. Add or update the Feature ID, Feature name, folder, status, primary requirements, suggested milestone, and dependencies so IDE refresh and downstream execution do not see orphan Feature folders.
    - Keep dependencies, milestone, status, and source `REQ-*`/`NFR-*`/`EDGE-*` mapping aligned between the Feature folder and the index.
-10. When the intake only appends mainline requirements and no Feature Spec is created or updated, report `downstreamSync` as pending and route the next step to `05.feature.decompose` / `split_feature_specs`; do not invent a checklist document to remember the pending split.
+10. When the invocation asks for `desiredOutcome: feature_spec_ready_for_execution`, do not stop after mainline requirements. Create or update the implementation-ready Feature Spec, update `docs/features/README.md`, update `docs/features/feature-pool-queue.json`, and write Feature `spec-state.json` with `status: ready` and cleared blocking reasons so the UI can immediately schedule execution. If the requirement cannot be made execution-ready, return `blocked` or `review_needed` with the missing decision.
 11. Re-check downstream references: traceability matrix, phase mapping, feature index, HLD split/dependency mapping, and open questions.
 
 ## Versioning

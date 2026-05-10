@@ -1514,7 +1514,12 @@ test("intake requirement from feature index writes back to mainline requirements
   ]);
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
   assert.deepEqual(jobPayload.context.sourcePaths, ["docs/features/README.md"]);
-  assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/requirements.md"]);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/requirements.md"), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/<feature-id>/requirements.md"), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/<feature-id>/spec-state.json"), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
+  assert.equal(jobPayload.context.desiredOutcome, "feature_spec_ready_for_execution");
+  assert.equal(jobPayload.context.targetFeatureStatus, "ready");
 });
 
 test("IDE lifecycle commands scan spec sources and run project health through Console gateway", () => {
