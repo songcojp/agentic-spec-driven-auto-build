@@ -27,6 +27,8 @@ Review Center 是高风险、阻塞、澄清和审批动作的统一入口。它
 3. 审批人打开 Review Center 查看上下文。
 4. Approval Action Handler 写入决策。
 5. 状态机根据决策继续、阻断、恢复或交付。
+6. `approve_continue` 恢复到 ReviewItem 保存的 paused Feature/Task 状态；`request_changes` 回到 planning/ready；`reject` 进入 blocked；`rollback` 进入 failed；`split_task` 回到 planning；`update_spec` 保持 review_needed 并进入变更流程。
+7. Feature 级审批决策必须同步 Feature `spec-state.json.resumeTarget`、history 和 nextAction；Product Console 与 VSCode Webview 只通过同一个 ReviewItem / ApprovalRecord 事实源展示和操作。
 
 ## Dependencies
 

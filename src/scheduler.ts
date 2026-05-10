@@ -56,7 +56,18 @@ export const BULLMQ_CLI_RUNNER_QUEUE = BULLMQ_EXECUTION_ADAPTER_QUEUE;
 export const CLI_WORKER_LOCK_DURATION_MS = 60 * 60 * 1000;
 
 export type SchedulerJobType = "cli.run" | "rpc.run" | "codex.rpc.run" | "codex.app_server.run" | "native.run";
-export type SchedulerJobStatus = "queued" | "running" | "completed" | "approval_needed" | "blocked" | "failed";
+export type SchedulerJobStatus =
+  | "queued"
+  | "running"
+  | "waiting_input"
+  | "approval_needed"
+  | "review_needed"
+  | "blocked"
+  | "failed"
+  | "cancelled"
+  | "paused"
+  | "skipped"
+  | "completed";
 
 export type SchedulerEnqueueResult = {
   schedulerJobId: string;
@@ -1533,7 +1544,7 @@ async function dispatchSchedulerJob(
     updateSchedulerJobRecord(
       dbPath,
       input.bullmqJobId,
-      result.status === "blocked" || result.status === "approval_needed" ? result.status : "completed",
+      schedulerJobStatusForRunnerResult(result.status),
       undefined,
       input.attemptsMade,
     );
@@ -1541,6 +1552,10 @@ async function dispatchSchedulerJob(
     updateSchedulerJobRecord(dbPath, input.bullmqJobId, "failed", error, input.attemptsMade);
     throw error;
   }
+}
+
+function schedulerJobStatusForRunnerResult(status: RunnerQueueStatus): SchedulerJobStatus {
+  return status;
 }
 
 function appServerResultStatus(result: { session: { exitCode: number | null }; result: { skillOutput?: SkillOutputContract; contractValidation?: { valid: boolean }; events?: Array<Record<string, unknown>> } }): RunnerQueueStatus {

@@ -155,3 +155,8 @@ Feature ID: FEAT-021
 状态: done
 描述: Feature Spec Webview 在 need review / review_needed Feature 上显示 `Review` 入口，使用当前 Feature 对应的 ReviewItem 执行 `approve_review` 受控命令；执行返回的 review_needed 结果必须创建 ReviewItem，保证 Webview 和 Product Console 使用同一审批事实源。`Pass` 按钮从默认 Webview 隐藏，仅保留为临时重置命令。
 验证: `node --test tests/scheduler.test.ts tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts` 覆盖 review_needed 执行创建 ReviewItem、IDE ViewModel 投影 ReviewItem、Webview 使用 approve_review 且不展示 Pass。
+
+### T-021-31 队列动作状态回流与 resumeTarget
+状态: done
+描述: pause、resume、retry、cancel、skip 和 Review 审批后的状态变化必须由 Control Plane 同步 Scheduler Job、Execution Record、Feature `spec-state.json.history` 和必要的 `resumeTarget`；Webview 只展示投影和提交受控命令。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts tests/specdrive-ide.test.ts` 覆盖 Webview 状态投影、ReviewItem 入口和队列动作；`node --test tests/review-center.test.ts tests/scheduler.test.ts tests/spec-protocol.test.ts` 覆盖 Review 审批、Scheduler 和 `spec-state.json.resumeTarget` 回流。

@@ -11,7 +11,6 @@ import {
   jsonBlock,
   queueItemKey,
   queueButton,
-  renderBlockerCard,
   renderQueueGroup,
   renderRawLogRefs,
   renderWorkbenchPage,
@@ -67,6 +66,8 @@ export function renderExecutionWorkbenchWebview(
           <div class="title-actions">${selectedTaskActionButtons(selectedItem)}</div>
         </div>
         ${detail ? executionFieldsHtml(detail) : emptyState("No active execution selected.")}
+        <h3>State Flow</h3>
+        ${renderStateFlow(selectedItem)}
         <h3>Token Consumption</h3>
         ${renderTokenConsumption(executionDetail)}
         <h3>Raw Log Refs</h3>
@@ -91,7 +92,7 @@ export function renderExecutionWorkbenchWebview(
 function selectedBlockerItems(item: SpecDriveIdeQueueItem | undefined): SpecDriveIdeQueueItem[] {
   if (!item) return [];
   const status = item.status.toLowerCase();
-  return status === "blocked" || status === "approval_needed" || status === "waiting_input" ? [item] : [];
+  return ["waiting_input", "approval_needed", "review_needed", "blocked", "failed", "paused"].includes(status) ? [item] : [];
 }
 
 function queueGroupItems(statuses: string[], grouped: Record<string, SpecDriveIdeQueueItem[]>): SpecDriveIdeQueueItem[] {
@@ -164,13 +165,50 @@ function executionPreferenceControls(view: SpecDriveIdeView | undefined): string
 
 function renderBlockersAndApprovals(blockers: SpecDriveIdeQueueItem[], detail: SpecDriveIdeExecutionDetail | undefined): string {
   const approvalRequests = detail?.approvalRequests ?? [];
-  const queueHtml = blockers.map(renderBlockerCard).join("");
+  const queueHtml = blockers.map(renderStateFlowCard).join("");
   const approvalHtml = approvalRequests.length > 0
     ? `<h3>Approval Requests</h3>${compactJsonBlock(approvalRequests)}`
     : "";
   return queueHtml || approvalHtml
     ? `${queueHtml}${approvalHtml}`
     : emptyState("No blockers or approval requests.");
+}
+
+function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
+  if (!item) return emptyState("Select a queue item to inspect its state flow.");
+  const resume = item.resumeTarget;
+  const rows: Array<[string, string]> = [
+    ["Current Status", item.status],
+    ["Reason", item.stateReason ?? item.summary ?? "No state reason recorded."],
+    ["Review Reason", reviewReasonLabel(item.reviewNeededReason)],
+    ["Resume Target", resume ? `${resume.status} via ${resume.source}` : "none"],
+    ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
+    ["Next Action", stateFlowNextAction(item)],
+  ];
+  return `<div class="result-group state-flow">${rows.map(([label, value]) => `<div class="row"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`).join("")}</div>`;
+}
+
+function renderStateFlowCard(item: SpecDriveIdeQueueItem): string {
+  const actions = stateFlowCardActions(item);
+  return `<div class="issue ${statusClass(item.status)}"><strong>${escapeHtml(item.featureId ?? item.executionId ?? item.schedulerJobId ?? item.status)}</strong><br>
+    <span>${escapeHtml(item.stateReason ?? item.summary ?? item.operation ?? item.status)}</span>
+    ${item.resumeTarget ? `<div class="row"><span>Resume Target</span><span>${escapeHtml(item.resumeTarget.status)}</span></div>` : ""}
+    ${actions ? `<div class="toolbar">${actions}</div>` : ""}
+  </div>`;
+}
+
+function stateFlowCardActions(item: SpecDriveIdeQueueItem): string {
+  const status = item.status.toLowerCase();
+  if (status === "review_needed") {
+    const review = reviewItemButton(item);
+    return `${review}${item.executionId ? queueButton("Retry", item, "retry") : ""}`;
+  }
+  if (status === "approval_needed") {
+    return `${queueButton("Accept", item, "approve").replace("data-action=\"approve\"", "data-action=\"approve\" data-approval-decision=\"accept\"")}${queueButton("Decline", item, "approve").replace("data-action=\"approve\"", "data-action=\"approve\" data-approval-decision=\"decline\"")}${item.executionId ? queueButton("Retry", item, "retry") : ""}`;
+  }
+  if (status === "paused") return queueButton("Resume", item, "resume");
+  if (status === "blocked" || status === "failed") return item.executionId ? queueButton("Retry", item, "retry") : "";
+  return "";
 }
 
 function resultProjection(detail: SpecDriveIdeExecutionDetail | undefined): unknown {
@@ -209,12 +247,20 @@ function selectedTaskActionButtons(selectedItem: SpecDriveIdeQueueItem | undefin
   return [
     queueActionButton("Run Now", selectedItem, "run_now", ["ready", "queued"]),
     pauseResumeButton(selectedItem),
-    queueActionButton("Retry", selectedItem, "retry", ["failed", "cancelled", "skipped"]),
-    queueActionButton("Cancel", selectedItem, "cancel", ["ready", "queued", "running", "approval_needed", "blocked", "paused"]),
-    queueActionButton("Skip", selectedItem, "skip", ["queued", "approval_needed", "blocked", "failed", "paused"]),
+    retryButton(selectedItem),
+    queueActionButton("Cancel", selectedItem, "cancel", ["ready", "queued", "running", "waiting_input", "approval_needed", "review_needed", "blocked", "paused"]),
+    queueActionButton("Skip", selectedItem, "skip", ["queued", "waiting_input", "approval_needed", "review_needed", "blocked", "failed", "paused"]),
     queueActionButton("Reprioritize", selectedItem, "reprioritize", ["ready", "queued", "blocked", "paused"]),
     queueActionButton("Enqueue", selectedItem, "enqueue", ["ready", "blocked"]),
+    reviewItemButton(selectedItem),
   ].join("");
+}
+
+function retryButton(item: SpecDriveIdeQueueItem | undefined): string {
+  if (item?.status.toLowerCase() === "blocked" && !item.executionId) {
+    return disabledButton("Retry", "Retry requires an Execution Record for blocked work.");
+  }
+  return queueActionButton("Retry", item, "retry", ["failed", "cancelled", "skipped", "blocked"]);
 }
 
 function renderTraceabilityChips(traceability: unknown, detail: SpecDriveIdeExecutionDetail): string {
@@ -340,6 +386,37 @@ function pauseResumeButton(item: SpecDriveIdeQueueItem | undefined): string {
   const status = item?.status.toLowerCase();
   if (status === "paused") return queueActionButton("Resume", item, "resume", ["paused"]);
   return queueActionButton("Pause", item, "pause", ["queued", "running"]);
+}
+
+function reviewItemButton(item: SpecDriveIdeQueueItem | undefined): string {
+  if (item?.status.toLowerCase() !== "review_needed") return "";
+  const label = item.reviewNeededReason === "approval_needed" ? "Approve" : "Review";
+  if (!item.reviewItemId) return disabledButton(label, "No Review Center item has been recorded for this run.");
+  return commandButton(label, "controlled", {
+    action: "approve_review",
+    entityType: "review_item",
+    entityId: item.reviewItemId,
+    reason: `${label} ${item.featureId ?? item.executionId ?? "selected run"} from Execution Workbench.`,
+  }, { icon: "check" });
+}
+
+function reviewReasonLabel(reason: SpecDriveIdeQueueItem["reviewNeededReason"]): string {
+  if (reason === "approval_needed") return "approval_needed";
+  if (reason === "clarification_needed") return "clarification_needed";
+  if (reason === "risk_review_needed") return "risk_review_needed";
+  return "none";
+}
+
+function stateFlowNextAction(item: SpecDriveIdeQueueItem): string {
+  const status = item.status.toLowerCase();
+  if (status === "waiting_input") return "Provide the requested input or cancel the run.";
+  if (status === "approval_needed") return "Accept or decline the adapter approval request.";
+  if (status === "review_needed") return item.reviewItemId ? "Resolve the ReviewItem approval." : "Open Review Center after refresh creates a ReviewItem.";
+  if (status === "paused") return "Resume, cancel, or reprioritize this job.";
+  if (status === "blocked" || status === "failed") return item.executionId ? "Retry, skip, or inspect the failure evidence." : "Skip, reprioritize, or reschedule this job.";
+  if (status === "cancelled") return "Retry, skip, or reschedule when ready.";
+  if (status === "skipped") return "Select the next Feature or retry when ready.";
+  return "Continue monitoring the selected job.";
 }
 
 function disabledButton(label: string, title: string): string {

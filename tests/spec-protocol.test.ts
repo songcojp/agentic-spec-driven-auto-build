@@ -257,8 +257,23 @@ test("file spec state reads, merges, writes, and blocks path escapes", () => {
   assert.equal(reread.status, "blocked");
   assert.equal(reread.executionStatus, "blocked");
   assert.deepEqual(reread.blockedReasons, ["Missing tasks.md"]);
+  assert.equal(reread.resumeTarget?.status, "ready");
+  assert.equal(reread.resumeTarget?.source, "test");
+  assert.equal(reread.resumeTarget?.executionId, "RUN-1");
   assert.equal(reread.history.at(-1)?.executionStatus, "blocked");
   assert.equal(reread.history.at(-1)?.executionId, "RUN-1");
+
+  const resumed = mergeFileSpecState(reread, {
+    status: "ready",
+    executionStatus: undefined,
+    blockedReasons: [],
+    nextAction: "Ready for scheduler selection.",
+  }, {
+    now: stableDate,
+    source: "test-resume",
+    summary: "Blocked reason resolved.",
+  });
+  assert.equal(resumed.resumeTarget, undefined);
   assert.throws(() => specStateRelativePath("../outside"), /inside docs\/features/);
 });
 

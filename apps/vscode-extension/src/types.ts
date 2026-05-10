@@ -13,6 +13,8 @@ export type SpecDriveIdeFeatureNode = {
   priority?: string;
   dependencies: string[];
   blockedReasons: string[];
+  stateReason?: string;
+  resumeTarget?: SpecDriveIdeResumeTarget;
   nextAction?: string;
   documents: SpecDriveIdeDocument[];
   latestExecutionId?: string;
@@ -24,6 +26,15 @@ export type SpecDriveIdeFeatureNode = {
   indexStatus?: "indexed" | "missing_from_index" | "missing_folder";
   tasks?: SpecDriveIdeTaskProjection[];
   taskParseBlockedReasons?: string[];
+};
+
+export type SpecDriveIdeResumeTarget = {
+  status: string;
+  reason: string;
+  source: string;
+  at: string;
+  schedulerJobId?: string;
+  executionId?: string;
 };
 
 export type SpecDriveIdeTaskProjection = {
@@ -52,6 +63,10 @@ export type SpecDriveIdeQueueItem = {
   completedAt?: string;
   updatedAt?: string;
   summary?: string;
+  stateReason?: string;
+  resumeTarget?: SpecDriveIdeResumeTarget;
+  reviewItemId?: string;
+  reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
 };
 
 export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {

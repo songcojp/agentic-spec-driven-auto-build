@@ -13,6 +13,8 @@ import {
   specStateRelativePath,
   writeFileSpecState,
   type FeatureSpec,
+  type FileSpecLifecycleStatus,
+  type FileSpecResumeTargetStatus,
   type FileSpecState,
   type SpecSourceScanSummary,
 } from "./spec-protocol.ts";
@@ -4973,7 +4975,7 @@ function executeReviewCommand(dbPath: string, input: ConsoleCommandInput, accept
   if (!decisionInput) {
     return undefined;
   }
-  return recordApprovalDecision(dbPath, {
+  const record = recordApprovalDecision(dbPath, {
     reviewItemId: input.entityId,
     decision: decisionInput.decision,
     actor: input.requestedBy,
@@ -4983,6 +4985,16 @@ function executeReviewCommand(dbPath: string, input: ConsoleCommandInput, accept
     now: new Date(acceptedAt),
     metadata: input.payload,
   });
+  updateFeatureSpecStateForReviewDecision(dbPath, item, {
+    decision: record.decision,
+    targetStatus: decisionInput.targetStatus,
+    reason: input.reason,
+    actor: input.requestedBy,
+    acceptedAt,
+    approvalRecordId: record.id,
+    stateTransitionId: record.stateTransition?.id,
+  });
+  return record;
 }
 
 function reviewDecisionInputForCommand(input: ConsoleCommandInput, item?: ReturnType<typeof listReviewCenterItems>[number]): Pick<RecordApprovalInput, "decision" | "targetStatus"> | undefined {
@@ -4993,18 +5005,99 @@ function reviewDecisionInputForCommand(input: ConsoleCommandInput, item?: Return
     case "mark_review_complete":
       return { decision: "mark_complete", targetStatus: payloadTargetStatus ?? defaultCompleteStatus(item) };
     case "reject_review":
-      return { decision: "reject", targetStatus: payloadTargetStatus };
+      return { decision: "reject", targetStatus: payloadTargetStatus ?? (item?.featureId && !item.taskId ? "blocked" : undefined) };
     case "request_review_changes":
       return { decision: "request_changes", targetStatus: payloadTargetStatus ?? defaultChangesRequestedStatus(item) };
     case "rollback_review":
       return { decision: "rollback", targetStatus: payloadTargetStatus ?? "failed" };
     case "split_review_task":
-      return { decision: "split_task", targetStatus: payloadTargetStatus ?? "blocked" };
+      return { decision: "split_task", targetStatus: payloadTargetStatus ?? (item?.featureId && !item.taskId ? "planning" : "blocked") };
     case "update_spec":
-      return { decision: "update_spec", targetStatus: payloadTargetStatus ?? defaultChangesRequestedStatus(item) };
+      return { decision: "update_spec", targetStatus: payloadTargetStatus ?? (item?.featureId && !item.taskId ? "review_needed" : defaultChangesRequestedStatus(item)) };
     default:
       return undefined;
   }
+}
+
+function updateFeatureSpecStateForReviewDecision(
+  dbPath: string,
+  item: ReturnType<typeof listReviewCenterItems>[number] | undefined,
+  input: {
+    decision: RecordApprovalInput["decision"];
+    targetStatus?: RecordApprovalInput["targetStatus"];
+    reason: string;
+    actor: string;
+    acceptedAt: string;
+    approvalRecordId: string;
+    stateTransitionId?: string;
+  },
+): void {
+  if (!item?.featureId || item.taskId || !item.projectId || !input.targetStatus) return;
+  const project = getProject(dbPath, item.projectId);
+  const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, item.projectId, project?.targetRepoPath);
+  if (!workspaceRoot) return;
+  const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, item.featureId);
+  const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
+  if (!featureFolder) return;
+  const stateStatus = reviewTargetToFileSpecStatus(input.targetStatus);
+  if (!stateStatus) return;
+  try {
+    const now = new Date(input.acceptedAt);
+    const current = readFileSpecState(workspaceRoot, featureFolder, item.featureId, now);
+    const targetStatus = input.targetStatus as FileSpecResumeTargetStatus;
+    const summary = `Review ${input.decision} by ${input.actor}: ${input.reason}`;
+    writeFileSpecState(workspaceRoot, featureFolder, mergeFileSpecState(current, {
+      status: stateStatus,
+      executionStatus: stateStatus === "completed" || stateStatus === "delivered" ? "completed" : current.executionStatus,
+      blockedReasons: stateStatus === "blocked" || stateStatus === "failed" ? [summary] : current.blockedReasons,
+      nextAction: reviewDecisionNextAction(input.decision, targetStatus),
+      resumeTarget: stateStatus === "review_needed" || stateStatus === "blocked" || stateStatus === "failed"
+        ? {
+            status: targetStatus,
+            reason: summary,
+            source: "review_center",
+            at: input.acceptedAt,
+            executionId: current.currentJob?.executionId,
+            schedulerJobId: current.currentJob?.schedulerJobId,
+          }
+        : undefined,
+    }, {
+      now,
+      source: "review_center",
+      summary,
+      schedulerJobId: current.currentJob?.schedulerJobId,
+      executionId: current.currentJob?.executionId,
+    }));
+  } catch {
+    // Approval records and state_transitions remain authoritative if the operator-facing file projection fails.
+  }
+}
+
+function reviewTargetToFileSpecStatus(targetStatus: RecordApprovalInput["targetStatus"]): FileSpecLifecycleStatus | undefined {
+  if (!targetStatus) return undefined;
+  if (targetStatus === "done") return "completed";
+  if (targetStatus === "planning" || targetStatus === "tasked" || targetStatus === "implementing") return "ready";
+  if (targetStatus === "backlog" || targetStatus === "scheduled" || targetStatus === "checking") return "ready";
+  if (targetStatus === "delivered"
+    || targetStatus === "draft"
+    || targetStatus === "ready"
+    || targetStatus === "running"
+    || targetStatus === "review_needed"
+    || targetStatus === "blocked"
+    || targetStatus === "failed") {
+    return targetStatus;
+  }
+  return undefined;
+}
+
+function reviewDecisionNextAction(decision: RecordApprovalInput["decision"], targetStatus: FileSpecResumeTargetStatus): string {
+  if (decision === "approve_continue") return `Review approved; resume ${targetStatus}.`;
+  if (decision === "request_changes") return `Review requested changes; resume ${targetStatus} after updates.`;
+  if (decision === "update_spec") return "Update the affected Spec through the change-management flow before resuming.";
+  if (decision === "split_task") return `Split or re-plan the Feature from ${targetStatus}.`;
+  if (decision === "rollback") return "Rollback decision recorded; inspect failure evidence before retrying.";
+  if (decision === "reject") return "Review rejected; resolve the blocked reason before scheduling.";
+  return `Review decision recorded; current target is ${targetStatus}.`;
 }
 
 function defaultApproveStatus(item: ReturnType<typeof listReviewCenterItems>[number] | undefined): RecordApprovalInput["targetStatus"] | undefined {

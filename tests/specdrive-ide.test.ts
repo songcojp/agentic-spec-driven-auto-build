@@ -906,6 +906,35 @@ test("SpecDrive IDE queue actions can pause and cancel another job while a run i
   }, { now: new Date("2026-05-02T12:11:00.000Z") });
   const pausedState = readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016");
   const pausedView = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+
+  assert.equal(pause.status, "accepted");
+  assert.equal(pausedState.status, "paused");
+  assert.equal(pausedState.executionStatus, "paused");
+  assert.equal(pausedState.currentJob?.schedulerJobId, "JOB-WAITING");
+  assert.equal(pausedState.resumeTarget?.status, "ready");
+  assert.equal(pausedState.resumeTarget?.schedulerJobId, "JOB-WAITING");
+  assert.equal(pausedView.features.find((entry) => entry.id === "FEAT-016")?.status, "paused");
+  assert.equal(pausedView.features.find((entry) => entry.id === "FEAT-016")?.resumeTarget?.status, "ready");
+  const pausedQueueItem = pausedView.queue.groups.paused[0];
+  assert.equal(pausedQueueItem.schedulerJobId, "JOB-WAITING");
+  assert.equal(pausedQueueItem.resumeTarget?.status, "ready");
+  assert.equal(pausedQueueItem.stateReason, "Queue paused: Pause waiting job while another run is active.");
+  const resume = await submitIdeQueueCommand(dbPath, {
+    schemaVersion: 1,
+    ideCommandType: "queue_action",
+    projectId: "project-ide",
+    workspaceRoot,
+    queueAction: "resume",
+    entityType: "job",
+    entityId: "JOB-WAITING",
+    requestedBy: "vscode-extension",
+    reason: "Resume waiting job while another run is active.",
+  }, { now: new Date("2026-05-02T12:11:30.000Z") });
+  const resumedState = readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016");
+  assert.equal(resume.status, "accepted");
+  assert.equal(resumedState.status, "queued");
+  assert.equal(resumedState.resumeTarget, undefined);
+  assert.equal(resumedState.history.at(-1)?.status, "queued");
   const cancel = await submitIdeQueueCommand(dbPath, {
     schemaVersion: 1,
     ideCommandType: "queue_action",
@@ -917,12 +946,6 @@ test("SpecDrive IDE queue actions can pause and cancel another job while a run i
     requestedBy: "vscode-extension",
     reason: "Cancel waiting job while another run is active.",
   }, { now: new Date("2026-05-02T12:12:00.000Z") });
-
-  assert.equal(pause.status, "accepted");
-  assert.equal(pausedState.status, "paused");
-  assert.equal(pausedState.executionStatus, "paused");
-  assert.equal(pausedState.currentJob?.schedulerJobId, "JOB-WAITING");
-  assert.equal(pausedView.features.find((entry) => entry.id === "FEAT-016")?.status, "paused");
   assert.equal(cancel.status, "accepted");
   const cancelledState = readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016");
   const cancelledView = buildSpecDriveIdeView(dbPath, { workspaceRoot });
@@ -930,8 +953,10 @@ test("SpecDrive IDE queue actions can pause and cancel another job while a run i
   assert.equal(cancelledState.executionStatus, "cancelled");
   assert.equal(cancelledState.lastResult?.status, "cancelled");
   assert.equal(cancelledState.currentJob?.completedAt, "2026-05-02T12:12:00.000Z");
+  assert.equal(cancelledState.resumeTarget, undefined);
   assert.equal(cancelledState.history.at(-1)?.source, "ide.queue_action");
   assert.equal(cancelledView.features.find((entry) => entry.id === "FEAT-016")?.status, "cancelled");
+  assert.equal(cancelledView.features.find((entry) => entry.id === "FEAT-016")?.stateReason, "Queue cancelled: Cancel waiting job while another run is active.");
   const rows = runSqlite(dbPath, [], [
     { name: "jobs", sql: "SELECT id, status FROM scheduler_job_records WHERE id IN ('JOB-IDE', 'JOB-WAITING') ORDER BY id" },
   ]).queries.jobs;
@@ -1377,10 +1402,58 @@ test("SpecDrive IDE projects pending Feature review item for Webview approval", 
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
+  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-016",
+    status: "review_needed",
+    executionStatus: "review_needed",
+    updatedAt: "2026-05-02T12:00:00.000Z",
+    blockedReasons: [],
+    dependencies: ["FEAT-013"],
+    currentJob: {
+      schedulerJobId: "JOB-REVIEW-PENDING",
+      executionId: "RUN-REVIEW-PENDING",
+      operation: "feature_execution",
+    },
+    resumeTarget: {
+      status: "running",
+      reason: "Review FEAT-016 before continuing.",
+      source: "runner",
+      at: "2026-05-02T12:00:00.000Z",
+      schedulerJobId: "JOB-REVIEW-PENDING",
+      executionId: "RUN-REVIEW-PENDING",
+    },
+    nextAction: "Resolve review.",
+    history: [],
+  }));
   runSqlite(dbPath, [
     {
       sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json)
         VALUES ('FEAT-016', 'project-ide', 'SpecDrive IDE Foundation', 'review_needed', 10, 'feat-016-specdrive-ide-foundation', '["REQ-074"]')`,
+    },
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json, updated_at)
+        VALUES ('JOB-REVIEW-PENDING', 'bull-review-pending', 'specdrive:execution-adapter', 'rpc.run', 'review_needed', '{}', '2026-05-02T12:00:00.000Z')`,
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, started_at, completed_at, summary, metadata_json, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        "RUN-REVIEW-PENDING",
+        "JOB-REVIEW-PENDING",
+        "codex.rpc",
+        "feature_execution",
+        "project-ide",
+        JSON.stringify({ featureId: "FEAT-016" }),
+        "review_needed",
+        "2026-05-02T11:59:00.000Z",
+        "2026-05-02T12:00:00.000Z",
+        "Review FEAT-016 before continuing.",
+        JSON.stringify({ reviewNeededReason: "approval_needed" }),
+        "2026-05-02T12:00:00.000Z",
+      ],
     },
     {
       sql: `INSERT INTO review_items (
@@ -1400,6 +1473,18 @@ test("SpecDrive IDE projects pending Feature review item for Webview approval", 
   assert.equal(feature?.latestReviewItemId, "REV-FEAT-016");
   assert.equal(feature?.latestReviewStatus, "review_needed");
   assert.equal(feature?.latestReviewNeededReason, "approval_needed");
+  assert.equal(feature?.resumeTarget?.status, "running");
+  assert.equal(feature?.stateReason, "Review FEAT-016 before continuing.");
+  const queueItem = view.queue.groups.review_needed[0];
+  assert.equal(queueItem.executionId, "RUN-REVIEW-PENDING");
+  assert.equal(queueItem.reviewItemId, "REV-FEAT-016");
+  assert.equal(queueItem.reviewNeededReason, "approval_needed");
+  assert.equal(queueItem.resumeTarget?.executionId, "RUN-REVIEW-PENDING");
+  assert.equal(queueItem.stateReason, "Review FEAT-016 before continuing.");
+  const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-REVIEW-PENDING");
+  assert.equal(detail?.reviewItemId, "REV-FEAT-016");
+  assert.equal(detail?.reviewNeededReason, "approval_needed");
+  assert.equal(detail?.resumeTarget?.status, "running");
 });
 
 test("SpecDrive IDE pass command marks blocked Feature and latest execution completed", () => {
@@ -1563,6 +1648,12 @@ test("SpecDrive IDE queue actions retry failed executions and preserve previous 
   assert.equal(rows[0].status, "queued");
   assert.equal(JSON.parse(String(rows[0].context_json)).previousExecutionId, "RUN-FAILED");
   assert.equal(JSON.parse(String(rows[0].metadata_json)).previousExecutionId, "RUN-FAILED");
+  const retryState = readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016");
+  assert.equal(retryState.status, "queued");
+  assert.equal(retryState.executionStatus, "queued");
+  assert.equal(retryState.currentJob?.executionId, receipt.executionId);
+  assert.equal(retryState.resumeTarget, undefined);
+  assert.equal(retryState.history.at(-1)?.summary, "Queue queued: Retry failed app-server turn from VSCode.");
 
   const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
   const queueItems = Object.values(view.queue.groups).flat();

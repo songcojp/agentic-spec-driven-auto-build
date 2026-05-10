@@ -18,6 +18,7 @@ export type FileSpecLifecycleStatus =
   | "failed"
   | "skipped"
   | "delivered";
+export type FileSpecResumeTargetStatus = FileSpecLifecycleStatus | "planning" | "tasked" | "implementing" | "done";
 export type FileSpecExecutionStatus =
   | "queued"
   | "running"
@@ -166,6 +167,14 @@ export type FileSpecState = {
     queuedAt?: string;
     startedAt?: string;
     completedAt?: string;
+  };
+  resumeTarget?: {
+    status: FileSpecResumeTargetStatus;
+    reason: string;
+    source: string;
+    at: string;
+    schedulerJobId?: string;
+    executionId?: string;
   };
   blockedReasons: string[];
   dependencies: string[];
@@ -763,6 +772,15 @@ export function mergeFileSpecState(
   const updatedAt = (input.now ?? new Date()).toISOString();
   const status = patch.status ?? current.status;
   const executionStatus = patch.executionStatus ?? current.executionStatus;
+  const resumeTarget = patch.resumeTarget !== undefined
+    ? patch.resumeTarget
+    : defaultResumeTargetForStatus(current, status, {
+        at: updatedAt,
+        source: input.source,
+        reason: input.summary ?? patch.lastResult?.summary ?? status,
+        schedulerJobId: input.schedulerJobId,
+        executionId: input.executionId,
+      });
   return {
     ...current,
     ...patch,
@@ -771,6 +789,7 @@ export function mergeFileSpecState(
     status,
     executionStatus,
     updatedAt,
+    resumeTarget,
     blockedReasons: patch.blockedReasons ?? current.blockedReasons,
     dependencies: patch.dependencies ?? current.dependencies,
     history: [
@@ -854,12 +873,63 @@ function normalizeFileSpecState(parsed: Partial<FileSpecState>, featureId: strin
     executionStatus: isFileSpecExecutionStatus(parsed.executionStatus) ? parsed.executionStatus : undefined,
     updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : fallback.updatedAt,
     currentJob: parsed.currentJob && typeof parsed.currentJob === "object" ? parsed.currentJob : undefined,
+    resumeTarget: normalizeFileSpecResumeTarget(parsed.resumeTarget),
     blockedReasons: Array.isArray(parsed.blockedReasons) ? parsed.blockedReasons.filter((item): item is string => typeof item === "string") : [],
     dependencies: Array.isArray(parsed.dependencies) ? parsed.dependencies.filter((item): item is string => typeof item === "string") : [],
     lastResult: parsed.lastResult && typeof parsed.lastResult === "object" ? parsed.lastResult : undefined,
     nextAction: typeof parsed.nextAction === "string" ? parsed.nextAction : fallback.nextAction,
     history: Array.isArray(parsed.history) ? parsed.history.filter(isFileSpecStateHistoryEntry).slice(-50) : fallback.history,
   };
+}
+
+function defaultResumeTargetForStatus(
+  current: FileSpecState,
+  status: FileSpecLifecycleStatus,
+  input: { at: string; source: string; reason: string; schedulerJobId?: string; executionId?: string },
+): FileSpecState["resumeTarget"] {
+  if (!isFileSpecInterruptStatus(status)) {
+    return undefined;
+  }
+  const prior = isFileSpecInterruptStatus(current.status) ? current.resumeTarget?.status : current.status;
+  return {
+    status: prior ?? "ready",
+    reason: input.reason,
+    source: input.source,
+    at: input.at,
+    schedulerJobId: input.schedulerJobId,
+    executionId: input.executionId,
+  };
+}
+
+function isFileSpecInterruptStatus(status: FileSpecLifecycleStatus): boolean {
+  return status === "waiting_input"
+    || status === "approval_needed"
+    || status === "review_needed"
+    || status === "blocked"
+    || status === "failed"
+    || status === "paused";
+}
+
+function normalizeFileSpecResumeTarget(value: unknown): FileSpecState["resumeTarget"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (!isFileSpecResumeTargetStatus(record.status)) return undefined;
+  return {
+    status: record.status,
+    reason: typeof record.reason === "string" ? record.reason : "Resume the interrupted Feature flow.",
+    source: typeof record.source === "string" ? record.source : "unknown",
+    at: typeof record.at === "string" ? record.at : new Date(0).toISOString(),
+    schedulerJobId: typeof record.schedulerJobId === "string" ? record.schedulerJobId : undefined,
+    executionId: typeof record.executionId === "string" ? record.executionId : undefined,
+  };
+}
+
+function isFileSpecResumeTargetStatus(value: unknown): value is FileSpecResumeTargetStatus {
+  return isFileSpecLifecycleStatus(value)
+    || value === "planning"
+    || value === "tasked"
+    || value === "implementing"
+    || value === "done";
 }
 
 function isFileSpecLifecycleStatus(value: unknown): value is FileSpecLifecycleStatus {

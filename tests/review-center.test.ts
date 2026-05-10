@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeSchema, listTables, MIGRATIONS, SCHEMA_VERSION } from "../src/schema.ts";
@@ -1107,7 +1107,24 @@ test("product console approve_review restores scheduled task reviews", () => {
 
 test("product console approve_review resolves feature-scoped reviews", () => {
   const dbPath = seedReviewData();
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "feat-011-review-workspace-"));
+  const featureDir = join(workspaceRoot, "docs", "features", "feat-011-review-center");
+  mkdirSync(featureDir, { recursive: true });
+  writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n");
+  writeFileSync(join(featureDir, "design.md"), "# Design\n");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n");
+  writeFileSync(join(featureDir, "spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-011",
+    status: "review_needed",
+    updatedAt: stableDate.toISOString(),
+    blockedReasons: [],
+    dependencies: [],
+    nextAction: "Review the pending approval.",
+    history: [{ at: stableDate.toISOString(), status: "review_needed", summary: "Review pending.", source: "test" }],
+  }, null, 2));
   runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [workspaceRoot] },
     { sql: "UPDATE features SET status = 'ready' WHERE id = 'FEAT-011'" },
     { sql: "UPDATE tasks SET status = 'running' WHERE id = 'TASK-011'" },
     { sql: "UPDATE task_graph_tasks SET status = 'running' WHERE id = 'TASK-011'" },
@@ -1142,6 +1159,10 @@ test("product console approve_review resolves feature-scoped reviews", () => {
   assert.equal(result.queries.feature[0].status, "ready");
   assert.equal(result.queries.task[0].status, "running");
   assert.equal(result.queries.graphTask[0].status, "running");
+  const specState = JSON.parse(readFileSync(join(featureDir, "spec-state.json"), "utf8"));
+  assert.equal(specState.status, "ready");
+  assert.equal(specState.resumeTarget, undefined);
+  assert.match(specState.nextAction, /Review approved/);
 });
 
 test("feature-scoped approvals keep blocking while sibling feature reviews remain open", () => {
@@ -1618,7 +1639,7 @@ test("task-level review completion preserves delivered parent feature", () => {
   assert.equal(result.queries.feature[0].status, "delivered");
 });
 
-test("product console resolves draft feature reviews with legal defaults", () => {
+test("product console resolves draft feature reviews with legal state-flow defaults", () => {
   const dbPath = seedReviewData();
   runSqlite(dbPath, [{ sql: "UPDATE features SET status = 'draft' WHERE id = 'FEAT-011'" }]);
   createReviewItem(dbPath, {
@@ -1664,7 +1685,7 @@ test("product console resolves draft feature reviews with legal defaults", () =>
     ["REV-DRAFT-APPROVE", "approved"],
     ["REV-DRAFT-UPDATE-SPEC", "changes_requested"],
   ]);
-  assert.equal(result.queries.feature[0].status, "planning");
+  assert.equal(result.queries.feature[0].status, "review_needed");
 });
 
 test("product console change requests do not restore terminal done work", () => {

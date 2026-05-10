@@ -52,6 +52,7 @@
 | CHG-043 | Feature Spec 拆分规则补充 `.gitignore` 创建 | 用户指令：项目初始化作为第一个 Feature Spec，需要在该 Feature 中增加 git ignore 文件创建需求；用户澄清该规则不是针对当前项目，而是固化到 Spec 中 | 已增强 REQ-006、HLD、Feature Index、FEAT-002 requirements/design/tasks、`05.feature.decompose` 和 `10.change.create-request` | 作为 Spec 生成规则：当拆分结果包含项目初始化作为首个 Feature Spec 时，生成的 Feature Spec 必须包含 `.gitignore` 创建或安全更新要求。 |
 | CHG-051 | Journey Closure Gate 协议级缺陷修复 | rapid 项目复盘；Feature 全部 completed 但用户旅程完成度严重不足；参考成熟 Agent/Skill 库中 eval / QA / critic 独立于执行的模式 | 已增强 Agentic Spec 标准、SkillOutputContract、Feature 拆分、执行、评审 Skill 和 Scheduler/Adapter 完成投影 | 新增 `09.review.journey-closure`；Feature completed 必须有 requirementCoverage、acceptanceEvidence、journeyEvidence 或合法 foundationExemption；缺口投影为 `review_needed`。 |
 | CHG-052 | HLD / Feature Spec / LLD 职责边界修复 | 用户讨论：主线 HLD 是否必要、是否需要生成 LLD；后续要求优化 HLD 与 Feature Spec 相关技能 | 已增强 Agentic Spec 标准、Skill 导航和 HLD/Feature 生成/规划/评审 Skill | 保留主线 HLD 作为项目级架构事实源；不生成主线 LLD；低层设计下沉到 Feature `design.md` 或规划结果，Feature requirements/design/tasks 前置承担旅程闭环责任。 |
+| CHG-056 | Agentic Spec 状态流转全流程补齐 | 用户指令：当前项目作为 Agentic Spec 规范的管理系统，需要完善状态流转全流程；实现计划要求标准 + 产品实现同步 | 已增强 Agentic Spec 标准、requirements、HLD、Skill 导航、FEAT-004、FEAT-009、FEAT-010、FEAT-011、FEAT-021 和状态投影代码 | 作为状态机 / 协议覆盖增强：补齐状态迁移事件契约、`resumeTarget`、Scheduler Job 完整状态、Review/Recovery 回流和 UI 受控投影边界。 |
 
 ## 人工处置顺序建议
 
@@ -106,6 +107,7 @@
 | CHG-050 | Feature 最新费用与 Job 累计费用边界 | 用户指令：Feature 执行完成后 VSCode Feature Spec 页面未正确显示 token 计费；同一 Feature 可以多次执行，Job 记录每次费用，Feature 只保留最后一次执行费用，累计成本按 Job 历史统计 | 已增强 NFR-006、REQ-084、Feature Index 和 FEAT-021 requirements/tasks | 已执行 FEAT-021 follow-up：`T-021-26` 覆盖 Feature 最新执行费用、Job 历史累计边界和再次 queued/run 状态依据。 |
 | CHG-051 | Journey Closure Gate 协议级缺陷修复；执行 Skill 不再拥有最终完成度裁决。 | 已同步 `docs/zh-CN/agentic-spec-standard.md`、`.agents/skills/SKILL_OUTPUT_CONTRACT.md`、`05.feature.decompose`、`07.execution.dispatch-adapter`、`09.review.spec-consistency`、`09.review.code-diff`、新增 `09.review.journey-closure`、Adapter/Scheduler/Orchestration 代码和回归测试。 | 已同步实现 |
 | CHG-052 | HLD 保持项目级架构事实源，不生成主线 LLD；Feature requirements/design/tasks 分别承担验收对象、闭环实现路径和可执行 Journey Checkpoint。 | 已同步 `docs/zh-CN/agentic-spec-standard.md`、`docs/zh-CN/skills.md`、`.agents/skills/03.hld.generate`、`05.feature.generate-requirements`、`05.feature.generate-design`、`05.feature.generate-tasks`、`05.feature.decompose`、`03.hld.review-architecture`、`03.hld.define-data-flow`、`03.hld.define-adapter-model`、`06.planning.prepare-execution-plan`、`09.review.spec-consistency`。 | 已同步实现 |
+| CHG-056 | 状态流转全流程按标准 + 产品实现一起补齐；状态迁移必须可追踪、可恢复、可投影。 | 已同步 `docs/zh-CN/agentic-spec-standard.md`、`requirements.md`、`hld.md`、`skills.md`、FEAT-004 / FEAT-009 / FEAT-010 / FEAT-011 / FEAT-021，并补充 `spec-state.json.resumeTarget`、Scheduler Job 完整状态和 Review 审批回流。 | 已同步实现 |
 
 ## Feature Spec Execute 评估
 

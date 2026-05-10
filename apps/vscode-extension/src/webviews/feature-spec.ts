@@ -132,7 +132,7 @@ function renderFeatureCard(feature: SpecDriveIdeFeatureNode, current: boolean): 
     <header><strong>${escapeHtml(feature.id)}</strong><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></header>
     <div>${escapeHtml(feature.title)}</div>
     <div class="metric"><span>Task Progress</span><strong>${progress}%</strong><div class="bar"><span style="width:${progress}%"></span></div></div>
-    <div class="metric"><span>Execution State</span><strong>${escapeHtml(feature.latestExecutionStatus ?? "Not Started")}</strong></div>
+    <div class="metric"><span>Execution State</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
     <div class="metric"><span>Tasks</span><strong>${doneTasks}/${taskCount}</strong></div>
     <div class="metric"><span>Next Action</span><strong>${escapeHtml(feature.nextAction ?? "None")}</strong></div>
     <div class="feature-card-actions">
@@ -147,7 +147,9 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
     <h3>${escapeHtml(feature.title)}</h3>
     <div class="row"><span>Priority</span><strong>${escapeHtml(feature.priority ?? "-")}</strong></div>
     <div class="row"><span>Latest Run</span><strong>${escapeHtml(feature.latestExecutionId ?? "-")}</strong></div>
-    <div class="row"><span>Execution</span><strong>${escapeHtml(feature.latestExecutionStatus ?? "Not Started")}</strong></div>
+    <div class="row"><span>Execution</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
+    <h3>State Flow</h3>
+    ${renderFeatureStateFlow(feature)}
     <h3>Latest Execution Cost</h3>
     ${renderTokenCost(feature.tokenConsumption)}
     <h3>Artifacts</h3>
@@ -163,11 +165,11 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
 function featureDetailActions(feature: SpecDriveIdeFeatureNode, projectId?: string): string {
   if (isDoneFeature(feature)) return "";
   const reviewReason = feature.latestReviewNeededReason;
-  if (isApprovalPendingFeature(feature) && reviewReason !== "approval_needed") {
-    return disabledButtonHtml("Approval", "Resolve the pending approval request in Execution Workbench.", "check");
+  if (isApprovalPendingFeature(feature)) {
+    return disabledButtonHtml("Approval", "Resolve the adapter approval request in Execution Workbench.", "check");
   }
-  if (reviewReason === "approval_needed") {
-    return reviewFeatureButton("Approve", feature, "Feature Detail");
+  if (isWaitingInputFeature(feature)) {
+    return `${clarifyFeatureButton(feature)}${markFeatureReadyButton("Ready", feature, projectId, "Feature Detail")}`;
   }
   if (isActiveExecutionFeature(feature)) {
     return "";
@@ -177,9 +179,10 @@ function featureDetailActions(feature: SpecDriveIdeFeatureNode, projectId?: stri
   }
 
   if (isReviewNeededFeature(feature)) {
+    if (reviewReason === "approval_needed") return reviewFeatureButton("Approve", feature, "Feature Detail");
     if (reviewReason === "clarification_needed") return clarifyFeatureButton(feature);
     if (reviewReason === "risk_review_needed") return reviewFeatureButton("Review", feature, "Feature Detail");
-    return disabledButtonHtml("Review", "Review reason is missing; refresh the Feature or open Execution Workbench.", "check");
+    return reviewFeatureButton("Review", feature, "Feature Detail");
   }
   if (isBlockedFeature(feature)) {
     const blockedReviewReason = feature.latestReviewNeededReason;
@@ -189,6 +192,42 @@ function featureDetailActions(feature: SpecDriveIdeFeatureNode, projectId?: stri
     return `${reviewAction}${clarifyFeatureButton(feature)}${markFeatureReadyButton("Ready", feature, projectId, "Feature Detail")}`;
   }
   return "";
+}
+
+function featureExecutionLabel(feature: SpecDriveIdeFeatureNode): string {
+  return feature.latestExecutionStatus ?? feature.status ?? "Not Started";
+}
+
+function renderFeatureStateFlow(feature: SpecDriveIdeFeatureNode): string {
+  const resume = feature.resumeTarget;
+  const rows: Array<[string, string]> = [
+    ["Current Status", feature.status],
+    ["Execution", featureExecutionLabel(feature)],
+    ["Reason", feature.stateReason ?? firstFeatureStateReason(feature)],
+    ["Review Reason", feature.latestReviewNeededReason ?? "none"],
+    ["Resume Target", resume ? `${resume.status} via ${resume.source}` : "none"],
+    ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
+    ["Next Action", featureStateNextAction(feature)],
+  ];
+  return `<div class="result-group state-flow">${rows.map(([label, value]) => `<div class="row"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`).join("")}</div>`;
+}
+
+function firstFeatureStateReason(feature: SpecDriveIdeFeatureNode): string {
+  return feature.blockedReasons[0] ?? feature.nextAction ?? "No state reason recorded.";
+}
+
+function featureStateNextAction(feature: SpecDriveIdeFeatureNode): string {
+  const status = normalizedRawFeatureStatus(feature);
+  const executionStatus = normalizedExecutionStatus(feature);
+  if (status === "approval needed" || executionStatus === "approval needed") return "Resolve adapter approval in Execution Workbench.";
+  if (status === "waiting input" || executionStatus === "waiting input") return "Clarify the requested input or mark the Feature ready after updating the Spec.";
+  if (status === "review needed" || status === "need review") return feature.latestReviewItemId ? "Resolve the ReviewItem approval." : "Refresh or open Execution Workbench to find the ReviewItem.";
+  if (status === "blocked" || status === "block") return "Clarify, mark ready after correction, or inspect the latest run.";
+  if (status === "failed") return "Inspect failure evidence and retry from Execution Workbench.";
+  if (status === "cancelled") return "Retry, skip, or reschedule when ready.";
+  if (status === "skipped") return "Select the next Feature or retry when ready.";
+  if (status === "paused") return "Resume from Execution Workbench.";
+  return feature.nextAction ?? "Continue the Feature lifecycle.";
 }
 
 function clarifyFeatureButton(feature: SpecDriveIdeFeatureNode): string {
@@ -368,6 +407,10 @@ function isActiveExecutionFeature(feature: SpecDriveIdeFeatureNode): boolean {
 
 function isApprovalPendingFeature(feature: SpecDriveIdeFeatureNode): boolean {
   return normalizedRawFeatureStatus(feature) === "approval needed" || normalizedExecutionStatus(feature) === "approval needed";
+}
+
+function isWaitingInputFeature(feature: SpecDriveIdeFeatureNode): boolean {
+  return normalizedRawFeatureStatus(feature) === "waiting input" || normalizedExecutionStatus(feature) === "waiting input";
 }
 
 function isReviewNeededFeature(feature: SpecDriveIdeFeatureNode): boolean {

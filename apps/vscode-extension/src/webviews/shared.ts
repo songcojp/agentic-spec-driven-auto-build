@@ -449,7 +449,7 @@ export function renderQueueGroup(status: string, items: SpecDriveIdeQueueItem[],
     ${items.map((item) => {
       const key = queueItemKey(item);
       const selected = Boolean(selectedKey && key === selectedKey);
-      return `<div class="queue-item${selected ? " selected" : ""}"><span>${escapeHtml(item.featureId ?? item.taskId ?? item.operation ?? "execution")}</span><span>${escapeHtml(item.operation ?? item.jobType ?? "-")}</span><span>${escapeHtml(item.adapter ?? "-")}</span>${queueSelectButton(item, selected)}</div>`;
+      return `<div class="queue-item${selected ? " selected" : ""}"><span>${escapeHtml(item.featureId ?? item.taskId ?? item.operation ?? "execution")}</span><span>${escapeHtml(item.stateReason ?? item.operation ?? item.jobType ?? "-")}</span><span>${escapeHtml(item.adapter ?? item.status ?? "-")}</span><span class="toolbar">${queueReviewButton(item)}${queueSelectButton(item, selected)}</span></div>`;
     }).join("") || `<div class="queue-item"><span class="muted">No items</span></div>`}
   </details>`;
 }
@@ -467,6 +467,18 @@ function queueSelectButton(item: SpecDriveIdeQueueItem, selected?: boolean): str
     entityType: item.executionId ? "run" : "job",
     entityId,
   }, { icon: selected ? "check" : "select", variant: selected ? "button-primary" : "button-select" });
+}
+
+function queueReviewButton(item: SpecDriveIdeQueueItem): string {
+  if (item.status !== "review_needed") return "";
+  const label = item.reviewNeededReason === "approval_needed" ? "Approve" : "Review";
+  if (!item.reviewItemId) return disabledButtonHtml(label, "No Review Center item has been recorded for this queue item.", "check");
+  return commandButton(label, "controlled", {
+    action: "approve_review",
+    entityType: "review_item",
+    entityId: item.reviewItemId,
+    reason: `${label} ${item.featureId ?? item.executionId ?? "queue item"} from Execution Workbench queue.`,
+  }, { icon: "check" });
 }
 
 export function renderBlockerCard(item: SpecDriveIdeQueueItem): string {

@@ -102,6 +102,36 @@ test("local embedded scheduler executes queued CLI jobs without Redis", async ()
   assert.equal(rows.execution[0].summary, "Skill completed.");
 });
 
+test("local embedded scheduler preserves review_needed job status", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-local-scheduler-review-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const scheduler = createLocalScheduler(dbPath, {
+    runner: () => ({
+      status: 0,
+      stdout: `{"type":"session","session_id":"SESSION-LOCAL-REVIEW"}\n${skillOutputEvent("RUN-LOCAL-REVIEW", {
+        status: "review_needed",
+        summary: "Operator authorization is required before delivery.",
+      })}`,
+      stderr: "",
+    }),
+  });
+
+  const job = scheduler.enqueueCliRun(cliRunPayload("RUN-LOCAL-REVIEW"));
+  await scheduler.drain();
+  await scheduler.close();
+  const rows = runSqlite(dbPath, [], [
+    { name: "job", sql: "SELECT status FROM scheduler_job_records WHERE id = ?", params: [job.schedulerJobId] },
+    { name: "execution", sql: "SELECT status FROM execution_records WHERE id = 'RUN-LOCAL-REVIEW'" },
+    { name: "review", sql: "SELECT status FROM review_items WHERE run_id = 'RUN-LOCAL-REVIEW'" },
+  ]).queries;
+
+  assert.equal(rows.job[0].status, "review_needed");
+  assert.equal(rows.execution[0].status, "review_needed");
+  assert.equal(rows.review[0].status, "review_needed");
+});
+
 test("scheduler worker startup can recover transient queued jobs created while worker was unavailable", () => {
   const dbPath = makeDbPath();
   runSqlite(dbPath, [
@@ -710,6 +740,8 @@ test("codex.rpc.run projects approval pending to Feature spec-state", async () =
   assert.equal(metadata.approvalState, "pending");
   assert.equal(state.status, "approval_needed");
   assert.equal(state.executionStatus, "approval_needed");
+  assert.equal(state.resumeTarget.status, "running");
+  assert.equal(state.resumeTarget.executionId, "RUN-APPROVAL");
   assert.match(state.nextAction, /approval/i);
 });
 

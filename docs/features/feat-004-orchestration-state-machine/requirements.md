@@ -47,6 +47,8 @@
 - 依赖未完成的 Feature 不得进入 implementing。
 - `06.planning.replan` 返回的 `select_next_feature` 决策必须包含 decision、featureId、reason、blockedReasons、dependencyFindings、resumeRequiredFeatures 和 skippedFeatures。
 - `approval_needed`、`blocked`、`review_needed`、`failed` 和 SkillOutput contract validation failure 必须投影到 Feature `spec-state.json`，并阻止自动执行继续选择该 Feature。
+- Scheduler Job 状态必须覆盖 `queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`paused`、`skipped` 和 `completed`；调度器不得把中断态、失败态或取消态折叠为 `completed`。
+- Feature `spec-state.json` 必须记录 `resumeTarget`，用于从 `approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 返回原阶段入口。
 
 ## Acceptance Criteria
 
@@ -58,6 +60,7 @@
 - [ ] skip to next 不会删除队列项，但会把被跳过 Feature 的 `spec-state.json.status` 写为 `skipped`，并选择后续可执行 Feature。
 - [ ] Execution Record 与 Evidence、heartbeat、logs 和 session 能关联查询。
 - [ ] Running Execution Record 完成检测后可进入 Done、Review Needed、Blocked 或 Failed。
+- [ ] Scheduler Job、Execution Record 和 Feature `spec-state.json` 对 `waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`paused`、`skipped` 和 `completed` 的投影一致。
 - [ ] Feature 进入 review_needed 时记录 approval_needed、clarification_needed 或 risk_review_needed。
 - [ ] 手动、指定时间和周期触发能生成可审计的调度触发记录和 `<executor>.run` scheduler job。
 - [ ] Redis 不可用时 scheduler health 为 blocked，API 不崩溃。

@@ -739,6 +739,9 @@ flowchart TD
 - `blocked`：任意阶段均可发生；恢复后回退到前一阶段的入口并重新入队 `<executor>.run` Job。
 - `review_needed`：任意阶段均可触发；审批通过后恢复到原阶段入口；拒绝或要求修改则回退到 `intake` 或 `planning`。
 - Feature 的 `done` 不能仅凭任务卡片状态判断，必须满足 Feature Spec `tasks.md` 覆盖、Feature 验收标准、Spec Alignment 检查和必要测试覆盖。
+- 每次状态迁移都必须记录 from、to、触发事件、事实源、证据引用、允许副作用、恢复入口和终态条件；`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 必须写入可恢复的 `resumeTarget`。
+- `feature-pool-queue.json` 只负责 Feature 依赖、优先级和队列顺序；Feature `spec-state.json` 负责文件化生命周期、currentJob、lastResult、resumeTarget、blocked reasons、nextAction 和 history；SQLite 的 `scheduler_job_records`、`execution_records`、`review_items` 和 `approval_records` 负责运行事实；Product Console / VSCode Webview 只消费查询投影并提交受控命令。
+- Scheduler Job 状态必须完整保留 `queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`paused`、`skipped` 和 `completed`，不得把 `review_needed`、`failed` 或 `cancelled` 投影成 `completed`。
 
 ## 11. Security, Privacy, and Governance
 
@@ -929,6 +932,7 @@ Decomposition rules:
 | Review Needed → 审批流 | **Code**（状态记录 + 通知）+ **Skill**（`09.review.code-diff` 生成 review 内容） | 状态和入口是 Code；review 分析内容是 Skill |
 | Blocked → 记录阻塞 | **Code** | 阻塞持久化；无法解除时任务回退是状态机 |
 | Failed → 生成恢复任务 | **Code**（指纹 / 去重 / 退避）+ **Skill**（`12.recovery.classify-failure` 恢复策略推理） | 重试不变式是 Code；恢复推理是 Skill |
+| Paused / Cancelled / Skipped → 恢复或重规划 | **Code** | 暂停保留 resumeTarget；取消记录操作者和原因；跳过不删除历史，只触发下一 Feature 选择 |
 | Feature done → PR / Delivery Report | **Code**（`gh` CLI 调用 + 交付记录）+ **Skill**（`14.release.prepare-pr` 生成 PR 内容） | — |
 | Spec Evolution | **Skill** | `10.change.update-mainline-spec` |
 | 回到 Feature Selector | **Code** | 调度器循环闭合 |

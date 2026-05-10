@@ -79,6 +79,7 @@ Feature 名称: IDE Workbench Webviews
 - [x] 状态为 `need review` / `review_needed` 的 Feature Spec 必须在 Feature Spec Webview 工具栏和详情面板提供 ReviewItem 审批入口；点击后通过 Control Plane 执行与 Product Console 一致的 `approve_review` 命令，审批通过后恢复继续执行。
 - [x] 状态为 `need review` / `review_needed` 的 Feature Spec 仍可通过 Clarify 入口提交澄清内容；澄清提交以 `clarification` 意图进入 Spec change request，并由 Control Plane 排入 `10.change.impact-analysis` 技能调用任务，不由前端硬编码需求变更或新增路由。
 - [x] `Pass` 只作为临时状态重置命令保留，不作为 Feature Spec Webview 的默认入口展示；后端 `mark_feature_complete` 仍可通过受控命令将 Feature 状态、`spec-state.json.executionStatus`、当前或最近 `feature_execution` Execution Record 和对应 Scheduler Job 标记为 `completed`，并清空 blocked reasons。
+- [x] pause、resume、retry、cancel、skip 和 Review 审批后的状态变化必须由 Control Plane 同步 Scheduler Job、Execution Record、Feature `spec-state.json.history` 和必要的 `resumeTarget`；Webview 只展示投影和提交受控命令。
 - [x] Feature Spec 详情面板不得展示 Evidence 区域或 Evidence 验收项；详情只展示 artifacts、tasks、blockers、traceability、最新运行 token/cost 和可执行动作。Artifacts 必须合并原 acceptance 状态，每行展示文件名、状态和 Open 按钮。
 - [x] Feature Spec Webview 必须按分类 panel 展示 Feature：依次为 `Blocked`、`In-Process`、`Todo`、`Ready`、`Done`；每组可点击折叠/展开并显示展开/折叠状态图标，Done 默认折叠，其它默认展开；panel 中 Feature list 必须自适应换行，不依赖 panel 内垂直滚动条或水平滚动条展示卡片。
 - [x] Feature Spec Webview 顶部第一个控件必须是单个视图切换按钮；Feature List 视图下按钮文字显示 `Dependency Graph`，点击后切换到 Dependency Graph 视图并将按钮文字改为 `Feature List`；`Dependency Graph` 视图以树状层级展示 Feature 之间的依赖关系，标出缺失依赖，树节点支持折叠和展开，并默认展开到二级节点。

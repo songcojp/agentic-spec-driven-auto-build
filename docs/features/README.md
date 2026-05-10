@@ -156,5 +156,6 @@ FEAT-000 System Bootstrap
 | CHG-050 | FEAT-021 / NFR-006 | 同一 Feature 可以有多次 Job / Execution Record；Job 记录每次执行费用，Feature 只展示最后一次有效执行费用；同一 Feature 多次执行总成本必须按 Job / Execution 历史累计。 | 已执行 FEAT-021 `T-021-26`；Feature Spec 页面保留最后执行费用，Schedule / Run 能否再次执行由当前 Feature 状态和安全闸决定。 |
 | CHG-045 | FEAT-021 | Feature Spec Webview 在 blocked / block 或 need review / review_needed 状态显示 `Pass` 按钮；点击后通过受控命令将 Feature 和当前或最近执行记录同步为 completed。 | 已执行 FEAT-021 `T-021-22`；更新 `spec-state.json`、features、execution_records 和 scheduler_job_records 的完成投影。 |
 | CHG-054 | FEAT-021 / FEAT-011 | `Pass` 只作为临时状态重置能力保留；VSCode Feature Spec Webview 在 need review / review_needed 状态使用与 Product Console 一致的 ReviewItem 审批入口，审批通过后继续执行。 | 已执行 FEAT-021 `T-021-30`；执行返回 review_needed 时创建 ReviewItem，Webview 投影 ReviewItem 并隐藏默认 Pass 按钮。 |
+| CHG-056 | FEAT-004 / FEAT-009 / FEAT-010 / FEAT-011 / FEAT-021 | Agentic Spec 状态流转全流程补齐：状态迁移必须记录事实源、证据、允许副作用、resumeTarget 和终态条件；Scheduler Job / Execution Record / Feature `spec-state.json` / ReviewItem / UI 投影必须保持同一状态语义。 | 已同步标准、requirements、HLD 和相关 Feature Spec；代码补齐 Scheduler Job 完整状态、`spec-state.json.resumeTarget` 和 Review 审批回流。 |
 | CHG-007 | FEAT-010 | 失败重试上限、2/4/8 分钟退避和失败指纹已由现有实现与测试覆盖。 | 无需重新执行 Feature Spec。 |
 | CHG-006 / CHG-008 | Mainline Docs | Issue Tracker 非目标和性能阈值基线记录是文档约束，不形成实现任务。 | 无需执行 Feature Spec。 |

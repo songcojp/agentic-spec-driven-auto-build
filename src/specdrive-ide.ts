@@ -43,16 +43,28 @@ export type SpecDriveIdeFeatureNode = {
   priority?: string;
   dependencies: string[];
   blockedReasons: string[];
+  stateReason?: string;
+  resumeTarget?: SpecDriveIdeResumeTarget;
   nextAction?: string;
   documents: SpecDriveIdeDocument[];
   latestExecutionId?: string;
   latestExecutionStatus?: string;
   latestReviewItemId?: string;
   latestReviewStatus?: string;
+  latestReviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
   tokenConsumption?: SpecDriveIdeTokenConsumption;
   indexStatus: "indexed" | "missing_from_index" | "missing_folder";
   tasks: SpecDriveIdeTaskProjection[];
   taskParseBlockedReasons: string[];
+};
+
+export type SpecDriveIdeResumeTarget = {
+  status: string;
+  reason: string;
+  source: string;
+  at: string;
+  schedulerJobId?: string;
+  executionId?: string;
 };
 
 export type SpecDriveIdeTaskProjection = {
@@ -81,6 +93,10 @@ export type SpecDriveIdeQueueItem = {
   completedAt?: string;
   updatedAt?: string;
   summary?: string;
+  stateReason?: string;
+  resumeTarget?: SpecDriveIdeResumeTarget;
+  reviewItemId?: string;
+  reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
 };
 
 export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {
@@ -354,7 +370,7 @@ export function buildSpecDriveIdeView(dbPath: string, options: BuildSpecDriveIde
   const documents = workspaceRoot ? buildTopLevelDocuments(workspaceRoot, specRoot) : [];
   const features = workspaceRoot ? buildFeatureNodes(dbPath, workspaceRoot, projectId) : [];
   const projectCost = buildProjectCostSummary(dbPath, projectId);
-  const queue = buildQueueGroups(dbPath, projectId);
+  const queue = buildQueueGroups(dbPath, projectId, features);
   const activeAdapter = readActiveAdapter(dbPath);
   const executionPreferenceOptions = readExecutionPreferenceOptions(dbPath, projectId);
   const automation = buildAutomationState(dbPath, project, projectId);
@@ -557,19 +573,34 @@ export function buildSpecDriveIdeExecutionDetail(
     .flatMap((log) => log.events)
     .filter((event) => isApprovalRequestEvent(event));
   const tokenConsumption = tokenConsumptionFromRow(result.queries.tokenConsumption[0]);
+  const projectId = optionalString(row.project_id);
+  const featureId = optionalString(context.featureId);
+  const featureProjection = featureId ? readFeatureStateProjection(dbPath, projectId, featureId) : undefined;
+  const reviewProjection = featureId ? readLatestReviewsByFeature(dbPath, projectId).get(featureId) : undefined;
+  const stateReason = queueStateReason({
+    status: optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown",
+    summary: optionalString(row.summary),
+    metadata,
+    resumeTarget: featureProjection?.resumeTarget,
+    reviewNeededReason: reviewProjection?.reviewNeededReason,
+  });
   return {
     schedulerJobId: optionalString(row.scheduler_job_id),
     executionId: String(row.id),
     status: optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown",
     operation: optionalString(row.operation),
     jobType: optionalString(row.job_type) ?? optionalString(metadata.jobType),
-    featureId: optionalString(context.featureId),
+    featureId,
     taskId: optionalString(context.taskId),
     adapter: optionalString(metadata.skillSlug) ?? optionalString(metadata.adapterId),
     threadId: optionalString(metadata.threadId),
     turnId: optionalString(metadata.turnId),
     updatedAt: optionalString(row.updated_at),
     summary: optionalString(row.summary),
+    stateReason,
+    resumeTarget: featureProjection?.resumeTarget,
+    reviewItemId: reviewProjection?.id,
+    reviewNeededReason: reviewProjection?.reviewNeededReason,
     context,
     metadata,
     rawLogs,
@@ -703,6 +734,17 @@ export async function submitIdeQueueCommand(
       },
       acceptedAt,
     });
+    const retryContext = isRecord(payload.context) ? payload.context : {};
+    updateQueueTargetSpecState(dbPath, {
+      ...previous,
+      schedulerJobId: job.schedulerJobId,
+      executionId: payload.executionId,
+      payload,
+      context: retryContext,
+      status: "queued",
+    }, "queued", acceptedAt, {
+      retryReason: command.reason,
+    }, command.workspaceRoot);
     return {
       ...base(),
       schedulerJobId: job.schedulerJobId,
@@ -1396,6 +1438,16 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         ? stateExecutionId ?? latestExecutionForProjection?.executionId
         : latestExecutionForProjection?.executionId;
       const tokenConsumption = latestExecutionForProjection?.tokenConsumption;
+      const stateLastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
+      const resumeTarget = normalizeIdeResumeTarget(state.resumeTarget);
+      const stateReason = featureStateReason({
+        status,
+        blockedReasons: syncBlockedReasons,
+        resumeTarget,
+        reviewNeededReason: latestReview?.reviewNeededReason,
+        lastResultSummary: optionalString(stateLastResult?.summary),
+        nextAction: optionalString(state.nextAction),
+      });
       return {
         id: featureId,
         folder,
@@ -1404,6 +1456,8 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         priority: optionalString(queueEntry?.priority),
         dependencies: stringArray(queueEntry?.dependencies),
         blockedReasons: syncBlockedReasons,
+        stateReason,
+        resumeTarget,
         nextAction: optionalString(state.nextAction),
         latestExecutionId,
         latestExecutionStatus,
@@ -1449,6 +1503,45 @@ function readLatestReviewsByFeature(dbPath: string, projectId?: string): Map<str
 
 function normalizeReviewNeededReason(value: unknown): "approval_needed" | "clarification_needed" | "risk_review_needed" | undefined {
   return value === "approval_needed" || value === "clarification_needed" || value === "risk_review_needed" ? value : undefined;
+}
+
+function normalizeIdeResumeTarget(value: unknown): SpecDriveIdeResumeTarget | undefined {
+  if (!isRecord(value)) return undefined;
+  const status = optionalString(value.status);
+  if (!status) return undefined;
+  return {
+    status,
+    reason: optionalString(value.reason) ?? "Resume the interrupted Feature flow.",
+    source: optionalString(value.source) ?? "unknown",
+    at: optionalString(value.at) ?? new Date(0).toISOString(),
+    schedulerJobId: optionalString(value.schedulerJobId),
+    executionId: optionalString(value.executionId),
+  };
+}
+
+function featureStateReason(input: {
+  status: string;
+  blockedReasons: string[];
+  resumeTarget?: SpecDriveIdeResumeTarget;
+  reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+  lastResultSummary?: string;
+  nextAction?: string;
+}): string | undefined {
+  if (input.blockedReasons.length > 0) return input.blockedReasons[0];
+  if (input.resumeTarget?.reason) return input.resumeTarget.reason;
+  if (input.reviewNeededReason) return reviewNeededReasonLabel(input.reviewNeededReason);
+  if (input.lastResultSummary) return input.lastResultSummary;
+  const normalized = input.status.toLowerCase();
+  if (normalized === "cancelled") return "Cancelled by operator.";
+  if (normalized === "skipped") return "Skipped by operator.";
+  if (normalized === "paused") return "Paused by operator.";
+  return input.nextAction;
+}
+
+function reviewNeededReasonLabel(reason: "approval_needed" | "clarification_needed" | "risk_review_needed"): string {
+  if (reason === "approval_needed") return "Approval is required before execution can continue.";
+  if (reason === "clarification_needed") return "Clarification is required before execution can continue.";
+  return "Human review is required before execution can continue.";
 }
 
 function isCompletedFeatureStatus(status: string): boolean {
@@ -2078,7 +2171,9 @@ function queueStatusSpecStateSummary(status: string, metadataPatch: Record<strin
     ?? optionalString(metadataPatch.pausedReason)
     ?? optionalString(metadataPatch.resumedReason)
     ?? optionalString(metadataPatch.skipReason)
-    ?? optionalString(metadataPatch.approvalReason);
+    ?? optionalString(metadataPatch.approvalReason)
+    ?? optionalString(metadataPatch.retryReason)
+    ?? optionalString(metadataPatch.runNowReason);
   return reason ? `Queue ${status}: ${reason}` : `Queue status changed to ${status}.`;
 }
 
@@ -2169,7 +2264,7 @@ function loadAppServerAdapterConfig(dbPath: string): CodexAppServerAdapterConfig
   };
 }
 
-function buildQueueGroups(dbPath: string, projectId?: string): { groups: Record<string, SpecDriveIdeQueueItem[]> } {
+function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriveIdeFeatureNode[] = []): { groups: Record<string, SpecDriveIdeQueueItem[]> } {
   const projectFilter = projectId
     ? `WHERE (
         er.project_id = ?
@@ -2211,6 +2306,8 @@ function buildQueueGroups(dbPath: string, projectId?: string): { groups: Record<
     },
   ]);
   const groups: Record<string, SpecDriveIdeQueueItem[]> = {};
+  const featureById = new Map(features.map((feature) => [feature.id, feature]));
+  const latestReviews = readLatestReviewsByFeature(dbPath, projectId);
   const supersededExecutionIds = new Set<string>();
   for (const row of result.queries.queue) {
     const context = parseJsonObject(optionalString(row.context_json));
@@ -2234,13 +2331,18 @@ function buildQueueGroups(dbPath: string, projectId?: string): { groups: Record<
     if (!executionId && isCompletedScheduleOnlyStatus(status)) continue;
     if (executionId && supersededExecutionIds.has(executionId)) continue;
     const executionPreference = executionPreferenceFromQueueParts(context, metadata, payload, optionalString(row.job_type), optionalString(row.executor_type));
+    const featureId = optionalString(context.featureId) ?? optionalString(payloadContext.featureId);
+    const feature = featureId ? featureById.get(featureId) : undefined;
+    const review = featureId ? latestReviews.get(featureId) : undefined;
+    const resumeTarget = feature?.resumeTarget;
+    const reviewNeededReason = review?.reviewNeededReason;
     const item: SpecDriveIdeQueueItem = {
       schedulerJobId: optionalString(row.scheduler_job_id),
       executionId,
       status,
       operation: optionalString(row.operation) ?? optionalString(payload.operation) ?? optionalString(payload.requestedAction),
       jobType: optionalString(row.job_type),
-      featureId: optionalString(context.featureId) ?? optionalString(payloadContext.featureId),
+      featureId,
       taskId: optionalString(context.taskId) ?? optionalString(payloadContext.taskId),
       adapter: optionalString(metadata.skillSlug)
         ?? optionalString(metadata.adapterId)
@@ -2254,6 +2356,10 @@ function buildQueueGroups(dbPath: string, projectId?: string): { groups: Record<
       completedAt: optionalString(row.execution_completed_at),
       updatedAt: optionalString(row.execution_updated_at) ?? optionalString(row.job_updated_at),
       summary: optionalString(row.summary),
+      stateReason: queueStateReason({ status, summary: optionalString(row.summary), metadata, resumeTarget, reviewNeededReason }),
+      resumeTarget,
+      reviewItemId: review?.id,
+      reviewNeededReason,
     };
     groups[status] = [...(groups[status] ?? []), item];
   }
@@ -2262,6 +2368,82 @@ function buildQueueGroups(dbPath: string, projectId?: string): { groups: Record<
 
 function isCompletedScheduleOnlyStatus(status: string): boolean {
   return ["completed", "cancelled", "skipped"].includes(status);
+}
+
+function queueStateReason(input: {
+  status: string;
+  summary?: string;
+  metadata: Record<string, unknown>;
+  resumeTarget?: SpecDriveIdeResumeTarget;
+  reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+}): string | undefined {
+  return optionalString(input.metadata.cancelReason)
+    ?? optionalString(input.metadata.pausedReason)
+    ?? optionalString(input.metadata.resumedReason)
+    ?? optionalString(input.metadata.skipReason)
+    ?? optionalString(input.metadata.approvalReason)
+    ?? optionalString(input.metadata.blockedReason)
+    ?? optionalString(input.metadata.retryReason)
+    ?? input.resumeTarget?.reason
+    ?? (input.reviewNeededReason ? reviewNeededReasonLabel(input.reviewNeededReason) : undefined)
+    ?? input.summary
+    ?? defaultQueueStateReason(input.status);
+}
+
+function defaultQueueStateReason(status: string): string | undefined {
+  if (status === "waiting_input") return "Waiting for operator input.";
+  if (status === "approval_needed") return "Approval is required before execution can continue.";
+  if (status === "review_needed") return "Human review is required before execution can continue.";
+  if (status === "blocked") return "Execution is blocked.";
+  if (status === "failed") return "Execution failed.";
+  if (status === "paused") return "Execution is paused.";
+  if (status === "cancelled") return "Execution was cancelled.";
+  if (status === "skipped") return "Execution was skipped.";
+  return undefined;
+}
+
+function readFeatureStateProjection(
+  dbPath: string,
+  projectId: string | undefined,
+  featureId: string,
+): { resumeTarget?: SpecDriveIdeResumeTarget; stateReason?: string; nextAction?: string } | undefined {
+  const workspaceRoot = workspaceRootForProject(dbPath, projectId);
+  if (!workspaceRoot) return undefined;
+  const featureRoot = join(workspaceRoot, "docs/features");
+  if (!existsSync(featureRoot)) return undefined;
+  const folders = new Set(readdirSync(featureRoot)
+    .filter((entry) => statSync(join(featureRoot, entry)).isDirectory())
+    .sort());
+  const indexEntry = readFeatureIndex(workspaceRoot).find((entry) => entry.id === featureId);
+  const folder = resolveFeatureFolder(featureId, indexEntry?.folder, folders);
+  const state = readJson(join(featureRoot, folder, "spec-state.json"));
+  const blockedReasons = stringArray(state.blockedReasons);
+  const resumeTarget = normalizeIdeResumeTarget(state.resumeTarget);
+  const nextAction = optionalString(state.nextAction);
+  const lastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
+  return {
+    resumeTarget,
+    nextAction,
+    stateReason: featureStateReason({
+      status: optionalString(state.status) ?? "unknown",
+      blockedReasons,
+      resumeTarget,
+      lastResultSummary: optionalString(lastResult?.summary),
+      nextAction,
+    }),
+  };
+}
+
+function workspaceRootForProject(dbPath: string, projectId: string | undefined): string | undefined {
+  if (!projectId) return undefined;
+  const row = runSqlite(dbPath, [], [
+    {
+      name: "project",
+      sql: "SELECT target_repo_path FROM projects WHERE id = ? LIMIT 1",
+      params: [projectId],
+    },
+  ]).queries.project[0];
+  return optionalString(row?.target_repo_path);
 }
 
 function executionPreferenceFromQueueParts(

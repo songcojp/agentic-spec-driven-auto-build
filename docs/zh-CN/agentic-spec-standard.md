@@ -1274,6 +1274,67 @@ Running
 
 ---
 
+## 8.4 状态迁移事件契约
+
+所有状态迁移都必须能被机器和人工同时复核。一次迁移至少包含：
+
+```yaml
+state_transition:
+  from: Running
+  to: Review Needed
+  trigger_event: skill_output_review_needed
+  fact_source: runs/RUN-001/result.yaml
+  evidence_refs:
+    - runs/RUN-001/report.json
+  allowed_side_effects:
+    - create_review_item
+    - pause_auto_continue
+  resume_target: Running
+  terminal_condition: human_decision_recorded
+```
+
+规则：
+
+1. `from` 和 `to` 必须来自对应对象的状态机。
+2. `trigger_event` 必须说明是用户指令、Skill 输出、Adapter 事件、Status Check、Review 决策、Recovery 结果还是交付动作。
+3. `fact_source` 必须指向文件、运行记录、审批记录或审计记录，不能只引用聊天上下文。
+4. `evidence_refs` 必须引用可复核产物。
+5. `allowed_side_effects` 只能列出本次迁移允许触发的副作用。
+6. `resume_target` 用于 `waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 等中断状态。
+7. `terminal_condition` 必须说明该状态如何结束、如何恢复或为何不可恢复。
+
+---
+
+## 8.5 标准状态与产品投影边界
+
+Agentic Spec Standard 只定义通用对象状态、迁移事件和恢复规则，不规定具体产品必须使用哪种数据库、队列或 UI。
+
+`agentic-spec-driven-auto-build` 的产品投影规则是：
+
+```text
+feature-pool-queue.json
+  = Feature 依赖、优先级和全局队列事实源
+
+docs/features/<feature-id>/spec-state.json
+  = 单个 Feature 的文件化生命周期、当前 Job、lastResult、resumeTarget 和 operator-facing nextAction
+
+SQLite scheduler_job_records
+  = 队列 Job 运行事实
+
+SQLite execution_records
+  = 真实执行实例事实
+
+SQLite review_items / approval_records
+  = Review Needed 与审批事实
+
+Product Console / VSCode Webview
+  = 查询投影和受控命令入口，不直接拥有状态事实
+```
+
+当这些投影冲突时，必须先核查运行事实、文件状态、Git/worktree 和审计记录，再修正派生投影。
+
+---
+
 # 9. 状态机规范
 
 ## 9.1 Document State
@@ -1747,6 +1808,109 @@ Resume with Decision
 ```
 
 OpenAI Agents SDK 的 RunResult 可暴露 pending approvals，并可通过 `to_state()` 捕获可恢复 RunState，再在审批后继续运行；Agentic Spec 的审批恢复流程应兼容这种“中断—序列化—审批—恢复”的模式。([openai.github.io][3])
+
+---
+
+## 10.8 Spec 与代码不一致修复流程
+
+适用于：
+
+1. 实现行为偏离已批准 Spec。
+2. 测试或 Review 发现 Spec Alignment 不通过。
+3. 运行证据证明旧 Spec 已过时。
+4. 已完成 Feature 的验收结论被新证据推翻。
+
+流程：
+
+```text
+Spec / Code Drift Detected
+  ↓
+Capture Drift Evidence
+  ↓
+Classify: Code Fix or Spec Evolution?
+  ├─ Code Fix → Re-open Feature / Task → Execute → Verify
+  └─ Spec Evolution → Change Request → Impact Analysis → Update Specs → Re-plan
+  ↓
+Invalidate Affected Evidence
+  ↓
+Update Traceability
+  ↓
+Resume from recorded resumeTarget
+```
+
+规则：
+
+1. 如果 Spec 仍正确，修代码，不改 Spec。
+2. 如果实现证据推翻 Spec，先走 Change Request，不得静默修改代码绕过。
+3. 已完成或已交付 Feature 被影响时，必须记录 follow-up、reopening 或 Spec Evolution。
+4. 受影响的 Evidence、StatusCheckResult、ReviewItem 和 Delivery Report 必须能追溯到本次漂移修复。
+
+---
+
+## 10.9 任务重规划流程
+
+适用于：
+
+1. Feature 依赖变化。
+2. Feature 被 skip、blocked、failed 或 review_needed 后需要选择下一项。
+3. 用户要求 resume 指定 Feature。
+4. Spec 变更使当前执行计划失效。
+
+流程：
+
+```text
+Re-plan Requested
+  ↓
+Read Feature Queue
+  ↓
+Read Feature spec-state
+  ↓
+Read Latest Execution / Review / Recovery Facts
+  ↓
+Select Next Feature
+  ↓
+Code Safety Gate
+  ├─ Pass → Enqueue Execution Adapter Job
+  └─ Block → Record blocked reason and resumeTarget
+```
+
+规则：
+
+1. Feature 队列事实来自 `feature-pool-queue.json` 或等价机器可读队列文件。
+2. 单个 Feature 的当前状态来自 `spec-state` 类文件或等价机器可读状态文件。
+3. LLM/Skill 可以提供选择建议，但代码必须执行结构校验、安全闸和去重。
+4. `blocked`、`failed`、`review_needed` 和 `approval_needed` 不得被自动反复选择，除非有明确 resume/skip hint。
+
+---
+
+## 10.10 暂停、取消、跳过与恢复流程
+
+```text
+Running / Queued
+  → Paused
+  → Resume
+  → Running / Queued
+```
+
+```text
+Queued / Running / Approval Required
+  → Cancelled
+  → Terminal or Re-plan
+```
+
+```text
+Blocked / Failed / Review Needed
+  → Skipped
+  → Select Next Feature
+```
+
+规则：
+
+1. `paused` 必须保留 `resumeTarget`，恢复后回到暂停前入口。
+2. `cancelled` 必须记录操作者、原因和是否允许 retry。
+3. `skipped` 不删除 Feature，不删除历史，只让调度器选择下一项。
+4. `retry` 必须关联上一次 Execution、失败原因、恢复结果和重试预算。
+5. UI 只能提交受控命令；状态事实必须由控制面、状态机或运行记录写入。
 
 ---
 
