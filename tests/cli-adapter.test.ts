@@ -8,6 +8,7 @@ import { runSqlite } from "../src/sqlite.ts";
 import {
   buildExecutionResultInput,
   buildExecutionInvocationPrompt,
+  buildCliAdapterEnvironment,
   buildRunnerConsoleSnapshot,
   CLAUDE_CLI_ADAPTER_CONFIG,
   cliAdapterConfigToExecutionAdapterConfig,
@@ -386,6 +387,46 @@ test("Claude Code CLI adapter preset validates and dry-renders structured JSON c
   assert.ok(rendered.args[1].includes("Continue bounded task"));
   assert.equal(rendered.args[2], "--resume");
   assert.equal(rendered.args[3], "SESSION-CLAUDE");
+});
+
+test("Claude Code CLI adapter can load allowlisted env from normal terminal shell config", () => {
+  const home = mkdtempSync(join(tmpdir(), "specdrive-claude-env-"));
+  const bashrc = join(home, ".bashrc");
+  writeFileSync(bashrc, [
+    "case $- in",
+    "  *i*) ;;",
+    "    *) return;;",
+    "esac",
+    "export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic",
+    "export ANTHROPIC_AUTH_TOKEN=\"token-from-bashrc\"",
+    "export ANTHROPIC_DEFAULT_SONNET_MODEL='deepseek-v4-pro[1m]'",
+    "export UNRELATED_SECRET=must-not-load",
+    "",
+  ].join("\n"));
+
+  const env = buildCliAdapterEnvironment(CLAUDE_CLI_ADAPTER_CONFIG, { HOME: home, PATH: "/bin" });
+
+  assert.equal(env.ANTHROPIC_BASE_URL, "https://api.deepseek.com/anthropic");
+  assert.equal(env.ANTHROPIC_AUTH_TOKEN, "token-from-bashrc");
+  assert.equal(env.ANTHROPIC_DEFAULT_SONNET_MODEL, "deepseek-v4-pro[1m]");
+  assert.equal(env.UNRELATED_SECRET, undefined);
+});
+
+test("CLI adapter process env overrides user env files", () => {
+  const home = mkdtempSync(join(tmpdir(), "specdrive-cli-env-"));
+  writeFileSync(join(home, ".claude-code-env"), [
+    "export ANTHROPIC_AUTH_TOKEN=file-token",
+    "export CLAUDE_CODE_EFFORT_LEVEL=max",
+  ].join("\n"));
+
+  const env = buildCliAdapterEnvironment(CLAUDE_CLI_ADAPTER_CONFIG, {
+    HOME: home,
+    PATH: "/bin",
+    ANTHROPIC_AUTH_TOKEN: "process-token",
+  });
+
+  assert.equal(env.ANTHROPIC_AUTH_TOKEN, "process-token");
+  assert.equal(env.CLAUDE_CODE_EFFORT_LEVEL, "max");
 });
 
 test("default SkillOutputContract schema is valid for Codex strict JSON schema", () => {

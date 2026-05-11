@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join, normalize as normalizeFilePath } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { delimiter as pathDelimiter, dirname, join, normalize as normalizeFilePath } from "node:path";
 import { ORDINARY_LOG_SECRET_PATTERNS } from "./persistence.ts";
 import {
   buildFailureFingerprint,
@@ -262,8 +262,8 @@ export type CliCommandResult = {
   commandTermination?: CliCommandTermination;
 };
 
-export type CliCommandRunner = (command: string, args: string[], cwd: string) => CliCommandResult;
-export type AsyncCliCommandRunner = (command: string, args: string[], cwd: string) => Promise<CliCommandResult>;
+export type CliCommandRunner = (command: string, args: string[], cwd: string, env?: NodeJS.ProcessEnv) => CliCommandResult;
+export type AsyncCliCommandRunner = (command: string, args: string[], cwd: string, env?: NodeJS.ProcessEnv) => Promise<CliCommandResult>;
 
 export type CliCommandTerminationReason = "terminal_contract_drain_timeout" | "stdin_wait_after_terminal_contract";
 
@@ -276,6 +276,7 @@ export type RunCommandOptions = {
   terminalOutputGraceMs?: number;
   hasTerminalOutput?: (stdout: string, stderr: string) => boolean;
   terminationReason?: (stdout: string, stderr: string) => CliCommandTerminationReason;
+  env?: NodeJS.ProcessEnv;
 };
 
 export type CliAdapterInput = {
@@ -492,6 +493,91 @@ export function cliAdapterConfigToExecutionAdapterConfig(config: CliAdapterConfi
     status: config.status,
     updatedAt: config.updatedAt,
   };
+}
+
+export function defaultCliEnvironmentFiles(env: NodeJS.ProcessEnv = process.env): string[] {
+  const home = env.HOME?.trim() || homedir();
+  const explicitFiles = String(env.AUTOBUILD_CLI_ENV_FILE ?? "")
+    .split(pathDelimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return uniqueStrings([
+    join(home, ".bashrc"),
+    join(home, ".bash_profile"),
+    join(home, ".profile"),
+    join(home, ".zshrc"),
+    join(home, ".config", "specdrive", "cli.env"),
+    join(home, ".specdrive", "cli.env"),
+    join(home, ".claude-code-env"),
+    ...explicitFiles.map((entry) => expandHomePath(entry, home)),
+  ]);
+}
+
+export function buildCliAdapterEnvironment(
+  config: CliAdapterConfig,
+  baseEnv: NodeJS.ProcessEnv = process.env,
+  envFiles: string[] = defaultCliEnvironmentFiles(baseEnv),
+): NodeJS.ProcessEnv {
+  const allowed = new Set(config.environmentAllowlist);
+  if (allowed.size === 0) return { ...baseEnv };
+  const fileEnv: Record<string, string> = {};
+  for (const file of envFiles) {
+    const parsed = parseCliEnvironmentFile(file);
+    for (const [key, value] of Object.entries(parsed)) {
+      if (allowed.has(key)) fileEnv[key] = value;
+    }
+  }
+  const merged: NodeJS.ProcessEnv = { ...baseEnv };
+  for (const [key, value] of Object.entries(fileEnv)) {
+    if (merged[key] === undefined || merged[key] === "") {
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
+function parseCliEnvironmentFile(path: string): Record<string, string> {
+  if (!existsSync(path)) return {};
+  let content = "";
+  try {
+    content = readFileSync(path, "utf8");
+  } catch {
+    return {};
+  }
+  const values: Record<string, string> = {};
+  for (const line of content.split(/\r?\n/)) {
+    const parsed = parseCliEnvironmentLine(line);
+    if (parsed) values[parsed.key] = parsed.value;
+  }
+  return values;
+}
+
+function parseCliEnvironmentLine(line: string): { key: string; value: string } | undefined {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#")) return undefined;
+  const withoutExport = trimmed.startsWith("export ") ? trimmed.slice("export ".length).trim() : trimmed;
+  const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(withoutExport);
+  if (!match) return undefined;
+  return { key: match[1], value: unquoteEnvValue(match[2].trim()) };
+}
+
+function unquoteEnvValue(value: string): string {
+  if (value.length >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+    return value.slice(1, -1).replace(/\\"/g, "\"").replace(/\\\\/g, "\\");
+  }
+  if (value.length >= 2 && value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1);
+  }
+  const commentIndex = value.search(/\s+#/);
+  return commentIndex >= 0 ? value.slice(0, commentIndex).trimEnd() : value;
+}
+
+function expandHomePath(path: string, home: string): string {
+  return path === "~" ? home : path.startsWith("~/") ? join(home, path.slice(2)) : path;
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
 }
 export const DEFAULT_OUTPUT_SCHEMA = {
   type: "object",
@@ -1398,6 +1484,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
     outputSchemaPath,
     imagePaths: input.imagePaths,
   });
+  const commandEnv = buildCliAdapterEnvironment(adapterConfig);
   const logFiles = writeCliInputLog({
     policy: input.policy,
     prompt,
@@ -1414,9 +1501,9 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
     let result: CliCommandResult;
     try {
       result = input.asyncRunner
-        ? await input.asyncRunner(rendered.command, rendered.args, input.policy.workspaceRoot)
+        ? await input.asyncRunner(rendered.command, rendered.args, input.policy.workspaceRoot, commandEnv)
         : input.runner
-          ? input.runner(rendered.command, rendered.args, input.policy.workspaceRoot)
+          ? input.runner(rendered.command, rendered.args, input.policy.workspaceRoot, commandEnv)
           : await runCommand(
               rendered.command,
               rendered.args,
@@ -1431,6 +1518,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
                   return !!latest && isTerminalSkillOutputStatus(latest.status);
                 },
                 terminationReason: terminalContractTerminationReason,
+                env: commandEnv,
               },
             );
     } catch (error) {
@@ -3257,7 +3345,7 @@ export function runCommand(
   options: RunCommandOptions = {},
 ): Promise<CliCommandResult> {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd });
+    const child = spawn(command, args, { cwd, env: options.env });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     let timedOut = false;
