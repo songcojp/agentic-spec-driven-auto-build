@@ -151,6 +151,8 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
     <div class="row"><span>Execution</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
     <h3>State Flow</h3>
     ${renderFeatureStateFlow(feature)}
+    <h3>Review Item</h3>
+    ${renderFeatureReviewDetails(feature)}
     <h3>Latest Execution Cost</h3>
     ${renderTokenCost(feature.tokenConsumption)}
     <h3>Artifacts</h3>
@@ -209,6 +211,9 @@ function renderFeatureStateFlow(feature: SpecDriveIdeFeatureNode): string {
     ["Execution", featureExecutionLabel(feature)],
     ["Reason", feature.stateReason ?? firstFeatureStateReason(feature)],
     ["Review Reason", feature.latestReviewNeededReason ?? "none"],
+    ["Review Message", feature.latestReview?.message ?? "none"],
+    ["Review Triggers", feature.latestReview?.triggerReasons.join(", ") || "none"],
+    ["Recommended Actions", feature.latestReview?.recommendedActions.join(", ") || "none"],
     ["Resume Target", resume ? `${resume.status} via ${resume.source}` : "none"],
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
     ["Next Action", featureStateNextAction(feature)],
@@ -220,6 +225,23 @@ function renderFeatureStateRow([label, value]: [string, string]): string {
   return `<div class="feature-state-row"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
 }
 
+function renderFeatureReviewDetails(feature: SpecDriveIdeFeatureNode): string {
+  const review = feature.latestReview;
+  if (!review) return emptyState("No active ReviewItem for this Feature.");
+  const rows: Array<[string, string]> = [
+    ["ReviewItem", review.id],
+    ["Status", review.status],
+    ["Severity", review.severity ?? "none"],
+    ["Reason", review.reviewNeededReason ?? "none"],
+    ["Message", review.message ?? feature.stateReason ?? "No review message recorded."],
+    ["Risk", review.riskExplanation ?? "none"],
+    ["Triggers", review.triggerReasons.join(", ") || "none"],
+    ["Recommended Actions", review.recommendedActions.join(", ") || "none"],
+    ["References", review.referenceRefs.join(", ") || "none"],
+  ];
+  return `<div class="result-group review-details">${rows.map(renderFeatureStateRow).join("")}</div>`;
+}
+
 function firstFeatureStateReason(feature: SpecDriveIdeFeatureNode): string {
   return feature.blockedReasons[0] ?? feature.nextAction ?? "No state reason recorded.";
 }
@@ -229,7 +251,7 @@ function featureStateNextAction(feature: SpecDriveIdeFeatureNode): string {
   const executionStatus = normalizedExecutionStatus(feature);
   if (status === "approval needed" || executionStatus === "approval needed") return "Resolve adapter approval in Execution Workbench.";
   if (status === "waiting input" || executionStatus === "waiting input") return "Clarify the requested input or mark the Feature ready after updating the Spec.";
-  if (status === "review needed" || status === "need review") return feature.latestReviewItemId ? "Resolve the ReviewItem approval." : "Refresh or open Execution Workbench to find the ReviewItem.";
+  if (status === "review needed" || status === "need review") return feature.latestReviewItemId ? "Resolve the ReviewItem decision." : "Refresh or open Execution Workbench to find the ReviewItem.";
   if (status === "blocked" || status === "block") return "Clarify, mark ready after correction, or inspect the latest run.";
   if (status === "failed") return "Inspect failure evidence and retry from Execution Workbench.";
   if (status === "cancelled") return "Retry, skip, or reschedule when ready.";
@@ -298,7 +320,12 @@ function reviewFeatureButton(label: string, action: string, icon: string, featur
     entityType: "review_item",
     entityId: feature.latestReviewItemId,
     reason: `${label} ${feature.id} review from ${source}.`,
+    reviewNoteRequired: reviewActionNeedsNote(action) ? "true" : undefined,
   }, { icon });
+}
+
+function reviewActionNeedsNote(action: string): boolean {
+  return ["request_review_changes", "update_spec", "reject_review", "rollback_review", "split_review_task"].includes(action);
 }
 
 function markFeatureReadyButton(label: string, feature: SpecDriveIdeFeatureNode, projectId: string | undefined, source: string): string {

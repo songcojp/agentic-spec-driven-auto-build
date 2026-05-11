@@ -186,3 +186,8 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 状态: done
 描述: Feature Spec 详情和 Execution Workbench 选中 Job 详情显示 Feature Spec 标题与描述信息；Control Plane 从 Feature `spec-state.json.description` 或 Feature `requirements.md` 的目标 / 用户价值 / Scope 等段落提取描述，并随 Feature / Queue ViewModel 投影到 VSCode Webview，避免详情只显示 Feature 编号。
 验证: `npm run ide:build`，`node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-35 Review Needed 具体审查事项投影
+状态: done
+描述: Execution Workbench 与 Feature Spec 的 review_needed 投影优先显示 Execution Record summary / ReviewItem message 中的具体缺口，并展示 ReviewItem trigger、推荐动作、风险说明和 refs；Delivery Fidelity、behavior obligation 或 unresolved loss 触发时归类为 `risk_review_needed` 和 `quality_evidence_gap`，不得因 PR / approval / permission 字样误判为 `approval_needed`；request changes、update spec、reject、rollback 和 split task 决策要求输入澄清/修改说明并写入 approval metadata。
+验证: `node --test tests/scheduler.test.ts tests/specdrive-ide.test.ts`，`npm run ide:build`，`git diff --check`。

@@ -24,6 +24,7 @@ export type SpecDriveIdeFeatureNode = {
   latestReviewItemId?: string;
   latestReviewStatus?: string;
   latestReviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+  latestReview?: SpecDriveIdeReviewProjection;
   tokenConsumption?: SpecDriveIdeTokenConsumption;
   indexStatus?: "indexed" | "missing_from_index" | "missing_folder";
   tasks?: SpecDriveIdeTaskProjection[];
@@ -71,6 +72,7 @@ export type SpecDriveIdeQueueItem = {
   resumeTarget?: SpecDriveIdeResumeTarget;
   reviewItemId?: string;
   reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+  review?: SpecDriveIdeReviewProjection;
 };
 
 export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {
@@ -85,6 +87,20 @@ export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {
   contractValidation?: unknown;
   outputSchema?: unknown;
   approvalRequests: unknown[];
+};
+
+export type SpecDriveIdeReviewProjection = {
+  id: string;
+  status: string;
+  severity?: string;
+  reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+  message?: string;
+  riskExplanation?: string;
+  triggerReasons: string[];
+  recommendedActions: string[];
+  referenceRefs: string[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type SpecDriveIdeTokenConsumption = {

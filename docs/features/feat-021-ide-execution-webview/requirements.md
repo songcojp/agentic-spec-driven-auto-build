@@ -54,6 +54,7 @@ Feature 名称: IDE Workbench Webviews
 - CHG-059（2026-05-10）：用户要求 New Requirement、Requirement Change 和 Clarification 都必须推进到可直接实现的 Feature Spec，包括 Feature index、Feature Pool Queue 和 `spec-state.json` 状态修改；处理完成后用户应能直接通过 UI 调度执行。影响 REQ-084 和 FEAT-021，替代 CHG-058 中“后续再 split”的处理方式。
 - CHG-060（2026-05-10）：用户反馈 VSCode IDE 所有页面自动刷新会导致需求新增、变更、澄清录入内容丢失；输入信息应以聊天对话框形态展示，自动刷新、手动刷新或 Webview 重新渲染不得重置未提交草稿。影响 REQ-084 和 FEAT-021，作为输入稳定性 follow-up 修订。
 - CHG-061（2026-05-10）：用户反馈 Feature Spec 和 Execution Workbench 详情区域只显示 Feature 编号时无法判断任务内容；详情必须显示 Feature Spec 标题和描述信息。影响 REQ-084 和 FEAT-021，作为详情可读性 follow-up 修订。
+- CHG-062（2026-05-11）：用户反馈 FEAT-016 只显示“需要审批”，但看不出需要审批或审查什么；Execution Workbench 和 Feature Spec 的 review_needed 投影必须展示具体 ReviewItem / Execution summary、trigger、推荐动作和风险说明，Delivery Fidelity 或 behavior obligation 缺口必须归类为 `risk_review_needed` 而不是被 PR / approval 字样误判为 `approval_needed`；request changes、update spec、reject、rollback 和 split task 必须允许输出澄清/修改说明。影响 REQ-046、REQ-084、REQ-091 和 FEAT-021，作为 review 可读性 follow-up 修订。
 
 ## UI 概念图
 
@@ -107,3 +108,4 @@ Feature 名称: IDE Workbench Webviews
 - [x] `Spec Workspace` 中的 UI Spec Concept Images 每行最多显示 8 张图片，超出后自动换行，并在窄宽度下自适应减少列数。
 - [x] VSCode IDE Webview 必须按操作对象和当前状态显示 Spec、Feature Spec 与 Job 操作入口：Spec Workspace 区分 New Requirement / Requirement Change / Clarification；Feature 详情按状态显示 Schedule、Ready、Clarify、Requirement Change、Review 决策、Pause / Resume、Retry、Cancel、Skip 和 Reprioritize；Execution Workbench 的 Review 决策覆盖 approve、reject、request changes、rollback、split task 和 update spec。
 - [x] Feature Spec 详情和 Execution Workbench 选中 Job 详情必须展示 Feature Spec 标题和描述信息；描述优先来自 Feature `spec-state.json.description`，其次来自 `requirements.md` 的目标 / 用户价值 / Scope 等描述段落。
+- [x] review_needed 队列卡片和 State Flow 必须优先展示 Execution summary / ReviewItem message 中的具体缺口，并显示 ReviewItem trigger、推荐动作、风险说明和 refs；Delivery Fidelity 或 behavior obligation 未关闭时必须显示为风险审查，不得只显示泛化的 approval label；非通过决策必须记录操作者澄清/修改说明。

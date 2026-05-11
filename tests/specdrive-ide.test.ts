@@ -1488,7 +1488,7 @@ test("SpecDrive IDE projects pending Feature review item for Webview approval", 
         ) VALUES (
           'REV-FEAT-016', 'project-ide', 'FEAT-016', 'review_needed', 'medium', 'approval_needed',
           '["permission_escalation"]', '["approve_continue","request_changes","reject"]', '[]',
-          '{"message":"Review FEAT-016 before continuing."}', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z'
+          '{"message":"Review FEAT-016 before continuing.","riskExplanation":"Approval must confirm the PR and cleanup evidence."}', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z'
         )`,
     },
   ]);
@@ -1499,17 +1499,22 @@ test("SpecDrive IDE projects pending Feature review item for Webview approval", 
   assert.equal(feature?.latestReviewItemId, "REV-FEAT-016");
   assert.equal(feature?.latestReviewStatus, "review_needed");
   assert.equal(feature?.latestReviewNeededReason, "approval_needed");
+  assert.equal(feature?.latestReview?.message, "Review FEAT-016 before continuing.");
+  assert.deepEqual(feature?.latestReview?.triggerReasons, ["permission_escalation"]);
+  assert.deepEqual(feature?.latestReview?.recommendedActions, ["approve_continue", "request_changes", "reject"]);
   assert.equal(feature?.resumeTarget?.status, "running");
   assert.equal(feature?.stateReason, "Review FEAT-016 before continuing.");
   const queueItem = view.queue.groups.review_needed[0];
   assert.equal(queueItem.executionId, "RUN-REVIEW-PENDING");
   assert.equal(queueItem.reviewItemId, "REV-FEAT-016");
   assert.equal(queueItem.reviewNeededReason, "approval_needed");
+  assert.equal(queueItem.review?.riskExplanation, "Approval must confirm the PR and cleanup evidence.");
   assert.equal(queueItem.resumeTarget?.executionId, "RUN-REVIEW-PENDING");
   assert.equal(queueItem.stateReason, "Review FEAT-016 before continuing.");
   const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-REVIEW-PENDING");
   assert.equal(detail?.reviewItemId, "REV-FEAT-016");
   assert.equal(detail?.reviewNeededReason, "approval_needed");
+  assert.equal(detail?.review?.message, "Review FEAT-016 before continuing.");
   assert.equal(detail?.resumeTarget?.status, "running");
 });
 

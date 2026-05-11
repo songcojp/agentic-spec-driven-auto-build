@@ -289,6 +289,42 @@ test("cli.run creates a ReviewItem when feature execution returns review_needed"
   assert.equal(rows.feature[0].status, "review_needed");
 });
 
+test("cli.run classifies review_needed delivery fidelity losses as risk review before approval wording", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-review-risk-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-CLI-RISK-REVIEW"), () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-CLI-RISK-REVIEW"}\n${skillOutputEvent("RUN-CLI-RISK-REVIEW", {
+      status: "review_needed",
+      summary: "PR #14 is merged, but independent review found P1 behavior-obligation gaps that require review before approval.",
+      result: {
+        ...validJourneyResult(),
+        deliveryFidelity: validDeliveryFidelity({
+          completionDecision: {
+            status: "review_needed",
+            reason: "Open behavior-obligation gaps remain.",
+            decidedBy: "release-reviewer",
+            unresolvedLosses: ["LOSS-016-E2E"],
+          },
+        }),
+      },
+    })}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "reviews", sql: "SELECT status, review_needed_reason, trigger_reasons_json, body FROM review_items WHERE run_id = 'RUN-CLI-RISK-REVIEW'" },
+  ]).queries;
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(rows.reviews[0].status, "review_needed");
+  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
+  assert.deepEqual(JSON.parse(String(rows.reviews[0].trigger_reasons_json)), ["quality_evidence_gap"]);
+  assert.match(String(rows.reviews[0].body), /behavior-obligation gaps/);
+});
+
 test("cli.run keeps large source documents out of the provider prompt", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-compact-prompt-"));
   prepareSkillWorkspace(root);

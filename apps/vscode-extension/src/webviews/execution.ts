@@ -165,12 +165,13 @@ function executionPreferenceControls(view: SpecDriveIdeView | undefined): string
 
 function renderBlockersAndApprovals(blockers: SpecDriveIdeQueueItem[], detail: SpecDriveIdeExecutionDetail | undefined): string {
   const approvalRequests = detail?.approvalRequests ?? [];
+  const reviewHtml = detail?.review ? `<h3>Review Item</h3>${renderReviewDetails(detail)}` : "";
   const queueHtml = blockers.map(renderStateFlowCard).join("");
   const approvalHtml = approvalRequests.length > 0
     ? `<h3>Approval Requests</h3>${compactJsonBlock(approvalRequests)}`
     : "";
-  return queueHtml || approvalHtml
-    ? `${queueHtml}${approvalHtml}`
+  return reviewHtml || queueHtml || approvalHtml
+    ? `${reviewHtml}${queueHtml}${approvalHtml}`
     : emptyState("No blockers or approval requests.");
 }
 
@@ -181,6 +182,9 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
     ["Current Status", item.status],
     ["Reason", item.stateReason ?? item.summary ?? "No state reason recorded."],
     ["Review Reason", reviewReasonLabel(item.reviewNeededReason)],
+    ["Review Message", item.review?.message ?? "none"],
+    ["Review Triggers", item.review?.triggerReasons.join(", ") || "none"],
+    ["Recommended Actions", item.review?.recommendedActions.join(", ") || "none"],
     ["Resume Target", resume ? `${resume.status} via ${resume.source}` : "none"],
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
     ["Next Action", stateFlowNextAction(item)],
@@ -189,7 +193,7 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
 }
 
 function renderStateFlowRow([label, value]: [string, string]): string {
-  const stacked = ["Reason", "Resume Evidence", "Next Action"].includes(label);
+  const stacked = ["Reason", "Review Message", "Review Triggers", "Recommended Actions", "Resume Evidence", "Next Action"].includes(label);
   return `<div class="row${stacked ? " row-stacked" : ""}"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
 }
 
@@ -197,9 +201,36 @@ function renderStateFlowCard(item: SpecDriveIdeQueueItem): string {
   const actions = stateFlowCardActions(item);
   return `<div class="issue ${statusClass(item.status)}"><strong>${escapeHtml(item.featureId ?? item.executionId ?? item.schedulerJobId ?? item.status)}</strong><br>
     <span>${escapeHtml(item.stateReason ?? item.summary ?? item.operation ?? item.status)}</span>
+    ${item.review ? renderReviewSummary(item) : ""}
     ${item.resumeTarget ? `<div class="row"><span>Resume Target</span><span>${escapeHtml(item.resumeTarget.status)}</span></div>` : ""}
     ${actions ? `<div class="toolbar">${actions}</div>` : ""}
   </div>`;
+}
+
+function renderReviewSummary(item: SpecDriveIdeQueueItem): string {
+  const review = item.review;
+  if (!review) return "";
+  return `<div class="review-summary">
+    <div class="row row-stacked"><span>Review Item</span><span>${escapeHtml(review.message ?? item.stateReason ?? "Review details unavailable.")}</span></div>
+    <div class="row row-stacked"><span>Triggers</span><span>${escapeHtml(review.triggerReasons.join(", ") || "none")}</span></div>
+  </div>`;
+}
+
+function renderReviewDetails(item: SpecDriveIdeQueueItem): string {
+  const review = item.review;
+  if (!review) return emptyState("No ReviewItem details recorded.");
+  const rows: Array<[string, string]> = [
+    ["ReviewItem", review.id],
+    ["Status", review.status],
+    ["Severity", review.severity ?? "none"],
+    ["Reason", review.reviewNeededReason ?? "none"],
+    ["Message", review.message ?? item.stateReason ?? "No review message recorded."],
+    ["Risk", review.riskExplanation ?? "none"],
+    ["Triggers", review.triggerReasons.join(", ") || "none"],
+    ["Recommended Actions", review.recommendedActions.join(", ") || "none"],
+    ["References", review.referenceRefs.join(", ") || "none"],
+  ];
+  return `<div class="result-group review-details">${rows.map(renderStateFlowRow).join("")}</div>`;
 }
 
 function stateFlowCardActions(item: SpecDriveIdeQueueItem): string {
@@ -449,7 +480,12 @@ function reviewDecisionButton(
     entityType: "review_item",
     entityId: item.reviewItemId,
     reason: `${label} ${item.featureId ?? item.executionId ?? "selected run"} from ${source}.`,
+    reviewNoteRequired: reviewActionNeedsNote(action) ? "true" : undefined,
   }, { icon });
+}
+
+function reviewActionNeedsNote(action: string): boolean {
+  return ["request_review_changes", "update_spec", "reject_review", "rollback_review", "split_review_task"].includes(action);
 }
 
 function reviewReasonLabel(reason: SpecDriveIdeQueueItem["reviewNeededReason"]): string {
@@ -463,7 +499,7 @@ function stateFlowNextAction(item: SpecDriveIdeQueueItem): string {
   const status = item.status.toLowerCase();
   if (status === "waiting_input") return "Provide the requested input or cancel the run.";
   if (status === "approval_needed") return "Accept or decline the adapter approval request.";
-  if (status === "review_needed") return item.reviewItemId ? "Resolve the ReviewItem approval." : "Open Review Center after refresh creates a ReviewItem.";
+  if (status === "review_needed") return item.reviewItemId ? "Resolve the ReviewItem decision." : "Open Review Center after refresh creates a ReviewItem.";
   if (status === "paused") return "Resume, cancel, or reprioritize this job.";
   if (status === "blocked" || status === "failed") return item.executionId ? "Retry, skip, or inspect the failure evidence." : "Skip, reprioritize, or reschedule this job.";
   if (status === "cancelled") return "Retry, skip, or reschedule when ready.";

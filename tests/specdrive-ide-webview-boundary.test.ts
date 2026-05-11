@@ -151,8 +151,7 @@ test("VSCode Execution Workbench requires selected queue tasks for stateful acti
   assert.match(extensionSource, /split_review_task/);
   assert.match(extensionSource, /update_spec/);
   assert.match(webviewSource, /function queueReviewButton\(item: SpecDriveIdeQueueItem\): string/);
-  assert.match(webviewSource, /action: "approve_review"/);
-  assert.match(webviewSource, /entityType: "review_item"/);
+  assert.match(webviewSource, /commandButton\("Review", "selectQueueItem"/);
   assert.match(extensionSource, /Select a job first\./);
   assert.match(extensionSource, /selected job is \$\{selectedItem\.status\}/);
   assert.doesNotMatch(extensionSource, /queueButton\("Run Now", queue\.find/);
@@ -173,6 +172,10 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /"Next Action"\]\.includes\(label\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
+  assert.match(webviewSource, /Review Message/);
+  assert.match(webviewSource, /Recommended Actions/);
+  assert.match(webviewSource, /function renderReviewDetails\(item: SpecDriveIdeQueueItem\): string/);
+  assert.match(webviewSource, /review\.riskExplanation/);
   assert.match(webviewSource, /renderTokenConsumption\(executionDetail\)/);
   assert.match(webviewSource, /No token consumption recorded\./);
   assert.match(webviewSource, /<div class="token-consumption-grid">/);
@@ -192,6 +195,7 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /\["waiting_input", "approval_needed", "review_needed", "blocked", "failed", "paused"\]\.includes\(status\)/);
   assert.doesNotMatch(executionWebviewSource, /queue\.filter\(\(item\) => item\.status === "blocked" \|\| item\.status === "approval_needed"\)/);
   assert.match(webviewSource, /Approval Requests/);
+  assert.match(webviewSource, /<h3>Review Item<\/h3>/);
   assert.match(webviewSource, /<div class="section-title"><h2>Result Projection<\/h2><span>spec-state\.json<\/span><\/div>/);
   assert.match(webviewSource, /renderSkillOutputSummary\(executionDetail\)/);
   assert.match(webviewSource, /renderTraceabilityChips/);
@@ -401,7 +405,7 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /function featureQueueActionButtons\(feature: SpecDriveIdeFeatureNode\): string/);
   assert.match(extensionSource, /featureQueueActionButton\("Retry", feature, "retry", \["failed", "cancelled", "skipped", "blocked"\], true\)/);
   assert.match(extensionSource, /latestSchedulerJobId\?: string/);
-  assert.match(extensionSource, /action: "approve_review"/);
+  assert.match(extensionSource, /"approve_review"/);
   assert.match(extensionSource, /entityType: "review_item"/);
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
   assert.match(webviewSource, /renderFeatureStateFlow\(feature\)/);
@@ -413,10 +417,15 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(webviewSource, /\.feature-state-row\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
+  assert.match(webviewSource, /renderFeatureReviewDetails\(feature\)/);
+  assert.match(webviewSource, /review\.recommendedActions\.join/);
   assert.match(webviewSource, /featureExecutionLabel\(feature\)/);
   assert.doesNotMatch(extensionSource, /selected && isClarificationNeededFeature\(selected\)/);
   assert.doesNotMatch(extensionSource, /selected && isPassableFeature\(selected\)/);
   assert.doesNotMatch(extensionSource, /approveFeatureReviewButton\("Pass"/);
+  assert.match(webviewSource, /reviewNoteRequired: reviewActionNeedsNote\(action\) \? "true" : undefined/);
+  assert.match(webviewSource, /Record the review clarification, requested change, or decision note before continuing\./);
+  assert.match(webviewSource, /payload\.payload = \{\.\.\.\(payload\.payload \|\| \{\}\), reviewNote: trimmed, clarification: trimmed\}/);
   assert.match(extensionSource, /markFeatureReadyButton\("Ready", feature, projectId, "Feature Detail"\)/);
   assert.match(extensionSource, /action: "mark_feature_ready"/);
   assert.match(extensionSource, /panelOpenState = Object\.fromEntries/);

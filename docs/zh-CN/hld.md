@@ -465,7 +465,7 @@ Collaborates With:
 Responsibilities:
 
 - 接收因权限、安全、预算、高风险、diff 过大、forbidden files、多次失败、需求歧义、权限提升、AGENTS.md / 项目宪章人工授权规则、Project Memory / 项目健康检查冲突、constitution 或架构变更触发的 Review Needed。
-- 接收 Delivery Fidelity 失败触发的 Review Needed，包括 `quality_evidence_gap`、`test_semantics_gap` 和 `journey_bypassed_by_fixture`。
+- 接收 Delivery Fidelity 失败触发的 Review Needed，包括 `quality_evidence_gap`、`test_semantics_gap` 和 `journey_bypassed_by_fixture`；Delivery Fidelity、behavior obligation 或 unresolved loss 触发时优先归类为 `risk_review_needed`，不得因同一运行 metadata 中出现 PR / approval / permission 字样而归类为 `approval_needed`。
 - 展示任务目标、关联 Spec、Run Contract、diff、测试结果、风险说明、执行结果 和推荐动作。
 - 展示质量损失发生 lifecycle handoff、损失类型、责任 agent、缺失证据和关闭建议。
 - 处理批准继续、拒绝、要求修改、回滚、拆分任务、更新 Spec 和标记完成。
@@ -681,7 +681,8 @@ flowchart TD
 
 ### 10.4 Review and Recovery Workflow
 
-- Review Needed 必须带 `approval_needed`、`clarification_needed` 或 `risk_review_needed`。
+- Review Needed 必须带 `approval_needed`、`clarification_needed` 或 `risk_review_needed`，并在 UI 投影中保留 Execution Record summary / ReviewItem message、trigger、推荐动作、风险说明和 reference refs；枚举 reason 只用于分类和推荐动作，不得替代用户可读的缺口说明。
+- Request changes、update spec、reject、rollback 和 split task 等非通过决策必须要求操作者输入澄清/修改说明，并随受控命令写入 approval record metadata，作为后续 Spec Evolution 或恢复执行的输入。
 - 审批缺失时，受影响任务不得进入 Done 或 Delivered。
 - 同一失败模式最多自动重试 3 次，并按 2 分钟、4 分钟、8 分钟退避。
 - 重复失败或危险操作必须进入人工 Review Center。

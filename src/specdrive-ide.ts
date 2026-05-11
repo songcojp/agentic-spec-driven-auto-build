@@ -54,6 +54,7 @@ export type SpecDriveIdeFeatureNode = {
   latestReviewItemId?: string;
   latestReviewStatus?: string;
   latestReviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+  latestReview?: SpecDriveIdeReviewProjection;
   tokenConsumption?: SpecDriveIdeTokenConsumption;
   indexStatus: "indexed" | "missing_from_index" | "missing_folder";
   tasks: SpecDriveIdeTaskProjection[];
@@ -101,6 +102,7 @@ export type SpecDriveIdeQueueItem = {
   resumeTarget?: SpecDriveIdeResumeTarget;
   reviewItemId?: string;
   reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+  review?: SpecDriveIdeReviewProjection;
 };
 
 export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {
@@ -116,6 +118,20 @@ export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {
   contractValidation?: unknown;
   outputSchema?: unknown;
   approvalRequests: unknown[];
+};
+
+export type SpecDriveIdeReviewProjection = {
+  id: string;
+  status: string;
+  severity?: string;
+  reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
+  message?: string;
+  riskExplanation?: string;
+  triggerReasons: string[];
+  recommendedActions: string[];
+  referenceRefs: string[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type SpecDriveIdeTokenConsumption = {
@@ -605,6 +621,7 @@ export function buildSpecDriveIdeExecutionDetail(
     resumeTarget: featureProjection?.resumeTarget,
     reviewItemId: reviewProjection?.id,
     reviewNeededReason: reviewProjection?.reviewNeededReason,
+    review: reviewProjection,
     context,
     metadata,
     rawLogs,
@@ -1479,6 +1496,7 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         latestReviewItemId: latestReview?.id,
         latestReviewStatus: latestReview?.status,
         latestReviewNeededReason: latestReview?.reviewNeededReason,
+        latestReview,
         tokenConsumption,
         indexStatus: indexed ? folderExists ? "indexed" : "missing_folder" : "missing_from_index",
         tasks: taskProjection.tasks,
@@ -1488,13 +1506,24 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
     });
 }
 
-function readLatestReviewsByFeature(dbPath: string, projectId?: string): Map<string, { id: string; status: string; reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed" }> {
+function readLatestReviewsByFeature(dbPath: string, projectId?: string): Map<string, SpecDriveIdeReviewProjection> {
   const projectFilter = projectId ? "AND (project_id = ? OR feature_id IN (SELECT id FROM features WHERE project_id = ?))" : "";
   const params = projectId ? [projectId, projectId] : [];
   const rows = runSqlite(dbPath, [], [
     {
       name: "reviews",
-      sql: `SELECT id, feature_id, status, review_needed_reason, created_at
+      sql: `SELECT
+          id,
+          feature_id,
+          status,
+          severity,
+          review_needed_reason,
+          trigger_reasons_json,
+          recommended_actions_json,
+          reference_refs_json,
+          body,
+          created_at,
+          updated_at
         FROM review_items
         WHERE feature_id IS NOT NULL
           AND status IN ('review_needed', 'changes_requested', 'rejected')
@@ -1503,17 +1532,30 @@ function readLatestReviewsByFeature(dbPath: string, projectId?: string): Map<str
       params,
     },
   ]).queries.reviews;
-  const byFeature = new Map<string, { id: string; status: string; reviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed" }>();
+  const byFeature = new Map<string, SpecDriveIdeReviewProjection>();
   for (const row of rows) {
     const featureId = optionalString(row.feature_id);
     if (!featureId || byFeature.has(featureId)) continue;
-    byFeature.set(featureId, {
-      id: String(row.id),
-      status: String(row.status),
-      reviewNeededReason: normalizeReviewNeededReason(row.review_needed_reason),
-    });
+    byFeature.set(featureId, reviewProjectionFromRow(row));
   }
   return byFeature;
+}
+
+function reviewProjectionFromRow(row: Record<string, unknown>): SpecDriveIdeReviewProjection {
+  const body = parseJsonObject(optionalString(row.body));
+  return {
+    id: String(row.id),
+    status: String(row.status),
+    severity: optionalString(row.severity),
+    reviewNeededReason: normalizeReviewNeededReason(row.review_needed_reason),
+    message: optionalString(body.message) ?? optionalString(row.body),
+    riskExplanation: optionalString(body.riskExplanation),
+    triggerReasons: parseJsonArray(row.trigger_reasons_json).filter((entry): entry is string => typeof entry === "string"),
+    recommendedActions: parseJsonArray(row.recommended_actions_json).filter((entry): entry is string => typeof entry === "string"),
+    referenceRefs: parseJsonArray(row.reference_refs_json).filter((entry): entry is string => typeof entry === "string"),
+    createdAt: optionalString(row.created_at),
+    updatedAt: optionalString(row.updated_at),
+  };
 }
 
 function normalizeReviewNeededReason(value: unknown): "approval_needed" | "clarification_needed" | "risk_review_needed" | undefined {
@@ -1544,8 +1586,8 @@ function featureStateReason(input: {
 }): string | undefined {
   if (input.blockedReasons.length > 0) return input.blockedReasons[0];
   if (input.resumeTarget?.reason) return input.resumeTarget.reason;
-  if (input.reviewNeededReason) return reviewNeededReasonLabel(input.reviewNeededReason);
   if (input.lastResultSummary) return input.lastResultSummary;
+  if (input.reviewNeededReason) return reviewNeededReasonLabel(input.reviewNeededReason);
   const normalized = input.status.toLowerCase();
   if (normalized === "cancelled") return "Cancelled by operator.";
   if (normalized === "skipped") return "Skipped by operator.";
@@ -2380,6 +2422,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
       resumeTarget,
       reviewItemId: review?.id,
       reviewNeededReason,
+      review,
     };
     groups[status] = [...(groups[status] ?? []), item];
   }
@@ -2466,8 +2509,8 @@ function queueStateReason(input: {
     ?? optionalString(input.metadata.blockedReason)
     ?? optionalString(input.metadata.retryReason)
     ?? input.resumeTarget?.reason
-    ?? (input.reviewNeededReason ? reviewNeededReasonLabel(input.reviewNeededReason) : undefined)
     ?? input.summary
+    ?? (input.reviewNeededReason ? reviewNeededReasonLabel(input.reviewNeededReason) : undefined)
     ?? defaultQueueStateReason(input.status);
 }
 

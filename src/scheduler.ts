@@ -699,9 +699,14 @@ function executionReviewNeededReason(
 ): "approval_needed" | "clarification_needed" | "risk_review_needed" {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
   if (
+    hasDeliveryFidelityReviewRisk(metadata) ||
     text.includes("journey closure gate") ||
     text.includes("delivery fidelity gate") ||
     text.includes("git delivery gate") ||
+    text.includes("behavior-obligation gap") ||
+    text.includes("behavior obligation gap") ||
+    text.includes("delivery-fidelity loss") ||
+    text.includes("delivery fidelity loss") ||
     text.includes("journey_not_closed") ||
     text.includes("acceptance_gap") ||
     text.includes("evidence_missing") ||
@@ -720,9 +725,18 @@ function executionReviewNeededReason(
 
 function executionReviewTriggers(summary: string, metadata?: Record<string, unknown>): ReviewTrigger[] {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (hasDeliveryFidelityReviewRisk(metadata)) return ["quality_evidence_gap"];
   if (/\bevidence_missing\b/.test(text) || text.includes("journey closure gate")) return ["evidence_missing"];
   if (text.includes("journey_not_closed")) return ["journey_not_closed"];
   if (text.includes("acceptance_gap")) return ["acceptance_gap"];
+  if (
+    text.includes("behavior-obligation gap") ||
+    text.includes("behavior obligation gap") ||
+    text.includes("delivery-fidelity loss") ||
+    text.includes("delivery fidelity loss")
+  ) {
+    return ["quality_evidence_gap"];
+  }
   if (text.includes("journey_bypassed_by_fixture")) return ["journey_bypassed_by_fixture"];
   if (text.includes("test_semantics_gap")) return ["test_semantics_gap"];
   if (text.includes("quality_evidence_gap") || text.includes("delivery fidelity gate")) return ["quality_evidence_gap"];
@@ -737,6 +751,31 @@ function executionReviewTriggers(summary: string, metadata?: Record<string, unkn
   if (text.includes("constitution")) return ["constitution_change"];
   if (text.includes("architecture")) return ["architecture_change"];
   return ["failed_tests_continue"];
+}
+
+function hasDeliveryFidelityReviewRisk(metadata?: Record<string, unknown>): boolean {
+  const skillOutput = asRecord(metadata?.skillOutputContract);
+  const result = asRecord(skillOutput?.result);
+  const deliveryFidelity = asRecord(result?.deliveryFidelity);
+  if (!deliveryFidelity) return false;
+  const completionDecision = asRecord(deliveryFidelity.completionDecision);
+  const completionStatus = optionalString(completionDecision?.status)?.toLowerCase();
+  const unresolvedLosses = Array.isArray(completionDecision?.unresolvedLosses)
+    ? completionDecision.unresolvedLosses
+    : [];
+  if (unresolvedLosses.length > 0) return true;
+  if (completionStatus && completionStatus !== "passed" && completionStatus !== "completed") return true;
+  const losses = Array.isArray(deliveryFidelity.losses) ? deliveryFidelity.losses : [];
+  return losses.some((loss) => {
+    const item = asRecord(loss);
+    const status = optionalString(item?.status)?.toLowerCase();
+    const severity = optionalString(item?.severity)?.toLowerCase();
+    return status === "open" && (severity === "p0" || severity === "p1" || severity === "critical" || severity === "high");
+  });
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 }
 
 export async function runCodexAppServerRunJob(

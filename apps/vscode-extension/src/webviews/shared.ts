@@ -363,6 +363,20 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       if (payload.command === "controlled") {
         const executionPreference = selectedExecutionPreference();
         if (payload.action === "schedule_run" || payload.action === "start_auto_run") payload.payload = scheduleRunPayload(payload, executionPreference);
+        if (payload.reviewNoteRequired === "true") {
+          const note = window.prompt("Record the review clarification, requested change, or decision note before continuing.");
+          if (note === null) {
+            setWorkbenchStatus("Review decision cancelled.");
+            return;
+          }
+          const trimmed = note.trim();
+          if (!trimmed) {
+            setWorkbenchStatus("Review decision requires a clarification or decision note.");
+            return;
+          }
+          payload.reason = payload.reason + " Note: " + trimmed;
+          payload.payload = {...(payload.payload || {}), reviewNote: trimmed, clarification: trimmed};
+        }
         setWorkbenchStatus("Running command...");
         vscode.postMessage(payload);
         return;
@@ -546,13 +560,11 @@ function queueSelectButton(item: SpecDriveIdeQueueItem, selected?: boolean): str
 
 function queueReviewButton(item: SpecDriveIdeQueueItem): string {
   if (item.status !== "review_needed") return "";
-  const label = item.reviewNeededReason === "approval_needed" ? "Approve" : "Review";
-  if (!item.reviewItemId) return disabledButtonHtml(label, "No Review Center item has been recorded for this queue item.", "check");
-  return commandButton(label, "controlled", {
-    action: "approve_review",
-    entityType: "review_item",
-    entityId: item.reviewItemId,
-    reason: `${label} ${item.featureId ?? item.executionId ?? "queue item"} from Execution Workbench queue.`,
+  const entityId = item.executionId ?? item.schedulerJobId;
+  if (!entityId) return disabledButtonHtml("Review", "Select the queue item to inspect ReviewItem details.", "check");
+  return commandButton("Review", "selectQueueItem", {
+    entityType: item.executionId ? "run" : "job",
+    entityId,
   }, { icon: "check" });
 }
 

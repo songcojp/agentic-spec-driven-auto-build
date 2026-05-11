@@ -609,6 +609,8 @@ THE SYSTEM SHALL 将任务路由到 Review Needed。
 
 验收：
 - [ ] Review Needed 必须包含具体触发原因和推荐动作。
+- [ ] Review Needed 的 UI 投影必须显示具体审查事项、trigger、推荐动作和风险说明；当 Execution Record summary 或 ReviewItem body 已说明缺口时，不得只展示 `approval_needed`、`risk_review_needed` 等枚举标签。
+- [ ] Review 决策除 approve 外，必须支持记录 request changes、update spec、reject、rollback 或 split task 的澄清/修改说明，并写入审批记录 metadata。
 - [ ] 进入 `review_needed` 的执行结果必须创建可查询的 ReviewItem；Product Console 和 VSCode Webview 必须复用同一 ReviewItem 审批事实源。
 - [ ] Review 审批通过必须恢复到 ReviewItem 保存的 paused Feature/Task 状态；要求修改、拒绝、回滚、拆分任务或更新 Spec 必须分别写入 planning/ready、blocked、failed、planning 或 review_needed 路由，并同步 Feature `spec-state.json.resumeTarget`。
 
@@ -1075,6 +1077,8 @@ THE SYSTEM SHALL 以聊天对话框形态展示输入区，并在 Webview 自动
 - [ ] Feature Spec 详情必须按 Feature 当前状态和最新 Job / Execution Record 显示或禁用 Schedule、Ready、Clarify、Requirement Change、Review 决策、Pause / Resume、Retry、Cancel、Skip 和 Reprioritize。
 - [ ] Feature Spec 详情和 Execution Workbench 选中 Job 详情必须显示 Feature Spec 标题和描述；描述优先来自 Feature `spec-state.json.description`，其次来自 Feature `requirements.md` 的目标 / 用户价值 / Scope 等描述段落。
 - [ ] ReviewItem 审批入口必须覆盖 approve、reject、request changes、rollback、split task 和 update spec；不同 review_needed reason 可以显示不同推荐动作，但不得绕过 ReviewItem 事实源。
+- [ ] Execution Workbench 的 review_needed 队列卡片和 State Flow 必须优先展示 Execution Record summary / ReviewItem message 中的具体缺口，并显示 ReviewItem trigger、推荐动作、风险说明和 reference refs；`review_needed_reason` 仅用于分类和推荐动作，不得遮蔽“需要审查什么”。
+- [ ] Execution Workbench 和 Feature Spec 的 Review 决策入口在 request changes、update spec、reject、rollback 或 split task 时必须要求输入澄清/修改说明，随受控命令写入 approval record metadata。
 - [ ] Webview 可以复用 shared contract、TypeScript 类型和 query/command API，但不得把 Product Console ViewModel 作为插件 UI 的事实源。
 - [ ] 顶部 New Feature 以弹出输入框收集自然语言需求，提交后不得由前端硬编码判断新增或变更；必须交给模型按 `10.change.create-request` / `10.change.update-mainline-spec` 边界判定。
 - [ ] New Requirement、Requirement Change、Clarification、New Feature 和 Feature-scoped Requirement Change 输入区必须以聊天对话框形态展示，并按表单模式、Feature 和 intent 保存未提交草稿；自动刷新、手动刷新和 Webview 重新渲染不得清空草稿。
@@ -1187,6 +1191,7 @@ THE SYSTEM SHALL 将 Execution Record 投影为 `review_needed`，创建 ReviewI
 
 验收：
 - [ ] ReviewItem body 能说明损失类型、发生 handoff、责任角色、缺失证据和推荐修复。
+- [ ] Delivery Fidelity、behavior obligation 或 unresolved loss 触发的 review_needed 必须分类为 `risk_review_needed`；即使同一 summary / metadata 中包含 PR、approval 或 permission 字样，也不得误分类为 `approval_needed`。
 - [ ] Feature Aggregator 将 Delivery Fidelity Gate 纳入 Done 条件。
 - [ ] Execution Workbench 或 Review Center 能展示 Delivery Fidelity 失败原因。
 
