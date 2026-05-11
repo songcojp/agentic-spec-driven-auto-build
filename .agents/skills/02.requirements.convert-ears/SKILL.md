@@ -16,6 +16,9 @@ This is the design-named PRD-to-EARS conversion entry point.
    - Identify each distinct user journey or independently deliverable capability from the PRD.
    - Assign a priority level: `P1` (Core—must ship), `P2` (important—should ship), `P3` (nice to have).
    - Verify each user story is independently testable and delivers standalone value.
+   - Preserve success examples, failure examples, non-goals, and module
+     sub-capabilities from the PRD so later design does not collapse broad
+     modules into shallow tasks.
    - Include a foundational user story or requirement for Project Initialization (项目初始化) (e.g., scaffolding, environment setup, base dependencies) if not explicitly present.
    - Record stories as `US-001`, `US-002`, ... with title, actor, goal, and priority.
 5. Convert observable behavior into EARS statements using stable IDs:
@@ -23,6 +26,8 @@ This is the design-named PRD-to-EARS conversion entry point.
    - `NFR-001`, `NFR-002`, ... for non-functional requirements.
    - `EDGE-001`, `EDGE-002`, ... for boundary, error, recovery, or exceptional paths.
    - Map each `REQ-*` back to the `US-*` it belongs to.
+   - Add acceptance checks, boundary/error paths, and evidence type for each
+     behavior when the source supports it.
 6. Keep each requirement atomic, observable, testable, and free of implementation choices unless the source states a hard constraint.
 7. Add traceability back to PRD sections or source bullets when possible.
 8. Surface gaps as open questions instead of inventing product intent.
@@ -82,6 +87,11 @@ THE SYSTEM SHALL [safe handling, error message, rollback, retry, or blocked acti
 
 - Every requirement has exactly one primary behavior.
 - Every requirement can become a test case without interpretation.
+- Every requirement has a source user story, trigger, expected system response,
+  acceptance check, boundary/error path when relevant, and evidence type.
+- UI/configuration requirements must identify editable actions, persistence or
+  state expectations, and reload/revisit evidence where the behavior is meant
+  to survive navigation.
 - Defined `US-*`, `REQ-*`, `NFR-*`, and `EDGE-*` IDs are unique and monotonically increasing within their section; update traceability references if an ID changes.
 - Error, empty, permission, duplicate, timeout, and recovery paths are covered when relevant.
 - Design, data model, framework, database, and algorithm choices stay out of requirements unless explicitly required by the source.
@@ -90,3 +100,5 @@ THE SYSTEM SHALL [safe handling, error message, rollback, retry, or blocked acti
 ## Failure Routing
 
 - Use `clarification_needed` for ambiguous goals, conflicting sources, or untestable acceptance.
+- Use `review_needed` when the source PRD is too coarse to generate testable
+  EARS requirements without inventing behavior.

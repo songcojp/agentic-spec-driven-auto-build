@@ -112,6 +112,7 @@
 | CHG-056 | 状态流转全流程按标准 + 产品实现一起补齐；状态迁移必须可追踪、可恢复、可投影。 | 已同步 `docs/zh-CN/agentic-spec-standard.md`、`requirements.md`、`hld.md`、`skills.md`、FEAT-004 / FEAT-009 / FEAT-010 / FEAT-011 / FEAT-021，并补充 `spec-state.json.resumeTarget`、Scheduler Job 完整状态和 Review 审批回流。 | 已同步实现 |
 | CHG-057 | VSCode IDE Spec 全操作入口按对象状态协同；不新增事实源，不让 Webview 直接写状态。 | 已同步 REQ-084、FEAT-021 requirements/design/tasks、Feature 最新 Job 投影、Spec Workspace New Requirement / Requirement Change / Clarification 入口、Feature 详情状态按钮、Execution Workbench Review 多决策入口和边界测试。 | 已同步实现 |
 | CHG-058 | Feature execution 的 Git 生命周期改为 Skill-owned；worktree 并发和 PR 管理作为 Feature 实现默认交付边界。 | 已同步 PRD、requirements、HLD、skills、FEAT-007、FEAT-008、FEAT-012、FEAT-013、FEAT-021 和执行/发布 Skill，并新增 `result.gitDelivery` 完成校验。 | 已同步实现 |
+| ADD-011 | Spec Artifact Granularity Gate：主线 PRD / requirements / HLD / UI Spec / Feature Spec 必须达到可向下传递的颗粒度；粗粒度文档或 Feature Spec 不得进入 ready / execution。 | 已新增 `REQ-092`、`09.review.spec-granularity`，并同步 PRD、requirements、HLD、Agentic Spec 标准、skills、FEAT-023 和 Rapid FEAT-016 下游审查样例。 | 需同步实现 |
 
 ## Feature Spec Execute 评估
 

@@ -1149,12 +1149,49 @@ v1.2 中 Task 输入输出不再冗余复制完整上下文。
   - [ ] Implementation satisfies FR-001
   - [ ] Unit tests pass
   - [ ] Evidence Pack updated
-  - [ ] No forbidden paths changed
+- [ ] No forbidden paths changed
 ```
 
 ---
 
-## 7.4 status.yaml
+## 7.4 Spec Artifact Granularity Gate
+
+Agentic Spec 不只要求 PRD、requirements、HLD、UI Spec 和 Feature Spec
+“存在”，还要求每一层达到能向下游传递的颗粒度。推荐采用
+requirements-first 顺序：
+
+```text
+PRD intent
+  -> EARS requirements
+  -> HLD / UI Spec
+  -> Feature requirements / design
+  -> tasks
+  -> execution
+```
+
+当 requirements 变化时，必须先 refine design，再 sync tasks。不得用
+Quick Plan 或直接编码绕过 requirements analysis、design review 和 task
+sync。
+
+### 7.4.1 Artifact 粒度责任
+
+| Artifact | Minimum granularity | Review failure |
+|---|---|---|
+| PRD | 用户、目标、业务流程、大模块子能力、成功样例、失败样例、非目标、优先级。 | 只写模块名、页面名、愿景句或没有失败样例。 |
+| requirements | `REQ-*` / `NFR-*` / `EDGE-*` 原子 EARS 行为、`US-*` 映射、验收、边界/错误路径、证据类型。 | 需求需要解释才能测试。 |
+| HLD | 系统级子系统、事实源数据、状态流、接口/事件策略、运行拓扑、恢复和测试策略。 | 只有组件名、页面名或技术名。 |
+| UI Spec | 页面、视图、弹窗、状态、用户动作、interaction matrix、数据绑定、保存/校验/reload 断言、浏览器验收。 | 只有概念图、截图、入口或 happy path。 |
+| Feature Spec | 垂直用户旅程、Feature-scoped design、parser-compatible tasks、Journey Checkpoints、验收证据计划。 | P1 journey 没有 requirement row、design path、task block 或 evidence plan。 |
+
+`09.review.spec-granularity` 负责跨层审查。失败原因使用
+`intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、
+`state_data_gap`、`task_gap`、`evidence_gap`。失败时 Feature 或相关
+workflow 必须进入 `review_needed` / `clarification_needed` /
+`risk_review_needed`，不得进入 `ready` 或 `feature_execution`。
+
+---
+
+## 7.5 status.yaml
 
 ```yaml
 feature_id: FEAT-001
@@ -2414,6 +2451,7 @@ using-agent-skills
 
 ```text
 09.review.spec-consistency
+09.review.spec-granularity
 09.review.code-diff
 09.review.journey-closure
 09.review.security

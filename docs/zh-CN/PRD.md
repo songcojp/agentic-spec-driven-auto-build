@@ -929,6 +929,20 @@ Agentic Spec 的用户心智模型从编号阶段切换为 Define、Plan、Build
 
 Status Checker、Review Center、Execution Workbench 和 Feature Aggregator 必须把 Delivery Fidelity 失败投影为 `review_needed`，并显示质量损失发生阶段、责任角色、缺失证据、推荐修复和是否允许延期。仅依赖测试通过、入口存在、API-seeded fixture、commit、PR 或实现 agent 自证不得关闭 Feature。
 
+#### FR-125 Spec Artifact Granularity Gate
+
+Agentic Spec 必须采用 requirements-first 的规格生成顺序：先确认 PRD 与 EARS requirements 是否足够具体，再生成 HLD / UI Spec / Feature Spec design，最后生成 tasks。需求变更后必须 refine design 并 sync tasks，不得让粗颗粒度主线文档或 Feature Spec 直接进入实现。
+
+Spec Artifact Granularity Gate 按文档层级检查：
+
+* PRD 必须把大模块拆到用户、目标、业务流程、子能力、成功样例、失败样例、非目标和优先级。
+* requirements 必须把每个 `REQ-*` / `NFR-*` / `EDGE-*` 写成原子、可观察、可测试的行为单元，并映射 `US-*`、验收、边界路径和证据类型。
+* HLD 必须说明系统级子系统、数据事实源、状态流、接口/事件策略、运行拓扑、质量策略和 Feature 拆分指导；不能只列组件名或页面名。
+* UI Spec 必须说明页面、视图、弹窗、状态、用户动作、交互矩阵、数据绑定、保存/校验/reload 断言和浏览器验收。
+* Feature Spec 必须把上游义务承接为垂直用户旅程、Feature-scoped design、parser-compatible tasks、Journey Checkpoints 和验收证据计划。
+
+任何层级只包含模块名、页面名、概念名、happy path、只读截图或入口文字时，`09.review.spec-granularity` 必须返回 `review_needed`，并列出 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap` 或 `evidence_gap`。
+
 ---
 
 ## 7. 核心数据模型

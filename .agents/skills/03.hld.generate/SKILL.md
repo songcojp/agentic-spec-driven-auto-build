@@ -136,10 +136,19 @@ Use these patterns when the source documents support them. They are reusable HLD
 - The HLD must include concept-level entity and interface/event inventories when the product has durable records, external integrations, or workflow transitions.
 - The HLD must include a primary page/surface inventory when downstream UI Spec generation needs page or workflow-screen inputs.
 - The HLD must include module-specific constraints and risk mitigations, not only module names.
+- The HLD must include state flow, source-of-truth data, integration boundary,
+  runtime/recovery expectation, and test strategy for every P1 cross-feature
+  workflow. A list of components, screens, or technology names is not enough.
+- UI/configuration-heavy products must expose the page/surface and
+  configuration-group inventory needed by `04.ui.generate-spec` to create an
+  interaction matrix.
 - The HLD must describe runtime/deployment and test strategy, even for a local-first application.
 - The HLD must preserve existing valid architecture decisions during regeneration and explicitly call out superseded or stale content instead of silently dropping it.
 - Avoid weak placeholders such as "具体技术栈由实现层决定" when source documents or repository facts can support a decision.
 - The HLD must explicitly preserve the no-mainline-LLD policy. If low-level design is needed, identify the owning Feature Spec or planning skill instead of writing it into the HLD.
+- If the HLD cannot meet the Spec Artifact Granularity Gate, return
+  `review_needed` with the missing `architecture_gap` or `state_data_gap`
+  instead of generating a shallow architecture document.
 
 ## Output
 

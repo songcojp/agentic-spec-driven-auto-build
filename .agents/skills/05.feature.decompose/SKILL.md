@@ -39,15 +39,19 @@ mainline LLD. When a Feature needs low-level design, place it in that Feature's
 9. If the split includes Project Initialization / 项目初始化 as the first Feature Spec, embed a `.gitignore` creation or safe-update requirement in that Feature Spec's `requirements.md`, `design.md`, and `tasks.md`. The generated requirement must say: create `.gitignore` when missing; when it exists, append only missing local runtime artifact ignore rules; never overwrite user content.
 10. For each feature, define scope, non-scope, dependencies, acceptance, risks, and implementation tasks.
 11. Add `User Journey Coverage` to each generated `requirements.md`. This section must map each P1 user story to at least one Feature, requirement row, acceptance scenario, and evidence expectation. If the Feature is foundation-only, declare `foundationExemption` and name downstream closure Features plus integration verification points.
-12. **Structure tasks by user story phase**: organize tasks into phases that mirror the user story priority order—Phase 1: shared setup (no story yet), Phase 2: P1 story tasks, Phase 3: P2 story tasks, Phase 4: P3 story tasks, Phase N: polish and cross-cutting. Each story phase must have an independent test checkpoint.
-13. Add a `Journey Checkpoint` to `tasks.md` for every P1 user story covered by the Feature. The checkpoint must name the scenario, required visible/runtime evidence, and acceptance rows that the implementation must close.
-14. Add a `Git Delivery Checkpoint` to `tasks.md`. The checkpoint must state that `07.execution.dispatch-adapter` owns the Feature worktree, branch, commit, PR, checks, merge, remote branch cleanup, local branch cleanup, and worktree cleanup, while platform code only records and validates `result.gitDelivery`.
-15. Create tasks that are independently reviewable, ordered by dependency, and tied to requirement IDs.
-16. Assign expected files, allowed scope, required skill, subagent type, verification command, and done criteria.
-17. Generate `tasks.md` with Webview-parseable task blocks that match `parseFeatureTasksMarkdown()` in `src/specdrive-ide.ts`, not compact single-line task bullets. Each task heading must use a stable parser-compatible task ID such as `T-001-01`, `T-021-12`, or `TASK-001`; do not generate compact IDs like `T001-01` even though the Webview can normalize them for legacy files. Each task block must include a standalone `状态:` or `Status:` line so the Feature Spec Webview can track status and compute task completion counts. New generated tasks must start as `状态: todo` unless the task is already completed from existing source evidence.
-18. Write output to the requested location. If unspecified, create or update `docs/features/<feature-id>/requirements.md`, `design.md`, and `tasks.md`.
-19. Always create or update the feature index table at `docs/features/README.md`. The index table MUST strictly use the following format: `| Feature ID | Status | Name | Milestone | Dependencies |`. A tree-structured dependency graph (树状依赖关系图) MUST be included to visualize the feature dependencies. This file is required by the downstream coding, testing, review, and PR generation skills.
-20. Always create or update the machine-readable Feature Spec Pool queue plan at `docs/features/feature-pool-queue.json`. Code consumes this artifact to push Feature Specs into the Pool; do not rely on code parsing dependency prose from `README.md`.
+12. For UI/configuration Features, add interaction matrix coverage to the
+   generated requirements/design/tasks. A matrix row must name the surface,
+   field/control, user action, save/cancel/validate behavior, state feedback,
+   source truth, reload assertion, and verification mode.
+13. **Structure tasks by user story phase**: organize tasks into phases that mirror the user story priority order—Phase 1: shared setup (no story yet), Phase 2: P1 story tasks, Phase 3: P2 story tasks, Phase 4: P3 story tasks, Phase N: polish and cross-cutting. Each story phase must have an independent test checkpoint.
+14. Add a `Journey Checkpoint` to `tasks.md` for every P1 user story covered by the Feature. The checkpoint must name the scenario, required visible/runtime evidence, and acceptance rows that the implementation must close.
+15. Add a `Git Delivery Checkpoint` to `tasks.md`. The checkpoint must state that `07.execution.dispatch-adapter` owns the Feature worktree, branch, commit, PR, checks, merge, remote branch cleanup, local branch cleanup, and worktree cleanup, while platform code only records and validates `result.gitDelivery`.
+16. Create tasks that are independently reviewable, ordered by dependency, and tied to requirement IDs.
+17. Assign expected files, allowed scope, required skill, subagent type, verification command, and done criteria.
+18. Generate `tasks.md` with Webview-parseable task blocks that match `parseFeatureTasksMarkdown()` in `src/specdrive-ide.ts`, not compact single-line task bullets. Each task heading must use a stable parser-compatible task ID such as `T-001-01`, `T-021-12`, or `TASK-001`; do not generate compact IDs like `T001-01` even though the Webview can normalize them for legacy files. Each task block must include a standalone `状态:` or `Status:` line so the Feature Spec Webview can track status and compute task completion counts. New generated tasks must start as `状态: todo` unless the task is already completed from existing source evidence.
+19. Write output to the requested location. If unspecified, create or update `docs/features/<feature-id>/requirements.md`, `design.md`, and `tasks.md`.
+20. Always create or update the feature index table at `docs/features/README.md`. The index table MUST strictly use the following format: `| Feature ID | Status | Name | Milestone | Dependencies |`. A tree-structured dependency graph (树状依赖关系图) MUST be included to visualize the feature dependencies. This file is required by the downstream coding, testing, review, and PR generation skills.
+21. Always create or update the machine-readable Feature Spec Pool queue plan at `docs/features/feature-pool-queue.json`. Code consumes this artifact to push Feature Specs into the Pool; do not rely on code parsing dependency prose from `README.md`.
 
 ## Feature Slicing Rules
 
@@ -63,6 +67,9 @@ mainline LLD. When a Feature needs low-level design, place it in that Feature's
 - Each P1 story phase must be completable and demoed without any P2/P3 tasks being done. An implementation that stops after P1 must still be a valid, usable baseline.
 - Every P1 user story must have at least one Journey Checkpoint that can be judged by `09.review.journey-closure`.
 - Foundation Features may declare `foundationExemption`, but must list downstream closure Features and integration verification points. A foundation exemption is not a blanket completion shortcut.
+- A Feature cannot be marked ready when upstream PRD, requirements, HLD, UI
+  Spec, Feature requirements, Feature design, or tasks fail
+  `09.review.spec-granularity`.
 
 ## Output
 

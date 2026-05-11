@@ -44,9 +44,13 @@ vertical enough to close user journeys, not only technical layers.
 5. For UI-bearing Features, include visible page/route/component state work and
    browser-level verification. API/ViewModel/schema tasks may support the
    journey but cannot be the only completion path.
-6. For foundation Features, add integration checkpoints naming downstream
+6. For UI/configuration Features, include task blocks that close interaction
+   matrix rows: editable fields or controls, save/cancel/validate behavior,
+   state feedback, persisted source truth, reload/revisit assertion, and
+   negative sample where relevant.
+7. For foundation Features, add integration checkpoints naming downstream
    closure Features and integration evidence.
-7. Keep every task independently reviewable with scope, linked requirements,
+8. Keep every task independently reviewable with scope, linked requirements,
    verification, and done criteria.
 
 ## Required Task Block Template
@@ -93,6 +97,8 @@ concise result object specific to this workflow step.
 - `tasks.md` remains parseable by the Feature Spec Webview task parser.
 - Every P1 user story has a Journey Checkpoint or valid foundation integration
   checkpoint.
+- UI/configuration tasks are vertical behavior obligations, not only files,
+  components, endpoints, text, or screenshots.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
 - No product-specific UI, database, scheduler, or adapter behavior is hardcoded
   beyond what the Feature design and HLD require.

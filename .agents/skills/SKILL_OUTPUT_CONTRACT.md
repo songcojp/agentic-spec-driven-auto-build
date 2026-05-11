@@ -24,6 +24,14 @@ it carries only `featureId`. Requirement IDs, task IDs, acceptance rows, journey
 checkpoints, test commands, screenshots, PR links, and review decisions belong
 in the skill-specific `result` object or produced artifact summaries.
 
+Spec granularity review uses the same boundary. `09.review.spec-granularity`
+must place its machine-readable decision under `result.specGranularity`; do not
+add new top-level fields. The object should name artifact-level findings,
+missing user scenarios, missing behavior requirements, missing state/data
+contracts, missing interaction matrix rows, missing acceptance evidence, and
+required refinements before downstream design, tasks, ready state, or execution
+can proceed.
+
 For `07.execution.dispatch-adapter` with `requestedAction =
 "feature_execution"`, `status = "completed"` is valid only with
 `contractVersion = "skill-contract/v2"` and when `result` contains all of the

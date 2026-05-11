@@ -48,10 +48,14 @@ HLD, Feature design, tasks, or implementation code.
    downstream Journey Checkpoint that tasks must include.
 6. Add `Acceptance Scenarios` that can become tests or manual acceptance checks
    without interpretation.
-7. For foundation-only Features, add `Foundation Exemption` with `exempt`,
+7. For UI/configuration Features, add interaction-matrix obligations that the
+   Feature design and tasks must close. Each row should cover configuration
+   group or surface, user action, expected state/data mutation, validation
+   behavior, reload/revisit assertion, and evidence mode.
+8. For foundation-only Features, add `Foundation Exemption` with `exempt`,
    `reason`, `downstreamFeatures`, and `integrationEvidence`. Do not add this
    section as a shortcut for user-facing scope.
-8. If source intent, priority, or acceptance is ambiguous, return
+9. If source intent, priority, or acceptance is ambiguous, return
    `clarification_needed` instead of inventing completion criteria.
 
 ## Required Feature Requirements Template
@@ -104,6 +108,8 @@ concise result object specific to this workflow step.
 - The result stays within the `05` `feature` requirements boundary.
 - Every P1 user story has requirement and journey coverage, or a valid
   foundation exemption exists.
+- UI/configuration Features name interaction, state/data, reload/revisit, and
+  evidence obligations instead of only listing pages or labels.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
 - No project-level HLD, mainline LLD, design, task, UI, database, scheduler, or
   adapter behavior is hardcoded into the requirements artifact.

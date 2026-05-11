@@ -16,12 +16,16 @@ detail, and tasks carry executable Journey Checkpoints.
 2. Verify every requirement has a design path, task coverage, user journey coverage, delivery checkpoint, and acceptance verification plan.
 3. Verify every task maps to an approved requirement, design decision, or explicit follow-up.
 4. Verify every P1 user story has a Journey Checkpoint in `tasks.md`, every implementation Feature has a Git Delivery Checkpoint for `result.gitDelivery`, and UI-bearing Features include browser-level or equivalent runtime evidence expectations.
-5. Verify HLD-vs-Feature boundaries:
+5. Verify Spec Artifact Granularity Gate results when present. If not present,
+   perform the minimal granularity check inline: PRD intent, EARS behavior,
+   HLD state/data/interface boundary, UI interaction matrix, Feature design
+   path, task block, and evidence plan must all be traceable for P1 scope.
+6. Verify HLD-vs-Feature boundaries:
    - HLD does not contain Feature task steps, function signatures, component internals, or field-level payloads.
    - Feature design does not redefine project-level architecture, source-of-truth ownership, runtime topology, or security policy.
    - Feature design carries any needed Feature-scoped low-level design instead of relying on a mainline LLD.
-6. Check that data model, contracts, quickstart validation, and task slicing do not contradict each other.
-7. List stale status, dependency, milestone, or feature-index entries that must be corrected.
+7. Check that data model, contracts, quickstart validation, and task slicing do not contradict each other.
+8. List stale status, dependency, milestone, or feature-index entries that must be corrected.
 
 ## Output
 
@@ -51,9 +55,14 @@ detail, and tasks carry executable Journey Checkpoints.
 - `contradictions`: array of conflicts across requirements, design, data model, contracts, quickstart, or tasks.
 - `staleAssumptions`: assumptions that no longer match current artifacts.
 - `requiredFixes`: fixes required before implementation.
+- `specGranularity`: pass/fail summary or the referenced
+  `result.specGranularity` rows from `09.review.spec-granularity`.
 
 ## Failure Routing
 
 - Use `review_needed` when consistency fails.
 - Use `clarification_needed` for unresolved requirements.
 - Use `risk_review_needed` for architecture or cross-feature contradictions.
+- Use `review_needed` when consistency appears intact only because artifacts
+  are too coarse to expose missing behavior, interaction, state/data, task, or
+  evidence obligations.

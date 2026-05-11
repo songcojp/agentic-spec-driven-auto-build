@@ -19,12 +19,15 @@ Feature 名称: Full Lifecycle Delivery Fidelity
 | REQ-089 | 使用 lifecycle-first skill/agent routing 选择专用工作流与角色 | 用户指令“参考项目已经是别人实践过的最佳路径” |
 | REQ-090 | `feature_execution` completed 输出升级到 `skill-contract/v2` | 用户指令“破坏性升级，保证最佳实践” |
 | REQ-091 | 审查与调度必须定位质量损失发生阶段并进入 Review Center | 用户指令“不是仅依靠质量守门” |
+| REQ-092 | 建立 Spec Artifact Granularity Gate，阻止粗颗粒度主线文档和 Feature Spec 进入执行 | 用户指令“主线文档和 feature spec 的设计不够详细”；Kiro Requirements-First workflow |
 
 ## 用户故事
 
 - US-023-01：作为 SpecDrive 用户，我希望系统在需求、设计、任务、实现、测试、审查和交付每一步都保留原始意图，而不是最后才发现实现偏差。
 - US-023-02：作为执行 agent，我需要知道当前任务应使用哪些 skill、agent persona 和生命周期检查，避免把复杂交付压成单次编码。
 - US-023-03：作为 reviewer，我需要看到质量损失发生在哪个 lifecycle handoff、由谁负责、缺什么证据和如何关闭。
+- US-023-04：作为 SpecDrive 用户，我希望 PRD、requirements、HLD、UI Spec 和 Feature Spec 每一层都有明确颗粒度标准，避免只写模块名或页面名就进入实现。
+- US-023-05：作为 reviewer，我需要用同一套规则审计 Rapid FEAT-016 这类下游项目，判断 App Studio 等复杂模块为什么仍需 review repair。
 
 ## 验收标准
 
@@ -35,9 +38,13 @@ Feature 名称: Full Lifecycle Delivery Fidelity
 - [ ] 缺少 Delivery Fidelity、存在 open P0/P1 loss、fixture-only evidence、entry/text-only evidence 或 self-review-only closure 时，Execution Record 进入 `review_needed`。
 - [ ] ReviewItem trigger 能区分 `quality_evidence_gap`、`test_semantics_gap` 和 `journey_bypassed_by_fixture`。
 - [ ] Feature 状态聚合把 Delivery Fidelity Gate 作为 Done 判定条件之一。
+- [ ] 主线 PRD、requirements、HLD、UI Spec 和 Feature Spec 都定义最小颗粒度：PRD 写用户/流程/子能力/样例/非目标；requirements 写 EARS 行为单元；HLD 写系统级事实源/状态/接口/运行/测试；UI Spec 写 interaction matrix；Feature Spec 写垂直 journey、design path、task block、Journey Checkpoint 和 evidence plan。
+- [ ] 新增 `09.review.spec-granularity`，跨 PRD -> requirements -> HLD -> UI Spec -> Feature Spec 审计颗粒度，失败时输出 `review_needed` 和 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
+- [ ] Rapid FEAT-016 作为下游 golden sample，审计能解释 App Studio 旧实现为何失败、FEAT-016 为什么不能伪装 completed，以及每个 BO-016 义务如何关闭。
 
 ## 非目标
 
 - 不修复任何目标项目的具体业务缺陷。
 - 不把上游 `agent-skills` 的命令体系全量照搬为 SpecDrive 的唯一入口。
 - 不为旧的浅层 feature execution completed 输出提供兼容豁免。
+- 不把 Rapid 的 App Studio 单点修复混入 SpecDrive 本体代码；Rapid 只作为下游审查修复样例和验收证据。

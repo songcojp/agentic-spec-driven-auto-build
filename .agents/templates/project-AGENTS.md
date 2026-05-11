@@ -20,6 +20,13 @@ Use this file as the target project's SpecDrive operating contract.
 - `hld.md` captures architecture, subsystem responsibility, data ownership, state machines, interfaces, security, scheduling, and technology constraints.
 - `docs/ui/ui-spec.md` and `docs/ui/concepts/*.png` guide page layout, visual hierarchy, state messaging, and browser verification when UI exists.
 - Each `docs/features/<feature-id>/` folder should contain feature-local `requirements.md`, `design.md`, `tasks.md`, and optional `spec-state.json`.
+- Treat artifact granularity as part of source truth: PRD must carry users,
+  workflows, sub-capabilities, success/failure examples, non-goals and
+  priority; requirements must be atomic EARS behaviors with evidence
+  expectations; HLD must name source-of-truth data, state flow, interfaces,
+  runtime and test strategy; UI Spec must include interaction matrices; Feature
+  Specs must close vertical journeys with design paths, task blocks, Journey
+  Checkpoints, and evidence plans.
 - Do not create project-level scratch requirement files under `docs/features/`. Project-level additions and changes belong in the active mainline `requirements.md`.
 - Feature-local `tasks.md` is an execution-agent work plan and UI projection source. Do not introduce a platform task table or make parsed tasks a scheduling prerequisite unless the active project spec explicitly requires it.
 
@@ -113,6 +120,7 @@ compatibility layer, not a reason to skip lifecycle responsibilities.
 - `06.planning.prepare-execution-plan`: Check startability, commands, environment, and blockers before slicing tasks.
 - `05.feature.decompose`: Split product scope into Feature Specs or executable tasks.
 - `09.review.spec-consistency`: Verify planning outputs agree before implementation.
+- `09.review.spec-granularity`: Review whether PRD, requirements, HLD, UI Spec, and Feature Spec artifacts are granular enough before downstream design, tasks, ready state, or execution.
 - `06.planning.replan`: Select the next executable Feature from queue, dependencies, state, and operator hints.
 - `07.execution.dispatch-adapter`: Implement bounded tasks through Codex while preserving scope, Delivery Fidelity, Journey Closure, and Git delivery evidence.
 - `08.test.run-tests`: Run and analyze verification commands against behavior obligations.

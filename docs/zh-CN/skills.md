@@ -24,7 +24,7 @@ Agentic Spec 的主模型是 Define、Plan、Build、Verify、Review、Ship 的 
 | 需求变更 | `10.change.create-request`, `10.change.update-mainline-spec`, `10.change.impact-analysis` | 处理新增需求、已有需求修订和阻塞性歧义。 |
 | 需求质量门 | `02.requirements.validate-testability` | 检查需求是否原子、可观察、可测试、可追踪。 |
 | 项目级设计 | `03.hld.generate`, `04.ui.generate-spec` | 生成项目 HLD、页面清单、UI Spec 和概念图；不生成主线 LLD。 |
-| Feature 规划 | `07.execution.prepare-context`, `06.planning.estimate-risk`, `03.hld.review-architecture`, `03.hld.define-data-flow`, `03.hld.define-adapter-model`, `06.planning.prepare-execution-plan`, `05.feature.generate-requirements`, `05.feature.generate-design`, `05.feature.generate-tasks`, `05.feature.decompose`, `09.review.spec-consistency` | 从 Feature Spec 进入技术上下文、决策、架构、数据、契约、可启动性、Feature 三件套生成/维护、任务拆分和一致性检查。 |
+| Feature 规划 | `07.execution.prepare-context`, `06.planning.estimate-risk`, `03.hld.review-architecture`, `03.hld.define-data-flow`, `03.hld.define-adapter-model`, `06.planning.prepare-execution-plan`, `05.feature.generate-requirements`, `05.feature.generate-design`, `05.feature.generate-tasks`, `05.feature.decompose`, `09.review.spec-granularity`, `09.review.spec-consistency` | 从 Feature Spec 进入技术上下文、决策、架构、数据、契约、可启动性、Feature 三件套生成/维护、规格颗粒度审查、任务拆分和一致性检查。 |
 | 自主执行选择 | `06.planning.replan` | 从 Feature Spec Pool 中推理选择下一项可执行 Feature，并说明 worktree 并发适配性。 |
 | 实现与验证 | `07.execution.dispatch-adapter`, `08.test.run-tests`, `12.recovery.classify-failure` | 在受控范围内实现、运行测试、处理失败恢复；默认由实现 Skill 管理 Feature worktree、branch、commit、PR、merge 和 cleanup。 |
 | 评审与交付 | `09.review.code-diff`, `09.review.journey-closure`, `14.release.prepare-pr`, `07.execution.update-state` | 生成评审结论、用户旅程闭环判定、补交付 PR closeout、生命周期副作用和审计证据。 |
@@ -72,6 +72,7 @@ Feature execution 的完成语义使用 `skill-contract/v2`：`07.execution.disp
 | `05.feature.generate-tasks` | 中等完整 | 生成或修复 Feature `tasks.md`，需要 Webview 可解析任务块和 Journey Checkpoint 时。 | Feature requirements、design、HLD、quickstart validation、仓库命令。 | 按用户故事阶段组织的 task blocks、Journey Checkpoints、verification plan、parser compatibility。 |
 | `05.feature.decompose` | 较完整 | 将 PRD/EARS/HLD 拆成 Feature Specs，或维护 Feature Spec 内的 `tasks.md` 执行清单时。 | PRD、EARS、HLD、Feature planning 输出、现有 Feature Spec。 | `docs/features/<feature-id>/requirements.md`、`design.md`、`tasks.md`、Feature 索引和 `feature-pool-queue.json`。 |
 | `09.review.spec-consistency` | 中等完整 | 规划结束或实现前，检查 requirements、design、tasks、数据模型、契约、quickstart 和 HLD/Feature 边界是否一致。 | Feature requirements、design、tasks、HLD、全部规划输出。 | 一致性结论、需求到任务覆盖、Journey coverage、HLD/Feature boundary findings、修复项。 |
+| `09.review.spec-granularity` | 中等完整 | 主线文档或 Feature Spec 进入下游前，检查 PRD、requirements、HLD、UI Spec 和 Feature Spec 是否达到可传递颗粒度。 | PRD、requirements、HLD、UI Spec、Feature requirements/design/tasks、Feature index、review findings。 | `specGranularity` 决策、artifact-level findings、缺失用户场景、缺失行为需求、缺失状态/数据契约、缺失 interaction matrix、缺失验收证据和 required refinements。 |
 
 ### 实现、测试与恢复类
 
@@ -112,7 +113,8 @@ Feature execution 的完成语义使用 `skill-contract/v2`：`07.execution.disp
 6. `05.feature.generate-requirements`
 7. `05.feature.generate-design`
 8. `05.feature.generate-tasks`
-9. `09.review.spec-consistency`
+9. `09.review.spec-granularity`
+10. `09.review.spec-consistency`
 
 ### 单个 Feature 进入实现前规划
 
@@ -126,7 +128,8 @@ Feature execution 的完成语义使用 `skill-contract/v2`：`07.execution.disp
 8. `05.feature.generate-requirements`，仅当 Feature requirements 需要生成或修复。
 9. `05.feature.generate-design`，仅当 Feature design 需要生成、修复或吸收规划结果。
 10. `05.feature.generate-tasks`，仅当 `tasks.md` 需要生成、修复或补 Journey Checkpoint。
-11. `09.review.spec-consistency`
+11. `09.review.spec-granularity`
+12. `09.review.spec-consistency`
 
 ### 已规划任务进入编码交付
 

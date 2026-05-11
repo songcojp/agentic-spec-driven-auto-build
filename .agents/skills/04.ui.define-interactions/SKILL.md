@@ -3,11 +3,14 @@ name: 04.ui.define-interactions
 description: "Execute the Agentic Spec 04 ui workflow for define interactions with reusable input references, output contract, and acceptance checks."
 ---
 
-# Ui Define Interactions
+# UI Define Interactions
 
 ## Purpose
 
-Use this skill to perform the Agentic Spec `04` `ui` workflow step for `define-interactions`. Keep the workflow reusable across Agentic Spec projects and avoid product-specific assumptions.
+Define the interaction matrix for UI, configuration, approval, dashboard,
+settings, editor, or multi-step workflow surfaces. This skill owns the
+user-action-to-state/data/evidence contract that prevents UI work from passing
+with only text, screenshots, or happy-path navigation.
 
 ## When to Use
 
@@ -23,11 +26,29 @@ Read only the artifacts needed for the request, preferring references over copie
 
 ## Workflow
 
-1. Confirm the requested action and identify the relevant Agentic Spec phase, object, and state.
-2. Read the minimum source references needed to make the result traceable.
-3. Produce the requested workflow result, preserving existing IDs, states, and evidence links unless the invocation explicitly asks for a change.
-4. Record assumptions, blockers, and follow-up actions in the output instead of inventing missing facts.
-5. Keep implementation-specific details out of the skill unless they are passed as constraints or evidence.
+1. Read PRD user journeys, requirements, HLD surface inventory, UI Spec, Feature
+   Spec, concept images, and review findings named by the invocation.
+2. Identify every page, panel, drawer, dialog, step, form, table, command bar,
+   and approval or recovery surface that the scoped requirements imply.
+3. For each interaction row, define entry point, field/control, user action,
+   save/cancel/validate behavior, state feedback, data source, persistence
+   assertion, reload/revisit assertion, error/empty/permission behavior, and
+   verification mode.
+4. Separate visual acceptance from functional interaction acceptance. Screens
+   may pass visual review while still failing interaction completeness.
+5. Return `review_needed` when a requirement-backed surface only has a concept
+   image, page heading, status label, or happy-path navigation.
+
+## Required Interaction Matrix Shape
+
+```md
+| Surface | Entry | Field/Control | User Action | State Feedback | Persistence / Source Truth | Reload Assertion | Verification |
+|---|---|---|---|---|---|---|---|
+```
+
+Each row must name the requirement or user story it closes. If a surface is
+intentionally read-only, say so explicitly and name the source requirement or
+non-goal that makes it read-only.
 
 ## Output Contract
 
@@ -38,4 +59,6 @@ Return the project-local `SkillOutputContractV1` when invoked by an adapter. Ech
 - The output is traceable to the referenced Agentic Spec artifacts.
 - The result stays within the `04` `ui` boundary.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
+- UI/configuration surfaces include interaction matrix rows and browser or
+  equivalent runtime evidence expectations.
 - No product-specific UI, database, scheduler, or adapter behavior is hardcoded into the skill.

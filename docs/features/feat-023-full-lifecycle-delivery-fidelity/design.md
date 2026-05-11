@@ -48,9 +48,32 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Review Center、Sk
 - Scheduler 将 `quality_evidence_gap`、`test_semantics_gap`、`journey_bypassed_by_fixture` 路由到 `review_needed`。
 - Feature Aggregator 把 Delivery Fidelity Gate 与 acceptance、Journey Closure、Git Delivery、Spec Alignment、required tests 一起作为 Done 条件。
 
-## 5. 验证策略
+## 5. Spec Artifact Granularity Gate
+
+`09.review.spec-granularity` 是 Delivery Fidelity 的上游 Plan/ready 门。它不检查“文件是否存在”，而是检查每层文档是否足够向下传递：
+
+| Artifact | Owns | Fails When |
+|---|---|---|
+| PRD | 用户、目标、业务流程、大模块子能力、成功/失败样例、非目标、优先级。 | 只写模块名、页面名、愿景句或没有失败样例。 |
+| requirements | EARS 行为单元、`US-*` 映射、验收、边界/错误路径、证据类型。 | 需求需要解释才能测试，或只写“支持配置”。 |
+| HLD | 系统级子系统、数据事实源、状态流、接口/事件、运行拓扑、质量策略和 Feature 拆分指导。 | 只有组件列表、页面列表或技术名。 |
+| UI Spec | 页面/视图/弹窗、状态、用户动作、interaction matrix、数据绑定、保存/校验/reload 断言、浏览器验收。 | 只有概念图、截图、入口或 happy path。 |
+| Feature Spec | 垂直 journey、Feature-scoped design、parser-compatible tasks、Journey Checkpoint、evidence plan。 | P1 journey 没有 requirement row、design path、task block 或 evidence plan。 |
+
+`result.specGranularity` 必须包含 `decision`、`artifactLevelFindings`、`missingUserScenarios`、`missingBehaviorRequirements`、`missingStateDataContracts`、`missingInteractionMatrix`、`missingAcceptanceEvidence` 和 `requiredRefinements`。失败原因使用 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
+
+## 6. Rapid Review Repair Golden Sample
+
+Rapid 的 FEAT-016 是本门禁的下游样例。审计规则必须能判断：
+
+- App Studio 只展示配置步骤、只高亮第一个步骤、只读字段、只提供 validate/publish 或只检查文字，不能关闭 `REQ-006` 至 `REQ-010` 和 `REQ-068`。
+- FEAT-016 需要保持 `review_needed` 或 `ready`，直到 BO-016 behavior matrix 的 App Studio、publish RuntimeBinding、Skill binding、Provider、Runtime、Artifact 和 E2E fidelity 均有独立证据。
+- API fixture 和 seed demo 只能是前置条件，不能替代用户操作、状态变更、connector/database truth、reload/revisit 证据。
+
+## 7. 验证策略
 
 - Contract tests 覆盖 v2、deliveryFidelity 缺失、未关闭损失、fixture-only evidence、self-review-only closure。
 - Scheduler tests 覆盖 Delivery Fidelity 失败创建 ReviewItem。
 - Orchestration tests 覆盖 Delivery Fidelity Gate 参与 Done 判定。
 - Skill validation 覆盖新增元技能和更新后的 Skill 文档。
+- Golden samples 覆盖模块名式 PRD、不可测试 requirement、只有组件列表的 HLD、无 interaction matrix UI Spec、只有任务标题的 Feature Spec，以及 Rapid FEAT-016 下游审查样例。

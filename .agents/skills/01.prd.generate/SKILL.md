@@ -3,11 +3,15 @@ name: 01.prd.generate
 description: "Execute the Agentic Spec 01 prd workflow for generate with reusable input references, output contract, and acceptance checks."
 ---
 
-# Prd Generate
+# PRD Generate
 
 ## Purpose
 
-Use this skill to perform the Agentic Spec `01` `prd` workflow step for `generate`. Keep the workflow reusable across Agentic Spec projects and avoid product-specific assumptions.
+Generate or refresh the project PRD at the product-intent layer. The PRD must
+be specific enough for requirements-first decomposition: it should preserve
+users, workflows, module sub-capabilities, success/failure examples, non-goals,
+risks, priorities, and acceptance direction. It must not stop at module names,
+page names, or broad product slogans.
 
 ## When to Use
 
@@ -23,11 +27,35 @@ Read only the artifacts needed for the request, preferring references over copie
 
 ## Workflow
 
-1. Confirm the requested action and identify the relevant Agentic Spec phase, object, and state.
-2. Read the minimum source references needed to make the result traceable.
-3. Produce the requested workflow result, preserving existing IDs, states, and evidence links unless the invocation explicitly asks for a change.
-4. Record assumptions, blockers, and follow-up actions in the output instead of inventing missing facts.
-5. Keep implementation-specific details out of the skill unless they are passed as constraints or evidence.
+1. Confirm the requested action and identify the relevant Agentic Spec phase,
+   object, and state.
+2. Read intake notes, product brief, existing PRD, requirements, HLD, UI Spec,
+   Feature index, review findings, and repository facts needed for traceability.
+3. For every major capability, identify actors, user goals, workflow steps,
+   sub-capabilities, success examples, failure examples, non-goals, priority,
+   and evidence direction.
+4. For UI/configuration-heavy modules, list the configuration groups and user
+   actions that downstream UI Spec and Feature Spec must cover. For example,
+   an App Studio-like module must identify basics, template, page structure,
+   team, Skill, Tool/MCP, Provider, Artifact, task flow, approval, budget, and
+   publish groups when source intent supports them.
+5. Produce the PRD without task-level implementation details, function
+   signatures, or file edits.
+6. Record assumptions, blockers, and follow-up actions. Return
+   `clarification_needed` or `review_needed` instead of inventing missing
+   product intent.
+
+## PRD Granularity Gate
+
+The PRD fails this skill's quality bar when it:
+
+- names a module, page, role, or workflow without the user action and target
+  outcome;
+- omits success and failure examples for P1 journeys;
+- leaves non-goals, priority, or phase boundary implicit;
+- describes a UI/configuration surface without the configuration groups or
+  actions downstream specs must close;
+- cannot feed `02.requirements.convert-ears` without interpretation.
 
 ## Output Contract
 
@@ -38,4 +66,6 @@ Return the project-local `SkillOutputContractV1` when invoked by an adapter. Ech
 - The output is traceable to the referenced Agentic Spec artifacts.
 - The result stays within the `01` `prd` boundary.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
+- Every P1 module has user scenarios, sub-capabilities, success/failure
+  examples, non-goals, priority, and downstream evidence direction.
 - No product-specific UI, database, scheduler, or adapter behavior is hardcoded into the skill.

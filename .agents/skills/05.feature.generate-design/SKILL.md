@@ -39,11 +39,14 @@ project architecture or create a mainline LLD.
    state/data/API/UI behavior to feedback and evidence.
 4. Define Feature-scoped UI, API, data, state, error, recovery, audit, and
    evidence design only as needed to make implementation safe.
-5. Include low-level design details only when risk justifies them; keep them
+5. For UI/configuration Features, include an interaction matrix or reference the
+   UI Spec matrix and show how each row maps to state/data ownership,
+   validation, persistence, reload/revisit evidence, and browser verification.
+6. Include low-level design details only when risk justifies them; keep them
    inside Feature scope and trace them to requirements or planning results.
-6. Identify implementation boundaries: files/modules likely touched,
+7. Identify implementation boundaries: files/modules likely touched,
    dependencies, forbidden changes, compatibility constraints, and assumptions.
-7. Record unresolved design decisions as `clarification_needed` or
+8. Record unresolved design decisions as `clarification_needed` or
    `risk_review_needed`; do not hide them in broad prose.
 
 ## Required Feature Design Template
@@ -94,6 +97,9 @@ concise result object specific to this workflow step.
   project HLD.
 - Every P1 journey from requirements has an implementation path and evidence
   design.
+- Every UI/configuration interaction has a state/data path, validation behavior,
+  persistence or source-of-truth owner, reload/revisit assertion, and evidence
+  mode.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
 - No mainline LLD, task list, or product-specific shortcut is hardcoded into the
   skill.

@@ -102,7 +102,7 @@ MVP 采用本地优先的控制面架构：
 | REQ-069, REQ-070, REQ-071, REQ-072, REQ-073 | 7.14, 8, 9 | Chat Interface 提供悬浮面板、意图分类、受控命令派发、高风险二次确认和会话/消息持久化。 |
 | REQ-074, REQ-075, REQ-076, REQ-077, REQ-078, REQ-079 | 7.15, 8, 9, 10, 15 | VSCode Extension 提供工作区识别、Spec Explorer、文档交互、SpecChangeRequest、IDE command receipt 和 Task Queue 管理。 |
 | REQ-080, REQ-081, REQ-082, REQ-083, REQ-084, REQ-085 | 7.8, 7.15, 8, 9, 10, 11, 13, 15 | RPC Adapter、Execution Projection、Codex RPC approval、VSCode Diagnostics、独立 Execution Workbench Webview 和 IDE System Settings 属于 Execution Adapter + IDE 联合边界。 |
-| REQ-087, REQ-088, REQ-089, REQ-090, REQ-091 | 7.8, 7.9, 7.12, 10, 14, 15 | Delivery Lifecycle OS、Delivery Fidelity Ledger、skill-contract/v2、agent persona routing 和 Review Center loss 投影。 |
+| REQ-087, REQ-088, REQ-089, REQ-090, REQ-091, REQ-092 | 7.8, 7.9, 7.12, 10, 14, 15 | Delivery Lifecycle OS、Delivery Fidelity Ledger、skill-contract/v2、agent persona routing、Review Center loss 投影和 Spec Artifact Granularity Gate。 |
 | NFR-001, NFR-002, NFR-003, NFR-004 | 5, 10, 11, 12, 13, 14 | 默认沙箱、回滚、幂等和崩溃恢复是平台级质量属性。 |
 | NFR-005, NFR-006, NFR-010, NFR-012 | 11, 12, 14 | 审计时间线、成本、成功率、心跳和成功指标进入可观测性体系。 |
 | NFR-007, NFR-008, NFR-009, NFR-011 | 11, 12, 13, 14 | 性能指标作为基线记录，只读 Subagent 并发作为受控并行能力。 |
@@ -344,6 +344,7 @@ Responsibilities:
 - 采集命令输出、RPC event stream、provider session/thread、心跳和原始日志。
 - 生成或转交 Execution Result。
 - 对 `feature_execution` completed 输出校验 `skill-contract/v2`、Delivery Fidelity Ledger、Journey Closure、Git delivery 和 evidence artifact refs；失败时投影为 `review_needed`。
+- 对 PRD、requirements、HLD、UI Spec 和 Feature Spec 的规格颗粒度执行 `09.review.spec-granularity` 语义审查；粗颗粒度文档只能进入 `review_needed`，不得推进到 `ready` 或 `feature_execution`。
 
 Owns:
 
@@ -728,6 +729,7 @@ flowchart TD
 | EARS 需求拆解 | 用户上传 PRD / Spec Sources 扫描 | **Skill** | PRD / 自然语言需求 | EARS Requirements（`requirements.md`） | `02.requirements.convert-ears` |
 | HLD 生成 | EARS 完成后手动或受控命令触发 | **Skill**（内容）+ **Code**（artifact 落地） | PRD + EARS Requirements | HLD 文档（`docs/zh-CN/hld.md`）+ **一级页面清单** | `03.hld.generate` |
 | UI Spec + 主要页面概念图 | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + EARS Requirements + HLD + 一级页面清单 | UI Spec 文档（`docs/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ 主要页面概念图（`docs/ui/concepts/*.png`） | `04.ui.generate-spec` |
+| Spec Artifact Granularity Gate | 每个主线产物生成或变更后、进入下游前触发 | **Skill** | PRD + EARS Requirements + HLD + UI Spec + 目标 Feature Spec | `specGranularity` 决策；通过 → 允许生成 design/tasks 或 ready；失败 → `review_needed` 并列出 required refinements | `09.review.spec-granularity` |
 | Feature Spec 拆分 | UI Specs 完成（或 HLD 完成）后触发 | **Skill** | HLD + UI Specs | Feature Spec 候选集（`docs/features/<feat-id>/`） | `05.feature.decompose`（Feature 级） |
 | 启动项目级任务调度 | `schedule_run(project)` 或 `start_auto_run` 触发 | **Code + Skill** | 已生成的 `docs/features/*` + Skill 产出的 `docs/features/feature-pool-queue.json` + Feature `spec-state.json` | SQLite Feature 候选记录 + BullMQ `<executor>.run` Job + Execution Record；Job payload 指向 Feature Spec 目录 | `06.planning.replan` |
 | 需求质量检查 | Feature Spec 创建后 | **Skill** | Feature Spec requirements.md | 通过 → `ready`；歧义 → ClarificationLog + `draft` | `02.requirements.validate-testability`、`10.change.impact-analysis` |
@@ -893,6 +895,8 @@ Decomposition rules:
 - 涉及写代码、测试执行或 Git 修改的 Feature Spec 必须明确 Workspace Manager 与 Execution Policy。
 - UI Feature Spec 只消费控制面状态，不重新定义调度真实来源。
 - Project Memory 相关 Feature Spec 必须处理压缩、版本、冲突修复和投影与真实状态的边界。
+- 每个 Feature Spec 的上游 PRD、requirements、HLD 和 UI Spec 必须达到 `REQ-092` 的颗粒度要求；只包含模块名、页面名、组件名、happy path 或只读截图的规格不得进入 `ready`。
+- UI / 配置型 Feature 必须包含 interaction matrix，覆盖入口、字段/控件、用户动作、保存/取消/校验、状态反馈、reload 后断言和浏览器验收；缺失时由 `09.review.spec-granularity` 标记 `interaction_gap` 或 `state_data_gap`。
 
 ## 16. Skill-vs-Code Implementation Boundaries
 

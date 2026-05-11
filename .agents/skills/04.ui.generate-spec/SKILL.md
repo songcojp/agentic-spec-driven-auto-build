@@ -37,6 +37,10 @@ This skill is a UI specification generator, not a frontend implementation skill.
    - Information architecture, hierarchy, navigation, and cross-page continuity.
    - Required states: default, loading, empty, validation error, permission denied, failure/retry, success, and selected/detail states as applicable.
    - View model fields, source system, refresh behavior, and stale-data handling.
+   - Interaction matrix rows for configuration or multi-step pages: entry,
+     field/control, user action, save/cancel/validate behavior, state feedback,
+     persistence/source-of-truth assertion, reload/revisit assertion, and
+     browser verification mode.
 5. Define a design direction and design system before generating concept PNGs:
    - Product tone and density. Operational tools should be quiet, dense, scannable, and work-focused; avoid marketing-style heroes, oversized decorative sections, generic card grids, and visual filler.
    - Layout system: app shell, navigation, bands, panels, tables, lists, canvas, drawers, sidebars, dialogs, or cards only where the workflow needs them.
@@ -68,6 +72,9 @@ Borrow these standards from strong frontend/UI skills, but express them as speci
 - Specify desktop, mobile, and narrow-layout behavior with stable dimensions for fixed-format UI such as boards, tables, toolbars, sidebars, and dashboards.
 - Avoid unreadable text, overlapping controls, generic placeholders, nested cards, one-note palettes, decorative blobs/orbs, and invented marketing copy.
 - Treat accessibility, empty/error/loading states, and operator feedback as first-class UI, not polish afterthoughts.
+- Treat interaction completeness separately from visual alignment. Concept PNGs
+  and screenshot evidence cannot close a UI story when editable controls,
+  persistence, validation, or reload evidence are missing.
 
 ## Optional Coordination
 
@@ -144,3 +151,5 @@ When this skill is invoked inside an interactive Codex session rather than the s
 - Use `blocked` when required source files cannot be resolved or read at the workspace root.
 - Use `blocked` when required PNG concept images are requested but the active adapter is not Codex CLI or the current Codex CLI runtime does not expose `$imagegen`.
 - Use `review_needed` when design direction, technology-stack constraints, accessibility requirements, or page inventory conflicts must be resolved before producing a trustworthy UI Spec.
+- Use `review_needed` when a UI/configuration surface lacks an interaction
+  matrix or state/data evidence plan required by `REQ-092`.
