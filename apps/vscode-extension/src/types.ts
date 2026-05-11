@@ -21,6 +21,8 @@ export type SpecDriveIdeFeatureNode = {
   latestExecutionId?: string;
   latestSchedulerJobId?: string;
   latestExecutionStatus?: string;
+  latestExecutionCompletedAt?: string;
+  latestExecutionCreatedAt?: string;
   latestReviewItemId?: string;
   latestReviewStatus?: string;
   latestReviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";

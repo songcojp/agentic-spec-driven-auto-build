@@ -154,8 +154,8 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 
 ### T-021-28 Spec Workspace UI Spec Concept Images 每行上限
 状态: done
-描述: Spec Workspace 的 UI Spec Concept Images 使用每行最多 8 张图片的网格布局，超过 8 张自动换行，并在窄宽度下自适应减少列数。
-验证: `node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 concept image grid 的 8 列上限和窄屏断点。
+描述: Spec Workspace 的 UI Spec Concept Images 使用响应式图片网格展示所有可访问概念图；图片来源合并 UI Spec execution artifacts 与 `docs/ui/concepts` 目录扫描结果，按路径去重后全部渲染，超过单行容量自动换行，并在窄宽度下自适应减少列数。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 concept image grid 不截断图片列表、artifact 与目录扫描合并、以及窄屏断点。
 
 ### T-021-29 Feature Spec 项目成本总计
 状态: done
@@ -205,4 +205,9 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 ### T-021-38 统一紧凑工作台与主题
 状态: done
 描述: VSCode IDE Webview 采用与 Product Console 一致的紧凑工作台 token；语言和主题入口集中到 System Settings，主题支持 VS Code / Light / Dark / High Contrast；Execution Workbench 和 Feature Spec 详情取消内部滚动，把低优先级详情折叠为 compact section，同时保留关键字段和全部操作按钮。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-39 共享左侧导航栏
+状态: done
+描述: 在共享 Webview shell 中为 Spec Workspace、Feature Spec、Execution Workbench 和 System Settings 提供左侧导航栏；当前页面高亮，点击导航项通过 extension host 打开对应 Webview，导航栏可折叠/展开并只使用工作台级 localStorage 保留状态，不在每个页面的 Webview state 中保存副本。
 验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。

@@ -24,13 +24,14 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 | Execution Workbench | Current Execution | 展示当前 Execution Record、Feature Spec 标题和描述、thread/turn、步骤进度、raw log refs、diff 摘要和输出校验状态。 |
 | Execution Workbench | Job Timing | 从 Control Plane ViewModel 消费 `startedAt`、`completedAt` 和 `durationMs`，在队列行、选中详情和 State Flow 中展示开始时间、结束时间和单次执行耗时。 |
 | Shared Webview Shell | Appearance State | 语言与主题状态由 System Settings 管理；共享 shell 只负责从 Webview state / localStorage 恢复 locale 和 theme，并把 token 应用到所有 VSCode IDE Webview。 |
+| Shared Webview Shell | Left Navigation | 在 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 中渲染共享左侧导航；导航项点击后向 extension host 发送页面打开请求，当前页高亮，并只用工作台级 localStorage 保留折叠或展开状态。 |
 | Execution Workbench | Blockers and Approvals | 汇总 blocked reason、approval pending、失败原因和可执行恢复动作。 |
 | Execution Workbench | Result Projection | 摘要优先展示结构化 Skill 输出：状态、summary、nextAction、traceability、produced artifacts 表格、常见 result 分组、Additional Result 和完整 JSON 审计视图。 |
 | Spec Workspace | Lifecycle Pipeline | 展示 PRD 到 Delivery 的 Spec 全流程阶段、阶段状态、当前阶段和下一步动作。 |
 | Spec Workspace | Stage Detail | 展示当前阶段来源文档、traceability、required skills、evidence、blockers 和阶段推进按钮。 |
 | Spec Workspace | Control Guardrails | 展示 constitution checks、command approvals、safe action confirmations、spec consistency 和 manual approval。 |
 | Spec Workspace | Evidence & Traceability | 以表格展示 requirement、feature、artifact、evidence、validation result 和更新时间。 |
-| Spec Workspace | UI Spec Concept Grid | `UI Spec Concept Images` 使用响应式图片网格，每行最多 8 张，超过 8 张自动换行，窄宽度下减少为 4 列或 2 列。 |
+| Spec Workspace | UI Spec Concept Grid | `UI Spec Concept Images` 使用响应式图片网格，必须渲染 UI Spec artifact 与 `docs/ui/concepts` 目录中所有可访问概念图；图片去重后全部展示，超过单行容量自动换行，窄宽度下降低列数。 |
 | Feature Spec | Feature Category Panels | 通过可折叠分类 panel 展示 Feature；顺序固定为 `Blocked`、`In-Process`、`Todo`、`Ready`、`Done`，其中 Done 默认折叠，其它默认展开；panel header 显示展开/折叠状态图标；panel 内 Feature list 自适应换行，不显示水平滚动条。 |
 | Feature Spec | Feature Detail Drawer | 展示选中 Feature 的标题、描述、artifacts、latest run、token/cost、tasks、blockers、traceability 和可执行动作；acceptance 状态合并到 artifacts。 |
 | Feature Spec | New Feature Dialog | 顶部 New Feature 按钮打开弹出输入框，提交自然语言需求；Webview 只提交受控需求输入，模型按需求新增/变更边界自行判定后续流程。 |
@@ -58,6 +59,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Product Console 与三组 VSCode Webview 共用持久事实源，但不共用 UI ViewModel 作为事实源。
 - Shared Webview Shell 的 locale 为前端本地 UI 状态，不进入 Control Plane 持久事实源；刷新、自动刷新或 Webview 重新渲染时从 Webview state / localStorage 恢复。语言切换不改变 query / command payload，不改变 Scheduler、Execution Record 或 Feature `spec-state.json`。
 - Shared Webview Shell 的 theme 为前端本地 UI 状态，不进入 Control Plane 持久事实源；主题支持 `vscode`、`light`、`dark` 和 `highContrast`。System Settings 是唯一主题切换入口，其它 Webview 只消费已保存主题 token。
+- Shared Webview Shell 的 left navigation 只负责页面切换 UI 状态，不进入 Control Plane 持久事实源。点击导航项必须由 VSCode extension host 调用已有 Webview 打开命令；折叠状态只保存到工作台级 localStorage，不写入每个页面自己的 Webview state，并在刷新、自动刷新、重新渲染或跨页面切换后保持一致。
 - 本地化只作用于 Webview chrome 文案；`SkillOutputContractV1`、Additional Result JSON、diff、日志、文件路径、命令输出、adapter JSON、用户输入、Feature 标题 / 描述和文档内容保持来源原文。
 - 详情紧凑化不得删除字段或按钮。允许将低优先级详情折叠为 compact section，但 Execution Workbench 的 Job 操作按钮、review 决策、State Flow、Token Consumption、Blockers / Approvals、Result Projection 和 Produced Artifacts 必须保留；Feature Spec 的 Schedule / Requirement Change / Clarify / Ready / Review / Queue actions、State Flow、Review Item、Cost、Artifacts、Tasks、Blockers 和 Traceability 必须保留。
 - Spec Workspace 的全流程操作通过 `runControlledCommand` 或 Spec change request 进入 extension host，由 Control Plane 决定是否生成任务、记录审批或拒绝动作。
@@ -93,4 +95,6 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Webview 级验证覆盖单个视图切换按钮显示在第一个控件位置、点击后切换 Feature List / Dependency Graph 并修改按钮文字、树状层级展示、默认展开二级节点、节点折叠/展开、缺失依赖提示，以及点击 Feature 节点后仍能选中详情。
 - Webview 级验证覆盖 Execution Workbench 队列任务选中、高亮、顶部按钮无选中时禁用、按 selected task status 启用 Run Now / Pause / Resume / Retry / Cancel / Skip / Reprioritize / Enqueue，以及选中后详情面板切换到该任务。
 - Webview 级验证覆盖 Execution Workbench 队列分类 panel 顺序、折叠/展开行为、移除 `ready` 分类、`running` 和 `queued` 默认展开，以及其它分类默认折叠。
+- Webview 级验证覆盖 Spec Workspace 的 UI Concept Images 不截断图片列表，必须合并 UI Spec execution artifacts 和 `docs/ui/concepts` 目录扫描结果后去重展示。
 - Webview 级验证覆盖 System Settings 中的共享语言切换入口、中文 / 英语 / 日语选项、主题切换入口、Webview state / localStorage 持久化、刷新后语言和主题恢复，以及 raw log / diff / path / command / JSON / user input 不被翻译。
+- Webview 级验证覆盖共享左侧导航栏在四个 VSCode IDE Webview 中渲染、当前页面高亮、点击导航项由 extension host 打开对应页面，以及折叠状态只通过工作台级 localStorage 在重新渲染和跨页面切换后恢复。

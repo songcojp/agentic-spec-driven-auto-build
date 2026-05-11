@@ -1074,10 +1074,15 @@ THE SYSTEM SHALL 以聊天对话框形态展示输入区，并在 Webview 自动
 WHEN 用户在 VSCode IDE Webview 中切换界面语言
 THE SYSTEM SHALL 支持中文、英语和日语三种 UI 语言，并在 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings Webview 中保持所选语言。
 
+WHEN 用户在 VSCode IDE Webview 中需要切换工作台页面
+THE SYSTEM SHALL 在 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings Webview 中提供共享左侧导航栏；点击导航项应打开或切换到对应 Webview 页面，导航栏支持折叠和展开，并使用同一份工作台级本地状态在所有页面保持一致。
+
 验收：
 - [ ] Webview 使用独立前端入口、布局、状态模型和组件，不复用 Product Console 的页面、路由、导航、App Shell 或组件实现。
 - [ ] Webview 顶部提供可见语言切换入口，支持 English、中文和日本語；切换后当前 Webview 的页面标题、操作按钮、字段标签、空态、提示和设置面板 chrome 使用所选语言展示。
 - [ ] VSCode IDE Webview 的语言选择必须保存在 Webview 本地状态或本地存储中，刷新、自动刷新和重新渲染后保持当前选择；执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入和 Feature 文档内容保持原文。
+- [ ] 四个 VSCode IDE Webview 页面均显示共享左侧导航；当前页面高亮，点击 Spec Workspace、Feature Spec、Execution Workbench 或 System Settings 导航项后由 VSCode extension host 打开对应页面。
+- [ ] 左侧导航栏支持折叠和展开；折叠状态只保存在工作台级 localStorage 中，不在每个页面的 Webview state 中保存副本，刷新、自动刷新、重新渲染和页面切换后保持一致。
 - [ ] 第一屏默认展示 Job 队列、当前运行、下一步动作、阻塞原因、自动执行开关和审批待办。
 - [ ] 用户可以从 Webview 发起 enqueue、run now、auto run、pause automation、resume automation、retry、cancel、skip 和 reprioritize。
 - [ ] Webview 通过 VSCode extension host 调用 Control Plane query/command API，不直接访问 SQLite、Scheduler 内部队列、`scheduler_job_records`、`execution_records` 或 `spec-state.json`。

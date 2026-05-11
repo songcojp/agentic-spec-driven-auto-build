@@ -29,31 +29,84 @@ export function renderFeatureSpecWebview(
   const groups = groupFeaturePanels(features);
   const projectId = view?.project?.id;
   return renderWorkbenchPage("Feature Spec", nonce, `
-    <section class="toolbar">
-      <button class="workbench-button button-secondary view-toggle" data-command="toggleFeatureSpecView" data-view-mode="dependency" aria-pressed="false">${buttonContent("Dependency Graph", "branch")}</button>
-      ${executionPreferenceControls(view)}
-      ${features.length > 0 ? commandButton("Schedule Selected", "scheduleSelectedFeatures", { projectId }) : ""}
-      ${selected ? scheduleFeatureButton("Schedule Current", selected, projectId, "Feature Spec Webview") : ""}
-      ${commandButton("New Feature", "openWorkbenchForm", { formMode: "newFeature" })}
-      ${commandButton("Refresh", "refresh", {})}
-      ${autoRefreshSwitch(autoRefreshEnabled)}
-      <span id="workbench-status" class="status-text" role="status" aria-live="polite"></span>
-      ${renderProjectCostTotal(view)}
-    </section>
-    ${renderWorkbenchInputForm()}
-    <main id="feature-list-panel" class="feature-layout" data-view-panel="list">
-      <section class="feature-board">
-        ${groups.map((group) => renderFeaturePanel(group, selected?.id, panelOpenState[group.id] ?? group.open)).join("")}
-      </section>
-      <aside class="panel detail-panel">
-        ${selected ? renderFeatureDetail(selected, projectId) : emptyState("No Feature Specs discovered.")}
-      </aside>
-    </main>
-    <section id="dependency-graph-panel" class="panel dependency-panel hidden" data-view-panel="dependency">
-      <div class="panel-title"><h2>Dependency Graph</h2><span>${features.length} Feature Specs</span><button class="workbench-button button-secondary dependency-toggle" data-command="toggleDependencyGraphBranches" data-expanded="true">${buttonContent("Collapse All", "branch")}</button></div>
-      ${renderDependencyGraph(features)}
-    </section>
+    ${renderFeatureV2Styles()}
+    <div class="feature-v2-shell">
+      <main class="feature-v2-main">
+        ${renderFeatureTopbar(view, groups)}
+        <section class="feature-v2-titlebar">
+          <div class="feature-v2-title">
+            <h1>Feature Spec / Project Home</h1>
+            <span>Plan, track, and ship features with traceable execution and review.</span>
+          </div>
+          <div class="feature-v2-actions">
+            <button class="workbench-button button-secondary view-toggle" data-command="toggleFeatureSpecView" data-view-mode="dependency" aria-pressed="false">${buttonContent("Dependency Graph", "branch")}</button>
+            ${executionPreferenceControls(view)}
+            ${features.length > 0 ? commandButton("Schedule Selected", "scheduleSelectedFeatures", { projectId }) : ""}
+            ${selected ? scheduleFeatureButton("Schedule Current", selected, projectId, "Feature Spec Webview") : ""}
+            ${commandButton("New Feature", "openWorkbenchForm", { formMode: "newFeature" })}
+            ${commandButton("Refresh", "refresh", {})}
+            ${autoRefreshSwitch(autoRefreshEnabled)}
+            ${renderProjectCostTotal(view)}
+          </div>
+        </section>
+        <section class="feature-v2-content">
+          <span id="workbench-status" class="status-text" role="status" aria-live="polite"></span>
+          ${renderWorkbenchInputForm()}
+          <main id="feature-list-panel" class="feature-layout" data-view-panel="list">
+            <section class="feature-board">
+              ${renderFeatureGroupedPanels(features, selected?.id)}
+            </section>
+            <aside class="panel detail-panel">
+              ${selected ? renderFeatureDetail(selected, projectId) : emptyState("No Feature Specs discovered.")}
+            </aside>
+          </main>
+          <section id="dependency-graph-panel" class="panel dependency-panel hidden" data-view-panel="dependency">
+            <div class="panel-title"><h2>Dependency Graph</h2><span>${features.length} Feature Specs</span><button class="workbench-button button-secondary dependency-toggle" data-command="toggleDependencyGraphBranches" data-expanded="true">${buttonContent("Collapse All", "branch")}</button></div>
+            ${renderDependencyGraph(features)}
+          </section>
+        </section>
+        <footer class="feature-v2-footer">
+          <span>Showing ${features.length} of ${features.length} features</span>
+          <span><span class="footer-dot bad"></span>Blocked by Dependency</span>
+          <span><span class="footer-link-mark"></span>Has Dependencies</span>
+          <span>Last updated: live projection</span>
+        </footer>
+      </main>
+    </div>
   `, undefined, locale, theme);
+}
+
+function renderFeatureV2Styles(): string {
+  return `<style>
+    html{overflow:hidden}body{padding:0;background:#071015;overflow:hidden}.workbench-header{display:none}.feature-v2-shell{height:100vh;display:grid;background:linear-gradient(180deg,#081117,#0b1419);color:var(--fg);overflow:hidden}.feature-v2-main{min-width:0;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;height:100vh;overflow:hidden}.feature-v2-topbar{min-height:62px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(126,231,236,.15);background:rgba(5,12,17,.74)}.feature-v2-metrics{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px}.feature-context-card{border-left:1px solid rgba(126,231,236,.22);padding-left:10px;min-width:0}.feature-context-card span{display:block;color:var(--muted);font-size:11px}.feature-context-card strong{display:flex;align-items:center;gap:6px;min-height:24px;font-size:12px;min-width:0;overflow-wrap:anywhere}.feature-v2-top-actions{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}.feature-v2-avatar{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--border);border-radius:999px;color:var(--fg)}.feature-v2-titlebar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;padding:12px 14px;border-bottom:1px solid rgba(126,231,236,.12);background:#071116}.feature-v2-title h1{margin:0;font-size:20px}.feature-v2-title span{color:var(--muted);font-size:12px}.feature-v2-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.feature-v2-actions .toolbar{margin:0}.feature-v2-actions .project-cost-total{margin-left:0}.feature-v2-content{min-height:0;overflow:hidden;padding:10px 14px;display:grid;grid-template-rows:auto auto minmax(0,1fr)}.feature-v2-content .workbench-form{margin-bottom:10px}.feature-layout{height:100%;min-height:0;display:grid;grid-template-columns:minmax(560px,.82fr) minmax(520px,1fr);gap:10px;overflow:hidden}.feature-board{height:100%;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:8px;align-items:stretch;min-width:0;min-height:0;overflow:hidden}.feature-panel{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;margin:0;background:linear-gradient(180deg,rgba(14,28,35,.96),rgba(8,17,22,.96));border-color:rgba(126,231,236,.20);box-shadow:none}.feature-panel[open]{height:100%;min-height:0}.feature-panel:not([open]){display:block;height:auto;min-height:0}.feature-panel summary{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(11,24,31,.88);padding:8px 9px;cursor:pointer;list-style:none}.feature-panel summary::-webkit-details-marker{display:none}.feature-panel summary::before{content:"+";display:inline-flex;width:14px;color:var(--muted);font-weight:650}.feature-panel[open] summary::before{content:"-"}.feature-panel summary h2{font-size:12px;margin-right:auto}.feature-panel-body{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}.feature-panel-body::-webkit-scrollbar{width:10px;height:10px}.feature-panel-body::-webkit-scrollbar-thumb{background:rgba(126,231,236,.32);border-radius:999px}.feature-panel-body::-webkit-scrollbar-track{background:rgba(7,16,22,.85)}.feature-panel-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-content:start;gap:8px;padding:8px}.feature-card{position:relative;min-height:136px;padding:8px 8px 8px 11px;background:linear-gradient(180deg,rgba(16,34,43,.96),rgba(9,20,26,.96));border-color:rgba(126,231,236,.16);box-shadow:none;overflow:hidden}.feature-card::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--feature-status-color,var(--muted))}.feature-card[data-status="blocked"]{--feature-status-color:var(--bad)}.feature-card[data-status="in-process"],.feature-card[data-status="running"]{--feature-status-color:var(--info)}.feature-card[data-status="ready"]{--feature-status-color:#a266ff}.feature-card[data-status="done"],.feature-card[data-status="completed"]{--feature-status-color:var(--ok)}.feature-card[data-status="todo"],.feature-card[data-status="draft"]{--feature-status-color:var(--muted)}.feature-card.current{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent),0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent);background:linear-gradient(180deg,rgba(22,55,68,.96),rgba(9,20,26,.96))}.feature-card header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px}.feature-status-badge{display:inline-flex;align-items:center;gap:5px;min-height:20px;border:1px solid currentColor;border-radius:999px;padding:2px 7px;font-size:10px;line-height:1;white-space:nowrap;background:color-mix(in srgb,currentColor 12%,transparent)}.feature-card-title{display:grid;gap:3px;margin-bottom:7px}.feature-card-title strong{font-size:12px;font-weight:620}.feature-card-title span{color:var(--muted);font-size:11px}.feature-card .metric{font-size:11px;margin-top:4px}.feature-card-meta{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;color:var(--muted);font-size:11px}.feature-card-meta span{min-width:0;overflow-wrap:anywhere}.feature-card-actions{margin-top:6px}.detail-panel{height:100%;min-height:0;position:static;overflow:auto;padding:10px;background:linear-gradient(180deg,rgba(14,28,35,.98),rgba(8,17,22,.98));border-color:rgba(126,231,236,.20);box-shadow:none}.selected-title{position:sticky;top:-10px;z-index:2;display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:8px;background:#071116;margin:-10px -10px 10px;padding:9px 10px;border-bottom:1px solid rgba(126,231,236,.18)}.feature-detail-heading{min-width:0}.feature-detail-heading h2{font-size:13px;line-height:1.25;margin:0 0 2px;overflow-wrap:anywhere}.feature-detail-heading span{font-size:11px}.title-actions{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-start;align-items:center;min-width:0;max-width:100%}.title-actions button{min-height:26px;max-width:128px;padding:4px 7px;font-size:11px}.feature-detail-hero{display:grid;gap:6px;margin-bottom:10px}.feature-detail-hero p{margin:0;color:var(--muted);font-size:12px}.feature-detail-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid rgba(126,231,236,.18);border-radius:4px;overflow:hidden;margin-bottom:10px}.feature-detail-kpis div{display:grid;gap:2px;padding:6px 8px;border-left:1px solid rgba(126,231,236,.14);font-size:11px}.feature-detail-kpis div:first-child{border-left:0}.feature-detail-kpis span{color:var(--muted)}.feature-state-flow-compact{position:relative;padding:8px 10px;border:1px solid rgba(126,231,236,.18);border-radius:4px;background:#081217;grid-template-columns:repeat(5,minmax(0,1fr))}.feature-state-flow-compact .feature-state-item:nth-child(2){grid-column:1/-1;text-align:left;border-top:0;border-bottom:1px solid rgba(126,231,236,.14);padding-bottom:8px}.feature-state-item{background:transparent;border:0;border-top:2px solid rgba(126,231,236,.24);border-radius:0;text-align:center}.feature-state-item span{font-size:10px}.feature-state-item strong{font-size:11px}.review-details,.result-group{border-color:rgba(126,231,236,.18)}.compact-section{background:transparent;border-color:rgba(126,231,236,.18);margin:8px 0}.compact-section>summary{background:transparent}.artifact-row{background:#081217;border-color:rgba(126,231,236,.15)}.token-cost-line{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px}.token-cost-line span{color:var(--muted)}.token-cost-line strong{font-weight:650}.dependency-panel{height:100%;overflow:auto;background:linear-gradient(180deg,rgba(14,28,35,.98),rgba(8,17,22,.98));border-color:rgba(126,231,236,.20);box-shadow:none}.feature-v2-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:30px;padding:5px 14px;border-top:1px solid rgba(126,231,236,.15);background:#071116;color:var(--muted);font-size:12px}.feature-v2-footer span{display:inline-flex;align-items:center;gap:6px;min-width:0}.footer-dot{width:7px;height:7px;border-radius:999px;background:currentColor}.footer-link-mark{width:12px;height:6px;border-bottom:1px solid var(--muted);border-left:1px solid var(--muted);transform:skewX(-22deg)}@media(max-width:1300px){.feature-v2-topbar,.feature-v2-titlebar{grid-template-columns:1fr}.feature-v2-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.feature-v2-actions{justify-content:flex-start}.feature-layout{grid-template-columns:minmax(500px,.8fr) minmax(460px,1fr)}.feature-panel-items{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}@media(max-width:980px){.feature-v2-shell,.feature-v2-main{height:100vh;overflow:hidden}.feature-v2-content{overflow:hidden}.feature-layout{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(260px,38vh);overflow:hidden}.detail-panel{height:100%;overflow:auto}.feature-v2-footer{flex-wrap:wrap;justify-content:flex-start}}@media(max-width:620px){.feature-v2-metrics,.feature-detail-kpis,.feature-state-flow-compact{grid-template-columns:minmax(0,1fr)}.feature-panel-items{grid-template-columns:minmax(0,1fr)}.feature-v2-top-actions{display:none}}
+  </style>`;
+}
+
+function renderFeatureTopbar(view: SpecDriveIdeView | undefined, groups: FeaturePanelGroup[]): string {
+  const running = groups.find((group) => group.id === "in-process")?.features.length ?? 0;
+  const total = groups.reduce((sum, group) => sum + group.features.length, 0);
+  const blocked = groups.find((group) => group.id === "blocked")?.features.length ?? 0;
+  const health = view?.projectInitialization?.blocked || blocked > 0 ? "Needs Review" : "Healthy";
+  const healthClass = view?.projectInitialization?.blocked || blocked > 0 ? "warn" : "ok";
+  return `<header class="feature-v2-topbar">
+    <div class="feature-v2-metrics">
+      ${featureContextCard("Project", view?.project?.name ?? view?.project?.id ?? "No project")}
+      ${featureContextCard("Branch", "workspace")}
+      ${featureContextCard("Health", health, healthClass)}
+      ${featureContextCard("Project Cost Total", projectCostLabel(view))}
+      ${featureContextCard("Runner Status", `${running} / ${total} Active`)}
+    </div>
+    <div class="feature-v2-top-actions"><span>Docs</span><span>Help</span><span class="feature-v2-avatar">SD</span></div>
+  </header>`;
+}
+
+function featureContextCard(label: string, value: string, className = ""): string {
+  return `<div class="feature-context-card"><span>${escapeHtml(label)}</span><strong class="${escapeAttr(className)}">${escapeHtml(value)}</strong></div>`;
+}
+
+function projectCostLabel(view: SpecDriveIdeView | undefined): string {
+  const cost = view?.projectCost;
+  return cost ? formatCurrency(cost.totalUsd, cost.currency, 2) : "USD 0.00";
 }
 
 function renderProjectCostTotal(view: SpecDriveIdeView | undefined): string {
@@ -117,11 +170,26 @@ type FeaturePanelGroup = {
   open: boolean;
 };
 
-function renderFeaturePanel(group: FeaturePanelGroup, selectedFeatureId: string | undefined, open: boolean): string {
-  return `<details class="feature-panel" data-panel="${escapeAttr(group.id)}" ${open ? "open" : ""}>
-    <summary><h2>${escapeHtml(group.title)} <span>${group.features.length}</span></h2><span>${escapeHtml(group.statuses)}</span></summary>
-    <div class="feature-panel-items">
-      ${group.features.length === 0 ? emptyState("No Feature Specs in this category.") : group.features.map((feature) => renderFeatureCard(feature, feature.id === selectedFeatureId)).join("")}
+function renderFeatureGroupedPanels(features: SpecDriveIdeFeatureNode[], selectedFeatureId: string | undefined): string {
+  const completed = sortDoneFeatures(features.filter(isDoneFeature));
+  const active = features.filter((feature) => !isDoneFeature(feature));
+  return `${renderFeatureGroupPanel("Other Features", "Active, blocked, ready, and planned", active, selectedFeatureId, true)}
+    ${renderFeatureGroupPanel("Completed Features", "Completed by default folded", completed, selectedFeatureId, false)}`;
+}
+
+function renderFeatureGroupPanel(
+  title: string,
+  subtitle: string,
+  features: SpecDriveIdeFeatureNode[],
+  selectedFeatureId: string | undefined,
+  open: boolean,
+): string {
+  return `<details class="feature-panel feature-group-panel" ${open ? "open" : ""}>
+    <summary><h2>${escapeHtml(title)} <span>${features.length}</span></h2><span>${escapeHtml(subtitle)}</span></summary>
+    <div class="feature-panel-body">
+      <div class="feature-panel-items">
+        ${features.length === 0 ? emptyState("No Feature Specs in this group.") : features.map((feature) => renderFeatureCard(feature, feature.id === selectedFeatureId)).join("")}
+      </div>
     </div>
   </details>`;
 }
@@ -132,13 +200,20 @@ function renderFeatureCard(feature: SpecDriveIdeFeatureNode, current: boolean): 
   const progress = taskCount > 0
     ? Math.round((doneTasks / taskCount) * 100)
     : feature.latestExecutionStatus === "completed" ? 100 : feature.latestExecutionStatus === "running" ? 70 : feature.status === "ready" ? 60 : 30;
-  return `<article class="feature-card${current ? " current" : ""}" data-feature-card="${escapeAttr(feature.id)}" aria-selected="false" ${current ? "aria-current=\"true\"" : ""}>
-    <header><strong>${escapeHtml(feature.id)}</strong><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></header>
-    <div data-i18n-skip>${escapeHtml(feature.title)}</div>
+  const cost = feature.tokenConsumption ? formatCurrency(feature.tokenConsumption.costUsd, feature.tokenConsumption.currency, 2) : formatCurrency(0, "USD", 2);
+  const statusKey = featureStatusKey(feature);
+  return `<article class="feature-card${current ? " current" : ""}" data-feature-card="${escapeAttr(feature.id)}" data-status="${escapeAttr(statusKey)}" aria-selected="false" ${current ? "aria-current=\"true\"" : ""}>
+    <header><strong>${escapeHtml(feature.id)}</strong><span class="feature-status-badge ${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></header>
+    <div class="feature-card-title">
+      <strong data-i18n-skip>${escapeHtml(feature.title)}</strong>
+      <span data-i18n-skip>${escapeHtml(feature.description ?? feature.nextAction ?? "No Feature Spec description found.")}</span>
+    </div>
     <div class="metric"><span>Task Progress</span><strong>${progress}%</strong><div class="bar"><span style="width:${progress}%"></span></div></div>
-    <div class="metric"><span>Execution State</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
-    <div class="metric"><span>Tasks</span><strong>${doneTasks}/${taskCount}</strong></div>
-    <div class="metric"><span>Next Action</span><strong>${escapeHtml(feature.nextAction ?? "None")}</strong></div>
+    <div class="feature-card-meta">
+      <span class="${statusClass(featureExecutionLabel(feature))}">${escapeHtml(featureExecutionLabel(feature))}</span>
+      <span>${doneTasks}/${taskCount}</span>
+      <span>${escapeHtml(cost)}</span>
+    </div>
     <div class="feature-card-actions">
       <label class="feature-select"><input type="checkbox" data-feature-select="${escapeAttr(feature.id)}"> Select</label>
     </div>
@@ -147,17 +222,21 @@ function renderFeatureCard(feature: SpecDriveIdeFeatureNode, current: boolean): 
 
 function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: string): string {
   const actions = featureDetailActions(feature, projectId);
-  return `<div class="panel-title selected-title"><div><h2 data-i18n-skip>${escapeHtml(feature.title)}</h2><span>${escapeHtml(feature.id)} · </span><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></div><div class="title-actions">${actions}</div></div>
-    <h3>Feature Spec Description</h3>
-    ${renderFeatureDescription(feature)}
-    <div class="row"><span>Priority</span><strong>${escapeHtml(feature.priority ?? "-")}</strong></div>
-    <div class="row"><span>Latest Run</span><strong>${escapeHtml(feature.latestExecutionId ?? "-")}</strong></div>
-    <div class="row"><span>Execution</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
+  return `<div class="panel-title selected-title"><div class="feature-detail-heading"><h2 data-i18n-skip>${escapeHtml(feature.title)}</h2><span>${escapeHtml(feature.id)} · </span><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></div><div class="title-actions">${actions}</div></div>
+    <section class="feature-detail-hero">
+      <h3>Feature Spec Description</h3>
+      ${renderFeatureDescription(feature)}
+    </section>
+    <div class="feature-detail-kpis">
+      <div><span>Priority</span><strong>${escapeHtml(feature.priority ?? "-")}</strong></div>
+      <div><span>Latest Run</span><strong>${escapeHtml(feature.latestExecutionId ?? "-")}</strong></div>
+      <div><span>Execution</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
+    </div>
     <h3>State Flow</h3>
     ${renderFeatureStateFlow(feature)}
     <h3>Review Item</h3>
     ${renderFeatureReviewDetails(feature)}
-    <details class="compact-section"><summary><h3>Latest Execution Cost</h3><span>${feature.tokenConsumption ? "recorded" : "none"}</span></summary><div class="compact-section-body">
+    <details class="compact-section" open><summary><h3>Latest Execution Cost</h3><span>${feature.tokenConsumption ? "recorded" : "none"}</span></summary><div class="compact-section-body">
       ${renderTokenCost(feature.tokenConsumption)}
     </div></details>
     <details class="compact-section" open><summary><h3>Artifacts</h3><span>${feature.documents.length}</span></summary><div class="compact-section-body">
@@ -166,10 +245,10 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
     <details class="compact-section" open><summary><h3>Tasks</h3><span>${feature.tasks?.length ?? 0}</span></summary><div class="compact-section-body">
       ${renderFeatureTasks(feature)}
     </div></details>
-    <details class="compact-section"><summary><h3>Blockers</h3><span>${feature.blockedReasons.length}</span></summary><div class="compact-section-body">
+    <details class="compact-section" open><summary><h3>Blockers</h3><span>${feature.blockedReasons.length}</span></summary><div class="compact-section-body">
       ${feature.blockedReasons.length === 0 ? emptyState("No blockers.") : feature.blockedReasons.map((reason) => `<div class="issue bad">${escapeHtml(reason)}</div>`).join("")}
     </div></details>
-    <details class="compact-section"><summary><h3>Traceability</h3><span>${feature.dependencies.length}</span></summary><div class="compact-section-body">
+    <details class="compact-section" open><summary><h3>Traceability</h3><span>${feature.dependencies.length}</span></summary><div class="compact-section-body">
       <div class="row"><span>Dependencies</span><strong>${escapeHtml(feature.dependencies.join(", ") || "-")}</strong></div>
     </div></details>`;
 }
@@ -217,11 +296,21 @@ function featureExecutionLabel(feature: SpecDriveIdeFeatureNode): string {
   return feature.latestExecutionStatus ?? feature.status ?? "Not Started";
 }
 
+function featureStatusKey(feature: SpecDriveIdeFeatureNode): string {
+  const status = normalizedFeatureStatus(feature);
+  const execution = (feature.latestExecutionStatus ?? "").toLowerCase();
+  if (feature.blockedReasons.length > 0 || status === "blocked" || status === "block") return "blocked";
+  if (execution === "running" || status === "running" || status === "in-process" || status === "in process") return "running";
+  if (isDoneFeature(feature)) return "done";
+  if (isReadyFeature(feature)) return "ready";
+  if (status === "draft" || status === "todo" || status === "planning") return "todo";
+  return status || "todo";
+}
+
 function renderFeatureStateFlow(feature: SpecDriveIdeFeatureNode): string {
   const resume = feature.resumeTarget;
   const rows: Array<[string, string]> = [
-    ["Current Status", feature.status],
-    ["Execution", featureExecutionLabel(feature)],
+    ["Current / Execution", `${feature.status} / ${featureExecutionLabel(feature)}`],
     ["Reason", feature.stateReason ?? firstFeatureStateReason(feature)],
     ["Review Reason", feature.latestReviewNeededReason ?? "none"],
     ["Review Message", feature.latestReview?.message ?? "none"],
@@ -449,18 +538,17 @@ function renderFeatureArtifacts(documents: SpecDriveIdeDocument[]): string {
 
 function renderTokenCost(token: SpecDriveIdeTokenConsumption | undefined): string {
   if (!token) return emptyState("No token consumption recorded.");
-  const rows: Array<[string, string]> = [
-    ["Model", token.model ?? "unknown"],
-    ["Input", formatInteger(token.inputTokens)],
-    ["Cached Input", formatInteger(token.cachedInputTokens)],
-    ["Output", formatInteger(token.outputTokens)],
-    ["Reasoning Output", formatInteger(token.reasoningOutputTokens)],
-    ["Total", formatInteger(token.totalTokens)],
-    ["Cost", formatCurrency(token.costUsd, token.currency)],
-    ["Pricing", token.pricingStatus],
-    ["Pricing Source", pricingSourceLabel(token.pricing)],
-  ];
-  return `<div class="token-mini-grid">${rows.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}</div>`;
+  return `<div class="token-cost-line">
+    <span>Model <strong>${escapeHtml(token.model ?? "unknown")}</strong></span>
+    <span>Input <strong>${escapeHtml(formatInteger(token.inputTokens))}</strong></span>
+    <span>Cached <strong>${escapeHtml(formatInteger(token.cachedInputTokens))}</strong></span>
+    <span>Output <strong>${escapeHtml(formatInteger(token.outputTokens))}</strong></span>
+    <span>Reasoning <strong>${escapeHtml(formatInteger(token.reasoningOutputTokens))}</strong></span>
+    <span>Total <strong>${escapeHtml(formatInteger(token.totalTokens))}</strong></span>
+    <span>Cost <strong>${escapeHtml(formatCurrency(token.costUsd, token.currency))}</strong></span>
+    <span>Pricing <strong>${escapeHtml(token.pricingStatus)}</strong></span>
+    <span>Source <strong>${escapeHtml(pricingSourceLabel(token.pricing))}</strong></span>
+  </div>`;
 }
 
 function pricingSourceLabel(pricing: Record<string, unknown> | undefined): string {
@@ -504,12 +592,22 @@ function groupFeaturePanels(features: SpecDriveIdeFeatureNode[]): FeaturePanelGr
     }
   }
   return [
-    { id: "blocked", title: "Blocked", statuses: "Blocked", features: blocked, open: true },
     { id: "in-process", title: "In-Process", statuses: "In process, running", features: inProcess, open: true },
+    { id: "blocked", title: "Blocked", statuses: "Blocked", features: blocked, open: true },
     { id: "todo", title: "Todo", statuses: "Todo, planning, draft", features: todo, open: true },
     { id: "ready", title: "Ready", statuses: "Ready", features: ready, open: true },
-    { id: "done", title: "Done", statuses: "Done", features: done, open: false },
+    { id: "done", title: "Done", statuses: "Done", features: sortDoneFeatures(done), open: true },
   ];
+}
+
+function sortDoneFeatures(features: SpecDriveIdeFeatureNode[]): SpecDriveIdeFeatureNode[] {
+  return [...features].sort((a, b) => featureDoneSortTime(b) - featureDoneSortTime(a) || a.id.localeCompare(b.id));
+}
+
+function featureDoneSortTime(feature: SpecDriveIdeFeatureNode): number {
+  const value = feature.latestExecutionCompletedAt ?? feature.latestExecutionCreatedAt ?? feature.tokenConsumption?.recordedAt;
+  const time = value ? Date.parse(value) : NaN;
+  return Number.isFinite(time) ? time : 0;
 }
 
 function isBlockedFeature(feature: SpecDriveIdeFeatureNode): boolean {

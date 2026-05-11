@@ -82,7 +82,7 @@ export function renderExecutionWorkbenchWebview(
           <main class="execution-layout">
             <section class="panel execution-queue-column">
               <div class="panel-title execution-panel-title"><h2>Execution Queue</h2><span>Total: ${queue.length}</span></div>
-              <div class="execution-queue-header" aria-hidden="true"><span>ID</span><span>Title</span><span>Status</span><span>Runner</span><span>Started / Duration</span><span>Action</span></div>
+              <div class="execution-queue-header" aria-hidden="true"><span>Title</span><span>Status</span><span>Runner</span><span>Started / Duration</span><span>Action</span></div>
               ${EXECUTION_QUEUE_GROUPS.map((group) => renderQueueGroup(group.label, queueGroupItems(group.statuses, grouped), selectedKey, group.open)).join("")}
             </section>
             <section class="panel current-selected-column">

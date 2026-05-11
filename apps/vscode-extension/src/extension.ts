@@ -1369,6 +1369,10 @@ async function openSystemSettings(provider: SpecExplorerProvider): Promise<void>
         await updateWorkbenchTheme(normalizeWorkbenchTheme(message.theme));
         return;
       }
+      if (message.command === "openWorkbenchView" && typeof message.view === "string") {
+        await openWorkbenchView(message.view, provider);
+        return;
+      }
       if (message.command === "refresh") {
         await render();
         return;
@@ -1407,6 +1411,10 @@ async function handleWorkbenchMessage(
       await render();
       return;
     }
+    if (message.command === "openWorkbenchView" && typeof message.view === "string") {
+      await openWorkbenchView(message.view, provider);
+      return;
+    }
     if (message.command === "openDocument" && typeof message.path === "string") {
       await openDocumentPath(message.path);
       return;
@@ -1443,6 +1451,24 @@ async function handleWorkbenchMessage(
     }
   } catch (error) {
     await vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function openWorkbenchView(view: string, provider: SpecExplorerProvider): Promise<void> {
+  if (view === "executionWorkbench") {
+    await openExecutionWorkbench(provider);
+    return;
+  }
+  if (view === "specWorkspace") {
+    await openSpecWorkspace(provider);
+    return;
+  }
+  if (view === "featureSpec") {
+    await openFeatureSpec(provider);
+    return;
+  }
+  if (view === "systemSettings") {
+    await openSystemSettings(provider);
   }
 }
 
@@ -1722,9 +1748,8 @@ async function collectUiConceptImages(
   if (!rootUri) return [];
   const uiSpecDetail = await latestUiSpecExecutionDetail(view);
   const artifacts = uiConceptImageArtifacts(uiSpecDetail);
-  const candidates = artifacts.length > 0
-    ? artifacts
-    : await discoverUiConceptImages(rootUri, "docs/ui/concepts");
+  const discovered = await discoverUiConceptImages(rootUri, "docs/ui/concepts");
+  const candidates = [...artifacts, ...discovered];
   const images: UiConceptImage[] = [];
   const seen = new Set<string>();
   for (const [label, path] of candidates) {

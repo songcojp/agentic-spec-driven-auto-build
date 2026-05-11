@@ -51,6 +51,8 @@ export type SpecDriveIdeFeatureNode = {
   latestExecutionId?: string;
   latestSchedulerJobId?: string;
   latestExecutionStatus?: string;
+  latestExecutionCompletedAt?: string;
+  latestExecutionCreatedAt?: string;
   latestReviewItemId?: string;
   latestReviewStatus?: string;
   latestReviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
@@ -1500,6 +1502,8 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         latestExecutionId,
         latestSchedulerJobId,
         latestExecutionStatus,
+        latestExecutionCompletedAt: latestExecutionForProjection?.completedAt,
+        latestExecutionCreatedAt: latestExecutionForProjection?.createdAt,
         latestReviewItemId: latestReview?.id,
         latestReviewStatus: latestReview?.status,
         latestReviewNeededReason: latestReview?.reviewNeededReason,
@@ -1772,6 +1776,9 @@ function readLatestExecutionsByFeature(
           er.id,
           er.scheduler_job_id,
           er.status,
+          er.completed_at,
+          er.created_at,
+          er.updated_at,
           er.context_json,
           tcr.run_id,
           tcr.scheduler_job_id,
@@ -1809,6 +1816,9 @@ function readLatestExecutionsByFeature(
       executionId: String(row.id),
       schedulerJobId: optionalString(row.scheduler_job_id),
       status: String(row.status),
+      completedAt: optionalString(row.completed_at),
+      createdAt: optionalString(row.created_at),
+      updatedAt: optionalString(row.updated_at),
       tokenConsumption: tokenConsumptionFromRow(row),
     };
     if (!existing.latest) {
@@ -1826,6 +1836,9 @@ type FeatureExecutionProjection = {
   executionId: string;
   schedulerJobId?: string;
   status: string;
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
   tokenConsumption?: SpecDriveIdeTokenConsumption;
 };
 

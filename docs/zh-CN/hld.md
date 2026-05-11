@@ -521,6 +521,7 @@ Responsibilities:
 - 提供 Spec Explorer，展示 PRD、requirements、HLD、Feature Specs、Task Queue、Execution Record 和最近 Codex 会话。
 - 提供独立 Execution Workbench Webview，默认聚焦 Job 队列、自动执行控制、当前运行、阻塞/审批、Execution Record 和运行结果投影。
 - 提供独立 System Settings Webview，展示并管理 CLI Adapter 与 RPC Adapter active/draft/preset、校验结果、dry-run/probe 和 JSON 配置。
+- 在独立 Webview 共享壳提供左侧导航栏，覆盖 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings；导航点击由 VSCode extension host 打开对应 Webview，折叠状态只保存在工作台级 localStorage，不在各页面 Webview state 中保存副本。
 - 提供项目级执行偏好设置，保存默认 run mode (`cli` / `rpc`) 与对应 Execution Adapter provider；Execution Workbench 在新建 Job 前可提交 Job 级执行偏好覆盖项目默认。
 - 提供 Feature Spec Webview 的 New Feature 受控输入、Feature index 与 Feature 文件夹同步刷新、Feature 详情 `tasks.md` 解析和任务状态展示。
 - Feature Spec Webview 对 need review / review_needed Feature 提供与 Product Console 一致的 ReviewItem 审批入口，审批通过后由 Review Center 恢复继续执行；`Pass` 仅作为隐藏的临时状态重置命令保留，由 Control Plane 同步 Feature `spec-state.json`、Execution Record 和 Scheduler Job 完成状态；Webview 不直接写运行事实源。
