@@ -5133,7 +5133,7 @@ function defaultApproveStatus(item: ReturnType<typeof listReviewCenterItems>[num
     const pausedStatus = item.body.pausedTaskStatus;
     return pausedStatus && ["backlog", "ready", "scheduled", "running", "checking"].includes(pausedStatus)
       ? pausedStatus
-      : pausedStatus === "failed" || pausedStatus === "blocked" || pausedStatus === "done" || pausedStatus === "delivered"
+      : pausedStatus === "done" || pausedStatus === "delivered"
         ? undefined
         : "ready";
   }
@@ -5141,7 +5141,7 @@ function defaultApproveStatus(item: ReturnType<typeof listReviewCenterItems>[num
     const pausedStatus = item.body.pausedFeatureStatus;
     return pausedStatus && !["draft", "review_needed", "failed", "blocked", "done", "delivered"].includes(pausedStatus)
       ? pausedStatus
-      : pausedStatus === "failed" || pausedStatus === "blocked" || pausedStatus === "done" || pausedStatus === "delivered"
+      : pausedStatus === "done" || pausedStatus === "delivered"
         ? undefined
         : "ready";
   }

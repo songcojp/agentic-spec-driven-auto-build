@@ -1012,6 +1012,59 @@ test("product console approve_review resumes the paused task state", () => {
   assert.equal(result.queries.task[0].status, "running");
 });
 
+test("product console approve_review unblocks blocked work for rerun", () => {
+  const dbPath = seedReviewData();
+  runSqlite(dbPath, [
+    { sql: "UPDATE features SET status = 'blocked' WHERE id = 'FEAT-011'" },
+    { sql: "UPDATE tasks SET status = 'blocked' WHERE id = 'TASK-011'" },
+  ]);
+  createReviewItem(dbPath, {
+    id: "REV-CONSOLE-UNBLOCK-FEATURE",
+    featureId: "FEAT-011",
+    message: "Blocked Feature needs approval before rerun.",
+    reviewNeededReason: "approval_needed",
+    triggerReasons: ["permission_escalation"],
+    now: stableDate,
+  });
+  createReviewItem(dbPath, {
+    id: "REV-CONSOLE-UNBLOCK-TASK",
+    taskId: "TASK-011",
+    message: "Blocked task needs approval before rerun.",
+    reviewNeededReason: "approval_needed",
+    triggerReasons: ["permission_escalation"],
+    now: new Date("2026-04-28T12:01:00.000Z"),
+  });
+
+  submitConsoleCommand(dbPath, {
+    action: "approve_review",
+    entityType: "review_item",
+    entityId: "REV-CONSOLE-UNBLOCK-FEATURE",
+    requestedBy: "reviewer",
+    reason: "Approved for rerun.",
+    now: new Date("2026-04-28T12:02:00.000Z"),
+  });
+  submitConsoleCommand(dbPath, {
+    action: "approve_review",
+    entityType: "review_item",
+    entityId: "REV-CONSOLE-UNBLOCK-TASK",
+    requestedBy: "reviewer",
+    reason: "Approved for rerun.",
+    now: new Date("2026-04-28T12:03:00.000Z"),
+  });
+
+  const result = runSqlite(dbPath, [], [
+    { name: "feature", sql: "SELECT status FROM features WHERE id = 'FEAT-011'" },
+    { name: "task", sql: "SELECT status FROM tasks WHERE id = 'TASK-011'" },
+    { name: "approvals", sql: "SELECT review_item_id, decision FROM approval_records ORDER BY review_item_id" },
+  ]);
+  assert.equal(result.queries.feature[0].status, "ready");
+  assert.equal(result.queries.task[0].status, "ready");
+  assert.deepEqual(result.queries.approvals, [
+    { review_item_id: "REV-CONSOLE-UNBLOCK-FEATURE", decision: "approve_continue" },
+    { review_item_id: "REV-CONSOLE-UNBLOCK-TASK", decision: "approve_continue" },
+  ]);
+});
+
 test("task review approval restores parent feature to paused lifecycle stage", () => {
   const dbPath = seedReviewData();
   runSqlite(dbPath, [

@@ -224,7 +224,11 @@ function renderFeatureStateFlow(feature: SpecDriveIdeFeatureNode): string {
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
     ["Next Action", featureStateNextAction(feature)],
   ];
-  return `<div class="result-group state-flow">${rows.map(renderFeatureStateRow).join("")}</div>`;
+  return `<div class="result-group state-flow feature-state-flow-compact">${rows.map(renderFeatureStateItem).join("")}</div>`;
+}
+
+function renderFeatureStateItem([label, value]: [string, string]): string {
+  return `<div class="feature-state-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
 function renderFeatureStateRow([label, value]: [string, string]): string {

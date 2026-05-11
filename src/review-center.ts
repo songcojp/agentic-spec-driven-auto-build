@@ -404,7 +404,7 @@ function buildApprovalTransition(dbPath: string, item: ReviewCenterItem, input: 
     if (from === to) {
       return approvalSelfTransition("task", item.taskId, from, to, input.reason, evidence, occurredAt);
     }
-    if (input.decision === "approve_continue" && ["blocked", "failed"].includes(from)) {
+    if (input.decision === "approve_continue" && ["blocked", "failed"].includes(from) && !taskRowExists(dbPath, item.taskId)) {
       throw new Error(`Illegal task transition for ${item.taskId}: ${from} -> ${to}`);
     }
     if (isReviewReopen(input, from, to)) {
@@ -514,7 +514,7 @@ function approvalTargetStatusStatements(item: ReviewItem, input: RecordApprovalI
             )`,
         params: [transition.to, updatedAt, item.taskId, item.featureId ?? "", item.taskId, item.featureId ?? "", item.taskId],
       },
-      ...parentFeatureStatusStatements(item.featureId, updatedAt, item.body.pausedFeatureStatus),
+      ...parentFeatureStatusStatements(item.featureId, updatedAt, parentFeatureResumeStatusForTaskApproval(item, input)),
     ];
   }
   if (transition.entityType === "feature" && item.featureId) {
@@ -525,6 +525,20 @@ function approvalTargetStatusStatements(item: ReviewItem, input: RecordApprovalI
     ];
   }
   return [];
+}
+
+function taskRowExists(dbPath: string, taskId: string): boolean {
+  const result = runSqlite(dbPath, [], [
+    { name: "task", sql: "SELECT 1 AS found FROM tasks WHERE id = ? LIMIT 1", params: [taskId] },
+  ]);
+  return result.queries.task.length > 0;
+}
+
+function parentFeatureResumeStatusForTaskApproval(item: ReviewItem, input: RecordApprovalInput): FeatureLifecycleStatus | undefined {
+  if (input.decision === "approve_continue" && input.targetStatus === "ready" && ["blocked", "failed"].includes(item.body.pausedFeatureStatus ?? "")) {
+    return "ready";
+  }
+  return item.body.pausedFeatureStatus;
 }
 
 function featureChildRestoreStatements(item: ReviewItem, input: RecordApprovalInput, updatedAt: string): SqlStatement[] {

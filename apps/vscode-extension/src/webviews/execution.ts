@@ -14,6 +14,7 @@ import {
   queueButton,
   renderQueueGroup,
   renderRawLogRefs,
+  renderWorkbenchInputForm,
   renderWorkbenchPage,
   statusClass,
   textBlock,
@@ -54,6 +55,7 @@ export function renderExecutionWorkbenchWebview(
       ${autoRefreshSwitch(autoRefreshEnabled)}
     </section>
     <div id="workbench-status" class="status-text" role="status" aria-live="polite">${escapeHtml(selectedItem ? `Selected job: ${selectedItem.executionId ?? selectedItem.schedulerJobId ?? "unknown"} · ${selectedItem.status}` : "Select a job to enable job actions.")}</div>
+    ${renderWorkbenchInputForm()}
     <main class="execution-layout">
       <section class="panel execution-queue-column">
         <div class="panel-title"><h2>Execution Queue</h2><span>${queue.length} items</span></div>
@@ -74,18 +76,12 @@ export function renderExecutionWorkbenchWebview(
         ${renderTokenConsumption(executionDetail)}
         <h3>Raw Log Refs</h3>
         ${renderRawLogRefs(detail)}
-        <h3>Diff Summary</h3>
-        ${compactJsonBlock(executionDetail?.diffSummary ?? null)}
-        <h3>SkillOutputContractV1</h3>
-        ${compactJsonBlock(executionDetail?.skillOutputContract ?? null)}
         <div class="section-title"><h2>Blockers & Approvals</h2><span>${blockerApprovalCount}</span></div>
         ${renderBlockersAndApprovals(selectedBlockers, executionDetail)}
         <div class="section-title"><h2>Result Projection</h2><span>spec-state.json</span></div>
         ${renderSkillOutputSummary(executionDetail)}
         <h3>Produced Artifacts</h3>
         ${renderProducedArtifacts(executionDetail)}
-        <h3>Additional Result</h3>
-        ${renderAdditionalResult(executionDetail)}
       </section>
     </main>
   `, undefined, locale);
@@ -194,7 +190,12 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
     ["Next Action", stateFlowNextAction(item)],
   ];
-  return `<div class="result-group state-flow">${rows.map(renderStateFlowRow).join("")}</div>`;
+  return `<div class="result-group state-flow state-flow-compact">${rows.map(renderStateFlowItem).join("")}</div>`;
+}
+
+function renderStateFlowItem([label, value]: [string, string]): string {
+  const reason = label === "Reason";
+  return `<div class="state-flow-item${reason ? " state-flow-reason" : ""}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
 function renderStateFlowRow([label, value]: [string, string]): string {
@@ -259,7 +260,6 @@ function resultProjection(detail: SpecDriveIdeExecutionDetail | undefined): unkn
   return {
     status: detail.status,
     summary: output.summary ?? detail.summary,
-    nextAction: output.nextAction,
     featureId: detail.featureId,
     taskId: detail.taskId,
     executionId: detail.executionId,
@@ -276,7 +276,6 @@ function renderSkillOutputSummary(detail: SpecDriveIdeExecutionDetail | undefine
   return `
     <div class="result-summary">
       <div class="result-status"><span class="badge ${statusClass(detail.status)}">${escapeHtml(detail.status)}</span><strong data-i18n-skip>${escapeHtml(String(projection.summary ?? "No summary."))}</strong></div>
-      <div class="row row-stacked"><span>Next Action</span><span>${escapeHtml(stringOrNone(output?.nextAction))}</span></div>
       ${renderTraceabilityChips(output?.traceability, detail)}
     </div>
     ${renderResultGroups(result)}
@@ -327,9 +326,9 @@ function renderProducedArtifacts(detail: SpecDriveIdeExecutionDetail | undefined
 
 function renderResultGroups(result: Record<string, unknown>): string {
   const groups: Array<[string, string[]]> = [
-    ["Decision", ["decision", "reason", "selectedFeature", "featureId", "blockedReason"]],
+    ["Decision", ["reason", "selectedFeature", "featureId"]],
     ["Commands", ["commands", "commandsChecked"]],
-    ["Verification", ["verification", "statusChecker", "failureClassification", "recommendedNextAction"]],
+    ["Verification", ["verification", "statusChecker", "failureClassification"]],
     ["Blockers", ["blockers", "blockedReasons", "openQuestions", "residualQuestions"]],
     ["Findings", ["findings", "specDriftFindings", "requiredFixes"]],
     ["Risks", ["risks", "residualRisks", "residualRisk"]],
@@ -348,6 +347,7 @@ function renderResultGroup(title: string, keys: string[], result: Record<string,
 }
 
 function renderResultEntry(groupTitle: string, key: string, value: unknown): string {
+  if (key === "gitDelivery") return renderGitDeliveryEntry(value);
   const wide = isWideResultValue(key, value);
   const entryLabel = labelize(key);
   const label = wide && entryLabel === groupTitle ? "" : `<span>${escapeHtml(entryLabel)}</span>`;
@@ -355,16 +355,43 @@ function renderResultEntry(groupTitle: string, key: string, value: unknown): str
   return `<div class="result-entry${wide ? " result-entry-wide" : ""}">${label}${valueHtml}</div>`;
 }
 
-function isWideResultValue(key: string, value: unknown): boolean {
-  if (["gitDelivery", "commands", "verification", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"].includes(key)) return true;
-  return value !== null && typeof value === "object";
+function renderGitDeliveryEntry(value: unknown): string {
+  const prUrl = gitDeliveryPrUrl(value);
+  const prLink = prUrl
+    ? `<a href="${escapeAttr(prUrl)}">${escapeHtml(prUrl)}</a>`
+    : `<span class="muted">No PR link recorded.</span>`;
+  return `<div class="result-entry"><span>PR</span><span data-i18n-skip>${prLink}</span></div>`;
 }
 
-function renderAdditionalResult(detail: SpecDriveIdeExecutionDetail | undefined): string {
-  const result = resultRecord(skillOutputRecord(detail));
-  const known = new Set(["decision", "reason", "selectedFeature", "featureId", "blockedReason", "commands", "commandsChecked", "verification", "statusChecker", "failureClassification", "recommendedNextAction", "blockers", "blockedReasons", "openQuestions", "residualQuestions", "findings", "specDriftFindings", "requiredFixes", "risks", "residualRisks", "residualRisk", "coverage", "traceabilityMatrix", "userStoryMapping", "gitDelivery", "updatedDocuments", "updatedArtifacts", "affectedDocuments"]);
-  const additional = Object.fromEntries(Object.entries(result).filter(([key]) => !known.has(key)));
-  return Object.keys(additional).length > 0 ? compactJsonBlock(additional) : emptyState("No additional result fields.");
+function gitDeliveryPrUrl(value: unknown): string | undefined {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const direct = firstSafeUrl(record.prUrl, record.pullRequestUrl, record.url);
+  if (direct) return direct;
+  const pullRequest = record.pullRequest && typeof record.pullRequest === "object" && !Array.isArray(record.pullRequest)
+    ? record.pullRequest as Record<string, unknown>
+    : {};
+  return firstSafeUrl(pullRequest.url, pullRequest.htmlUrl);
+}
+
+function firstSafeUrl(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value !== "string" || value.trim().length === 0) continue;
+    const url = value.trim();
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === "https:" || parsed.protocol === "http:") return url;
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
+}
+
+function isWideResultValue(key: string, value: unknown): boolean {
+  if (["commands", "verification", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"].includes(key)) return true;
+  return value !== null && typeof value === "object";
 }
 
 function renderResultValue(value: unknown): string {
@@ -538,8 +565,6 @@ export function renderExecutionWebview(item: SpecDriveIdeExecutionDetail | SpecD
     ${executionFieldsHtml(item)}
     <h2>Thread / Turn</h2>
     <ul><li>Thread: <code>${escapeHtml(item.threadId ?? "none")}</code></li><li>Turn: <code>${escapeHtml(item.turnId ?? "none")}</code></li></ul>
-    <h2>Diff Summary</h2>
-    ${jsonBlock(detail?.diffSummary ?? null)}
     <h2>Produced Artifacts</h2>
     ${jsonBlock(detail?.producedArtifacts ?? [])}
     <h2>Output Schema</h2>
