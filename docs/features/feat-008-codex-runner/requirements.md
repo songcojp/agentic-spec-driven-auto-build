@@ -10,7 +10,7 @@
 
 ## Scope
 
-- 通过 CLI Adapter 调用 Codex CLI、Google Gemini CLI 或后续等价编码 CLI 执行代码修改、测试或修复，默认 adapter 为 `codex-cli`，内置可选 adapter 为 `gemini-cli`。
+- 通过 CLI Adapter 调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价编码 CLI 执行代码修改、测试或修复，默认 adapter 为 `codex-cli`，内置可选 adapter 为 `gemini-cli` 和 `claude-cli`。
 - 通过 BullMQ `cli.run` job 调度 Execution Adapter Worker；Console 运行动作不得直接执行 CLI，后续远程/app-server 执行由 `rpc.run` 和 RPC Adapter 承载。
 - CLI Adapter 只消费已审计的 scheduler job / Execution Record / invocation contract，不提供给 Product Console 直接执行 shell 或 CLI 的接口。
 - 编码 CLI 必须在目标项目 workspace 中启动，workspace root 来自当前项目 repository `local_path` 或 `target_repo_path`。
@@ -31,13 +31,13 @@
 
 ## User Value
 
-系统可以用受安全策略约束的方式调用 Codex CLI 或 Google Gemini CLI 等编码 CLI，让自动编码、测试和修复具备可审计输出、可恢复 session 和可观察心跳。
+系统可以用受安全策略约束的方式调用 Codex CLI、Google Gemini CLI 或 Claude Code CLI 等编码 CLI，让自动编码、测试和修复具备可审计输出、可恢复 session 和可观察心跳。
 
 ## Requirements
 
 - CLI Adapter 必须产出结构化 SkillOutputContractV1 或原始执行结果，并投影为 `ExecutionAdapterResultV1`，供 Execution Record、raw logs 和 Status Checker 消费。
 - Execution Adapter Worker 必须读取已排期 Execution Record、active CLI Adapter、workspace root 和状态检查配置后执行。
-- CLI Adapter 不得在调度器、状态机或任务图中硬编码 Codex、Gemini 或其他编码 CLI 命令细节。
+- CLI Adapter 不得在调度器、状态机或任务图中硬编码 Codex、Gemini、Claude 或其他编码 CLI 命令细节。
 - CLI Adapter 不得绕过受控命令和 Scheduler 直接响应 UI 写操作；所有执行类入口必须有 Execution Record、job、audit 和 raw log 追踪。
 - CLI Adapter 必须在启动前校验 workspace root；项目路径缺失、不可读或缺少必要 `.agents/skills` / `AGENTS.md` 时进入 blocked。
 - `feature_execution` 的 `ExecutionAdapterInvocationV1.skillInstruction` 必须包含 Feature Spec `requirements.md`、`design.md` 和 `tasks.md` 作为 `sourcePaths`；缺失完整 Feature Spec 目录时，新执行必须 blocked。
@@ -52,7 +52,7 @@
 - CLI Adapter 必须以 `execution_records` 作为执行状态主表；不得为 `cli.run` 创建或更新旧 `runs` 记录。
 - 每次 Execution Adapter run 必须在 `.autobuild/runs/<executionId>/report.json` 写入一份独立 Run Report，合并 exit/session、SkillOutputContractV1、contract validation、产物、usage 和 log refs；Feature execution 默认 expected artifact 指向该 run report，不再写入共享 `.autobuild/reports/feature-execution.json`。
 - CLI Adapter 配置必须以 JSON 为唯一事实源，并支持 dry-run 校验。
-- CLI Adapter 必须提供 `codex-cli` 和 `gemini-cli` 内置 adapter preset；Gemini CLI preset 必须通过 headless JSON/JSONL 输出和 SkillOutputContractV1 事后校验接入，不要求 Gemini CLI 支持 Codex 风格自定义 output schema 参数。
+- CLI Adapter 必须提供 `codex-cli`、`gemini-cli` 和 `claude-cli` 内置 adapter preset；Gemini CLI preset 必须通过 headless JSON/JSONL 输出和 SkillOutputContractV1 事后校验接入，不要求 Gemini CLI 支持 Codex 风格自定义 output schema 参数；Claude Code CLI preset 必须通过 `claude -p --output-format json --json-schema` 输出和 `structured_output` 事后校验接入。
 - CLI Adapter 配置必须支持可选 `imageGeneration` 接口定义，用于声明 adapter 是否支持直接图像生成、支持哪些图像操作、调用入口、默认图像模型、模型环境变量、必需环境变量和输出格式；该定义必须投影为 Execution Adapter capability，供后续 UI / Scheduler 直接选择可产出 image artifact 的 provider。
 - `codex-cli` preset 的图像生成接口必须声明 Codex CLI 内置 `$imagegen` Skill，默认图像模型为 `gpt-image-2`；`gemini-cli` preset 的图像生成接口必须声明 Nano Banana Gemini CLI extension 命令，包括 `/generate`、`/edit`、`/restore`、`/icon`、`/pattern`、`/story`、`/diagram` 和 `/nanobanana`，并允许通过 `NANOBANANA_MODEL` 切换图像模型。
 - 开发阶段高风险任务默认以 `danger-full-access` 和 `approval=never` 执行；敏感文件、危险命令和 forbidden files 仍必须触发安全规则。
@@ -69,6 +69,7 @@
 
 - [ ] `codex-cli` adapter 可以在指定 workspace root 中启动 Codex CLI。
 - [ ] `gemini-cli` adapter 可以通过 active CLI Adapter 配置在指定 workspace root 中启动 Google Gemini CLI。
+- [ ] `claude-cli` adapter 可以通过 active CLI Adapter 配置在指定 workspace root 中启动 Claude Code CLI，并从完整 stdout JSON 的 `structured_output` 提取 SkillOutputContractV1。
 - [ ] `codex-cli` 和 `gemini-cli` adapter preset 会把图像生成接口投影为 `image-generation` capability，并保留 provider 专属命令/模型/环境变量约定。
 - [ ] `codex-cli` adapter 在 mock CLI adapter 中收到的 cwd 等于目标项目 workspace root。
 - [ ] Feature 级 `schedule_run` 可以在完整 Feature Spec 目录存在时产生 `cli.run` scheduler job，Worker 执行后持久化 session/log/status check 并回写 Execution Record 状态。
@@ -86,5 +87,5 @@
 
 ## Risks and Open Questions
 
-- Codex/Gemini CLI 输出格式、命令参数和 session resume 能力需要通过适配层隔离。
+- Codex/Gemini/Claude CLI 输出格式、命令参数和 session resume 能力需要通过适配层隔离。
 - 危险命令和 forbidden files 规则需要与 Review Center 保持一致。

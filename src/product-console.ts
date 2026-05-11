@@ -29,6 +29,7 @@ import {
   type ScheduleTriggerMode,
 } from "./orchestration.ts";
 import {
+  CLAUDE_CLI_ADAPTER_CONFIG,
   DEFAULT_CLI_ADAPTER_CONFIG,
   GEMINI_CLI_ADAPTER_CONFIG,
   dryRunCliAdapterConfig,
@@ -2318,7 +2319,7 @@ export function buildSystemSettingsView(dbPath: string): SystemSettingsViewModel
     cliAdapter: {
       active,
       draft,
-      presets: [DEFAULT_CLI_ADAPTER_CONFIG, GEMINI_CLI_ADAPTER_CONFIG],
+      presets: [DEFAULT_CLI_ADAPTER_CONFIG, GEMINI_CLI_ADAPTER_CONFIG, CLAUDE_CLI_ADAPTER_CONFIG],
       validation: validateCliAdapterConfig(draft ?? active),
       lastDryRun: dryRun,
     },
@@ -6188,7 +6189,7 @@ function readRpcAdapterRows(dbPath: string): Record<string, unknown>[] {
 
 function uniqueCliAdapters(rows: Record<string, unknown>[]): CliAdapterConfig[] {
   const byId = new Map<string, CliAdapterConfig>();
-  for (const adapter of [DEFAULT_CLI_ADAPTER_CONFIG, GEMINI_CLI_ADAPTER_CONFIG, ...rows.map(cliAdapterFromRow)]) {
+  for (const adapter of [DEFAULT_CLI_ADAPTER_CONFIG, GEMINI_CLI_ADAPTER_CONFIG, CLAUDE_CLI_ADAPTER_CONFIG, ...rows.map(cliAdapterFromRow)]) {
     byId.set(adapter.id, adapter);
   }
   return [...byId.values()];

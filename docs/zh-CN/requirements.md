@@ -448,7 +448,7 @@ THE SYSTEM SHALL 恢复未完成 Run、Running 任务、Scheduled 任务、Execu
 优先级：Must
 
 WHEN 任务需要代码修改、测试或修复
-THE SYSTEM SHALL 通过 CLI Adapter 在目标项目 workspace 中调用 Codex CLI、Google Gemini CLI 或后续等价编码 CLI，并要求输出符合 SkillOutput/Execution Result schema。
+THE SYSTEM SHALL 通过 CLI Adapter 在目标项目 workspace 中调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价编码 CLI，并要求输出符合 SkillOutput/Execution Result schema。
 
 验收：
 - [ ] CLI Adapter 产出结构化 Execution Result。
@@ -480,11 +480,11 @@ THE SYSTEM SHALL 阻止自动执行或路由到人工审批。
 优先级：Must
 
 WHEN Execution Adapter Layer 需要启动外部 CLI 执行任务
-THE SYSTEM SHALL 通过 active CLI Adapter 解析 executable、argument template、workspace root、session resume、output mode、执行结果映射和安全能力，不得在调度器或状态机中硬编码 Codex 或 Gemini 命令细节。
+THE SYSTEM SHALL 通过 active CLI Adapter 解析 executable、argument template、workspace root、session resume、output mode、执行结果映射和安全能力，不得在调度器或状态机中硬编码 Codex、Gemini 或 Claude 命令细节。
 
 验收：
 - [ ] 默认 `codex-cli` adapter 能生成与现有 Codex 执行等价的命令。
-- [ ] 系统提供 `codex-cli` 和 `gemini-cli` 内置 preset；Gemini CLI 通过 headless `--output-format stream-json` 输出接入，使用 `--skip-trust`、`--approval-mode` 和 `-p` 承载非交互执行，并由 Execution Adapter 从 `init`、`message`、`tool_use`、`tool_result`、`error`、`result` 事件中提取 session、日志、token usage 和 SkillOutputContractV1 做事后校验。
+- [ ] 系统提供 `codex-cli`、`gemini-cli` 和 `claude-cli` 内置 preset；Gemini CLI 通过 headless `--output-format stream-json` 输出接入，使用 `--skip-trust`、`--approval-mode` 和 `-p` 承载非交互执行，并由 Execution Adapter 从 `init`、`message`、`tool_use`、`tool_result`、`error`、`result` 事件中提取 session、日志、token usage 和 SkillOutputContractV1 做事后校验；Claude Code CLI 通过 `claude -p --output-format json --json-schema` 接入，并从 `structured_output` 提取最终 SkillOutputContractV1。
 - [ ] Execution Policy 解析结果与 adapter 配置合并后仍保留 sandbox、approval、model、profile、output schema 和 workspace root 约束。
 - [ ] CLI / RPC adapter 的 `defaults.costRates` 是模型 token 费率唯一配置入口；每次 token 成本计算必须使用该次执行最终 adapter 的费率快照，不得使用当前 active adapter 费率重算历史。
 - [ ] active CLI Adapter 必须在启动前解析并校验项目 workspace root；项目路径缺失、不可读或不是可用 workspace 时，新 Run 进入 blocked 并展示原因。

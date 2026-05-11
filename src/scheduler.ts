@@ -9,6 +9,7 @@ import {
 } from "./orchestration.ts";
 import {
   buildExecutionInvocationPrompt,
+  CLAUDE_CLI_ADAPTER_CONFIG,
   DEFAULT_CLI_ADAPTER_CONFIG,
   DEFAULT_OUTPUT_SCHEMA,
   GEMINI_CLI_ADAPTER_CONFIG,
@@ -1711,6 +1712,7 @@ function adapterFromRow(row?: Record<string, unknown>): CliAdapterConfig {
 function builtinCliAdapter(id?: string): CliAdapterConfig | undefined {
   if (id === DEFAULT_CLI_ADAPTER_CONFIG.id) return DEFAULT_CLI_ADAPTER_CONFIG;
   if (id === GEMINI_CLI_ADAPTER_CONFIG.id) return GEMINI_CLI_ADAPTER_CONFIG;
+  if (id === CLAUDE_CLI_ADAPTER_CONFIG.id) return CLAUDE_CLI_ADAPTER_CONFIG;
   return undefined;
 }
 

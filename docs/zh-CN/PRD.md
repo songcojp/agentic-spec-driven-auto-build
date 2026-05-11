@@ -748,7 +748,7 @@ Console 中的项目级 `schedule_run` 和 `start_auto_run` 返回调度触发 I
 
 #### FR-070 编码 CLI 执行
 
-系统通过 Runner CLI Adapter 调用 Codex CLI、Google Gemini CLI 或后续等价编码 CLI。Codex 是 MVP 默认 adapter，Gemini 是内置可选 adapter preset；Runner 不得把命令模板、参数映射、输出解析和 session resume 逻辑硬编码到调度状态机中。
+系统通过 Runner CLI Adapter 调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价编码 CLI。Codex 是 MVP 默认 adapter，Gemini 和 Claude 是内置可选 adapter preset；Runner 不得把命令模板、参数映射、输出解析和 session resume 逻辑硬编码到调度状态机中。
 
 编码 CLI 调用必须以当前项目 workspace 启动。workspace root 的来源优先级为当前项目 repository `local_path`、项目 `target_repo_path`；不得回退到 SpecDrive Control Plane 进程运行目录。缺少项目路径、路径不可读、不是可用 workspace，或 workspace 中缺少所需 `.agents/skills/*` / `AGENTS.md` 时，新 Run 必须进入 blocked 并给出可观察原因。
 

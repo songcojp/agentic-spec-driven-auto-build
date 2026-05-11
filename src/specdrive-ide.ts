@@ -2677,6 +2677,7 @@ function readExecutionPreferenceOptions(dbPath: string, projectId?: string): Spe
   const cliAdapters = uniqueAdapterOptions([
     { id: "codex-cli", display_name: "Codex CLI", status: "active" },
     { id: "gemini-cli", display_name: "Google Gemini CLI", status: "draft" },
+    { id: "claude-cli", display_name: "Claude Code CLI", status: "draft" },
     ...result.queries.cli,
   ]);
   const rpcAdapters = uniqueAdapterOptions([

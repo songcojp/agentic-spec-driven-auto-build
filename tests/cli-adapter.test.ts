@@ -9,6 +9,7 @@ import {
   buildExecutionResultInput,
   buildExecutionInvocationPrompt,
   buildRunnerConsoleSnapshot,
+  CLAUDE_CLI_ADAPTER_CONFIG,
   cliAdapterConfigToExecutionAdapterConfig,
   DEFAULT_CLI_ADAPTER_CONFIG,
   GEMINI_CLI_ADAPTER_CONFIG,
@@ -307,6 +308,56 @@ test("Gemini CLI adapter preset validates and dry-renders headless stream-json c
     "Implement bounded task",
   ]);
   assert.equal(result.args?.includes("--output-schema"), false);
+});
+
+test("Claude Code CLI adapter preset validates and dry-renders structured JSON command", () => {
+  const result = dryRunCliAdapterConfig({
+    config: CLAUDE_CLI_ADAPTER_CONFIG,
+    prompt: "Implement bounded task",
+    outputSchemaPath: "/tmp/runner-output.schema.json",
+  });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.command, "claude");
+  const args = result.args ?? [];
+  assert.equal(CLAUDE_CLI_ADAPTER_CONFIG.defaults.model, "sonnet");
+  assert.ok(CLAUDE_CLI_ADAPTER_CONFIG.environmentAllowlist.includes("ANTHROPIC_API_KEY"));
+  assert.ok(CLAUDE_CLI_ADAPTER_CONFIG.environmentAllowlist.includes("CLAUDE_CODE_OAUTH_TOKEN"));
+  assert.deepEqual(args.slice(0, 10), [
+    "-p",
+    "Implement bounded task",
+    "--model",
+    "sonnet",
+    "--effort",
+    "medium",
+    "--output-format",
+    "json",
+    "--json-schema",
+    args[9],
+  ]);
+  assert.doesNotThrow(() => JSON.parse(String(args[9])));
+  assert.equal(args.includes("--permission-mode"), true);
+  assert.equal(args[args.indexOf("--permission-mode") + 1], "acceptEdits");
+  assert.equal(args[args.indexOf("--allowedTools") + 1], "Bash,Read,Edit,Write,Glob,Grep");
+
+  const resumePolicy = resolveRunnerPolicy({
+    runId: "RUN-CLAUDE-RESUME",
+    risk: "low",
+    workspaceRoot: "/workspace/project",
+    resumeSessionId: "SESSION-CLAUDE",
+    now: stableDate,
+  });
+  const rendered = renderCliAdapterCommand({
+    config: CLAUDE_CLI_ADAPTER_CONFIG,
+    policy: resumePolicy,
+    prompt: "Continue bounded task",
+    outputSchemaPath: "/tmp/runner-output.schema.json",
+  });
+
+  assert.equal(rendered.args[0], "-p");
+  assert.ok(rendered.args[1].includes("Continue bounded task"));
+  assert.equal(rendered.args[2], "--resume");
+  assert.equal(rendered.args[3], "SESSION-CLAUDE");
 });
 
 test("default SkillOutputContract schema is valid for Codex strict JSON schema", () => {
@@ -1282,6 +1333,70 @@ test("Gemini CLI adapter extracts session, usage, and SkillOutputContract from s
 
   const outputLog = JSON.parse(readFileSync(result.rawLog.files?.output ?? "", "utf8"));
   assert.deepEqual(outputLog.usage, { inputTokens: 11, outputTokens: 7 });
+});
+
+test("Claude Code CLI adapter extracts session and SkillOutputContract from structured output JSON", async () => {
+  const workspaceRoot = makeWorkspacePath();
+  const policy = resolveRunnerPolicy({
+    runId: "RUN-CLAUDE",
+    risk: "low",
+    workspaceRoot,
+    model: "sonnet",
+    now: stableDate,
+  });
+  const invocation = executionInvocation({
+    executionId: "RUN-CLAUDE",
+    workspaceRoot,
+    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+  });
+  const output = {
+    contractVersion: "skill-contract/v1",
+    executionId: "RUN-CLAUDE",
+    skillSlug: "02.requirements.convert-ears",
+    requestedAction: "generate_ears",
+    status: "completed",
+    summary: "Claude completed.",
+    nextAction: "Continue.",
+    producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+    traceability: { featureId: null },
+    result: { userStories: ["US-CLAUDE"], openQuestions: [] },
+  };
+
+  const result = await runCliAdapter({
+    policy,
+    adapterConfig: CLAUDE_CLI_ADAPTER_CONFIG,
+    prompt: buildExecutionInvocationPrompt(invocation, "Context"),
+    outputSchemaPath: "/tmp/runner-output.schema.json",
+    executionInvocation: invocation,
+    now: stableDate,
+    runner: (command, args, cwd) => {
+      assert.equal(command, "claude");
+      assert.equal(args[0], "-p");
+      assert.equal(args[args.indexOf("--output-format") + 1], "json");
+      assert.equal(args[args.indexOf("--permission-mode") + 1], "acceptEdits");
+      assert.equal(cwd, workspaceRoot);
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          type: "result",
+          session_id: "CLAUDE-SESSION",
+          result: "Claude wrote structured output.",
+          structured_output: output,
+          usage: { input_tokens: 13, output_tokens: 8 },
+        }, null, 2),
+        stderr: "",
+      };
+    },
+  });
+
+  assert.equal(result.session.sessionId, "CLAUDE-SESSION");
+  assert.equal(result.result.skillOutput?.summary, "Claude completed.");
+  assert.deepEqual(result.result.skillOutput?.result, { userStories: ["US-CLAUDE"], openQuestions: [] });
+  assert.equal(result.result.contractValidation?.valid, true);
+  assert.equal(result.executionAdapterResult?.providerSession.provider, "claude-cli");
+
+  const outputLog = JSON.parse(readFileSync(result.rawLog.files?.output ?? "", "utf8"));
+  assert.deepEqual(outputLog.usage, { input_tokens: 13, output_tokens: 8, inputTokens: 13, outputTokens: 8 });
 });
 
 test("CLI adapter uses the last SkillOutputContract when progress contracts precede the final result", async () => {

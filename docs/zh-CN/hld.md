@@ -138,7 +138,7 @@ flowchart LR
 
 外部边界：
 
-- Codex CLI / Google Gemini CLI：通过 CLI Adapter 执行代码修改、测试、修复和结构化结果输出。
+- Codex CLI / Google Gemini CLI / Claude Code CLI：通过 CLI Adapter 执行代码修改、测试、修复和结构化结果输出。
 - Codex RPC / HTTP / JSON-RPC / WebSocket 服务：通过 RPC Adapter 远程或进程内调用执行 turn、approval、event stream 和结构化结果输出。
 - Git CLI：读取状态、管理 branch/worktree、采集 diff 和支持回滚。
 - GitHub `gh` CLI：MVP 用于读取必要 PR 状态和创建 PR。
@@ -156,14 +156,14 @@ flowchart LR
 | Backend / Runtime | TypeScript + Node.js Control Plane API + Execution Adapter Worker | 产品需要调用本机 `codex`、`git`、`gh`、构建测试命令、文件系统和远程/RPC 执行服务；Node.js 对 CLI 编排、JSON-RPC、HTTP、JSON schema、前后端类型共享和本地开发友好。 | 若后续接入 Python Skill，可通过独立进程、CLI Adapter 或 RPC Adapter 执行，不改变控制面事实源。 |
 | Database / Storage | MVP 使用嵌入式 SQLite 作为 Persistent Store；`.autobuild/` 保存人类可读 artifact | 本地优先、多项目目录、长时间恢复和审计需要持久化，但 MVP 不需要外部数据库运维复杂度。SQLite 足够承载项目、项目选择、Feature、Task、Run、执行结果、审计、通用指标和 token 消费明细。 | 团队协作阶段可迁移 PostgreSQL；Project Memory 是文件投影，不替代数据库。 |
 | Authentication / Authorization | MVP 本地单用户/可信环境，关键动作用 Review Center 和 Safety Gate 审批；不建复杂 RBAC | PRD 明确 MVP 不做企业级复杂权限矩阵；当前风险重点是自动执行权限、敏感文件和高风险操作。 | 远程部署或团队协作阶段需要补充身份认证、角色、项目权限和审计主体。 |
-| API / Integration | Control Plane 暴露本地 HTTP API；内部命令使用 schema-validated command/event；外部集成通过 CLI Adapter 和 RPC Adapter | UI、IDE、调度器、Execution Adapter 和审批动作需要统一入口；Codex/Gemini/Git/GitHub/app-server/HTTP 服务先走稳定 adapter 边界，减少平台权限建模。 | CLI/RPC Adapter 配置统一使用 JSON + JSON Schema，并可投影为 Console JSON 表单；RPC Adapter 负责 protocol/capability/schema detection。 |
+| API / Integration | Control Plane 暴露本地 HTTP API；内部命令使用 schema-validated command/event；外部集成通过 CLI Adapter 和 RPC Adapter | UI、IDE、调度器、Execution Adapter 和审批动作需要统一入口；Codex/Gemini/Claude/Git/GitHub/app-server/HTTP 服务先走稳定 adapter 边界，减少平台权限建模。 | CLI/RPC Adapter 配置统一使用 JSON + JSON Schema，并可投影为 Console JSON 表单；RPC Adapter 负责 protocol/capability/schema detection。 |
 | Background Jobs / Scheduler | BullMQ + Redis queue + Worker；SQLite 保存 scheduler job record、Run、心跳、状态和 execution result | 长时间任务不能只存在内存；延迟/周期/Worker 执行交给成熟队列，业务事实仍可恢复。 | Redis 不可用时 scheduler health 为 blocked；写任务默认串行，写入型并行必须绑定 worktree。 |
 | Testing | Vitest/Jest 覆盖服务与状态机；Playwright 覆盖 Console；CLI adapter 使用 fixture 和本地集成测试 | 核心风险在状态机、schema、Execution Policy、工作区隔离和 UI 状态展示，测试应围绕这些边界。 | 目标仓库的测试命令由项目健康检查发现，不由本系统固定。 |
 | Deployment / Operations | MVP 本地进程：Control Plane + Execution Adapter Worker + Browser Console；artifact root 使用 `.autobuild/` | 本地优先符合编码 CLI、Git worktree、app-server 和目标仓库操作模型，降低 MVP 部署成本。 | 生产/团队化阶段需要服务化部署、队列、数据库、密钥管理和 Adapter Worker 池。 |
 
 Rejected / deferred alternatives:
 
-- 不采用自研大模型；模型能力由 Codex CLI、Google Gemini CLI、Codex RPC 或后续 Execution Adapter 提供。
+- 不采用自研大模型；模型能力由 Codex CLI、Google Gemini CLI、Claude Code CLI、Codex RPC 或后续 Execution Adapter 提供。
 - 不在 MVP 中引入复杂微服务；控制面和 Execution Adapter Worker 可先在同一主机运行。
 - 不以 Project Memory 作为调度数据库；Memory 只为 CLI 恢复提供压缩上下文。
 - `docs/zh-CN/design.md` 已作废；若历史内容与本文、PRD 或 requirements 冲突，以本文和当前 Feature Spec 为准。
@@ -333,8 +333,8 @@ Collaborates With:
 Responsibilities:
 
 - 提供统一的执行适配接口，不再以 Runner 作为核心抽象。
-- 按 executor kind 分发 `cli.run`、`rpc.run` 等 job；Scheduler 只认识 job kind、payload context 和 Execution Record，不硬编码 Codex、Gemini、app-server 或 HTTP 细节。
-- CLI Adapter 调用 Codex CLI、Google Gemini CLI 或后续等价 CLI 执行代码修改、测试或修复。
+- 按 executor kind 分发 `cli.run`、`rpc.run` 等 job；Scheduler 只认识 job kind、payload context 和 Execution Record，不硬编码 Codex、Gemini、Claude、app-server 或 HTTP 细节。
+- CLI Adapter 调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价 CLI 执行代码修改、测试或修复。
 - RPC Adapter 调用 Codex RPC、HTTP/JSON-RPC/WebSocket app-server 或后续远程执行服务，并处理 thread/turn、approval、event stream 和 interrupt/cancel。
 - 读取 active adapter JSON 配置，并将 executable、argument template、endpoint、transport、capabilities、workspace policy、output mode、执行结果映射和 session resume/thread resume 映射转换为实际执行计划。
 - 按任务风险解析 sandbox、approval policy、model、reasoning effort、profile、workspace root、session/thread resume 和 output schema。
@@ -370,6 +370,7 @@ CLI Adapter 只负责把 `ExecutionAdapterInvocationV1` 映射为本机进程调
 
 - `codex-cli`：默认内置 preset，provider 专用配置位于 `src/codex-cli-adapter.ts`；通用 CLI 执行、policy、contract validation、raw log、token usage 和 session record 逻辑位于 `src/cli-adapter.ts`。
 - `gemini-cli`：内置可选 preset，使用 headless `--output-format stream-json`、`--skip-trust`、`--approval-mode` 和 `-p` 运行；通用 CLI Adapter 从 `init`、`message`、`tool_use`、`tool_result`、`error`、`result` 事件中提取 session、日志、token usage 和事后 `SkillOutputContractV1` 校验结果。
+- `claude-cli`：内置可选 preset，使用 `claude -p`、`--output-format json` 和 `--json-schema` 运行；默认模型 alias 为 `sonnet`，`approval=never` 映射为 `--permission-mode acceptEdits` 与受控 `--allowedTools`，不使用 `bypassPermissions`；通用 CLI Adapter 从完整 stdout JSON 的 `session_id`、`structured_output`、`result` 和 usage 字段投影 session、日志、token usage 和事后 `SkillOutputContractV1` 校验结果。
 - 后续 CLI：通过 adapter JSON 增加 executable、argument template、resume template、environment allowlist、output mapping 和 dry-run，不修改 Scheduler 或状态机。
 
 CLI Adapter 必须在目标项目 workspace root 中启动进程。workspace root 不得回退到 SpecDrive Control Plane 进程 cwd。路径缺失、不可读、不是可用 workspace，或缺少执行所需 `.agents/skills/*` / `AGENTS.md` 时，新 Execution Record 必须 blocked。
@@ -445,7 +446,7 @@ Responsibilities:
 - Skill Center 展示 Skill 列表、详情、版本、schema、启用状态、执行日志、成功率、阶段和风险等级。
 - Subagent Console 展示 Run Contract、上下文切片、执行结果、token 使用、运行状态，并支持终止和重试。
 - Execution Console 展示 Execution Adapter 在线状态、active CLI adapter、当前模型、sandbox、approval policy、queue、日志、心跳和 CLI Adapter 配置健康摘要。
-- System Settings 提供 CLI Adapter 配置管理，支持 Codex/Gemini preset、原始 JSON、JSON Schema 表单、dry-run 校验、保存草稿、启用/禁用和字段级错误展示；Execution Console 仅提供状态摘要和跳转入口。
+- System Settings 提供 CLI Adapter 配置管理，支持 Codex/Gemini/Claude preset、原始 JSON、JSON Schema 表单、dry-run 校验、保存草稿、启用/禁用和字段级错误展示；Execution Console 仅提供状态摘要和跳转入口。
 
 Owns:
 
@@ -576,7 +577,7 @@ Data ownership rules:
 | Integration | MVP Strategy | Constraint |
 |---|---|---|
 | BullMQ + Redis | `specdrive:feature-scheduler` 和 Execution Adapter queue 承担 delayed、repeatable 和 Worker job 执行。 | Redis 不保存业务事实；断连时 scheduler health 为 blocked，SQLite 保留 trigger/job/audit。 |
-| Codex CLI / Google Gemini CLI | 由 CLI Adapter 调用 `codex exec`、Gemini headless `stream-json` 或等价执行入口，并要求结构化输出。 | 高风险任务不得自动高权限执行；命令模板和输出映射来自 active JSON adapter 配置。 |
+| Codex CLI / Google Gemini CLI / Claude Code CLI | 由 CLI Adapter 调用 `codex exec`、Gemini headless `stream-json`、Claude `-p` structured JSON 或等价执行入口，并要求结构化输出。 | 高风险任务不得自动高权限执行；命令模板和输出映射来自 active JSON adapter 配置。 |
 | Codex RPC / HTTP / JSON-RPC / WebSocket | 由 RPC Adapter 连接或启动 provider，执行 initialize/capability detection、thread/session start/resume、turn/request、interrupt/cancel、approval response 和 event stream 消费。 | RPC provider 不直接写事实源；VSCode 插件只能提交受控命令和订阅状态。 |
 | Git CLI | 由 Repository Adapter / Workspace Manager 读取状态；Feature 写入生命周期中的 worktree、branch、commit 和 cleanup 由执行 Skill 调用。 | Git 状态是代码事实来源；平台代码不替技能执行 Feature Git 生命周期。 |
 | GitHub `gh` CLI | 由执行 Skill 或补交付 Skill 创建 PR、读取 PR 状态、merge 和清理远程分支。 | MVP 不单独建模 Git 平台权限矩阵。 |
@@ -804,7 +805,7 @@ flowchart TB
   API --> Files[.autobuild Artifact Root]
   FeatureQueue --> FeatureWorker[Executor Job Scheduler Worker]
   AdapterQueue --> ExecAdapter[Local Execution Adapter Worker]
-  ExecAdapter --> CodingCLI[Codex CLI / Gemini CLI]
+  ExecAdapter --> CodingCLI[Codex CLI / Gemini CLI / Claude CLI]
   ExecAdapter --> RpcProvider[Codex RPC / HTTP / JSON-RPC]
   ExecAdapter --> Repo[Target Repository]
   Repo --> WT1[Task Worktree]

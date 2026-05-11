@@ -21,6 +21,7 @@ Feature 名称: IDE System Settings Webview
 
 - [x] VSCode 插件提供 `SpecDrive: Open System Settings` 命令和 Activity Bar title action。
 - [x] System Settings Webview 展示 CLI Adapter 与 RPC Adapter 的 active、draft、preset、schemaVersion、status、validation errors、last dry-run / last probe。
+- [x] System Settings Webview 的 CLI preset 列表包含 `codex-cli`、`gemini-cli` 和 `claude-cli`，并且 Job / 项目默认 provider 选择仍只暴露 adapter id。
 - [x] 用户可以在 Webview 中编辑 JSON 配置，并触发 validate、save draft、activate 和 disable。
 - [x] 所有配置修改通过 extension host 调用 Control Plane command API，不直接写 SQLite、配置文件或运行事实源。
 - [x] Webview 不复用 Product Console 页面、路由、App Shell 或组件实现。

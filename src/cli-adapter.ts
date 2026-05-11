@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
-import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, normalize as normalizeFilePath } from "node:path";
 import { ORDINARY_LOG_SECRET_PATTERNS } from "./persistence.ts";
@@ -48,9 +48,11 @@ import {
   CODEX_CLI_ADAPTER_CONFIG,
   DEFAULT_CLI_ADAPTER_CONFIG,
 } from "./codex-cli-adapter.ts";
+import { CLAUDE_CLI_ADAPTER_CONFIG, claudeAllowedTools, claudePermissionMode } from "./claude-cli-adapter.ts";
 import { GEMINI_CLI_ADAPTER_CONFIG, geminiApprovalMode } from "./gemini-cli-adapter.ts";
 
 export { CODEX_CLI_ADAPTER_CONFIG, DEFAULT_CLI_ADAPTER_CONFIG } from "./codex-cli-adapter.ts";
+export { CLAUDE_CLI_ADAPTER_CONFIG } from "./claude-cli-adapter.ts";
 export { GEMINI_CLI_ADAPTER_CONFIG } from "./gemini-cli-adapter.ts";
 export type { TokenCostRate } from "./adapter-pricing.ts";
 
@@ -939,14 +941,14 @@ export function normalizeCliAdapterConfig(input: Partial<CliAdapterConfig> | Rec
       costRates: normalizeCostRates(defaults.costRates ?? defaults.cost_rates),
     },
     imageGeneration,
-    environmentAllowlist: stringArray(input.environmentAllowlist ?? input.environment_allowlist, []),
+    environmentAllowlist: stringArray(input.environmentAllowlist ?? input.environment_allowlist, baseConfig.environmentAllowlist),
     outputMapping: {
       eventStream: outputMapping.eventStream === "json" || outputMapping.event_stream === "json" ? "json" : baseConfig.outputMapping.eventStream,
       outputSchema: optionalConfigString(outputMapping.outputSchema) ??
         optionalConfigString(outputMapping.output_schema) ??
         baseConfig.outputMapping.outputSchema,
       sessionIdPath: optionalConfigString(outputMapping.sessionIdPath) ?? optionalConfigString(outputMapping.session_id_path) ?? baseConfig.outputMapping.sessionIdPath,
-      responseTextPaths: stringArray(outputMapping.responseTextPaths ?? outputMapping.response_text_paths, []),
+      responseTextPaths: stringArray(outputMapping.responseTextPaths ?? outputMapping.response_text_paths, baseConfig.outputMapping.responseTextPaths ?? []),
     },
     status: normalizeAdapterStatus(input.status) ?? baseConfig.status,
     updatedAt: optionalConfigString(input.updatedAt) ?? optionalConfigString(input.updated_at) ?? new Date().toISOString(),
@@ -955,7 +957,10 @@ export function normalizeCliAdapterConfig(input: Partial<CliAdapterConfig> | Rec
 }
 
 function defaultCliAdapterConfigForId(id: unknown): CliAdapterConfig {
-  return optionalConfigString(id) === GEMINI_CLI_ADAPTER_CONFIG.id ? GEMINI_CLI_ADAPTER_CONFIG : DEFAULT_CLI_ADAPTER_CONFIG;
+  const adapterId = optionalConfigString(id);
+  if (adapterId === GEMINI_CLI_ADAPTER_CONFIG.id) return GEMINI_CLI_ADAPTER_CONFIG;
+  if (adapterId === CLAUDE_CLI_ADAPTER_CONFIG.id) return CLAUDE_CLI_ADAPTER_CONFIG;
+  return DEFAULT_CLI_ADAPTER_CONFIG;
 }
 
 function upgradeBuiltInAdapterConfig(config: CliAdapterConfig): CliAdapterConfig {
@@ -1058,11 +1063,14 @@ export function renderCliAdapterCommand(input: {
     profile: input.policy.profile ?? "",
     profile_flag: input.policy.profile ? "-p" : "",
     output_schema: input.outputSchemaPath,
+    output_schema_json: readOutputSchemaJson(input.outputSchemaPath, input.policy.outputSchema),
     workspace: input.policy.workspaceRoot,
     prompt: input.prompt,
     resume_session_id: input.policy.resumeSessionId ?? "",
     resume_prompt: buildResumePrompt(input.policy, input.prompt, input.outputSchemaPath),
     gemini_approval_mode: geminiApprovalMode(input.policy.approvalPolicy),
+    claude_permission_mode: claudePermissionMode(input.policy.approvalPolicy),
+    claude_allowed_tools: claudeAllowedTools(input.policy.approvalPolicy),
   };
   const rendered = template
     .map((entry) => renderTemplateEntry(entry, values))
@@ -1418,6 +1426,8 @@ function extractSkillOutputContract(events: CliJsonEvent[], responseTextPaths: s
 
     for (const path of responseTextPaths) {
       const value = readJsonPath(event, path);
+      const fromMappedRecord = isRecord(value) ? parseSkillOutputRecord(value) : undefined;
+      if (fromMappedRecord) latest = fromMappedRecord;
       const fromMappedText = parseSkillOutputText(typeof value === "string" ? value : undefined);
       if (fromMappedText) latest = fromMappedText;
     }
@@ -2674,6 +2684,14 @@ function writeOutputSchema(policy: RunnerPolicy, outputSchema: Record<string, un
   return path;
 }
 
+function readOutputSchemaJson(outputSchemaPath: string, fallbackSchema: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(JSON.parse(readFileSync(outputSchemaPath, "utf8")));
+  } catch {
+    return JSON.stringify(fallbackSchema);
+  }
+}
+
 function buildResumePrompt(policy: RunnerPolicy, prompt: string, outputSchemaPath: string): string {
   return [
     prompt,
@@ -2777,6 +2795,20 @@ function redactJsonValue(value: unknown): unknown {
 }
 
 function parseJsonEvents(stdout: string): CliJsonEvent[] {
+  const trimmed = stdout.trim();
+  if (trimmed) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter(isRecord).map((entry) => entry as CliJsonEvent);
+      }
+      if (isRecord(parsed)) {
+        return [parsed as CliJsonEvent];
+      }
+    } catch {
+      // Fall back to JSONL parsing below.
+    }
+  }
   return stdout
     .split(/\r?\n/)
     .map((line) => line.trim())

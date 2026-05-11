@@ -35,3 +35,8 @@ Feature ID: FEAT-022
 状态: done
 描述: System Settings Webview 在 CLI / RPC adapter section 中展示默认模型和已配置 pricing models，配置仍通过共享 adapter JSON 编辑和受控命令保存。
 验证: `node --test tests/specdrive-ide-webview-boundary.test.ts`
+
+### T-022-07 Claude CLI preset projection
+状态: done
+描述: System Settings Webview 和执行偏好选项展示 `claude-cli` 内置 CLI Adapter preset，并继续由 adapter id 推导 run mode。
+验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`

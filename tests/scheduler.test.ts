@@ -570,6 +570,37 @@ test("cli.run uses active Gemini CLI adapter from adapter configuration", async 
   assert.equal(calls[0].cwd, root);
 });
 
+test("cli.run can select built-in Claude Code CLI adapter from job execution preference", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-claude-cli-run-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const calls: Array<{ command: string; args: string[]; cwd: string }> = [];
+  const payload = {
+    ...cliRunPayload("RUN-CLAUDE-ADAPTER"),
+    executionPreference: { runMode: "cli" as const, adapterId: "claude-cli", source: "job" as const },
+  };
+
+  const result = await runCliRunJob(dbPath, payload, (command, args, cwd) => {
+    calls.push({ command, args, cwd });
+    return {
+      status: 0,
+      stdout: JSON.stringify({
+        type: "result",
+        session_id: "SESSION-CLAUDE",
+        structured_output: skillOutputObject("RUN-CLAUDE-ADAPTER"),
+      }),
+      stderr: "",
+    };
+  });
+
+  assert.equal(result.status, "completed");
+  assert.equal(calls[0].command, "claude");
+  assert.deepEqual(calls[0].args.slice(0, 8), ["-p", calls[0].args[1], "--model", "sonnet", "--effort", "medium", "--output-format", "json"]);
+  assert.equal(calls[0].args[calls[0].args.indexOf("--permission-mode") + 1], "acceptEdits");
+  assert.equal(calls[0].cwd, root);
+});
+
 test("codex.rpc.run executes mocked app-server transport and persists runner artifacts", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-app-server-run-"));
   prepareSkillWorkspace(root);

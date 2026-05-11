@@ -1051,7 +1051,7 @@ test("system settings exposes CLI adapter config and governed activation", () =>
 
   const initial = buildSystemSettingsView(dbPath);
   assert.equal(initial.cliAdapter.active.id, "codex-cli");
-  assert.deepEqual(initial.cliAdapter.presets.map((preset) => preset.id), ["codex-cli", "gemini-cli"]);
+  assert.deepEqual(initial.cliAdapter.presets.map((preset) => preset.id), ["codex-cli", "gemini-cli", "claude-cli"]);
   assert.equal(initial.cliAdapter.validation.valid, true);
   assert.equal(initial.rpcAdapter.active.id, "codex-rpc-default");
   assert.deepEqual(initial.rpcAdapter.presets.map((preset) => preset.id), ["codex-rpc-default", "gemini-acp-default"]);

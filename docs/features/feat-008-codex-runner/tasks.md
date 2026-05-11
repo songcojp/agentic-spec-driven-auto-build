@@ -13,6 +13,7 @@
 - [x] TASK-011: 将 Runner Queue Worker 接入 active CLI Adapter，确保无 active adapter 或配置无效时新 Run blocked，且不影响 running Run。
 - [x] TASK-012: 添加 CLI Adapter 配置、dry-run、active 配置回退、Codex 等价命令生成和无效配置阻塞测试。
 - [x] TASK-012A: 增加 `gemini-cli` 内置 adapter preset、Gemini headless JSON/JSONL 输出解析、System Settings preset 入口和 Gemini active adapter 调度测试。
+- [x] TASK-012B: 增加 `claude-cli` 内置 adapter preset、Claude structured JSON 输出解析、System Settings preset 入口和 Claude job 级 adapter 调度测试。
 - [x] TASK-013: 将 Execution Adapter Worker 接入 BullMQ `specdrive:execution-adapter` / `cli.run`，由 Worker 调用 CLI Adapter 并持久化 heartbeat、session、raw log 和 Execution Record 状态。
 - [x] TASK-014: 实现 workspace-aware 编码 CLI 调用，确保 Runner 从当前项目 repository `local_path` / `target_repo_path` 解析 workspace root，并在路径缺失、不可读或缺少所需 Skill 文件时 blocked。
 - [x] TASK-015: 将 Runner 消费模型更新为 `cli.run` Execution Record，payload context 提供 skill/source/artifact/workspace 信息，并预留 `native.run` executor 扩展点。

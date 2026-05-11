@@ -16,7 +16,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 
 | 区域 | 说明 |
 |---|---|
-| CLI Adapter | 展示 active/draft/preset、校验结果、最近 dry-run 和 JSON 编辑器。 |
+| CLI Adapter | 展示 active/draft/preset、校验结果、最近 dry-run 和 JSON 编辑器；内置 preset 包含 `codex-cli`、`gemini-cli` 和 `claude-cli`。 |
 | RPC Adapter | 展示 active/draft/preset、校验结果、最近 probe 和 JSON 编辑器。 |
 | 操作按钮 | Validate、Save Draft、Activate、Disable、Refresh。 |
 | 状态反馈 | 命令 receipt 通过 VSCode notification 展示，Webview 随后刷新配置投影。 |
