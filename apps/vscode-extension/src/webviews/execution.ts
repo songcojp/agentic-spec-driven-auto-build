@@ -185,6 +185,9 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
     ["Review Message", item.review?.message ?? "none"],
     ["Review Triggers", item.review?.triggerReasons.join(", ") || "none"],
     ["Recommended Actions", item.review?.recommendedActions.join(", ") || "none"],
+    ["Started", item.startedAt ?? "none"],
+    ["Completed", item.completedAt ?? "none"],
+    ["Duration", formatDurationMs(item.durationMs) ?? "none"],
     ["Resume Target", resume ? `${resume.status} via ${resume.source}` : "none"],
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
     ["Next Action", stateFlowNextAction(item)],
@@ -393,6 +396,17 @@ function resultRecord(output: Record<string, unknown> | undefined): Record<strin
 
 function stringOrNone(value: unknown): string {
   return typeof value === "string" && value.trim() ? value : "none";
+}
+
+function formatDurationMs(value: number | undefined): string | undefined {
+  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
+  const totalSeconds = Math.round(value / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 function labelize(key: string): string {

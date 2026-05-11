@@ -527,6 +527,7 @@ Responsibilities:
 - 将所有有副作用的 IDE action 转换为 Control Plane command API 请求，接收 `IdeCommandReceiptV1` 并刷新 UI。
 - 展示 app-server 事件流、diff 摘要、raw logs、approval pending 和 `SkillOutputContractV1` 校验结果。
 - 展示结构化 Skill 输出的摘要视图：状态、summary、nextAction、traceability、产物表格、常见 result 分组和完整 JSON 审计视图。
+- 从 Control Plane 投影的 Execution Record 时间字段展示 Job 开始时间、完成时间和单次执行耗时；耗时由 `started_at` / `completed_at` 派生，Webview 不直接读取 SQLite。
 - 在插件重载后恢复 Spec Explorer、Task Queue、pending approval 和最近执行状态。
 
 Owns:

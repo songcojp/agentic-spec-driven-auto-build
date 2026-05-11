@@ -638,7 +638,10 @@ test("SpecDrive IDE queue orders jobs by completed time descending", () => {
   const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
 
   assert.deepEqual(view.queue.groups.completed.map((item) => item.executionId), ["RUN-NEWER-END", "RUN-OLDER-END"]);
+  assert.equal(view.queue.groups.completed[0].startedAt, "2026-05-05T18:00:00.000Z");
   assert.equal(view.queue.groups.completed[0].completedAt, "2026-05-05T18:20:00.000Z");
+  assert.equal(view.queue.groups.completed[0].durationMs, 20 * 60 * 1000);
+  assert.equal(view.queue.groups.completed[1].durationMs, 10 * 60 * 1000);
 });
 
 test("SpecDrive IDE ready Feature keeps latest completed token cost after current job is cleared", () => {

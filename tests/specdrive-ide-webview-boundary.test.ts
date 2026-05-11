@@ -164,6 +164,9 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /Feature Spec Description/);
   assert.match(webviewSource, /featureSpecLabel\(item\)/);
   assert.match(webviewSource, /item\.featureDescription/);
+  assert.match(webviewSource, /queueItemMetricLabel\(item\)/);
+  assert.match(webviewSource, /\["Started", item\.startedAt\]/);
+  assert.match(webviewSource, /\["Duration", formatDurationMs\(item\.durationMs\)\]/);
   assert.match(extensionSource, /featureTitle: detail\.featureTitle \?\? item\.featureTitle/);
   assert.match(extensionSource, /featureDescription: detail\.featureDescription \?\? item\.featureDescription/);
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
@@ -174,6 +177,7 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /Review Reason/);
   assert.match(webviewSource, /Review Message/);
   assert.match(webviewSource, /Recommended Actions/);
+  assert.match(webviewSource, /\["Duration", formatDurationMs\(item\.durationMs\) \?\? "none"\]/);
   assert.match(webviewSource, /function renderReviewDetails\(item: SpecDriveIdeQueueItem\): string/);
   assert.match(webviewSource, /review\.riskExplanation/);
   assert.match(webviewSource, /renderTokenConsumption\(executionDetail\)/);

@@ -93,7 +93,9 @@ export type SpecDriveIdeQueueItem = {
   preferenceSource?: string;
   threadId?: string;
   turnId?: string;
+  startedAt?: string;
   completedAt?: string;
+  durationMs?: number;
   updatedAt?: string;
   summary?: string;
   featureTitle?: string;
@@ -515,6 +517,8 @@ export function buildSpecDriveIdeExecutionDetail(
           er.status,
           er.summary,
           er.metadata_json,
+          er.started_at,
+          er.completed_at,
           er.updated_at,
           sj.job_type,
           sj.status AS job_status
@@ -615,6 +619,9 @@ export function buildSpecDriveIdeExecutionDetail(
     adapter: optionalString(metadata.skillSlug) ?? optionalString(metadata.adapterId),
     threadId: optionalString(metadata.threadId),
     turnId: optionalString(metadata.turnId),
+    startedAt: optionalString(row.started_at),
+    completedAt: optionalString(row.completed_at),
+    durationMs: executionDurationMs(optionalString(row.started_at), optionalString(row.completed_at)),
     updatedAt: optionalString(row.updated_at),
     summary: optionalString(row.summary),
     stateReason,
@@ -2353,6 +2360,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
           er.context_json,
           er.metadata_json,
           sj.payload_json,
+          er.started_at AS execution_started_at,
           er.completed_at AS execution_completed_at,
           er.updated_at AS execution_updated_at
         FROM scheduler_job_records sj
@@ -2413,7 +2421,9 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
       preferenceSource: executionPreference?.source,
       threadId: optionalString(metadata.threadId),
       turnId: optionalString(metadata.turnId),
+      startedAt: optionalString(row.execution_started_at),
       completedAt: optionalString(row.execution_completed_at),
+      durationMs: executionDurationMs(optionalString(row.execution_started_at), optionalString(row.execution_completed_at)),
       updatedAt: optionalString(row.execution_updated_at) ?? optionalString(row.job_updated_at),
       summary: optionalString(row.summary),
       featureTitle: feature?.title,
@@ -2812,6 +2822,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function executionDurationMs(startedAt: string | undefined, completedAt: string | undefined): number | undefined {
+  const started = timestampMs(startedAt);
+  const completed = timestampMs(completedAt);
+  if (started === undefined || completed === undefined || completed < started) return undefined;
+  return completed - started;
+}
+
+function timestampMs(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const normalized = value.includes("T") ? value : value.replace(" ", "T");
+  const time = Date.parse(normalized);
+  return Number.isFinite(time) ? time : undefined;
 }
 
 function stringArray(value: unknown): string[] {

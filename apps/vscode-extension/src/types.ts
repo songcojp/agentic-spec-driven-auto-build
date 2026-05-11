@@ -63,7 +63,9 @@ export type SpecDriveIdeQueueItem = {
   preferenceSource?: string;
   threadId?: string;
   turnId?: string;
+  startedAt?: string;
   completedAt?: string;
+  durationMs?: number;
   updatedAt?: string;
   summary?: string;
   featureTitle?: string;

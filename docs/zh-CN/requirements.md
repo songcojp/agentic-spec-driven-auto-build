@@ -1064,6 +1064,9 @@ THE SYSTEM SHALL 按操作对象和对象当前状态显示或禁用需求新增
 WHEN 用户在 Feature Spec 或 Execution Workbench 详情区域查看 Feature / Job
 THE SYSTEM SHALL 展示 Feature Spec 标题和从 Feature Spec 文档提取的描述信息，而不是只展示 Feature 编号。
 
+WHEN 用户在 Execution Workbench 查看 Job 队列或选中 Job 详情
+THE SYSTEM SHALL 从 Execution Record 的 started_at / completed_at 投影 Job 开始时间、结束时间和执行耗时统计；没有完整时间范围时不得伪造耗时。
+
 WHEN 用户在 VSCode IDE Webview 中录入需求新增、需求变更或澄清内容
 THE SYSTEM SHALL 以聊天对话框形态展示输入区，并在 Webview 自动刷新、手动刷新或重新渲染后恢复尚未提交的输入草稿。
 
@@ -1076,6 +1079,7 @@ THE SYSTEM SHALL 以聊天对话框形态展示输入区，并在 Webview 自动
 - [ ] Spec Workspace 必须区分 New Requirement、Requirement Change 和 Clarification 入口，并通过 SpecChangeRequestV1 交由 Control Plane 路由，不在 Webview 中硬编码新增/变更判定。
 - [ ] Feature Spec 详情必须按 Feature 当前状态和最新 Job / Execution Record 显示或禁用 Schedule、Ready、Clarify、Requirement Change、Review 决策、Pause / Resume、Retry、Cancel、Skip 和 Reprioritize。
 - [ ] Feature Spec 详情和 Execution Workbench 选中 Job 详情必须显示 Feature Spec 标题和描述；描述优先来自 Feature `spec-state.json.description`，其次来自 Feature `requirements.md` 的目标 / 用户价值 / Scope 等描述段落。
+- [ ] Execution Workbench 队列行、选中 Job 详情和 State Flow 必须显示可用的开始时间、结束时间和执行耗时；耗时由 `execution_records.started_at` 与 `execution_records.completed_at` 派生，未完成或时间无效时显示为空/none。
 - [ ] ReviewItem 审批入口必须覆盖 approve、reject、request changes、rollback、split task 和 update spec；不同 review_needed reason 可以显示不同推荐动作，但不得绕过 ReviewItem 事实源。
 - [ ] Execution Workbench 的 review_needed 队列卡片和 State Flow 必须优先展示 Execution Record summary / ReviewItem message 中的具体缺口，并显示 ReviewItem trigger、推荐动作、风险说明和 reference refs；`review_needed_reason` 仅用于分类和推荐动作，不得遮蔽“需要审查什么”。
 - [ ] Execution Workbench 和 Feature Spec 的 Review 决策入口在 request changes、update spec、reject、rollback 或 split task 时必须要求输入澄清/修改说明，随受控命令写入 approval record metadata。
@@ -1258,11 +1262,15 @@ THE SYSTEM SHALL 统计 token、成本、成功率和失败率。
 WHEN 同一个 Feature 被多次排队或执行
 THE SYSTEM SHALL 保留每次 Job / Execution Record 的 token 与成本记录，并只在 Feature 投影中展示最后一次有效执行的 token 与成本。
 
+WHEN Job / Execution Record 具备开始和完成时间
+THE SYSTEM SHALL 计算并投影单次执行耗时，用于 IDE 或控制台展示执行时间统计。
+
 验收：
 - [ ] Dashboard 或相关控制台可以展示成本与成功率指标。
 - [ ] `token_consumption_records.pricing_json` 必须保存 `adapterId`、`adapterKind`、`model`、费率快照或缺失原因；已落库记录不得因 adapter 费率修改被自动重算。
 - [ ] `token_consumption_records` 必须按 `run_id` 表示单次执行费用；同一 `feature_id` 的多次执行不得互相覆盖。
 - [ ] Feature Spec 页面只展示 Feature 最后一次有效执行的 token / cost；需要统计同一 Feature 多次执行总成本时，必须从 Job / Execution Record 历史累计 `token_consumption_records`。
+- [ ] IDE 或控制台显示 Job 执行时间统计时，必须基于单次 Execution Record 的 started_at / completed_at 计算，不得跨历史 Job 累加后覆盖单次耗时。
 - [ ] Feature 是否可以再次 queued 或 run 必须依据 Feature 当前状态、依赖、安全闸和 active execution 判断，不得因历史 Job 中存在相同 Feature 的多次执行记录而阻塞。
 
 ### NFR-007：看板性能

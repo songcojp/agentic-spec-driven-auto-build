@@ -191,3 +191,8 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 状态: done
 描述: Execution Workbench 与 Feature Spec 的 review_needed 投影优先显示 Execution Record summary / ReviewItem message 中的具体缺口，并展示 ReviewItem trigger、推荐动作、风险说明和 refs；Delivery Fidelity、behavior obligation 或 unresolved loss 触发时归类为 `risk_review_needed` 和 `quality_evidence_gap`，不得因 PR / approval / permission 字样误判为 `approval_needed`；request changes、update spec、reject、rollback 和 split task 决策要求输入澄清/修改说明并写入 approval metadata。
 验证: `node --test tests/scheduler.test.ts tests/specdrive-ide.test.ts`，`npm run ide:build`，`git diff --check`。
+
+### T-021-36 Job 执行耗时统计投影
+状态: done
+描述: Control Plane 从 Execution Record 的 `started_at` 与 `completed_at` 派生 `durationMs`，并在 VSCode Execution Workbench 队列行、选中 Job 详情和 State Flow 中展示开始时间、结束时间和单次执行耗时；缺失或无效时间范围显示为空/none。
+验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`，`npm run ide:build`，`git diff --check`。

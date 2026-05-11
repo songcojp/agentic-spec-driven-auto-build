@@ -1908,6 +1908,9 @@ function formatExecutionDetails(item: SpecDriveIdeQueueItem): string {
       ["Adapter", item.adapter],
       ["Thread", item.threadId],
       ["Turn", item.turnId],
+      ["Started", item.startedAt],
+      ["Completed", item.completedAt],
+      ["Duration", formatDurationMs(item.durationMs)],
       ["Updated", item.updatedAt],
     ]
     : [
@@ -1918,6 +1921,9 @@ function formatExecutionDetails(item: SpecDriveIdeQueueItem): string {
       ["Feature", item.featureId],
       ["Task", item.taskId],
       ["Adapter", item.adapter],
+      ["Started", item.startedAt],
+      ["Completed", item.completedAt],
+      ["Duration", formatDurationMs(item.durationMs)],
       ["Updated", item.updatedAt],
     ];
   return [
@@ -1932,6 +1938,17 @@ function formatExecutionDetails(item: SpecDriveIdeQueueItem): string {
     item.summary ?? "No summary recorded yet.",
     "",
   ].join("\n");
+}
+
+function formatDurationMs(value: number | undefined): string | undefined {
+  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
+  const totalSeconds = Math.round(value / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 async function fetchExecutionDetail(item: SpecDriveIdeQueueItem): Promise<SpecDriveIdeExecutionDetail | SpecDriveIdeQueueItem> {

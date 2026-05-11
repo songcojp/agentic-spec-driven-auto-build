@@ -538,9 +538,15 @@ export function renderQueueGroup(status: string, items: SpecDriveIdeQueueItem[],
     ${items.map((item) => {
       const key = queueItemKey(item);
       const selected = Boolean(selectedKey && key === selectedKey);
-      return `<div class="queue-item${selected ? " selected" : ""}"><span>${escapeHtml(item.featureId ?? item.taskId ?? item.operation ?? "execution")}</span><span>${escapeHtml(item.stateReason ?? item.operation ?? item.jobType ?? "-")}</span><span>${escapeHtml(item.adapter ?? item.status ?? "-")}</span><span class="toolbar">${queueReviewButton(item)}${queueSelectButton(item, selected)}</span></div>`;
+      return `<div class="queue-item${selected ? " selected" : ""}"><span>${escapeHtml(item.featureId ?? item.taskId ?? item.operation ?? "execution")}</span><span>${escapeHtml(item.stateReason ?? item.operation ?? item.jobType ?? "-")}</span><span>${escapeHtml(queueItemMetricLabel(item))}</span><span class="toolbar">${queueReviewButton(item)}${queueSelectButton(item, selected)}</span></div>`;
     }).join("") || `<div class="queue-item"><span class="muted">No items</span></div>`}
   </details>`;
+}
+
+function queueItemMetricLabel(item: SpecDriveIdeQueueItem): string {
+  const duration = formatDurationMs(item.durationMs);
+  const primary = item.adapter ?? item.status ?? "-";
+  return duration ? `${primary} · ${duration}` : primary;
 }
 
 export function queueItemKey(item: SpecDriveIdeQueueItem | undefined): string | undefined {
@@ -639,7 +645,9 @@ export function executionFieldsHtml(item: SpecDriveIdeQueueItem): string {
       ["Run Mode", item.runMode],
       ["Provider", item.adapterId],
       ["Preference", item.preferenceSource],
+      ["Started", item.startedAt],
       ["Completed", item.completedAt],
+      ["Duration", formatDurationMs(item.durationMs)],
       ["Updated", item.updatedAt],
     ]
     : [
@@ -654,7 +662,9 @@ export function executionFieldsHtml(item: SpecDriveIdeQueueItem): string {
       ["Run Mode", item.runMode],
       ["Provider", item.adapterId],
       ["Preference", item.preferenceSource],
+      ["Started", item.startedAt],
       ["Completed", item.completedAt],
+      ["Duration", formatDurationMs(item.durationMs)],
       ["Updated", item.updatedAt],
     ];
   const featureDescription = item.featureDescription
@@ -669,6 +679,17 @@ export function executionFieldsHtml(item: SpecDriveIdeQueueItem): string {
 function featureSpecLabel(item: SpecDriveIdeQueueItem): string | undefined {
   if (item.featureTitle && item.featureId) return `${item.featureTitle} (${item.featureId})`;
   return item.featureTitle ?? item.featureId;
+}
+
+export function formatDurationMs(value: number | undefined): string | undefined {
+  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
+  const totalSeconds = Math.round(value / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 export function jsonBlock(value: unknown): string {
