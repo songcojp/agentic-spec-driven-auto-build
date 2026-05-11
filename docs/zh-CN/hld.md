@@ -528,6 +528,7 @@ Responsibilities:
 - 展示 app-server 事件流、diff 摘要、raw logs、approval pending 和 `SkillOutputContractV1` 校验结果。
 - 展示结构化 Skill 输出的摘要视图：状态、summary、nextAction、traceability、产物表格、常见 result 分组和完整 JSON 审计视图。
 - 从 Control Plane 投影的 Execution Record 时间字段展示 Job 开始时间、完成时间和单次执行耗时；耗时由 `started_at` / `completed_at` 派生，Webview 不直接读取 SQLite。
+- 在独立 Webview 共享层提供语言切换入口，支持中文、英语和日语，并用 Webview state / localStorage 保持选择；只翻译 UI chrome、按钮、字段标签、空态和提示，不翻译执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入或 Feature 文档内容。
 - 在插件重载后恢复 Spec Explorer、Task Queue、pending approval 和最近执行状态。
 
 Owns:

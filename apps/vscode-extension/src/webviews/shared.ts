@@ -1,10 +1,15 @@
 import type { QueueAction, SpecDriveIdeDocument, SpecDriveIdeExecutionDetail, SpecDriveIdeQueueItem } from "../types";
 
-export function renderWorkbenchPage(title: string, nonce: string, body: string, cspSource?: string): string {
+import { normalizeWorkbenchLocale, workbenchTranslationsForLocale, type WorkbenchLocale } from "./i18n";
+
+export function renderWorkbenchPage(title: string, nonce: string, body: string, cspSource?: string, locale: WorkbenchLocale = "en"): string {
   const imgSource = cspSource ? `${cspSource} data:` : "data:";
+  const workbenchLocale = normalizeWorkbenchLocale(locale);
+  const workbenchTranslations = workbenchTranslationsForLocale(workbenchLocale);
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${imgSource}; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';"><style>
     :root{color-scheme:dark;--accent:var(--vscode-focusBorder,#20d7d2);--accent-strong:#13b8c2;--accent-soft:rgba(24,189,198,.15);--ok:#5bd46f;--warn:#f4b63d;--bad:#f26a63;--info:#5aa9ff;--muted:var(--vscode-descriptionForeground,#94a3ad);--bg:var(--vscode-editor-background,#0d1418);--bg-elevated:color-mix(in srgb,var(--bg) 86%,#16333b);--panel:color-mix(in srgb,var(--vscode-sideBar-background,#11181d) 88%,#0da7b0 4%);--panel-strong:color-mix(in srgb,var(--panel) 84%,#000);--border:color-mix(in srgb,var(--vscode-panel-border,#2b3942) 72%,#5fe5ea 18%);--border-soft:color-mix(in srgb,var(--border) 58%,transparent);--shadow:0 10px 28px rgba(0,0,0,.26);--radius:5px}
     *{box-sizing:border-box}body{margin:0;padding:14px 16px 18px;font-family:var(--vscode-font-family,"Segoe UI",system-ui,sans-serif);color:var(--vscode-foreground);background:radial-gradient(circle at 22% 0,rgba(20,184,166,.10),transparent 34%),linear-gradient(180deg,color-mix(in srgb,var(--bg) 88%,#12252b),var(--bg));line-height:1.45}
+    .workbench-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.workbench-header h1{margin-bottom:0}.language-switch{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;white-space:nowrap}.language-switch select{min-height:28px;background:var(--bg-elevated);color:var(--vscode-dropdown-foreground,var(--vscode-input-foreground));border:1px solid var(--border);border-radius:var(--radius);padding:3px 7px}
     h1{font-size:22px;margin:4px 0 12px;font-weight:650;letter-spacing:0;color:color-mix(in srgb,var(--vscode-foreground) 94%,#cfffff)}h2{font-size:14px;margin:0;font-weight:650}h3{font-size:12px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:0}
     button{font:inherit;color:var(--vscode-button-foreground,var(--vscode-foreground));background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 88%,#fff 4%),var(--panel-strong));border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;cursor:pointer;max-width:100%;overflow-wrap:anywhere;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:background .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease}.workbench-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:30px;font-size:12px;line-height:1.2;white-space:normal;text-align:center}.button-icon{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;flex:0 0 auto}.button-icon svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}.button-label{min-width:0;overflow-wrap:anywhere}button:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 82%,var(--accent) 12%),var(--panel-strong));border-color:color-mix(in srgb,var(--accent) 72%,var(--border));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent),inset 0 1px 0 rgba(255,255,255,.07)}.button-primary,.button-run,.button-schedule,.button-submit{color:#eaffff;background:linear-gradient(180deg,#128f95,#0b6f76);border-color:#20c7ca}.button-danger,.button-cancel,.button-decline,.button-disable{color:#ffe8e6;background:linear-gradient(180deg,rgba(139,49,47,.82),rgba(73,31,32,.92));border-color:color-mix(in srgb,var(--bad) 72%,var(--border))}.button-warn,.button-retry,.button-skip,.button-reprioritize,.button-clarify{color:#fff6db;border-color:color-mix(in srgb,var(--warn) 68%,var(--border));background:linear-gradient(180deg,rgba(120,83,17,.72),rgba(57,44,25,.92))}.button-open,.button-refresh,.button-select,.button-settings{color:var(--vscode-foreground)}button:disabled,button:disabled:hover,.workbench-button.is-disabled{color:var(--vscode-disabledForeground,var(--muted));background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 72%,#000),color-mix(in srgb,var(--panel-strong) 84%,#000));border-color:color-mix(in srgb,var(--vscode-disabledForeground,var(--border)) 48%,var(--border));opacity:.55;cursor:not-allowed;box-shadow:none}
     [hidden]{display:none!important}.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.inline-field{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}.inline-field select{min-height:30px;max-width:220px;background:var(--bg-elevated);color:var(--vscode-dropdown-foreground,var(--vscode-input-foreground));border:1px solid var(--border);border-radius:var(--radius);padding:4px 7px}.view-toggle{min-width:132px}.auto-refresh-switch{display:inline-flex;align-items:center;gap:7px;background:transparent;color:var(--muted);border-color:var(--border);padding:4px 7px}.auto-refresh-switch:hover{background:var(--vscode-toolbar-hoverBackground,var(--vscode-list-hoverBackground))}.auto-refresh-switch .switch-track{position:relative;width:34px;height:18px;border:1px solid var(--border);border-radius:999px;background:var(--bg-elevated)}.auto-refresh-switch .switch-track::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:999px;background:var(--muted);transition:transform .15s ease,background .15s ease}.auto-refresh-switch[aria-checked="true"]{color:var(--vscode-foreground);border-color:var(--accent)}.auto-refresh-switch[aria-checked="true"] .switch-track{background:color-mix(in srgb,var(--accent) 28%,var(--bg-elevated));border-color:var(--accent)}.auto-refresh-switch[aria-checked="true"] .switch-track::after{transform:translateX(16px);background:var(--accent)}.status-text{color:var(--muted);font-size:12px;min-height:18px}.project-cost-total{margin-left:auto;display:inline-flex;align-items:center;gap:7px;min-height:30px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);padding:4px 8px;font-size:12px;white-space:nowrap}.project-cost-total span{color:var(--muted)}.project-cost-total strong{color:var(--vscode-foreground);font-weight:650}.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
@@ -19,15 +24,97 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
     .hidden{display:none!important}.workbench-form{margin-bottom:10px}.workbench-chat{display:grid;gap:0}.workbench-compose{display:grid;width:100%}.workbench-form textarea,.settings-editor{width:100%;max-width:100%;min-height:96px;resize:vertical;background:color-mix(in srgb,var(--bg-elevated) 82%,#000);color:var(--vscode-input-foreground);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font:inherit}.workbench-form textarea{border-color:color-mix(in srgb,var(--accent) 42%,var(--border));background:var(--vscode-input-background,var(--bg-elevated))}.settings-editor{min-height:170px;font-family:var(--vscode-editor-font-family,"SFMono-Regular",Consolas,monospace);font-size:12px;line-height:1.45}.settings-editor-compact{min-height:110px}.settings-toolbar{display:flex;gap:10px;align-items:center;justify-content:flex-start;margin-bottom:12px;flex-wrap:wrap}.settings-toolbar .status-text{margin-left:auto}.settings-shell{display:grid;grid-template-columns:minmax(220px,260px) minmax(0,1fr);gap:12px;align-items:start}.settings-main{display:grid;gap:12px;min-width:0}.settings-rail,.settings-panel{border:1px solid var(--border);background:linear-gradient(180deg,var(--panel),var(--panel-strong));border-radius:var(--radius);min-width:0;box-shadow:var(--shadow)}.settings-rail{position:sticky;top:12px;padding:10px}.settings-panel{padding:10px}.settings-panel p.muted{font-size:12px;margin:6px 0 8px}.settings-panel .issue{font-size:12px;padding:7px}.settings-rail-title,.settings-panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:8px}.settings-rail-title h2,.settings-panel-title h2{min-width:0;overflow-wrap:anywhere}.settings-rail-title span,.settings-panel-title span{color:var(--muted);font-size:12px}.settings-adapter-matrix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.settings-summary-list,.settings-source-list,.settings-meta-grid{display:grid;gap:0}.settings-summary-row,.settings-meta-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,max-content);gap:10px;align-items:center;min-width:0;border-top:1px solid var(--border-soft);padding:7px 0;font-size:12px}.settings-summary-row:first-child,.settings-meta-row:first-child{border-top:0}.settings-summary-row span,.settings-meta-row span{min-width:0;overflow-wrap:anywhere}.settings-summary-row>span:first-child,.settings-meta-row>span:first-child{color:var(--muted)}.settings-summary-row strong,.settings-meta-row code{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}.settings-status-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid currentColor;border-radius:999px;padding:2px 7px;font-size:11px;text-transform:uppercase;background:color-mix(in srgb,currentColor 10%,transparent)}.settings-source-item{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);padding:6px 7px;margin-top:6px;font-size:12px}.settings-source-item span{min-width:0;overflow-wrap:anywhere}.settings-source-item strong{font-size:11px;font-weight:600}.settings-preset-row,.settings-chip-row,.settings-actionbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.settings-preset-row button,.settings-actionbar button{padding:5px 8px}.settings-actionbar{justify-content:flex-end;margin:9px 0 0}.settings-chip-row{margin-bottom:0}.pricing-editor{display:grid;grid-template-columns:repeat(5,minmax(92px,1fr));gap:8px;margin-bottom:8px}.settings-field{display:grid;gap:4px;min-width:0;color:var(--muted);font-size:12px}.settings-field input{min-width:0;width:100%;background:var(--bg-elevated);color:var(--vscode-input-foreground);border:1px solid var(--border);border-radius:var(--radius);padding:5px 7px;font:inherit}.workbench-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}.dependency-panel{margin-bottom:10px}.dependency-tree,.dependency-tree ul{list-style:none;margin:0;padding-left:18px}.dependency-tree{padding-left:0}.dependency-tree li{position:relative;margin:4px 0;padding-left:14px}.dependency-tree li::before{content:"";position:absolute;left:0;top:13px;width:9px;border-top:1px solid var(--border)}.dependency-tree ul{border-left:1px solid var(--border);margin-left:8px}.dependency-branch>summary{list-style:none;cursor:pointer}.dependency-branch>summary::-webkit-details-marker{display:none}.dependency-branch>summary::before{content:"+";display:inline-flex;width:16px;color:var(--muted)}.dependency-branch[open]>summary::before{content:"-"}.dependency-leaf{margin-left:16px}.dependency-node{display:inline-flex;align-items:center;gap:7px;min-height:26px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);color:var(--vscode-foreground);padding:4px 7px}.dependency-node button{padding:2px 6px}.dependency-node.missing{color:var(--warn)}.dependency-node .muted{font-size:11px}
     .feature-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,34vw);gap:10px}.feature-board{display:flex;flex-direction:column;gap:10px;min-width:0}.feature-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);min-width:0;overflow:hidden;box-shadow:var(--shadow)}.feature-panel summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;cursor:pointer;background:linear-gradient(90deg,var(--accent-soft),transparent 74%);user-select:none;list-style:none}.feature-panel summary::-webkit-details-marker{display:none}.feature-panel summary::before{content:"+";display:inline-flex;width:16px;color:var(--muted);font-weight:650}.feature-panel[open] summary::before{content:"-"}.feature-panel summary h2{display:flex;gap:8px;align-items:center;margin-right:auto}.feature-panel summary span{color:var(--muted);font-size:12px}.feature-panel-items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));justify-content:stretch;gap:8px;align-items:stretch;padding:9px;overflow:visible}.feature-panel-items .muted{padding:2px}.feature-card{width:100%;min-width:0;min-height:154px;text-align:left;background:linear-gradient(180deg,var(--bg-elevated),var(--panel-strong));color:var(--vscode-foreground);border:1px solid var(--border-soft);border-radius:var(--radius);padding:9px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}.feature-card.current{background:linear-gradient(180deg,color-mix(in srgb,var(--vscode-list-activeSelectionBackground,#123846) 72%,var(--accent-soft)),var(--panel-strong));box-shadow:inset 4px 0 0 var(--accent),0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent)}.feature-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 65%,transparent)}.feature-card.current.selected{box-shadow:inset 4px 0 0 var(--accent),0 0 0 2px color-mix(in srgb,var(--accent) 65%,transparent)}.feature-card header{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.feature-card-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}.feature-select{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}.feature-select input{margin:0}.metric{display:grid;grid-template-columns:1fr auto;gap:6px;font-size:12px;color:var(--muted)}.bar{grid-column:1/-1;height:5px;background:color-mix(in srgb,var(--vscode-progressBar-background,#334155) 76%,#000);border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--ok))}.detail-panel{position:sticky;top:12px;height:calc(100vh - 32px);overflow:auto}.feature-state-row{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;padding:7px 8px;border-top:1px solid var(--border-soft);font-size:12px;min-width:0}.feature-state-row span{min-width:0;overflow-wrap:anywhere}.feature-state-row span:first-child{color:var(--muted);font-size:11px;font-weight:650;text-transform:uppercase}.feature-artifacts{display:grid;gap:5px}.artifact-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(72px,max-content) auto;align-items:center;gap:8px;border:1px solid var(--border-soft);border-radius:var(--radius);padding:5px 6px;font-size:12px;background:var(--bg-elevated)}.artifact-row strong{min-width:0;overflow-wrap:anywhere}.artifact-row button{padding:3px 7px}.task-chip-row{display:flex;flex-wrap:wrap;gap:6px}.task-chip{display:inline-flex;align-items:center;gap:6px;min-width:0;border:1px solid var(--border);border-radius:999px;padding:3px 7px;font-size:12px;background:var(--bg-elevated)}.task-chip strong{min-width:0;overflow-wrap:anywhere}.token-mini-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.token-mini-grid div{border:1px solid var(--border-soft);border-radius:var(--radius);padding:6px;min-width:0;background:var(--bg-elevated)}.token-mini-grid span{display:block;color:var(--muted);font-size:11px}.token-mini-grid strong{display:block;min-width:0;overflow-wrap:anywhere;font-size:12px}
     @media (max-width:1100px){.feature-layout{grid-template-columns:minmax(0,1fr) minmax(360px,36vw)}.feature-panel-items{grid-template-columns:repeat(2,minmax(0,1fr))}.concept-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.settings-shell{grid-template-columns:minmax(190px,220px) minmax(0,1fr)}.settings-adapter-matrix{grid-template-columns:minmax(0,1fr)}.pricing-editor{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:980px){.grid,.feature-layout,.execution-layout{display:block}.panel,.feature-panel{margin-bottom:10px}.current-selected-column{max-height:none;overflow:visible}.detail-panel{position:static;height:auto}.stage-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.feature-panel-items{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}.concept-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-shell{display:block}.settings-rail{position:static;margin-bottom:10px}.settings-panel{margin-bottom:10px}.settings-toolbar .status-text{margin-left:0}.pricing-editor{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:980px){.workbench-header{display:grid;gap:8px}.language-switch{justify-self:start}.grid,.feature-layout,.execution-layout{display:block}.panel,.feature-panel{margin-bottom:10px}.current-selected-column{max-height:none;overflow:visible}.detail-panel{position:static;height:auto}.stage-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.feature-panel-items{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}.concept-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-shell{display:block}.settings-rail{position:static;margin-bottom:10px}.settings-panel{margin-bottom:10px}.settings-toolbar .status-text{margin-left:0}.pricing-editor{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media (max-width:560px){.pricing-editor,.settings-summary-row,.settings-meta-row{grid-template-columns:minmax(0,1fr)}.settings-actionbar{justify-content:flex-start}.settings-editor{min-height:180px}}
-  </style></head><body><h1>${escapeHtml(title)}</h1>${body}<div id="concept-modal" class="concept-modal" hidden><div class="concept-dialog" role="dialog" aria-modal="true" aria-labelledby="concept-modal-title"><header><strong id="concept-modal-title">UI Concept</strong><button class="workbench-button button-secondary" data-command="closeConceptImage" aria-label="Close">${buttonContent("Close", "x")}</button></header><img id="concept-modal-image" alt=""></div></div><script nonce="${nonce}">
+  </style></head><body><header class="workbench-header"><h1>${escapeHtml(title)}</h1><label class="language-switch"><span>Language</span><select id="workbench-language" aria-label="Language"><option value="en">English</option><option value="zh-CN">中文</option><option value="ja">日本語</option></select></label></header>${body}<div id="concept-modal" class="concept-modal" hidden><div class="concept-dialog" role="dialog" aria-modal="true" aria-labelledby="concept-modal-title"><header><strong id="concept-modal-title">UI Concept</strong><button class="workbench-button button-secondary" data-command="closeConceptImage" aria-label="Close">${buttonContent("Close", "x")}</button></header><img id="concept-modal-image" alt=""></div></div><script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
+    const LOCALE_STORAGE_KEY = "specdrive.ide.locale";
+    const WORKBENCH_LOADED_LOCALE = ${JSON.stringify(workbenchLocale)};
+    const WORKBENCH_TRANSLATIONS = ${JSON.stringify(workbenchTranslations)};
+    const workbenchState = () => vscode.getState() || {};
+    const supportedLocale = (value) => ["en", "zh-CN", "ja"].includes(value) ? value : undefined;
+    const browserLocale = () => {
+      const language = String(navigator.language || "").toLowerCase();
+      if (language.startsWith("zh")) return "zh-CN";
+      if (language.startsWith("ja")) return "ja";
+      return "en";
+    };
+    const currentWorkbenchLocale = () => {
+      const stateLocale = supportedLocale(workbenchState().locale);
+      const storedLocale = supportedLocale(localStorage.getItem(LOCALE_STORAGE_KEY));
+      return storedLocale || stateLocale || WORKBENCH_LOADED_LOCALE || browserLocale();
+    };
+    const localize = (source, locale = currentWorkbenchLocale()) => {
+      const text = String(source || "");
+      if (locale === "en") return text;
+      return locale === WORKBENCH_LOADED_LOCALE ? WORKBENCH_TRANSLATIONS?.[text] || text : text;
+    };
+    const localizeDynamic = (message) => {
+      const text = localize(message);
+      if (text !== message) return text;
+      const locale = currentWorkbenchLocale();
+      const translations = locale === WORKBENCH_LOADED_LOCALE ? WORKBENCH_TRANSLATIONS || {} : {};
+      const selectedTask = String(message || "").match(/^Selected task (.+)\.$/);
+      if (selectedTask) return (translations["Selected task {id}."] || message).replace("{id}", selectedTask[1]);
+      const selectedJob = String(message || "").match(/^Selected job: (.+)$/);
+      if (selectedJob) return (translations["Selected job: {id}"] || message).replace("{id}", selectedJob[1]);
+      const scheduling = String(message || "").match(/^Scheduling (\\d+) Feature Specs?\\.\\.\\.$/);
+      if (scheduling) return (translations["Scheduling {count} Feature Specs..."] || message).replace("{count}", scheduling[1]);
+      return message;
+    };
+    const setLocalizedText = (element, source) => {
+      if (!element) return;
+      element.dataset.i18nTextSource = source;
+      element.textContent = localize(source);
+    };
+    const shouldSkipLocaleNode = (node) => {
+      const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+      return Boolean(element?.closest("script,style,code,pre,textarea,input,select,[data-i18n-skip]"));
+    };
+    const applyLocale = (locale) => {
+      const selected = supportedLocale(locale) || "en";
+      localStorage.setItem(LOCALE_STORAGE_KEY, selected);
+      vscode.setState({...workbenchState(), locale: selected});
+      document.documentElement.lang = selected;
+      const languageSelect = document.getElementById("workbench-language");
+      if (languageSelect) languageSelect.value = selected;
+      if (selected !== WORKBENCH_LOADED_LOCALE) {
+        vscode.postMessage({command:"setWorkbenchLocale", locale:selected});
+        return;
+      }
+      document.querySelectorAll("[data-i18n-text-source]").forEach((element) => {
+        element.textContent = localizeDynamic(element.dataset.i18nTextSource);
+      });
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      for (const node of textNodes) {
+        if (shouldSkipLocaleNode(node)) continue;
+        const raw = node.nodeValue || "";
+        const trimmed = raw.trim();
+        if (!trimmed) continue;
+        const source = node.__i18nSource || trimmed;
+        node.__i18nSource = source;
+        node.nodeValue = raw.replace(trimmed, localize(source, selected));
+      }
+      for (const element of document.querySelectorAll("[title],[aria-label],[placeholder],[alt]")) {
+        for (const attr of ["title", "aria-label", "placeholder", "alt"]) {
+          const value = element.getAttribute(attr);
+          if (!value || shouldSkipLocaleNode(element)) continue;
+          const sourceAttr = "i18n" + attr.replace(/(^|-)(\\w)/g, (_, __, letter) => letter.toUpperCase()) + "Source";
+          const source = element.dataset[sourceAttr] || value;
+          element.dataset[sourceAttr] = source;
+          element.setAttribute(attr, localize(source, selected));
+        }
+      }
+    };
     const setWorkbenchStatus = (message) => {
       const status = document.getElementById("workbench-status");
-      if (status) status.textContent = message;
+      if (status) {
+        status.dataset.i18nTextSource = message;
+        status.textContent = localizeDynamic(message);
+      }
     };
-    const workbenchState = () => vscode.getState() || {};
     const workbenchFormState = () => {
       const source = workbenchState().workbenchForm;
       return source && typeof source === "object" ? source : {drafts: {}};
@@ -88,9 +175,9 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
         newRequirement: ["New Requirement", "Global Spec request", "Enter the new requirement."],
         newFeature: ["New Feature", "Add or change", "Enter add-or-change content."],
       }[mode] || ["New Feature", "Add or change", "Enter add-or-change content."];
-      title.textContent = copy[0];
-      subtitle.textContent = copy[1];
-      if (prompt) prompt.textContent = copy[2];
+      setLocalizedText(title, copy[0]);
+      setLocalizedText(subtitle, copy[1]);
+      if (prompt) setLocalizedText(prompt, copy[2]);
       input.value = typeof options.initialContent === "string" ? options.initialContent : workbenchDraftFor(draftKey);
       if (options.focus !== false) input.focus();
       saveWorkbenchFormState();
@@ -200,6 +287,11 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       card.setAttribute("aria-current", "true");
     };
     document.addEventListener("change", (event) => {
+      const languageSelect = event.target.closest("#workbench-language");
+      if (languageSelect) {
+        applyLocale(languageSelect.value);
+        return;
+      }
       const checkbox = event.target.closest("[data-feature-select]");
       if (!checkbox) return;
       const card = checkbox.closest("[data-feature-card]");
@@ -303,8 +395,8 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       }
       const setButtonLabel = (button, label) => {
         const span = button?.querySelector?.(".button-label");
-        if (span) span.textContent = label;
-        else if (button) button.textContent = label;
+        if (span) setLocalizedText(span, label);
+        else if (button) setLocalizedText(button, label);
       };
       if (payload.command === "toggleFeatureSpecView") {
         const mode = target.dataset.viewMode === "dependency" ? "dependency" : "list";
@@ -364,7 +456,7 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
         const executionPreference = selectedExecutionPreference();
         if (payload.action === "schedule_run" || payload.action === "start_auto_run") payload.payload = scheduleRunPayload(payload, executionPreference);
         if (payload.reviewNoteRequired === "true") {
-          const note = window.prompt("Record the review clarification, requested change, or decision note before continuing.");
+          const note = window.prompt(localize("Record the review clarification, requested change, or decision note before continuing."));
           if (note === null) {
             setWorkbenchStatus("Review decision cancelled.");
             return;
@@ -401,6 +493,7 @@ export function renderWorkbenchPage(title: string, nonce: string, body: string, 
       }
       vscode.postMessage(payload);
     });
+    applyLocale(currentWorkbenchLocale());
     restoreWorkbenchFormState();
   </script></body></html>`;
 }
@@ -538,7 +631,7 @@ export function renderQueueGroup(status: string, items: SpecDriveIdeQueueItem[],
     ${items.map((item) => {
       const key = queueItemKey(item);
       const selected = Boolean(selectedKey && key === selectedKey);
-      return `<div class="queue-item${selected ? " selected" : ""}"><span>${escapeHtml(item.featureId ?? item.taskId ?? item.operation ?? "execution")}</span><span>${escapeHtml(item.stateReason ?? item.operation ?? item.jobType ?? "-")}</span><span>${escapeHtml(queueItemMetricLabel(item))}</span><span class="toolbar">${queueReviewButton(item)}${queueSelectButton(item, selected)}</span></div>`;
+      return `<div class="queue-item${selected ? " selected" : ""}"><span data-i18n-skip>${escapeHtml(item.featureId ?? item.taskId ?? item.operation ?? "execution")}</span><span data-i18n-skip>${escapeHtml(item.stateReason ?? item.operation ?? item.jobType ?? "-")}</span><span data-i18n-skip>${escapeHtml(queueItemMetricLabel(item))}</span><span class="toolbar">${queueReviewButton(item)}${queueSelectButton(item, selected)}</span></div>`;
     }).join("") || `<div class="queue-item"><span class="muted">No items</span></div>`}
   </details>`;
 }
@@ -575,8 +668,8 @@ function queueReviewButton(item: SpecDriveIdeQueueItem): string {
 }
 
 export function renderBlockerCard(item: SpecDriveIdeQueueItem): string {
-  return `<div class="issue ${statusClass(item.status)}"><strong>${escapeHtml(item.featureId ?? item.executionId ?? item.schedulerJobId ?? "approval")}</strong><br>
-    <span>${escapeHtml(item.summary ?? item.operation ?? item.status)}</span>
+  return `<div class="issue ${statusClass(item.status)}"><strong data-i18n-skip>${escapeHtml(item.featureId ?? item.executionId ?? item.schedulerJobId ?? "approval")}</strong><br>
+    <span data-i18n-skip>${escapeHtml(item.summary ?? item.operation ?? item.status)}</span>
     <div class="toolbar">${queueButton("Accept", item, "approve").replace("data-action=\"approve\"", "data-action=\"approve\" data-approval-decision=\"accept\"")}${queueButton("Decline", item, "approve").replace("data-action=\"approve\"", "data-action=\"approve\" data-approval-decision=\"decline\"")}${queueButton("Retry", item, "retry")}</div>
   </div>`;
 }
@@ -668,12 +761,12 @@ export function executionFieldsHtml(item: SpecDriveIdeQueueItem): string {
       ["Updated", item.updatedAt],
     ];
   const featureDescription = item.featureDescription
-    ? `<h2>Feature Spec Description</h2><p>${escapeHtml(item.featureDescription)}</p>`
+    ? `<h2>Feature Spec Description</h2><p data-i18n-skip>${escapeHtml(item.featureDescription)}</p>`
     : "";
   return `${featureDescription}<ul>${fields
     .filter(([, value]) => typeof value === "string" && value.length > 0)
-    .map(([label, value]) => `<li>${escapeHtml(String(label))}: <code>${escapeHtml(String(value))}</code></li>`)
-    .join("")}</ul><h2>Summary</h2><p>${escapeHtml(item.summary ?? "No summary recorded yet.")}</p>`;
+    .map(([label, value]) => `<li><span>${escapeHtml(String(label))}</span>: <code>${escapeHtml(String(value))}</code></li>`)
+    .join("")}</ul><h2>Summary</h2><p data-i18n-skip>${escapeHtml(item.summary ?? "No summary recorded yet.")}</p>`;
 }
 
 function featureSpecLabel(item: SpecDriveIdeQueueItem): string | undefined {

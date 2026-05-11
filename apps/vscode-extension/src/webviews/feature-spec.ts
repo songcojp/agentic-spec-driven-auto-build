@@ -1,4 +1,5 @@
 import type { QueueAction, SpecDriveIdeDocument, SpecDriveIdeFeatureNode, SpecDriveIdeTokenConsumption, SpecDriveIdeView } from "../types";
+import type { WorkbenchLocale } from "./i18n";
 import {
   autoRefreshSwitch,
   buttonContent,
@@ -18,6 +19,7 @@ export function renderFeatureSpecWebview(
   selectedFeatureId: string | undefined,
   autoRefreshEnabled = false,
   panelOpenState: Record<string, boolean> = {},
+  locale: WorkbenchLocale = "en",
 ): string {
   const nonce = webviewNonce();
   const features = view?.features ?? [];
@@ -49,7 +51,7 @@ export function renderFeatureSpecWebview(
       <div class="panel-title"><h2>Dependency Graph</h2><span>${features.length} Feature Specs</span><button class="workbench-button button-secondary dependency-toggle" data-command="toggleDependencyGraphBranches" data-expanded="true">${buttonContent("Collapse All", "branch")}</button></div>
       ${renderDependencyGraph(features)}
     </section>
-  `);
+  `, undefined, locale);
 }
 
 function renderProjectCostTotal(view: SpecDriveIdeView | undefined): string {
@@ -97,7 +99,7 @@ function renderDependencyNode(
   const nextPath = new Set(path);
   nextPath.add(node.id);
   const label = feature
-    ? `<button data-command="selectFeature" data-feature-id="${escapeAttr(feature.id)}">${escapeHtml(feature.id)}</button><span>${escapeHtml(feature.title)}</span><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span>`
+    ? `<button data-command="selectFeature" data-feature-id="${escapeAttr(feature.id)}">${escapeHtml(feature.id)}</button><span data-i18n-skip>${escapeHtml(feature.title)}</span><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span>`
     : `<strong>${escapeHtml(node.id)}</strong><span class="muted">missing dependency</span>`;
   const nodeHtml = `<span class="dependency-node ${feature ? "" : "missing"}">${label}</span>`;
   if (children.length === 0) return `<li><div class="dependency-leaf">${nodeHtml}</div></li>`;
@@ -130,7 +132,7 @@ function renderFeatureCard(feature: SpecDriveIdeFeatureNode, current: boolean): 
     : feature.latestExecutionStatus === "completed" ? 100 : feature.latestExecutionStatus === "running" ? 70 : feature.status === "ready" ? 60 : 30;
   return `<article class="feature-card${current ? " current" : ""}" data-feature-card="${escapeAttr(feature.id)}" aria-selected="false" ${current ? "aria-current=\"true\"" : ""}>
     <header><strong>${escapeHtml(feature.id)}</strong><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></header>
-    <div>${escapeHtml(feature.title)}</div>
+    <div data-i18n-skip>${escapeHtml(feature.title)}</div>
     <div class="metric"><span>Task Progress</span><strong>${progress}%</strong><div class="bar"><span style="width:${progress}%"></span></div></div>
     <div class="metric"><span>Execution State</span><strong>${escapeHtml(featureExecutionLabel(feature))}</strong></div>
     <div class="metric"><span>Tasks</span><strong>${doneTasks}/${taskCount}</strong></div>
@@ -143,7 +145,7 @@ function renderFeatureCard(feature: SpecDriveIdeFeatureNode, current: boolean): 
 
 function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: string): string {
   const actions = featureDetailActions(feature, projectId);
-  return `<div class="panel-title selected-title"><div><h2>${escapeHtml(feature.title)}</h2><span>${escapeHtml(feature.id)} · </span><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></div><div class="title-actions">${actions}</div></div>
+  return `<div class="panel-title selected-title"><div><h2 data-i18n-skip>${escapeHtml(feature.title)}</h2><span>${escapeHtml(feature.id)} · </span><span class="${statusClass(feature.status)}">${escapeHtml(feature.status)}</span></div><div class="title-actions">${actions}</div></div>
     <h3>Feature Spec Description</h3>
     ${renderFeatureDescription(feature)}
     <div class="row"><span>Priority</span><strong>${escapeHtml(feature.priority ?? "-")}</strong></div>
@@ -166,7 +168,11 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
 }
 
 function renderFeatureDescription(feature: SpecDriveIdeFeatureNode): string {
-  return `<div class="issue"><strong>${escapeHtml(feature.title)}</strong><br><span>${escapeHtml(feature.description ?? "No Feature Spec description found.")}</span></div>`;
+  const descriptionText = feature.description ?? "No Feature Spec description found.";
+  const description = feature.description
+    ? `<span data-i18n-skip>${escapeHtml(descriptionText)}</span>`
+    : `<span>${escapeHtml(descriptionText)}</span>`;
+  return `<div class="issue"><strong data-i18n-skip>${escapeHtml(feature.title)}</strong><br>${description}</div>`;
 }
 
 function featureDetailActions(feature: SpecDriveIdeFeatureNode, projectId?: string): string {

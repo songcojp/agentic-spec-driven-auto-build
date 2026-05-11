@@ -11,6 +11,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - UI 可以复用 shared TypeScript contract、query/command API client、状态枚举和 schema 类型，以保证前后端契约一致。
 - extension host 负责 Webview 消息路由、CSP、资源 URI 转换和 Control Plane client 调用；Webview 不直接访问本地文件系统、SQLite 或 Scheduler 内部队列。
 - Webview 信息架构拆为三类工作上下文：执行控制、Spec 生命周期控制、Feature Spec 状态总览。
+- Webview 共享壳提供本地化语言切换入口，支持中文、英语和日语，并将所选语言保存在 Webview state / localStorage；本地化范围只覆盖 UI chrome、按钮、字段标签、空态和提示，不翻译执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入或 Feature 文档内容。
 - 三张概念图固定为 UI 基准：`docs/ui/feat-021-execution-workbench-concept.png`、`docs/ui/feat-021-spec-workspace-concept.png`、`docs/ui/feat-021-feature-spec-concept.png`。
 
 ## 2. 主要视图
@@ -22,6 +23,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 | Execution Workbench | Selected Task Actions | 队列行支持显式选中；顶部自动执行入口在 Start Auto Run / Pause Auto Run 间切换；Run Now、Pause / Resume、Retry、Cancel、Skip、Reprioritize、Enqueue 默认禁用，只对选中任务可用，并根据选中任务状态启用、禁用或切换按钮文案。 |
 | Execution Workbench | Current Execution | 展示当前 Execution Record、Feature Spec 标题和描述、thread/turn、步骤进度、raw log refs、diff 摘要和输出校验状态。 |
 | Execution Workbench | Job Timing | 从 Control Plane ViewModel 消费 `startedAt`、`completedAt` 和 `durationMs`，在队列行、选中详情和 State Flow 中展示开始时间、结束时间和单次执行耗时。 |
+| Shared Webview Shell | Language Switch | 在所有 VSCode IDE Webview 顶部展示语言切换入口，支持 English、中文和日本語，切换后立即更新页面标题、按钮、字段标签、空态、提示和设置面板 chrome。 |
 | Execution Workbench | Blockers and Approvals | 汇总 blocked reason、approval pending、失败原因和可执行恢复动作。 |
 | Execution Workbench | Result Projection | 摘要优先展示结构化 Skill 输出：状态、summary、nextAction、traceability、produced artifacts 表格、常见 result 分组、Additional Result 和完整 JSON 审计视图。 |
 | Spec Workspace | Lifecycle Pipeline | 展示 PRD 到 Delivery 的 Spec 全流程阶段、阶段状态、当前阶段和下一步动作。 |
@@ -54,6 +56,8 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Execution Workbench 的全局任务调度动作和 Job 动作必须分离：全局动作直接提交 controlled command；Job 动作提交 queue command，并使用选中 queue item 的 scheduler job id 或 execution id 作为目标。后端必须支持 schedule-only Job（只有 `scheduler_job_records`）和已有 Execution Record 的 Run，不能只从 `execution_records` 查找目标。
 - Execution Workbench 禁用按钮必须在视觉上区别于可用按钮：使用 disabled foreground、次级背景、降低透明度和 `not-allowed` 光标；禁用按钮 hover 状态不得恢复为可用按钮样式。
 - Product Console 与三组 VSCode Webview 共用持久事实源，但不共用 UI ViewModel 作为事实源。
+- Shared Webview Shell 的 locale 为前端本地 UI 状态，不进入 Control Plane 持久事实源；刷新、自动刷新或 Webview 重新渲染时从 Webview state / localStorage 恢复。语言切换不改变 query / command payload，不改变 Scheduler、Execution Record 或 Feature `spec-state.json`。
+- 本地化只作用于 Webview chrome 文案；`SkillOutputContractV1`、Additional Result JSON、diff、日志、文件路径、命令输出、adapter JSON、用户输入、Feature 标题 / 描述和文档内容保持来源原文。
 - Spec Workspace 的全流程操作通过 `runControlledCommand` 或 Spec change request 进入 extension host，由 Control Plane 决定是否生成任务、记录审批或拒绝动作。
 - Spec Workspace 必须把需求新增、需求变更和澄清作为三个清晰入口展示；三者都提交 `SpecChangeRequestV1`，由 Control Plane 和变更流程判定后续 skill / spec evolution 路由。
 - Feature Spec 的调度、打开文档和刷新动作在 VSCode extension host 内执行；调度类动作必须进入 Control Plane command API。
@@ -87,3 +91,4 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Webview 级验证覆盖单个视图切换按钮显示在第一个控件位置、点击后切换 Feature List / Dependency Graph 并修改按钮文字、树状层级展示、默认展开二级节点、节点折叠/展开、缺失依赖提示，以及点击 Feature 节点后仍能选中详情。
 - Webview 级验证覆盖 Execution Workbench 队列任务选中、高亮、顶部按钮无选中时禁用、按 selected task status 启用 Run Now / Pause / Resume / Retry / Cancel / Skip / Reprioritize / Enqueue，以及选中后详情面板切换到该任务。
 - Webview 级验证覆盖 Execution Workbench 队列分类 panel 顺序、折叠/展开行为、移除 `ready` 分类、`running` 和 `queued` 默认展开，以及其它分类默认折叠。
+- Webview 级验证覆盖共享语言切换入口、中文 / 英语 / 日语选项、Webview state / localStorage 持久化、刷新后语言恢复，以及 raw log / diff / path / command / JSON / user input 不被翻译。

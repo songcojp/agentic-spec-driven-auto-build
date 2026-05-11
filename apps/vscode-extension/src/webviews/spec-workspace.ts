@@ -1,4 +1,5 @@
 import type { SpecDriveIdeDiagnostic, SpecDriveIdeDocument, SpecDriveIdeView, UiConceptImage } from "../types";
+import type { WorkbenchLocale } from "./i18n";
 import {
   autoRefreshSwitch,
   buttonIcon,
@@ -18,6 +19,7 @@ export function renderSpecWorkspaceWebview(
   uiConceptImages: UiConceptImage[] = [],
   autoRefreshEnabled = false,
   cspSource?: string,
+  locale: WorkbenchLocale = "en",
 ): string {
   const nonce = webviewNonce();
   const projectId = view?.project?.id ?? "workspace";
@@ -49,7 +51,7 @@ export function renderSpecWorkspaceWebview(
         ${renderGlobalDiagnosticsPanel(view)}
       </section>
     </main>
-  `, cspSource);
+  `, cspSource, locale);
 }
 
 type SpecLifecycleStage = {

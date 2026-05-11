@@ -19,6 +19,10 @@ function readSourceTree(dir: string): string {
 const extensionSource = readSourceTree("apps/vscode-extension/src");
 const webviewSource = readSourceTree("apps/vscode-extension/src/webviews");
 const executionWebviewSource = readFileSync("apps/vscode-extension/src/webviews/execution.ts", "utf8");
+const sharedWebviewSource = readFileSync("apps/vscode-extension/src/webviews/shared.ts", "utf8");
+const webviewI18nSource = readFileSync("apps/vscode-extension/src/webviews/i18n.ts", "utf8");
+const webviewI18nZhSource = readFileSync("apps/vscode-extension/src/webviews/i18n.zh-CN.ts", "utf8");
+const webviewI18nJaSource = readFileSync("apps/vscode-extension/src/webviews/i18n.ja.ts", "utf8");
 const specWorkspaceWebviewSource = readFileSync("apps/vscode-extension/src/webviews/spec-workspace.ts", "utf8");
 const executionQueueGroupsBlock = webviewSource.match(/const EXECUTION_QUEUE_GROUPS[\s\S]*?\];/)?.[0] ?? "";
 const productConsoleSource = readFileSync("src/product-console.ts", "utf8");
@@ -98,7 +102,7 @@ test("VSCode Execution Workbench requires selected queue tasks for stateful acti
   assert.match(extensionSource, /let selectedQueueKey: string \| undefined/);
   assert.match(extensionSource, /message\.command === "selectQueueItem"/);
   assert.match(extensionSource, /executionItemByKey\(view, selectedQueueKey\)/);
-  assert.match(extensionSource, /renderExecutionWorkbenchWebview\(view, detail, selectedQueueKey, autoRefreshEnabled\)/);
+  assert.match(extensionSource, /renderExecutionWorkbenchWebview\(view, detail, selectedQueueKey, autoRefreshEnabled, workbenchLocale\)/);
   assert.match(extensionSource, /automation\?: SpecDriveIdeAutomationState/);
   assert.match(extensionSource, /autoRunButton\(view\)/);
   assert.match(extensionSource, /let autoRefreshEnabled = true/);
@@ -240,6 +244,38 @@ test("VSCode Webview buttons use shared inline SVG icons", () => {
   assert.match(webviewSource, /buttonContent\("Close", "x"\)/);
   assert.match(webviewSource, /commandButton\("Open", "openDocument"/);
   assert.match(webviewSource, /buttonIcon\("warning"\)/);
+});
+
+test("VSCode IDE Webviews expose shared multilingual UI chrome", () => {
+  assert.match(webviewI18nSource, /workbenchTranslationsForLocale/);
+  assert.match(webviewI18nSource, /require\("\.\/i18n\.zh-CN"\)/);
+  assert.match(webviewI18nSource, /require\("\.\/i18n\.ja"\)/);
+  assert.doesNotMatch(webviewI18nSource, /"Execution Workbench": "执行工作台"/);
+  assert.doesNotMatch(webviewI18nSource, /"Execution Workbench": "実行ワークベンチ"/);
+  assert.match(sharedWebviewSource, /workbenchTranslationsForLocale/);
+  assert.doesNotMatch(sharedWebviewSource, /"Execution Workbench": "执行工作台"/);
+  assert.match(sharedWebviewSource, /WORKBENCH_LOADED_LOCALE/);
+  assert.match(sharedWebviewSource, /const WORKBENCH_TRANSLATIONS = \$\{JSON\.stringify\(workbenchTranslations\)\}/);
+  assert.match(sharedWebviewSource, /vscode\.postMessage\(\{command:"setWorkbenchLocale", locale:selected\}\)/);
+  assert.match(sharedWebviewSource, /id="workbench-language"/);
+  assert.match(sharedWebviewSource, /<option value="en">English<\/option>/);
+  assert.match(sharedWebviewSource, /<option value="zh-CN">中文<\/option>/);
+  assert.match(sharedWebviewSource, /<option value="ja">日本語<\/option>/);
+  assert.match(sharedWebviewSource, /LOCALE_STORAGE_KEY = "specdrive\.ide\.locale"/);
+  assert.match(sharedWebviewSource, /localStorage\.setItem\(LOCALE_STORAGE_KEY, selected\)/);
+  assert.match(sharedWebviewSource, /vscode\.setState\(\{\.\.\.workbenchState\(\), locale: selected\}\)/);
+  assert.match(sharedWebviewSource, /applyLocale\(currentWorkbenchLocale\(\)\)/);
+  assert.match(sharedWebviewSource, /shouldSkipLocaleNode\(node\)/);
+  assert.match(sharedWebviewSource, /script,style,code,pre,textarea,input,select,\[data-i18n-skip\]/);
+  assert.match(webviewI18nZhSource, /export const ZH_CN_TRANSLATIONS/);
+  assert.match(webviewI18nZhSource, /"Execution Workbench": "执行工作台"/);
+  assert.doesNotMatch(webviewI18nZhSource, /"Execution Workbench": "実行ワークベンチ"/);
+  assert.match(webviewI18nJaSource, /export const JA_TRANSLATIONS/);
+  assert.match(webviewI18nJaSource, /"Execution Workbench": "実行ワークベンチ"/);
+  assert.match(webviewI18nJaSource, /"System Settings": "システム設定"/);
+  assert.doesNotMatch(webviewI18nJaSource, /"Execution Workbench": "执行工作台"/);
+  assert.match(extensionSource, /setWorkbenchLocale/);
+  assert.match(extensionSource, /isWorkbenchLocale\(message\.locale\)/);
 });
 
 test("VSCode Spec Explorer title actions are ordered by workflow", () => {
@@ -386,7 +422,7 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /const featurePanelOpenState = \(\) =>/);
   assert.match(extensionSource, /vscode\.postMessage\(\{command:"selectFeature", featureId: featureCard\.dataset\.featureCard, panelOpenState: featurePanelOpenState\(\)\}\)/);
   assert.match(extensionSource, /let panelOpenState: Record<string, boolean> = \{\}/);
-  assert.match(extensionSource, /renderFeatureSpecWebview\(view, selectedFeatureId, autoRefreshEnabled, panelOpenState\)/);
+  assert.match(extensionSource, /renderFeatureSpecWebview\(view, selectedFeatureId, autoRefreshEnabled, panelOpenState, workbenchLocale\)/);
   assert.match(extensionSource, /card\.classList\.toggle\("selected", selected\)/);
   assert.match(extensionSource, /card\.setAttribute\("aria-selected", selected \? "true" : "false"\)/);
   assert.match(extensionSource, /aria-current=\\"true\\"/);
@@ -490,7 +526,7 @@ test("VSCode Feature Spec Webview schedules selected Features with adapter prefe
 
 test("VSCode Spec Workspace keeps global skill input at top and document actions inside lifecycle", () => {
   assert.match(extensionSource, /renderSpecWorkspaceWebview/);
-  assert.match(extensionSource, /renderSpecWorkspaceWebview\(view, uiConceptImages, autoRefreshEnabled, panel\.webview\.cspSource\)/);
+  assert.match(extensionSource, /renderSpecWorkspaceWebview\(view, uiConceptImages, autoRefreshEnabled, panel\.webview\.cspSource, workbenchLocale\)/);
   assert.match(extensionSource, /panel\.onDidDispose\(\(\) => \{\n    stopAutoRefresh\(\);\n    specWorkspacePanel = undefined;/);
   assert.match(specWorkspaceWebviewSource, /autoRefreshSwitch\(autoRefreshEnabled\)/);
   assert.match(specWorkspaceWebviewSource, /autoRefreshEnabled = false/);

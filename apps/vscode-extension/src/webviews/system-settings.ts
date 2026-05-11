@@ -1,4 +1,5 @@
 import type { AdapterSettingsSection, SystemSettingsViewModel } from "../types";
+import type { WorkbenchLocale } from "./i18n";
 import {
   commandButton,
   emptyState,
@@ -11,7 +12,7 @@ import {
 
 type AdapterKind = "cli" | "rpc";
 
-export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | undefined): string {
+export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | undefined, locale: WorkbenchLocale = "en"): string {
   const nonce = webviewNonce();
   const factSources = settings?.factSources ?? [];
   return renderWorkbenchPage("System Settings", nonce, `
@@ -37,7 +38,7 @@ export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | 
         </div>
       </main>
     ` : emptyState("System settings are unavailable.")}
-  `);
+  `, undefined, locale);
 }
 
 function renderSettingsRail(settings: SystemSettingsViewModel, factSources: string[]): string {

@@ -1,4 +1,5 @@
 import type { QueueAction, SpecDriveIdeExecutionDetail, SpecDriveIdeQueueItem, SpecDriveIdeView } from "../types";
+import type { WorkbenchLocale } from "./i18n";
 import {
   autoRefreshSwitch,
   commandButton,
@@ -36,6 +37,7 @@ export function renderExecutionWorkbenchWebview(
   detail: SpecDriveIdeExecutionDetail | SpecDriveIdeQueueItem | undefined,
   selectedKey?: string,
   autoRefreshEnabled = false,
+  locale: WorkbenchLocale = "en",
 ): string {
   const nonce = webviewNonce();
   const queue = view ? allQueueItems(view) : [];
@@ -86,7 +88,7 @@ export function renderExecutionWorkbenchWebview(
         ${renderAdditionalResult(executionDetail)}
       </section>
     </main>
-  `);
+  `, undefined, locale);
 }
 
 function selectedBlockerItems(item: SpecDriveIdeQueueItem | undefined): SpecDriveIdeQueueItem[] {
@@ -273,7 +275,7 @@ function renderSkillOutputSummary(detail: SpecDriveIdeExecutionDetail | undefine
   const result = resultRecord(output);
   return `
     <div class="result-summary">
-      <div class="result-status"><span class="badge ${statusClass(detail.status)}">${escapeHtml(detail.status)}</span><strong>${escapeHtml(String(projection.summary ?? "No summary."))}</strong></div>
+      <div class="result-status"><span class="badge ${statusClass(detail.status)}">${escapeHtml(detail.status)}</span><strong data-i18n-skip>${escapeHtml(String(projection.summary ?? "No summary."))}</strong></div>
       <div class="row row-stacked"><span>Next Action</span><span>${escapeHtml(stringOrNone(output?.nextAction))}</span></div>
       ${renderTraceabilityChips(output?.traceability, detail)}
     </div>
@@ -319,7 +321,7 @@ function renderProducedArtifacts(detail: SpecDriveIdeExecutionDetail | undefined
   if (artifacts.length === 0) return emptyState("No produced artifacts.");
   return `<table class="artifact-table"><thead><tr><th>Path</th><th>Kind</th><th>Status</th><th>Summary</th></tr></thead><tbody>${artifacts.map((artifact) => {
     const record = artifact && typeof artifact === "object" && !Array.isArray(artifact) ? artifact as Record<string, unknown> : {};
-    return `<tr><td><code>${escapeHtml(String(record.path ?? "-"))}</code></td><td>${escapeHtml(String(record.kind ?? "-"))}</td><td><span class="${statusClass(String(record.status ?? ""))}">${escapeHtml(String(record.status ?? "-"))}</span></td><td>${escapeHtml(String(record.summary ?? ""))}</td></tr>`;
+    return `<tr><td><code>${escapeHtml(String(record.path ?? "-"))}</code></td><td data-i18n-skip>${escapeHtml(String(record.kind ?? "-"))}</td><td data-i18n-skip><span class="${statusClass(String(record.status ?? ""))}">${escapeHtml(String(record.status ?? "-"))}</span></td><td data-i18n-skip>${escapeHtml(String(record.summary ?? ""))}</td></tr>`;
   }).join("")}</tbody></table>`;
 }
 
@@ -349,7 +351,7 @@ function renderResultEntry(groupTitle: string, key: string, value: unknown): str
   const wide = isWideResultValue(key, value);
   const entryLabel = labelize(key);
   const label = wide && entryLabel === groupTitle ? "" : `<span>${escapeHtml(entryLabel)}</span>`;
-  const valueHtml = wide ? `<div class="result-content">${renderResultValue(value)}</div>` : `<span>${renderResultValue(value)}</span>`;
+  const valueHtml = wide ? `<div class="result-content" data-i18n-skip>${renderResultValue(value)}</div>` : `<span data-i18n-skip>${renderResultValue(value)}</span>`;
   return `<div class="result-entry${wide ? " result-entry-wide" : ""}">${label}${valueHtml}</div>`;
 }
 

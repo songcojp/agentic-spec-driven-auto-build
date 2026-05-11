@@ -196,3 +196,8 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 状态: done
 描述: Control Plane 从 Execution Record 的 `started_at` 与 `completed_at` 派生 `durationMs`，并在 VSCode Execution Workbench 队列行、选中 Job 详情和 State Flow 中展示开始时间、结束时间和单次执行耗时；缺失或无效时间范围显示为空/none。
 验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`，`npm run ide:build`，`git diff --check`。
+
+### T-021-37 VSCode Webview 多语言切换
+状态: done
+描述: 在共享 Webview 壳增加语言切换入口，支持中文、英语和日语；将选择保存到 Webview state / localStorage，并在 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 中翻译页面标题、操作按钮、字段标签、空态、提示和设置面板 chrome；执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入和 Feature 文档内容保持原文。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。

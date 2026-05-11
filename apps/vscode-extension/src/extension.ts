@@ -23,6 +23,7 @@ import type {
 } from "./types";
 import { currentExecutionItem, executionItemByKey, renderExecutionWebview, renderExecutionWorkbenchWebview, runningExecutionItem } from "./webviews/execution";
 import { preferredFeature, preferredFeatureReviewSource, renderFeatureSpecWebview } from "./webviews/feature-spec";
+import { isWorkbenchLocale, type WorkbenchLocale } from "./webviews/i18n";
 import { preferredWorkspaceRequestSource, renderSpecWorkspaceWebview } from "./webviews/spec-workspace";
 import { renderSystemSettingsWebview } from "./webviews/system-settings";
 
@@ -1065,6 +1066,7 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
   panel.iconPath = specExplorePanelIconUri("run-all");
   let selectedQueueKey: string | undefined;
   let autoRefreshEnabled = true;
+  let workbenchLocale: WorkbenchLocale = "en";
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1080,7 +1082,7 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
       if (selectedQueueKey && !selected) selectedQueueKey = undefined;
       const current = selected ?? (view ? currentExecutionItem(view) : undefined);
       const detail = current ? await fetchExecutionDetail(current) : undefined;
-      panel.webview.html = renderExecutionWorkbenchWebview(view, detail, selectedQueueKey, autoRefreshEnabled);
+      panel.webview.html = renderExecutionWorkbenchWebview(view, detail, selectedQueueKey, autoRefreshEnabled, workbenchLocale);
     } finally {
       rendering = false;
     }
@@ -1100,6 +1102,11 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
     executionWorkbenchPanel = undefined;
   });
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
+    if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
+      workbenchLocale = message.locale;
+      await render();
+      return;
+    }
     if (isWorkbenchMessage(message) && message.command === "selectQueueItem" && typeof message.entityId === "string") {
       selectedQueueKey = `${message.entityType === "job" ? "job" : "run"}:${message.entityId}`;
       await render();
@@ -1136,6 +1143,7 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
   });
   panel.iconPath = specExplorePanelIconUri("checklist");
   let autoRefreshEnabled = true;
+  let workbenchLocale: WorkbenchLocale = "en";
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1145,7 +1153,7 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
       await provider.refresh();
       const view = provider.currentView();
       const uiConceptImages = await collectUiConceptImages(panel.webview, view, uiConceptWorkspaceRoot(view, workspaceRoot));
-      panel.webview.html = renderSpecWorkspaceWebview(view, uiConceptImages, autoRefreshEnabled, panel.webview.cspSource);
+      panel.webview.html = renderSpecWorkspaceWebview(view, uiConceptImages, autoRefreshEnabled, panel.webview.cspSource, workbenchLocale);
     } finally {
       rendering = false;
     }
@@ -1165,6 +1173,11 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
     specWorkspacePanel = undefined;
   });
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
+    if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
+      workbenchLocale = message.locale;
+      await render();
+      return;
+    }
     if (isWorkbenchMessage(message) && message.command === "specWorkspaceRequest" && typeof message.content === "string") {
       await submitSpecWorkspaceRequest(message.content, message.intent, provider);
       await render();
@@ -1205,6 +1218,7 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
   let selectedFeatureId = isFeatureItem(item) ? item.feature.id : undefined;
   let panelOpenState: Record<string, boolean> = {};
   let autoRefreshEnabled = true;
+  let workbenchLocale: WorkbenchLocale = "en";
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1216,7 +1230,7 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
       if (!selectedFeatureId || !view?.features.some((feature) => feature.id === selectedFeatureId)) {
         selectedFeatureId = preferredFeature(view)?.id;
       }
-      panel.webview.html = renderFeatureSpecWebview(view, selectedFeatureId, autoRefreshEnabled, panelOpenState);
+      panel.webview.html = renderFeatureSpecWebview(view, selectedFeatureId, autoRefreshEnabled, panelOpenState, workbenchLocale);
     } finally {
       rendering = false;
     }
@@ -1239,6 +1253,11 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
     featureSpecPanel = undefined;
   });
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
+    if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
+      workbenchLocale = message.locale;
+      await render();
+      return;
+    }
     if (isWorkbenchMessage(message) && message.command === "selectFeature" && typeof message.featureId === "string") {
       selectedFeatureId = message.featureId;
       if (typeof message.panelOpenState === "object" && message.panelOpenState !== null && !Array.isArray(message.panelOpenState)) {
@@ -1295,12 +1314,18 @@ async function openSystemSettings(provider: SpecExplorerProvider): Promise<void>
     retainContextWhenHidden: true,
   });
   panel.iconPath = specExplorePanelIconUri("settings-gear");
+  let workbenchLocale: WorkbenchLocale = "en";
   const render = async (): Promise<void> => {
-    panel.webview.html = renderSystemSettingsWebview(await fetchSystemSettings());
+    panel.webview.html = renderSystemSettingsWebview(await fetchSystemSettings(), workbenchLocale);
   };
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (!isWorkbenchMessage(message)) return;
     try {
+      if (message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
+        workbenchLocale = message.locale;
+        await render();
+        return;
+      }
       if (message.command === "refresh") {
         await render();
         return;
