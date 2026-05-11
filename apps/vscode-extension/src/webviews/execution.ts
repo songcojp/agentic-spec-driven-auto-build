@@ -185,7 +185,12 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
     ["Next Action", stateFlowNextAction(item)],
   ];
-  return `<div class="result-group state-flow">${rows.map(([label, value]) => `<div class="row"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`).join("")}</div>`;
+  return `<div class="result-group state-flow">${rows.map(renderStateFlowRow).join("")}</div>`;
+}
+
+function renderStateFlowRow([label, value]: [string, string]): string {
+  const stacked = ["Reason", "Resume Evidence", "Next Action"].includes(label);
+  return `<div class="row${stacked ? " row-stacked" : ""}"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
 }
 
 function renderStateFlowCard(item: SpecDriveIdeQueueItem): string {
@@ -235,7 +240,7 @@ function renderSkillOutputSummary(detail: SpecDriveIdeExecutionDetail | undefine
   return `
     <div class="result-summary">
       <div class="result-status"><span class="badge ${statusClass(detail.status)}">${escapeHtml(detail.status)}</span><strong>${escapeHtml(String(projection.summary ?? "No summary."))}</strong></div>
-      <div class="row"><span>Next Action</span><span>${escapeHtml(stringOrNone(output?.nextAction))}</span></div>
+      <div class="row row-stacked"><span>Next Action</span><span>${escapeHtml(stringOrNone(output?.nextAction))}</span></div>
       ${renderTraceabilityChips(output?.traceability, detail)}
     </div>
     ${renderResultGroups(result)}
@@ -303,7 +308,20 @@ function renderResultGroups(result: Record<string, unknown>): string {
 function renderResultGroup(title: string, keys: string[], result: Record<string, unknown>): string {
   const entries = keys.filter((key) => result[key] !== undefined).map((key) => [key, result[key]] as const);
   if (entries.length === 0) return "";
-  return `<div class="result-group"><h3>${escapeHtml(title)}</h3>${entries.map(([key, value]) => `<div class="row"><span>${escapeHtml(labelize(key))}</span><span>${renderResultValue(value)}</span></div>`).join("")}</div>`;
+  return `<div class="result-group"><h3>${escapeHtml(title)}</h3>${entries.map(([key, value]) => renderResultEntry(title, key, value)).join("")}</div>`;
+}
+
+function renderResultEntry(groupTitle: string, key: string, value: unknown): string {
+  const wide = isWideResultValue(key, value);
+  const entryLabel = labelize(key);
+  const label = wide && entryLabel === groupTitle ? "" : `<span>${escapeHtml(entryLabel)}</span>`;
+  const valueHtml = wide ? `<div class="result-content">${renderResultValue(value)}</div>` : `<span>${renderResultValue(value)}</span>`;
+  return `<div class="result-entry${wide ? " result-entry-wide" : ""}">${label}${valueHtml}</div>`;
+}
+
+function isWideResultValue(key: string, value: unknown): boolean {
+  if (["gitDelivery", "commands", "verification", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"].includes(key)) return true;
+  return value !== null && typeof value === "object";
 }
 
 function renderAdditionalResult(detail: SpecDriveIdeExecutionDetail | undefined): string {

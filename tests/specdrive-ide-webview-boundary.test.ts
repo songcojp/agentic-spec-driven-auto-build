@@ -169,6 +169,8 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(extensionSource, /featureDescription: detail\.featureDescription \?\? item\.featureDescription/);
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
   assert.match(webviewSource, /renderStateFlow\(selectedItem\)/);
+  assert.match(webviewSource, /function renderStateFlowRow\(\[label, value\]: \[string, string\]\): string/);
+  assert.match(webviewSource, /"Next Action"\]\.includes\(label\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
   assert.match(webviewSource, /renderTokenConsumption\(executionDetail\)/);
@@ -193,6 +195,11 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /<div class="section-title"><h2>Result Projection<\/h2><span>spec-state\.json<\/span><\/div>/);
   assert.match(webviewSource, /renderSkillOutputSummary\(executionDetail\)/);
   assert.match(webviewSource, /renderTraceabilityChips/);
+  assert.match(webviewSource, /<div class="row row-stacked"><span>Next Action<\/span>/);
+  assert.match(webviewSource, /function renderResultEntry\(groupTitle: string, key: string, value: unknown\): string/);
+  assert.match(webviewSource, /function isWideResultValue\(key: string, value: unknown\): boolean/);
+  assert.match(webviewSource, /\["gitDelivery", "commands", "verification", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"\]\.includes\(key\)/);
+  assert.match(webviewSource, /result-entry-wide/);
   assert.doesNotMatch(executionWebviewSource, /<h3>Token Cost<\/h3>/);
   assert.doesNotMatch(executionWebviewSource, /renderTokenCostSummary\(executionDetail\)/);
   assert.doesNotMatch(executionWebviewSource, /Calculated Cost/);
