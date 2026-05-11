@@ -27,7 +27,7 @@ import {
 } from "./lib/api";
 import { i18n, localeStorageKey, type UiStrings, type Locale, type ViewKey } from "./lib/i18n";
 import { formatRelativeTime, inferProjectNameFromPath, slugifyProjectName } from "./lib/utils";
-import type { CommandReceipt, ConsoleData, ProjectCreateForm, ProjectOverviewModel, ProjectSummary } from "./types";
+import type { CommandReceipt, ConsoleData, ConsoleTheme, ProjectCreateForm, ProjectOverviewModel, ProjectSummary } from "./types";
 import { Button, Chip } from "./components/ui/primitives";
 import { CreateProjectDialog } from "./components/CreateProjectDialog";
 import { ChatPanel } from "./components/ChatPanel";
@@ -39,6 +39,7 @@ import { ReviewsPage } from "./pages/ReviewsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 const projectStorageKey = "specdrive-current-project";
+const themeStorageKey = "specdrive-console-theme";
 const emptyOverviewData: ProjectOverviewModel = {
   summary: {
     totalProjects: 0,
@@ -128,6 +129,14 @@ function readInitialLocale(): Locale {
   return window.localStorage.getItem(localeStorageKey) === "en" ? "en" : "zh-CN";
 }
 
+function readInitialTheme(): ConsoleTheme {
+  if (typeof window === "undefined") {
+    return "vscode";
+  }
+  const value = window.localStorage.getItem(themeStorageKey);
+  return value === "light" || value === "dark" || value === "highContrast" || value === "vscode" ? value : "vscode";
+}
+
 function readInitialProjectId(): string {
   if (typeof window === "undefined") {
     return "";
@@ -167,6 +176,7 @@ function mergeLoadedProjects(loadedProjects: ProjectSummary[], currentProjects: 
 export function App() {
   const [view, setView] = useState<ViewKey>(readInitialView);
   const [locale, setLocale] = useState<Locale>(readInitialLocale);
+  const [theme, setTheme] = useState<ConsoleTheme>(readInitialTheme);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -375,6 +385,11 @@ export function App() {
     window.localStorage.setItem(localeStorageKey, nextLocale);
   }
 
+  function changeTheme(nextTheme: ConsoleTheme) {
+    setTheme(nextTheme);
+    window.localStorage.setItem(themeStorageKey, nextTheme);
+  }
+
   function switchProject(nextProjectId: string) {
     setCurrentProjectId(nextProjectId);
     window.localStorage.setItem(projectStorageKey, nextProjectId);
@@ -538,7 +553,7 @@ export function App() {
 
   return (
     <Toast.Provider swipeDirection="right">
-      <div className={`console-shell grid h-screen overflow-hidden ${sidebarCollapsed ? "grid-cols-[72px_1fr]" : "grid-cols-[220px_1fr]"} bg-canvas text-ink transition-[grid-template-columns] duration-200 max-md:block max-md:h-auto max-md:min-h-screen max-md:overflow-visible`}>
+      <div data-console-theme={theme} className={`console-shell console-workbench grid h-screen overflow-hidden ${sidebarCollapsed ? "grid-cols-[72px_1fr]" : "grid-cols-[220px_1fr]"} bg-canvas text-ink transition-[grid-template-columns] duration-200 max-md:block max-md:h-auto max-md:min-h-screen max-md:overflow-visible`}>
         <aside className="console-sidebar sticky top-0 h-screen border-r border-line bg-white transition-[width] max-md:static max-md:h-auto max-md:border-b max-md:border-r-0">
           <div className={`flex h-16 items-center gap-3 border-b border-line ${sidebarCollapsed ? "justify-center px-2 max-md:justify-between max-md:px-4" : "px-5"}`}>
             <div className="grid size-8 place-items-center rounded-md border border-slate-300 text-action">
@@ -618,18 +633,6 @@ export function App() {
               </div>
             </div>
             <div className="flex items-center gap-3 max-md:flex-wrap">
-              <label className="flex items-center gap-2 text-[12px] text-muted">
-                {text.language}
-                <select
-                  className="h-9 rounded-md border border-line bg-white px-3 text-[13px] text-ink"
-                  aria-label={text.language}
-                  value={locale}
-                  onChange={(event) => changeLocale(event.target.value as Locale)}
-                >
-                  <option value="zh-CN">{text.chinese}</option>
-                  <option value="en">{text.english}</option>
-                </select>
-              </label>
               <Chip tone="green">{text.healthy}</Chip>
               <Bell size={18} />
               <div className="grid size-9 place-items-center rounded-full bg-slate-100 text-[13px] font-semibold">OP</div>
@@ -687,7 +690,7 @@ export function App() {
                 <ReviewsPage data={currentData} text={text} onCommand={runCommand} busy={isPending} />
               </Tabs.Content>
               <Tabs.Content value="settings">
-                <SettingsPage data={currentData} text={text} onCommand={runCommand} busy={isPending} />
+                <SettingsPage data={currentData} text={text} onCommand={runCommand} busy={isPending} locale={locale} theme={theme} onLocaleChange={changeLocale} onThemeChange={changeTheme} />
               </Tabs.Content>
             </Tabs.Root>
             )}

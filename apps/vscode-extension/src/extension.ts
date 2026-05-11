@@ -38,6 +38,7 @@ let executionWorkbenchPanel: ManagedWebviewPanel | undefined;
 let specWorkspacePanel: ManagedWebviewPanel | undefined;
 let featureSpecPanel: (ManagedWebviewPanel & { selectFeature: (item?: unknown) => void }) | undefined;
 let systemSettingsPanel: ManagedWebviewPanel | undefined;
+let sharedWorkbenchLocale: WorkbenchLocale = "en";
 
 export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = vscode.languages.createDiagnosticCollection("specdrive");
@@ -1066,7 +1067,7 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
   panel.iconPath = specExplorePanelIconUri("run-all");
   let selectedQueueKey: string | undefined;
   let autoRefreshEnabled = true;
-  let workbenchLocale: WorkbenchLocale = "en";
+  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1104,6 +1105,7 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
       workbenchLocale = message.locale;
+      sharedWorkbenchLocale = message.locale;
       await render();
       return;
     }
@@ -1143,7 +1145,7 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
   });
   panel.iconPath = specExplorePanelIconUri("checklist");
   let autoRefreshEnabled = true;
-  let workbenchLocale: WorkbenchLocale = "en";
+  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1175,6 +1177,7 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
       workbenchLocale = message.locale;
+      sharedWorkbenchLocale = message.locale;
       await render();
       return;
     }
@@ -1218,7 +1221,7 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
   let selectedFeatureId = isFeatureItem(item) ? item.feature.id : undefined;
   let panelOpenState: Record<string, boolean> = {};
   let autoRefreshEnabled = true;
-  let workbenchLocale: WorkbenchLocale = "en";
+  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1255,6 +1258,7 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
       workbenchLocale = message.locale;
+      sharedWorkbenchLocale = message.locale;
       await render();
       return;
     }
@@ -1314,7 +1318,7 @@ async function openSystemSettings(provider: SpecExplorerProvider): Promise<void>
     retainContextWhenHidden: true,
   });
   panel.iconPath = specExplorePanelIconUri("settings-gear");
-  let workbenchLocale: WorkbenchLocale = "en";
+  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   const render = async (): Promise<void> => {
     panel.webview.html = renderSystemSettingsWebview(await fetchSystemSettings(), workbenchLocale);
   };
@@ -1323,7 +1327,11 @@ async function openSystemSettings(provider: SpecExplorerProvider): Promise<void>
     try {
       if (message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
         workbenchLocale = message.locale;
+        sharedWorkbenchLocale = message.locale;
         await render();
+        return;
+      }
+      if (message.command === "setWorkbenchTheme") {
         return;
       }
       if (message.command === "refresh") {

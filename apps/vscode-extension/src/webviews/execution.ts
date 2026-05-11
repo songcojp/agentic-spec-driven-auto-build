@@ -74,14 +74,17 @@ export function renderExecutionWorkbenchWebview(
         ${renderStateFlow(selectedItem)}
         <h3>Token Consumption</h3>
         ${renderTokenConsumption(executionDetail)}
-        <h3>Raw Log Refs</h3>
-        ${renderRawLogRefs(detail)}
+        <details class="compact-section"><summary><h3>Raw Log Refs</h3><span>${executionDetail?.rawLogRefs?.length ?? 0}</span></summary><div class="compact-section-body">
+          ${renderRawLogRefs(detail)}
+        </div></details>
         <div class="section-title"><h2>Blockers & Approvals</h2><span>${blockerApprovalCount}</span></div>
         ${renderBlockersAndApprovals(selectedBlockers, executionDetail)}
-        <div class="section-title"><h2>Result Projection</h2><span>spec-state.json</span></div>
-        ${renderSkillOutputSummary(executionDetail)}
-        <h3>Produced Artifacts</h3>
-        ${renderProducedArtifacts(executionDetail)}
+        <details class="compact-section" open><summary><h3>Result Projection</h3><span>spec-state.json</span></summary><div class="compact-section-body">
+          ${renderSkillOutputSummary(executionDetail)}
+        </div></details>
+        <details class="compact-section"><summary><h3>Produced Artifacts</h3><span>${executionDetail?.producedArtifacts?.length ?? 0}</span></summary><div class="compact-section-body">
+          ${renderProducedArtifacts(executionDetail)}
+        </div></details>
       </section>
     </main>
   `, undefined, locale);

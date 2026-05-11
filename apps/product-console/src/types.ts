@@ -34,6 +34,8 @@ export type CommandAction =
   | "generate_ui_spec"
   | "write_spec_evolution";
 
+export type ConsoleTheme = "vscode" | "light" | "dark" | "highContrast";
+
 export type CommandReceipt = {
   id: string;
   action: CommandAction;

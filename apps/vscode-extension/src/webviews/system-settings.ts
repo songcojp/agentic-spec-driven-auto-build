@@ -24,6 +24,7 @@ export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | 
       <main class="settings-shell">
         ${renderSettingsRail(settings, factSources)}
         <div class="settings-main">
+          ${renderAppearanceSection(locale)}
           ${renderExecutionPreferenceSection(settings.projectExecutionPreference)}
           <div class="settings-adapter-matrix">
             ${renderAdapterSection("CLI Adapter", "cli", settings.cliAdapter)}
@@ -39,6 +40,37 @@ export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | 
       </main>
     ` : emptyState("System settings are unavailable.")}
   `, undefined, locale);
+}
+
+function renderAppearanceSection(locale: WorkbenchLocale): string {
+  const languageOptions: Array<[WorkbenchLocale, string]> = [
+    ["en", "English"],
+    ["zh-CN", "中文"],
+    ["ja", "日本語"],
+  ];
+  const themeOptions: Array<[string, string]> = [
+    ["vscode", "VS Code"],
+    ["light", "Light"],
+    ["dark", "Dark"],
+    ["highContrast", "High Contrast"],
+  ];
+  return `<section class="settings-panel settings-appearance">
+    <div class="settings-panel-title"><h2>Appearance</h2><span>Language & Theme</span></div>
+    <div class="appearance-grid">
+      <label class="appearance-field">
+        <span>Language</span>
+        <select id="workbench-language" aria-label="Language">
+          ${languageOptions.map(([value, label]) => `<option value="${escapeAttr(value)}"${value === locale ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+        </select>
+      </label>
+      <div class="appearance-field">
+        <span>Theme</span>
+        <div class="theme-segmented" role="group" aria-label="Theme">
+          ${themeOptions.map(([value, label]) => `<button class="workbench-button button-secondary" data-command="setWorkbenchTheme" data-theme-option="${escapeAttr(value)}" aria-pressed="${value === "vscode" ? "true" : "false"}">${escapeHtml(label)}</button>`).join("")}
+        </div>
+      </div>
+    </div>
+  </section>`;
 }
 
 function renderSettingsRail(settings: SystemSettingsViewModel, factSources: string[]): string {

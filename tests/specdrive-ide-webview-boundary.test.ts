@@ -210,7 +210,7 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.doesNotMatch(executionWebviewSource, /queue\.filter\(\(item\) => item\.status === "blocked" \|\| item\.status === "approval_needed"\)/);
   assert.match(webviewSource, /Approval Requests/);
   assert.match(webviewSource, /<h3>Review Item<\/h3>/);
-  assert.match(webviewSource, /<div class="section-title"><h2>Result Projection<\/h2><span>spec-state\.json<\/span><\/div>/);
+  assert.match(webviewSource, /<details class="compact-section" open><summary><h3>Result Projection<\/h3><span>spec-state\.json<\/span><\/summary>/);
   assert.match(webviewSource, /renderSkillOutputSummary\(executionDetail\)/);
   assert.match(webviewSource, /renderTraceabilityChips/);
   assert.doesNotMatch(webviewSource, /<div class="row row-stacked"><span>Next Action<\/span>/);
@@ -273,14 +273,26 @@ test("VSCode IDE Webviews expose shared multilingual UI chrome", () => {
   assert.match(sharedWebviewSource, /WORKBENCH_LOADED_LOCALE/);
   assert.match(sharedWebviewSource, /const WORKBENCH_TRANSLATIONS = \$\{JSON\.stringify\(workbenchTranslations\)\}/);
   assert.match(sharedWebviewSource, /vscode\.postMessage\(\{command:"setWorkbenchLocale", locale:selected\}\)/);
-  assert.match(sharedWebviewSource, /id="workbench-language"/);
-  assert.match(sharedWebviewSource, /<option value="en">English<\/option>/);
-  assert.match(sharedWebviewSource, /<option value="zh-CN">中文<\/option>/);
-  assert.match(sharedWebviewSource, /<option value="ja">日本語<\/option>/);
+  assert.doesNotMatch(sharedWebviewSource, /class="language-switch"/);
+  assert.doesNotMatch(sharedWebviewSource, /<header class="workbench-header"><h1>\$\{escapeHtml\(title\)\}<\/h1><label/);
+  assert.match(webviewSource, /id="workbench-language"/);
+  assert.match(webviewSource, /<option value="\$\{escapeAttr\(value\)\}"/);
+  assert.match(webviewSource, /\["en", "English"\]/);
+  assert.match(webviewSource, /\["zh-CN", "中文"\]/);
+  assert.match(webviewSource, /\["ja", "日本語"\]/);
   assert.match(sharedWebviewSource, /LOCALE_STORAGE_KEY = "specdrive\.ide\.locale"/);
   assert.match(sharedWebviewSource, /localStorage\.setItem\(LOCALE_STORAGE_KEY, selected\)/);
   assert.match(sharedWebviewSource, /vscode\.setState\(\{\.\.\.workbenchState\(\), locale: selected\}\)/);
   assert.match(sharedWebviewSource, /applyLocale\(currentWorkbenchLocale\(\)\)/);
+  assert.match(sharedWebviewSource, /THEME_STORAGE_KEY = "specdrive\.ide\.theme"/);
+  assert.match(sharedWebviewSource, /const supportedTheme = \(value\) => \["vscode", "light", "dark", "highContrast"\]/);
+  assert.match(sharedWebviewSource, /document\.documentElement\.dataset\.workbenchTheme = selected/);
+  assert.match(sharedWebviewSource, /vscode\.postMessage\(\{command:"setWorkbenchTheme", theme:selected\}\)/);
+  assert.match(sharedWebviewSource, /applyTheme\(currentWorkbenchTheme\(\)\)/);
+  assert.match(sharedWebviewSource, /html\[data-workbench-theme="light"\]/);
+  assert.match(sharedWebviewSource, /html\[data-workbench-theme="highContrast"\]/);
+  assert.match(webviewSource, /data-command="setWorkbenchTheme"/);
+  assert.match(webviewSource, /data-theme-option="\$\{escapeAttr\(value\)\}"/);
   assert.match(sharedWebviewSource, /shouldSkipLocaleNode\(node\)/);
   assert.match(sharedWebviewSource, /script,style,code,pre,textarea,input,select,\[data-i18n-skip\]/);
   assert.match(webviewI18nZhSource, /export const ZH_CN_TRANSLATIONS/);
@@ -291,6 +303,7 @@ test("VSCode IDE Webviews expose shared multilingual UI chrome", () => {
   assert.match(webviewI18nJaSource, /"System Settings": "システム設定"/);
   assert.doesNotMatch(webviewI18nJaSource, /"Execution Workbench": "执行工作台"/);
   assert.match(extensionSource, /setWorkbenchLocale/);
+  assert.match(extensionSource, /sharedWorkbenchLocale/);
   assert.match(extensionSource, /isWorkbenchLocale\(message\.locale\)/);
 });
 
@@ -351,6 +364,9 @@ test("VSCode System Settings Webview manages adapter configs through controlled 
   assert.match(extensionSource, /"activate_rpc_adapter_config"/);
   assert.match(extensionSource, /settingsCommandButton\("Validate"/);
   assert.match(extensionSource, /class="settings-editor"/);
+  assert.match(extensionSource, /renderAppearanceSection\(locale\)/);
+  assert.match(extensionSource, /<h2>Appearance<\/h2>/);
+  assert.match(extensionSource, /Language & Theme/);
   assert.match(extensionSource, /"loadSettingsPreset"/);
   assert.match(extensionSource, /renderPricingSummary\(source\)/);
   assert.match(extensionSource, /renderPricingEditor\(editorId, source\)/);
@@ -366,6 +382,8 @@ test("VSCode System Settings Webview manages adapter configs through controlled 
   assert.match(extensionSource, /class="settings-shell"/);
   assert.match(extensionSource, /class="settings-rail"/);
   assert.match(extensionSource, /class="settings-adapter-matrix"/);
+  assert.match(extensionSource, /\.appearance-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(extensionSource, /\.theme-segmented\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(extensionSource, /\.pricing-editor\{/);
   assert.match(extensionSource, /\.settings-shell\{display:grid;grid-template-columns:minmax\(220px,260px\) minmax\(0,1fr\)/);
   assert.match(extensionSource, /\.settings-adapter-matrix\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);

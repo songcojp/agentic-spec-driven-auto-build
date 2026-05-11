@@ -16,6 +16,7 @@ Feature 名称: IDE System Settings Webview
 |---|---|---|
 | REQ-085 | 在 VSCode IDE 中管理系统设置 | 用户指令“vscode ide添加系统设置” |
 | REQ-086 | 配置项目级与 Job 级执行偏好 | 用户指令“系统级别和任务级别的服务商和 run 模式” |
+| REQ-087 | 在 System Settings 中集中管理 IDE 语言和主题 | 用户指令“语言切换和主题切换在系统设置中设置” |
 
 ## 验收标准
 
@@ -29,3 +30,5 @@ Feature 名称: IDE System Settings Webview
 - [ ] System Settings Webview 展示 CLI / RPC adapter 的默认模型、已配置 pricing models 和 validation 状态；pricing 仍写在 adapter JSON 的 `defaults.costRates` 中。
 - [ ] System Settings 展示并保存当前项目的默认 provider adapter；run mode 由 adapter id 推导。
 - [ ] 项目默认 provider 必须从 CLI 或 RPC adapter 配置列表中选择，并由所选 adapter 推导 run mode。
+- [x] System Settings Webview 提供 Appearance 区，集中展示语言和主题控件；语言支持 English、中文、日本語，主题支持 VS Code、Light、Dark、High Contrast。
+- [x] Execution Workbench、Spec Workspace 和 Feature Spec 不再在全局 header 展示语言切换控件。

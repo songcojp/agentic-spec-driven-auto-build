@@ -46,3 +46,5 @@
 - [x] TASK-043: 将 Feature 级 `schedule_run` 和 Runner 反馈更新为 Feature Spec 目录驱动：完整 `requirements.md` / `design.md` / `tasks.md` 可直接入队 `feature_execution`，缺失三件套展示 blocked reason，编码执行不依赖 `task_graph_tasks` / `tasks` 表。
 - [x] TASK-044: 在 Spec Workspace 展示 `spec-state.json`，在 Runner / Scheduler 详情中展示 Skill next action，并将 `update_spec` 作为受控 Spec 文档写入入口。
 - [x] TASK-045: 将 System Settings 的 token pricing 表单从 CLI 专属扩展为 CLI / RPC adapter 通用编辑器，直接写回对应 adapter JSON 的 `defaults.costRates`，并在执行结果中展示 pricing source。
+- [x] TASK-046: 将 Product Console 迁移到统一紧凑工作台视觉，复用现有 Control Plane API、真实 ViewModel、项目切换和受控命令边界；旧 Console 页面组织不再作为视觉基线。
+- [x] TASK-047: 将 Product Console 语言切换从全局 header 移入 System Settings，并新增 VS Code / Light / Dark / High Contrast 主题切换与本地持久化。

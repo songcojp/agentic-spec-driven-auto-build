@@ -168,25 +168,45 @@ test("omits the project metric summary strip from workbench pages", async ({ pag
 test("defaults to Chinese and persists language switching", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByLabel("语言")).toHaveValue("zh-CN");
   await expect(page.getByRole("button", { name: "全局概况", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "项目主页", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "任务调度", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "审计中心", exact: true })).toBeVisible();
   await expect(page.getByText("项目总数")).toBeVisible();
   await expect(page.getByText("Mobile Returns Portal")).toBeVisible();
+  await expect(page.getByLabel("语言")).toHaveCount(0);
 
+  await page.getByRole("button", { name: "系统设置", exact: true }).click();
+  await expect(page.getByLabel("语言")).toHaveValue("zh-CN");
   await page.getByLabel("语言").selectOption("en");
   await expect(page.getByRole("button", { name: "Dashboard", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Project Home", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Task Scheduler", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Audit Center", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page.getByText("Total Projects")).toBeVisible();
   await expect(page.getByText("Mobile Returns Portal")).toBeVisible();
 
   await page.reload();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByLabel("Language")).toHaveValue("en");
   await expect(page.getByRole("button", { name: "Dashboard", exact: true })).toBeVisible();
+});
+
+test("changes console theme from System Settings and keeps the compact workbench shell", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator(".console-workbench")).toHaveAttribute("data-console-theme", "vscode");
+  await expect(page.getByLabel("主题")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "系统设置", exact: true }).click();
+  await page.getByRole("button", { name: "浅色" }).click();
+  await expect(page.locator(".console-workbench")).toHaveAttribute("data-console-theme", "light");
+  await page.getByRole("button", { name: "高对比度" }).click();
+  await expect(page.locator(".console-workbench")).toHaveAttribute("data-console-theme", "highContrast");
+
+  await page.reload();
+  await expect(page.locator(".console-workbench")).toHaveAttribute("data-console-theme", "highContrast");
 });
 
 test("global overview switches projects and opens the selected board", async ({ page }) => {

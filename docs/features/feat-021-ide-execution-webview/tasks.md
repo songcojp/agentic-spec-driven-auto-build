@@ -199,5 +199,10 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 
 ### T-021-37 VSCode Webview 多语言切换
 状态: done
-描述: 在共享 Webview 壳增加语言切换入口，支持中文、英语和日语；将选择保存到 Webview state / localStorage，并在 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 中翻译页面标题、操作按钮、字段标签、空态、提示和设置面板 chrome；执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入和 Feature 文档内容保持原文。
+描述: 在 System Settings 中提供共享语言切换入口，支持中文、英语和日语；将选择保存到 Webview state / localStorage，并在 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 中翻译页面标题、操作按钮、字段标签、空态、提示和设置面板 chrome；执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入和 Feature 文档内容保持原文。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-38 统一紧凑工作台与主题
+状态: done
+描述: VSCode IDE Webview 采用与 Product Console 一致的紧凑工作台 token；语言和主题入口集中到 System Settings，主题支持 VS Code / Light / Dark / High Contrast；Execution Workbench 和 Feature Spec 详情取消内部滚动，把低优先级详情折叠为 compact section，同时保留关键字段和全部操作按钮。
 验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。

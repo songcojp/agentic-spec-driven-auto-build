@@ -155,16 +155,21 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
     ${renderFeatureStateFlow(feature)}
     <h3>Review Item</h3>
     ${renderFeatureReviewDetails(feature)}
-    <h3>Latest Execution Cost</h3>
-    ${renderTokenCost(feature.tokenConsumption)}
-    <h3>Artifacts</h3>
-    ${renderFeatureArtifacts(feature.documents)}
-    <h3>Tasks</h3>
-    ${renderFeatureTasks(feature)}
-    <h3>Blockers</h3>
-    ${feature.blockedReasons.length === 0 ? emptyState("No blockers.") : feature.blockedReasons.map((reason) => `<div class="issue bad">${escapeHtml(reason)}</div>`).join("")}
-    <h3>Traceability</h3>
-    <div class="row"><span>Dependencies</span><strong>${escapeHtml(feature.dependencies.join(", ") || "-")}</strong></div>`;
+    <details class="compact-section"><summary><h3>Latest Execution Cost</h3><span>${feature.tokenConsumption ? "recorded" : "none"}</span></summary><div class="compact-section-body">
+      ${renderTokenCost(feature.tokenConsumption)}
+    </div></details>
+    <details class="compact-section" open><summary><h3>Artifacts</h3><span>${feature.documents.length}</span></summary><div class="compact-section-body">
+      ${renderFeatureArtifacts(feature.documents)}
+    </div></details>
+    <details class="compact-section" open><summary><h3>Tasks</h3><span>${feature.tasks?.length ?? 0}</span></summary><div class="compact-section-body">
+      ${renderFeatureTasks(feature)}
+    </div></details>
+    <details class="compact-section"><summary><h3>Blockers</h3><span>${feature.blockedReasons.length}</span></summary><div class="compact-section-body">
+      ${feature.blockedReasons.length === 0 ? emptyState("No blockers.") : feature.blockedReasons.map((reason) => `<div class="issue bad">${escapeHtml(reason)}</div>`).join("")}
+    </div></details>
+    <details class="compact-section"><summary><h3>Traceability</h3><span>${feature.dependencies.length}</span></summary><div class="compact-section-body">
+      <div class="row"><span>Dependencies</span><strong>${escapeHtml(feature.dependencies.join(", ") || "-")}</strong></div>
+    </div></details>`;
 }
 
 function renderFeatureDescription(feature: SpecDriveIdeFeatureNode): string {

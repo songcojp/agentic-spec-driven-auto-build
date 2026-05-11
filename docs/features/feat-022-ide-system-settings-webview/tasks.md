@@ -40,3 +40,8 @@ Feature ID: FEAT-022
 状态: done
 描述: System Settings Webview 和执行偏好选项展示 `claude-cli` 内置 CLI Adapter preset，并继续由 adapter id 推导 run mode。
 验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`
+
+### T-022-08 Appearance 设置
+状态: done
+描述: System Settings Webview 增加 Appearance 区，集中放置语言和主题控件；语言支持 English / 中文 / 日本語，主题支持 VS Code / Light / Dark / High Contrast，其它 IDE Webview header 不再显示语言切换。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`

@@ -57,6 +57,7 @@ Feature 名称: IDE Workbench Webviews
 - CHG-062（2026-05-11）：用户反馈 FEAT-016 只显示“需要审批”，但看不出需要审批或审查什么；Execution Workbench 和 Feature Spec 的 review_needed 投影必须展示具体 ReviewItem / Execution summary、trigger、推荐动作和风险说明，Delivery Fidelity 或 behavior obligation 缺口必须归类为 `risk_review_needed` 而不是被 PR / approval 字样误判为 `approval_needed`；request changes、update spec、reject、rollback 和 split task 必须允许输出澄清/修改说明。影响 REQ-046、REQ-084、REQ-091 和 FEAT-021，作为 review 可读性 follow-up 修订。
 - CHG-063（2026-05-11）：用户要求增加 Job 执行时间统计并在 IDE UI 显示；Execution Workbench 必须从 Execution Record 的 started_at / completed_at 派生开始时间、结束时间和单次执行耗时，在队列行、选中 Job 详情和 State Flow 中展示；未完成或时间无效时不得伪造耗时。影响 REQ-084、NFR-006 和 FEAT-021，作为执行观测 follow-up 修订。
 - CHG-064（2026-05-11）：用户要求 VSCode IDE UI 增加多语言支持，可在中文、英语和日语之间切换；语言切换必须覆盖 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 的 UI chrome，并保持执行结果、diff、日志、路径、命令输出、JSON 配置、用户输入和 Feature 文档内容原文。影响 REQ-084 和 FEAT-021，作为 IDE Webview 本地化 follow-up 修订。
+- CHG-065（2026-05-11）：用户接受统一紧凑工作台概念图，要求 VSCode IDE 与 Product Console 使用同一套紧凑 UI；语言切换和主题切换必须集中在 System Settings，Execution / Feature / Spec 页面不再显示全局语言下拉；次要详情可以折叠或下钻，但关键数据项和操作按钮不得减少。影响 REQ-084、REQ-085、FEAT-013、FEAT-021 和 FEAT-022。
 
 ## UI 概念图
 
@@ -112,5 +113,7 @@ Feature 名称: IDE Workbench Webviews
 - [x] Feature Spec 详情和 Execution Workbench 选中 Job 详情必须展示 Feature Spec 标题和描述信息；描述优先来自 Feature `spec-state.json.description`，其次来自 `requirements.md` 的目标 / 用户价值 / Scope 等描述段落。
 - [x] review_needed 队列卡片和 State Flow 必须优先展示 Execution summary / ReviewItem message 中的具体缺口，并显示 ReviewItem trigger、推荐动作、风险说明和 refs；Delivery Fidelity 或 behavior obligation 未关闭时必须显示为风险审查，不得只显示泛化的 approval label；非通过决策必须记录操作者澄清/修改说明。
 - [x] Execution Workbench 必须展示 Job 开始时间、结束时间和单次执行耗时；耗时从 `execution_records.started_at` 与 `execution_records.completed_at` 派生，并出现在队列行、选中 Job 详情和 State Flow 中。
-- [x] VSCode IDE Webview 必须提供共享语言切换入口，支持中文、英语和日语；切换后 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 的页面标题、操作按钮、字段标签、空态、提示和设置面板 chrome 使用所选语言展示，并在刷新、自动刷新或 Webview 重新渲染后保持所选语言。
+- [x] VSCode IDE Webview 必须在 System Settings 提供共享语言切换入口，支持中文、英语和日语；切换后 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 的页面标题、操作按钮、字段标签、空态、提示和设置面板 chrome 使用所选语言展示，并在刷新、自动刷新或 Webview 重新渲染后保持所选语言。
 - [x] VSCode IDE Webview 本地化不得翻译执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入或 Feature 文档内容。
+- [x] VSCode IDE Webview 必须支持 VS Code、Light、Dark 和 High Contrast 主题；主题切换入口仅位于 System Settings，并通过共享 token 驱动 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings。
+- [x] Execution Workbench 与 Feature Spec 的详情区域必须使用页面级滚动；Raw Log refs、Produced Artifacts、Latest Execution Cost、Tasks、Blockers、Traceability 等次要详情可以折叠，但所有关键字段和操作按钮必须仍可见或可展开查看。

@@ -18,6 +18,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 |---|---|
 | CLI Adapter | 展示 active/draft/preset、校验结果、最近 dry-run 和 JSON 编辑器；内置 preset 包含 `codex-cli`、`gemini-cli` 和 `claude-cli`。 |
 | RPC Adapter | 展示 active/draft/preset、校验结果、最近 probe 和 JSON 编辑器。 |
+| Appearance | 集中管理 IDE Webview 语言和主题；语言支持 English / 中文 / 日本語，主题支持 VS Code / Light / Dark / High Contrast。 |
 | 操作按钮 | Validate、Save Draft、Activate、Disable、Refresh。 |
 | 状态反馈 | 命令 receipt 通过 VSCode notification 展示，Webview 随后刷新配置投影。 |
 
@@ -26,6 +27,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 - Webview 不直接访问 SQLite、Scheduler 内部状态、配置文件或运行事实源。
 - `activate` 失败不得覆盖现有 active adapter。
 - Product Console 与 VSCode System Settings 是两个 UI 入口，不是两套配置状态。
+- Appearance 设置为前端本地 UI 偏好，不新增 Control Plane 配置表；语言和主题通过 Webview state / localStorage 保留，且不改变 query / command payload。
 
 ## 4. 验证策略
 

@@ -5,13 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#18212f",
-        muted: "#657083",
-        line: "#d8dee8",
-        canvas: "#f7f9fc",
-        panel: "#ffffff",
-        action: "#0875d1",
-        teal: "#0f9f8f",
+        ink: "var(--console-ink)",
+        muted: "var(--console-muted)",
+        line: "var(--console-line)",
+        canvas: "var(--console-canvas)",
+        panel: "var(--console-panel)",
+        action: "var(--console-action)",
+        teal: "var(--console-teal)",
       },
       boxShadow: {
         panel: "0 1px 2px rgba(24, 33, 47, 0.04), 0 12px 30px rgba(24, 33, 47, 0.06)",

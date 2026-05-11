@@ -8,6 +8,8 @@ CHG-009 修正：FEAT-013 必须交付真实前端应用入口、页面路由、
 
 Implementation update：Product Console UI 采用 Vite React，前端入口位于 `apps/product-console`。UI 通过 Tailwind CSS、Radix UI primitives 和 repo-owned shadcn-style primitives 实现，消费现有 `/console/*` Control Plane API/ViewModel，并保留 `docs/features/feat-013-product-console/assets/product-console-concept.png` 作为视觉概念验收基线。
 
+Unified Workbench update：2026-05-11 用户接受新的 IDE + Console 紧凑工作台概念图作为视觉规格，概念图路径为 `/home/john/.codex/generated_images/019e162f-433b-71e0-bf03-b6c179288e1d/ig_0cf4b82983b1c0d2016a0199bbe788819892cabf1b756b0337.png`。旧 Console 的视觉和页面组织可以放弃；新 Console 必须与 VSCode IDE Webview 共用紧凑工作台信息架构、主题 token、操作按钮覆盖和“次要详情可折叠但不可丢失”的展示规则。
+
 CHG-017 update：Runner / Task Scheduler 页面采用执行队列视图。该页面从 Runner 状态面板升级为任务调度中心，必须展示 `cli.run` 与后续 `native.run` Job、Execution Record、payload context、右侧 scheduler job inspector、recent triggers、Evidence 摘要和 Runner 日志。该 UI 不恢复 Skill Center 或 Subagent Console，只展示 scheduler job、execution id、workspace、skill phase / native handler、blocked reason 和 Evidence 等执行反馈事实。
 
 Audit Center update：审计中心采用 `docs/ui/audit-center-concept.png` 作为视觉与交互基线。该页面从 Review 列表升级为端到端审计视图，展示审计摘要、筛选工具栏、Audit Timeline、事件详情 inspector、命令回执、阻塞原因、Evidence、Execution Record、Job、状态转换和 Approval 关联记录；英文界面名称统一为 `Audit Center`。
@@ -48,6 +50,7 @@ CHG-016 update：Spec Workspace、Task Board 和 Runner Console 必须展示 wor
 | Console Command Gateway | 将 UI 动作转换为 Control Plane 命令。 |
 | Frontend App Shell | 提供浏览器入口、导航、路由、布局、错误边界、加载态、项目切换、语言切换和页面切换。 |
 | Locale Provider | 管理默认中文、语言资源、语言偏好持久化和 UI 文案查找。 |
+| Appearance Settings | 位于 System Settings，集中管理语言和主题；主题支持 VS Code、Light、Dark 和 High Contrast，并驱动 Console 与 IDE 风格一致的紧凑 token。 |
 | shadcn/ui Component Layer | 提供表格、标签页、按钮、弹窗、状态徽标、命令菜单、表单和审计反馈组件。 |
 
 ## Data Ownership
@@ -74,6 +77,7 @@ Product Console 的查询接口只负责读取 ViewModel、配置 schema、Evide
 6. Console Command Gateway 将拖拽、批量排期、批量运行、暂停、恢复和 Spec 流程动作连同当前 `project_id` 提交为受控命令；Feature Spec 拆分使用独立 Skill 操作并产出队列规划；项目级 `schedule_run` / `start_auto_run` 读取已拆分 Feature Spec 和机器可读规划结果，调用 `06.planning.replan` 后创建 scheduler 队列。
 7. Control Plane 更新状态，Console 显示成功、阻塞或失败反馈并重新查询。
 8. 用户切换语言后，App Shell 保存偏好并重新渲染界面文案；事实数据保持 API 返回原文。
+8a. 用户从 System Settings 切换主题后，Console 保存主题偏好并立即将 shell、panel、表格、按钮、状态徽标和表单切换到对应 token；语言和主题不改变 query / command payload。
 9. 用户切换项目后，App Shell 更新当前项目上下文，重新查询所有项目级页面；若命令返回 `project_id` 缺失或不匹配，展示阻塞反馈并保留原页面状态。
 10. 用户在导入现有项目表单设置目录后，Console 调用只读 `/projects/scan` 扫描 Git、包管理器、SpecDrive 目录和仓库来源，并把扫描结果作为导入项目默认信息。
 11. 用户从 App Shell 打开 System Settings，或从 Runner Console 的配置健康摘要跳转到系统设置中的 adapter 配置页；Console 加载 CLI / RPC active/draft JSON 配置、JSON Schema、token 价格表和 form schema，并在原始 JSON 编辑器与表单之间保持同一份待保存配置状态。

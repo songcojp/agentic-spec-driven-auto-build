@@ -3,12 +3,135 @@
 @tailwind utilities;
 
 :root {
+  --console-ink: #18212f;
+  --console-muted: #657083;
+  --console-line: #d8dee8;
+  --console-canvas: #f7f9fc;
+  --console-panel: #ffffff;
+  --console-panel-strong: #eef3f8;
+  --console-action: #0875d1;
+  --console-teal: #0f9f8f;
   color: #18212f;
   background: #f7f9fc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.console-workbench {
+  --console-ink: #e7eef6;
+  --console-muted: #94a3ad;
+  --console-line: #31414c;
+  --console-canvas: #0d1418;
+  --console-panel: #11181d;
+  --console-panel-strong: #0b1115;
+  --console-action: #20d7d2;
+  --console-teal: #28b8a8;
+  --console-danger: #f26a63;
+  background:
+    radial-gradient(circle at 22% 0, rgba(32, 215, 210, 0.10), transparent 34%),
+    linear-gradient(180deg, #12242b, var(--console-canvas));
+}
+
+.console-workbench[data-console-theme="light"] {
+  --console-ink: #18212f;
+  --console-muted: #657083;
+  --console-line: #d8dee8;
+  --console-canvas: #f7f9fc;
+  --console-panel: #ffffff;
+  --console-panel-strong: #eef3f8;
+  --console-action: #0875d1;
+  --console-teal: #0f9f8f;
+  --console-danger: #d13b30;
+  background: var(--console-canvas);
+}
+
+.console-workbench[data-console-theme="dark"],
+.console-workbench[data-console-theme="vscode"] {
+  color-scheme: dark;
+}
+
+.console-workbench[data-console-theme="highContrast"] {
+  --console-ink: #ffffff;
+  --console-muted: #ffffff;
+  --console-line: #ffffff;
+  --console-canvas: #000000;
+  --console-panel: #000000;
+  --console-panel-strong: #050505;
+  --console-action: #ffff00;
+  --console-teal: #00ffff;
+  --console-danger: #ff6666;
+  background: #000;
+}
+
+.console-workbench .bg-white,
+.console-workbench .bg-panel {
+  background-color: var(--console-panel) !important;
+}
+
+.console-workbench .bg-slate-50,
+.console-workbench .bg-slate-50\/70,
+.console-workbench .bg-slate-100 {
+  background-color: var(--console-panel-strong) !important;
+}
+
+.console-workbench .text-ink,
+.console-workbench .text-slate-700,
+.console-workbench .text-slate-600,
+.console-workbench .text-slate-800,
+.console-workbench .text-slate-900 {
+  color: var(--console-ink) !important;
+}
+
+.console-workbench .text-muted,
+.console-workbench .text-slate-400,
+.console-workbench .text-slate-500 {
+  color: var(--console-muted) !important;
+}
+
+.console-workbench .text-action,
+.console-workbench .text-blue-700,
+.console-workbench .text-blue-600 {
+  color: var(--console-action) !important;
+}
+
+.console-workbench .border-line,
+.console-workbench .border-slate-200,
+.console-workbench .border-slate-300 {
+  border-color: var(--console-line) !important;
+}
+
+.console-workbench .shadow-panel {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22) !important;
+}
+
+.console-workbench select,
+.console-workbench input,
+.console-workbench textarea {
+  background-color: var(--console-panel) !important;
+  color: var(--console-ink) !important;
+  border-color: var(--console-line) !important;
+}
+
+.console-workbench table {
+  font-size: 12px;
+}
+
+.console-workbench th,
+.console-workbench td {
+  border-color: var(--console-line) !important;
+}
+
+.console-workbench [data-state="active"],
+.console-workbench [aria-selected="true"],
+.console-workbench [aria-pressed="true"] {
+  border-color: var(--console-action) !important;
+}
+
+.console-workbench h1 {
+  font-size: 22px;
+  line-height: 1.2;
 }
 
 body {

@@ -1,7 +1,7 @@
 import { CheckCircle2, FileText, Play, Settings, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { UiStrings } from "../lib/i18n";
-import type { CommandReceipt, ConsoleData } from "../types";
+import type { Locale, UiStrings } from "../lib/i18n";
+import type { CommandReceipt, ConsoleData, ConsoleTheme } from "../types";
 import { Button, Chip, Panel, SectionTitle } from "../components/ui/primitives";
 import { FactList } from "../components/ui/helpers";
 
@@ -38,14 +38,68 @@ export function SettingsPage({
   text,
   onCommand,
   busy,
+  locale,
+  theme,
+  onLocaleChange,
+  onThemeChange,
 }: {
   data: ConsoleData;
   text: UiStrings;
   onCommand: OnCommand;
   busy: boolean;
+  locale: Locale;
+  theme: ConsoleTheme;
+  onLocaleChange: (locale: Locale) => void;
+  onThemeChange: (theme: ConsoleTheme) => void;
 }) {
   return (
     <div className="space-y-4">
+      <Panel className="overflow-hidden">
+        <div className="border-b border-line bg-white px-4 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-[15px] font-semibold text-ink">{text.appearance}</h3>
+              <p className="mt-1 text-[13px] text-muted">{text.appearanceSubtitle}</p>
+            </div>
+            <Chip tone="blue">{text.theme}</Chip>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 p-4 max-lg:grid-cols-1">
+          <label className="block text-[12px] text-muted">
+            <span className="font-medium">{text.language}</span>
+            <select
+              className="mt-1 h-9 w-full rounded-md border border-line bg-white px-3 text-[13px] text-ink outline-none focus:border-action"
+              aria-label={text.language}
+              value={locale}
+              onChange={(event) => onLocaleChange(event.target.value as Locale)}
+            >
+              <option value="zh-CN">{text.chinese}</option>
+              <option value="en">{text.english}</option>
+            </select>
+          </label>
+          <div className="block text-[12px] text-muted">
+            <span className="font-medium">{text.theme}</span>
+            <div className="mt-1 grid grid-cols-4 gap-2 max-sm:grid-cols-2" role="group" aria-label={text.theme}>
+              {([
+                ["vscode", "VS Code"],
+                ["light", text.lightTheme],
+                ["dark", text.darkTheme],
+                ["highContrast", text.highContrastTheme],
+              ] as Array<[ConsoleTheme, string]>).map(([value, label]) => (
+                <Button
+                  key={value}
+                  tone={theme === value ? "primary" : "default"}
+                  className="h-9 px-2 text-[12px]"
+                  aria-pressed={theme === value}
+                  onClick={() => onThemeChange(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Panel>
       {data.settings.projectExecutionPreference ? (
         <Panel className="overflow-hidden">
           <div className="border-b border-line bg-white px-4 py-4">
