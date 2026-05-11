@@ -52,11 +52,42 @@ export function SettingsPage({
   onLocaleChange: (locale: Locale) => void;
   onThemeChange: (theme: ConsoleTheme) => void;
 }) {
+  const preference = data.settings.projectExecutionPreference;
+  const activePreference = preference?.active;
+  const cliValid = data.settings.cliAdapter.validation.valid;
+  const rpcValid = data.settings.rpcAdapter?.validation.valid;
   return (
-    <div className="space-y-4">
-      <Panel className="overflow-hidden">
-        <div className="border-b border-line bg-white px-4 py-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-3 max-xl:grid-cols-1">
+      <aside className="sticky top-3 self-start rounded-md border border-line bg-white p-3 shadow-panel max-xl:static">
+        <div className="mb-3 flex items-center justify-between gap-3 border-b border-line pb-3">
+          <div>
+            <h2 className="text-[14px] font-semibold text-ink">Settings Summary</h2>
+            <p className="mt-1 text-[12px] text-muted">{data.settings.factSources.length} fact sources</p>
+          </div>
+          <Chip tone={cliValid && (rpcValid ?? true) ? "green" : "red"}>{cliValid && (rpcValid ?? true) ? text.dryRunPassed : text.dryRunFailed}</Chip>
+        </div>
+        <FactList
+          rows={[
+            ["Language", locale],
+            ["Theme", theme],
+            ["Project", preference?.projectId ?? text.none],
+            [text.activeAdapter, activePreference?.adapterId ?? text.none],
+            [text.cliConfig, cliValid ? text.dryRunPassed : text.dryRunFailed],
+            ["RPC Adapter", rpcValid === undefined ? text.none : rpcValid ? text.dryRunPassed : text.dryRunFailed],
+          ]}
+        />
+        <div className="mt-4 border-t border-line pt-3">
+          <div className="mb-2 text-[12px] font-semibold text-ink">Fact Sources</div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.settings.factSources.slice(0, 6).map((source) => <Chip key={source}>{source}</Chip>)}
+          </div>
+        </div>
+      </aside>
+
+      <div className="min-w-0 space-y-3">
+        <Panel className="overflow-hidden">
+          <div className="border-b border-line bg-white px-3 py-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-[15px] font-semibold text-ink">{text.appearance}</h3>
               <p className="mt-1 text-[13px] text-muted">{text.appearanceSubtitle}</p>
@@ -64,7 +95,7 @@ export function SettingsPage({
             <Chip tone="blue">{text.theme}</Chip>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 p-4 max-lg:grid-cols-1">
+        <div className="grid grid-cols-2 gap-3 p-3 max-lg:grid-cols-1">
           <label className="block text-[12px] text-muted">
             <span className="font-medium">{text.language}</span>
             <select
@@ -100,29 +131,29 @@ export function SettingsPage({
           </div>
         </div>
       </Panel>
-      {data.settings.projectExecutionPreference ? (
+      {preference ? (
         <Panel className="overflow-hidden">
-          <div className="border-b border-line bg-white px-4 py-4">
+          <div className="border-b border-line bg-white px-3 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-[15px] font-semibold text-ink">Project Execution Defaults</h3>
                 <p className="mt-1 text-[13px] text-muted">Choose the default provider adapter for new project jobs.</p>
               </div>
-              <Chip tone={data.settings.projectExecutionPreference.validation.valid ? "green" : "red"}>
-                {data.settings.projectExecutionPreference.validation.valid ? text.dryRunPassed : text.dryRunFailed}
+              <Chip tone={preference.validation.valid ? "green" : "red"}>
+                {preference.validation.valid ? text.dryRunPassed : text.dryRunFailed}
               </Chip>
             </div>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-0 max-xl:grid-cols-1">
-            <div className="min-w-0 p-4">
+            <div className="min-w-0 p-3">
               <div className="mb-3 text-[12px] font-semibold text-ink">CLI Providers</div>
               <div className="mb-4 flex flex-wrap gap-2">
-                {data.settings.projectExecutionPreference.cliAdapters.map((adapter) => (
+                {preference.cliAdapters.map((adapter) => (
                   <Button
                     key={adapter.id}
                     disabled={busy}
-                    onClick={() => onCommand("save_project_execution_preference", "settings", data.settings.projectExecutionPreference?.projectId ?? "project", {
-                      config: { projectId: data.settings.projectExecutionPreference?.projectId, adapterId: adapter.id },
+                    onClick={() => onCommand("save_project_execution_preference", "settings", preference.projectId ?? "project", {
+                      config: { projectId: preference.projectId, adapterId: adapter.id },
                     })}
                   >
                     <Settings size={14} />
@@ -132,12 +163,12 @@ export function SettingsPage({
               </div>
               <div className="mb-3 text-[12px] font-semibold text-ink">RPC Providers</div>
               <div className="flex flex-wrap gap-2">
-                {data.settings.projectExecutionPreference.rpcAdapters.map((adapter) => (
+                {preference.rpcAdapters.map((adapter) => (
                   <Button
                     key={adapter.id}
                     disabled={busy}
-                    onClick={() => onCommand("save_project_execution_preference", "settings", data.settings.projectExecutionPreference?.projectId ?? "project", {
-                      config: { projectId: data.settings.projectExecutionPreference?.projectId, adapterId: adapter.id },
+                    onClick={() => onCommand("save_project_execution_preference", "settings", preference.projectId ?? "project", {
+                      config: { projectId: preference.projectId, adapterId: adapter.id },
                     })}
                   >
                     <Settings size={14} />
@@ -146,20 +177,20 @@ export function SettingsPage({
                 ))}
               </div>
             </div>
-            <aside className="border-l border-line bg-slate-50/70 p-4 max-xl:border-l-0 max-xl:border-t">
+            <aside className="border-l border-line bg-slate-50/70 p-3 max-xl:border-l-0 max-xl:border-t">
               <div className="rounded-lg border border-line bg-white">
                 <SectionTitle
                   title={text.activeAdapter}
-                  action={<Chip tone="green">{data.settings.projectExecutionPreference.active.source}</Chip>}
+                  action={<Chip tone="green">{preference.active.source}</Chip>}
                 />
-                <div className="space-y-3 p-4">
+                <div className="space-y-3 p-3">
                   <FactList
                     rows={[
-                      ["Project", data.settings.projectExecutionPreference.projectId ?? text.none],
-                      ["Provider", data.settings.projectExecutionPreference.active.adapterId],
+                      ["Project", preference.projectId ?? text.none],
+                      ["Provider", preference.active.adapterId],
                     ]}
                   />
-                  {data.settings.projectExecutionPreference.validation.errors.map((error) => (
+                  {preference.validation.errors.map((error) => (
                     <div key={error} className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
                       {error}
                     </div>
@@ -170,16 +201,17 @@ export function SettingsPage({
           </div>
         </Panel>
       ) : null}
-      <AdapterSettingsEditor
-        kind="cli"
-        title={text.cliConfig}
-        subtitle={text.cliConfigSubtitle}
-        section={data.settings.cliAdapter}
-        text={text}
-        onCommand={onCommand}
-        busy={busy}
-      />
-      {data.settings.rpcAdapter ? (
+      <div className="grid grid-cols-2 gap-3 max-2xl:grid-cols-1">
+        <AdapterSettingsEditor
+          kind="cli"
+          title={text.cliConfig}
+          subtitle={text.cliConfigSubtitle}
+          section={data.settings.cliAdapter}
+          text={text}
+          onCommand={onCommand}
+          busy={busy}
+        />
+        {data.settings.rpcAdapter ? (
         <AdapterSettingsEditor
           kind="rpc"
           title="RPC Adapter"
@@ -189,9 +221,19 @@ export function SettingsPage({
           onCommand={onCommand}
           busy={busy}
         />
-      ) : null}
-      <div className="rounded-md border border-line bg-white px-4 py-3 text-[12px] text-muted">
-        {data.settings.factSources.join("、")}
+        ) : null}
+      </div>
+        <Panel className="px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[15px] font-semibold text-ink">Fact Sources</h3>
+              <p className="mt-1 text-[12px] text-muted">{data.settings.factSources.length} sources returned by the Control Plane.</p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {data.settings.factSources.map((source) => <Chip key={source}>{source}</Chip>)}
+            </div>
+          </div>
+        </Panel>
       </div>
     </div>
   );
@@ -335,7 +377,7 @@ function AdapterSettingsEditor({
             </div>
           </div>
           <textarea
-            className="mt-2 min-h-[520px] w-full resize-y rounded-md border border-line bg-slate-950 p-4 font-mono text-[12px] leading-5 text-slate-100 outline-none focus:border-action"
+            className="mt-2 min-h-[360px] w-full resize-y rounded-md border border-line bg-slate-950 p-3 font-mono text-[12px] leading-5 text-slate-100 outline-none focus:border-action"
             value={jsonText}
             spellCheck={false}
             onChange={(event) => setJsonText(event.target.value)}

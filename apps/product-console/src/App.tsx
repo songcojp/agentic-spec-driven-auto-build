@@ -639,7 +639,7 @@ export function App() {
             </div>
           </header>
 
-          <div data-testid="console-content-scroll" className="scrollbar-thin min-h-0 flex-1 overflow-y-auto space-y-5 p-5 pb-14 max-md:overflow-visible">
+          <div data-testid="console-content-scroll" className="scrollbar-thin min-h-0 flex-1 overflow-y-auto space-y-3 p-3 pb-12 max-md:overflow-visible">
             {!currentProject ? (
               <section className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
                 <div className="max-w-xl text-center">

@@ -12,6 +12,7 @@ import {
   renderWorkbenchPage,
   statusClass,
   webviewNonce,
+  type WorkbenchTheme,
 } from "./shared";
 
 export function renderSpecWorkspaceWebview(
@@ -20,6 +21,7 @@ export function renderSpecWorkspaceWebview(
   autoRefreshEnabled = false,
   cspSource?: string,
   locale: WorkbenchLocale = "en",
+  theme: WorkbenchTheme = "vscode",
 ): string {
   const nonce = webviewNonce();
   const projectId = view?.project?.id ?? "workspace";
@@ -51,7 +53,7 @@ export function renderSpecWorkspaceWebview(
         ${renderGlobalDiagnosticsPanel(view)}
       </section>
     </main>
-  `, cspSource, locale);
+  `, cspSource, locale, theme);
 }
 
 type SpecLifecycleStage = {

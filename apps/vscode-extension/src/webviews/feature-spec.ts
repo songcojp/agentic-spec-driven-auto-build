@@ -12,6 +12,7 @@ import {
   renderWorkbenchPage,
   statusClass,
   webviewNonce,
+  type WorkbenchTheme,
 } from "./shared";
 
 export function renderFeatureSpecWebview(
@@ -20,6 +21,7 @@ export function renderFeatureSpecWebview(
   autoRefreshEnabled = false,
   panelOpenState: Record<string, boolean> = {},
   locale: WorkbenchLocale = "en",
+  theme: WorkbenchTheme = "vscode",
 ): string {
   const nonce = webviewNonce();
   const features = view?.features ?? [];
@@ -51,7 +53,7 @@ export function renderFeatureSpecWebview(
       <div class="panel-title"><h2>Dependency Graph</h2><span>${features.length} Feature Specs</span><button class="workbench-button button-secondary dependency-toggle" data-command="toggleDependencyGraphBranches" data-expanded="true">${buttonContent("Collapse All", "branch")}</button></div>
       ${renderDependencyGraph(features)}
     </section>
-  `, undefined, locale);
+  `, undefined, locale, theme);
 }
 
 function renderProjectCostTotal(view: SpecDriveIdeView | undefined): string {

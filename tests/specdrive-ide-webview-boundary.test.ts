@@ -102,7 +102,7 @@ test("VSCode Execution Workbench requires selected queue tasks for stateful acti
   assert.match(extensionSource, /let selectedQueueKey: string \| undefined/);
   assert.match(extensionSource, /message\.command === "selectQueueItem"/);
   assert.match(extensionSource, /executionItemByKey\(view, selectedQueueKey\)/);
-  assert.match(extensionSource, /renderExecutionWorkbenchWebview\(view, detail, selectedQueueKey, autoRefreshEnabled, workbenchLocale\)/);
+  assert.match(extensionSource, /renderExecutionWorkbenchWebview\(view, detail, selectedQueueKey, autoRefreshEnabled, sharedWorkbenchLocale, sharedWorkbenchTheme\)/);
   assert.match(extensionSource, /automation\?: SpecDriveIdeAutomationState/);
   assert.match(extensionSource, /autoRunButton\(view\)/);
   assert.match(extensionSource, /let autoRefreshEnabled = true/);
@@ -287,9 +287,11 @@ test("VSCode IDE Webviews expose shared multilingual UI chrome", () => {
   assert.match(sharedWebviewSource, /THEME_STORAGE_KEY = "specdrive\.ide\.theme"/);
   assert.match(sharedWebviewSource, /const supportedTheme = \(value\) => \["vscode", "light", "dark", "highContrast"\]/);
   assert.match(sharedWebviewSource, /document\.documentElement\.dataset\.workbenchTheme = selected/);
-  assert.match(sharedWebviewSource, /vscode\.postMessage\(\{command:"setWorkbenchTheme", theme:selected\}\)/);
-  assert.match(sharedWebviewSource, /applyTheme\(currentWorkbenchTheme\(\)\)/);
+  assert.match(sharedWebviewSource, /const WORKBENCH_LOADED_THEME = \$\{JSON\.stringify\(workbenchTheme\)\}/);
+  assert.match(sharedWebviewSource, /if \(notify\) vscode\.postMessage\(\{command:"setWorkbenchTheme", theme:selected\}\)/);
+  assert.match(sharedWebviewSource, /applyTheme\(currentWorkbenchTheme\(\), false\)/);
   assert.match(sharedWebviewSource, /html\[data-workbench-theme="light"\]/);
+  assert.match(sharedWebviewSource, /--fg:#18212f/);
   assert.match(sharedWebviewSource, /html\[data-workbench-theme="highContrast"\]/);
   assert.match(webviewSource, /data-command="setWorkbenchTheme"/);
   assert.match(webviewSource, /data-theme-option="\$\{escapeAttr\(value\)\}"/);
@@ -304,6 +306,9 @@ test("VSCode IDE Webviews expose shared multilingual UI chrome", () => {
   assert.doesNotMatch(webviewI18nJaSource, /"Execution Workbench": "执行工作台"/);
   assert.match(extensionSource, /setWorkbenchLocale/);
   assert.match(extensionSource, /sharedWorkbenchLocale/);
+  assert.match(extensionSource, /sharedWorkbenchTheme/);
+  assert.match(extensionSource, /renderAllWorkbenchPanels/);
+  assert.match(extensionSource, /workspaceState\.update\(WORKBENCH_THEME_STORAGE_KEY, theme\)/);
   assert.match(extensionSource, /isWorkbenchLocale\(message\.locale\)/);
 });
 
@@ -364,7 +369,7 @@ test("VSCode System Settings Webview manages adapter configs through controlled 
   assert.match(extensionSource, /"activate_rpc_adapter_config"/);
   assert.match(extensionSource, /settingsCommandButton\("Validate"/);
   assert.match(extensionSource, /class="settings-editor"/);
-  assert.match(extensionSource, /renderAppearanceSection\(locale\)/);
+  assert.match(extensionSource, /renderAppearanceSection\(locale, theme\)/);
   assert.match(extensionSource, /<h2>Appearance<\/h2>/);
   assert.match(extensionSource, /Language & Theme/);
   assert.match(extensionSource, /"loadSettingsPreset"/);
@@ -456,7 +461,7 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /const featurePanelOpenState = \(\) =>/);
   assert.match(extensionSource, /vscode\.postMessage\(\{command:"selectFeature", featureId: featureCard\.dataset\.featureCard, panelOpenState: featurePanelOpenState\(\)\}\)/);
   assert.match(extensionSource, /let panelOpenState: Record<string, boolean> = \{\}/);
-  assert.match(extensionSource, /renderFeatureSpecWebview\(view, selectedFeatureId, autoRefreshEnabled, panelOpenState, workbenchLocale\)/);
+  assert.match(extensionSource, /renderFeatureSpecWebview\(view, selectedFeatureId, autoRefreshEnabled, panelOpenState, sharedWorkbenchLocale, sharedWorkbenchTheme\)/);
   assert.match(extensionSource, /card\.classList\.toggle\("selected", selected\)/);
   assert.match(extensionSource, /card\.setAttribute\("aria-selected", selected \? "true" : "false"\)/);
   assert.match(extensionSource, /aria-current=\\"true\\"/);
@@ -570,7 +575,7 @@ test("VSCode Feature Spec Webview schedules selected Features with adapter prefe
 
 test("VSCode Spec Workspace keeps global skill input at top and document actions inside lifecycle", () => {
   assert.match(extensionSource, /renderSpecWorkspaceWebview/);
-  assert.match(extensionSource, /renderSpecWorkspaceWebview\(view, uiConceptImages, autoRefreshEnabled, panel\.webview\.cspSource, workbenchLocale\)/);
+  assert.match(extensionSource, /renderSpecWorkspaceWebview\(view, uiConceptImages, autoRefreshEnabled, panel\.webview\.cspSource, sharedWorkbenchLocale, sharedWorkbenchTheme\)/);
   assert.match(extensionSource, /panel\.onDidDispose\(\(\) => \{\n    stopAutoRefresh\(\);\n    specWorkspacePanel = undefined;/);
   assert.match(specWorkspaceWebviewSource, /autoRefreshSwitch\(autoRefreshEnabled\)/);
   assert.match(specWorkspaceWebviewSource, /autoRefreshEnabled = false/);

@@ -8,11 +8,16 @@ import {
   renderWorkbenchPage,
   statusClass,
   webviewNonce,
+  type WorkbenchTheme,
 } from "./shared";
 
 type AdapterKind = "cli" | "rpc";
 
-export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | undefined, locale: WorkbenchLocale = "en"): string {
+export function renderSystemSettingsWebview(
+  settings: SystemSettingsViewModel | undefined,
+  locale: WorkbenchLocale = "en",
+  theme: WorkbenchTheme = "vscode",
+): string {
   const nonce = webviewNonce();
   const factSources = settings?.factSources ?? [];
   return renderWorkbenchPage("System Settings", nonce, `
@@ -24,7 +29,7 @@ export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | 
       <main class="settings-shell">
         ${renderSettingsRail(settings, factSources)}
         <div class="settings-main">
-          ${renderAppearanceSection(locale)}
+          ${renderAppearanceSection(locale, theme)}
           ${renderExecutionPreferenceSection(settings.projectExecutionPreference)}
           <div class="settings-adapter-matrix">
             ${renderAdapterSection("CLI Adapter", "cli", settings.cliAdapter)}
@@ -39,10 +44,10 @@ export function renderSystemSettingsWebview(settings: SystemSettingsViewModel | 
         </div>
       </main>
     ` : emptyState("System settings are unavailable.")}
-  `, undefined, locale);
+  `, undefined, locale, theme);
 }
 
-function renderAppearanceSection(locale: WorkbenchLocale): string {
+function renderAppearanceSection(locale: WorkbenchLocale, theme: WorkbenchTheme): string {
   const languageOptions: Array<[WorkbenchLocale, string]> = [
     ["en", "English"],
     ["zh-CN", "中文"],
@@ -66,7 +71,7 @@ function renderAppearanceSection(locale: WorkbenchLocale): string {
       <div class="appearance-field">
         <span>Theme</span>
         <div class="theme-segmented" role="group" aria-label="Theme">
-          ${themeOptions.map(([value, label]) => `<button class="workbench-button button-secondary" data-command="setWorkbenchTheme" data-theme-option="${escapeAttr(value)}" aria-pressed="${value === "vscode" ? "true" : "false"}">${escapeHtml(label)}</button>`).join("")}
+          ${themeOptions.map(([value, label]) => `<button class="workbench-button button-secondary" data-command="setWorkbenchTheme" data-theme-option="${escapeAttr(value)}" aria-pressed="${value === theme ? "true" : "false"}">${escapeHtml(label)}</button>`).join("")}
         </div>
       </div>
     </div>

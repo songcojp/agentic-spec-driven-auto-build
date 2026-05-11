@@ -134,6 +134,15 @@
   line-height: 1.2;
 }
 
+.console-workbench .rounded-lg,
+.console-workbench .rounded-md {
+  border-radius: 5px;
+}
+
+.console-workbench .shadow-panel {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18) !important;
+}
+
 body {
   margin: 0;
   min-width: 320px;

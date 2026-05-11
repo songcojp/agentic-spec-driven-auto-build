@@ -25,11 +25,15 @@ import { currentExecutionItem, executionItemByKey, renderExecutionWebview, rende
 import { preferredFeature, preferredFeatureReviewSource, renderFeatureSpecWebview } from "./webviews/feature-spec";
 import { isWorkbenchLocale, type WorkbenchLocale } from "./webviews/i18n";
 import { preferredWorkspaceRequestSource, renderSpecWorkspaceWebview } from "./webviews/spec-workspace";
+import { normalizeWorkbenchTheme, type WorkbenchTheme } from "./webviews/shared";
 import { renderSystemSettingsWebview } from "./webviews/system-settings";
 
 let controlPlaneManager: BundledControlPlaneManager | undefined;
+let extensionContext: vscode.ExtensionContext | undefined;
 let startupSpecWorkspaceOpened = false;
 const WEBVIEW_AUTO_REFRESH_INTERVAL_MS = 60_000;
+const WORKBENCH_LOCALE_STORAGE_KEY = "specdrive.ide.locale";
+const WORKBENCH_THEME_STORAGE_KEY = "specdrive.ide.theme";
 type ManagedWebviewPanel = {
   panel: vscode.WebviewPanel;
   render: () => Promise<void>;
@@ -39,8 +43,12 @@ let specWorkspacePanel: ManagedWebviewPanel | undefined;
 let featureSpecPanel: (ManagedWebviewPanel & { selectFeature: (item?: unknown) => void }) | undefined;
 let systemSettingsPanel: ManagedWebviewPanel | undefined;
 let sharedWorkbenchLocale: WorkbenchLocale = "en";
+let sharedWorkbenchTheme: WorkbenchTheme = "vscode";
 
 export function activate(context: vscode.ExtensionContext): void {
+  extensionContext = context;
+  sharedWorkbenchLocale = readStoredWorkbenchLocale(context);
+  sharedWorkbenchTheme = readStoredWorkbenchTheme(context);
   const diagnostics = vscode.languages.createDiagnosticCollection("specdrive");
   context.subscriptions.push(diagnostics);
   controlPlaneManager = new BundledControlPlaneManager(context);
@@ -79,6 +87,32 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
   controlPlaneManager?.dispose();
   return;
+}
+
+function readStoredWorkbenchLocale(context: vscode.ExtensionContext): WorkbenchLocale {
+  const stored = context.workspaceState.get<unknown>(WORKBENCH_LOCALE_STORAGE_KEY);
+  return isWorkbenchLocale(stored) ? stored : "en";
+}
+
+function readStoredWorkbenchTheme(context: vscode.ExtensionContext): WorkbenchTheme {
+  return normalizeWorkbenchTheme(context.workspaceState.get<unknown>(WORKBENCH_THEME_STORAGE_KEY));
+}
+
+async function updateWorkbenchLocale(locale: WorkbenchLocale): Promise<void> {
+  sharedWorkbenchLocale = locale;
+  await extensionContext?.workspaceState.update(WORKBENCH_LOCALE_STORAGE_KEY, locale);
+  await renderAllWorkbenchPanels();
+}
+
+async function updateWorkbenchTheme(theme: WorkbenchTheme): Promise<void> {
+  sharedWorkbenchTheme = theme;
+  await extensionContext?.workspaceState.update(WORKBENCH_THEME_STORAGE_KEY, theme);
+  await renderAllWorkbenchPanels();
+}
+
+async function renderAllWorkbenchPanels(): Promise<void> {
+  const panels = [executionWorkbenchPanel, specWorkspacePanel, featureSpecPanel, systemSettingsPanel].filter((panel): panel is ManagedWebviewPanel => Boolean(panel));
+  await Promise.allSettled(panels.map((panel) => panel.render()));
 }
 
 class BundledControlPlaneManager implements vscode.Disposable {
@@ -1067,7 +1101,6 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
   panel.iconPath = specExplorePanelIconUri("run-all");
   let selectedQueueKey: string | undefined;
   let autoRefreshEnabled = true;
-  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1083,7 +1116,7 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
       if (selectedQueueKey && !selected) selectedQueueKey = undefined;
       const current = selected ?? (view ? currentExecutionItem(view) : undefined);
       const detail = current ? await fetchExecutionDetail(current) : undefined;
-      panel.webview.html = renderExecutionWorkbenchWebview(view, detail, selectedQueueKey, autoRefreshEnabled, workbenchLocale);
+      panel.webview.html = renderExecutionWorkbenchWebview(view, detail, selectedQueueKey, autoRefreshEnabled, sharedWorkbenchLocale, sharedWorkbenchTheme);
     } finally {
       rendering = false;
     }
@@ -1104,9 +1137,11 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
   });
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
-      workbenchLocale = message.locale;
-      sharedWorkbenchLocale = message.locale;
-      await render();
+      await updateWorkbenchLocale(message.locale);
+      return;
+    }
+    if (isWorkbenchMessage(message) && message.command === "setWorkbenchTheme") {
+      await updateWorkbenchTheme(normalizeWorkbenchTheme(message.theme));
       return;
     }
     if (isWorkbenchMessage(message) && message.command === "selectQueueItem" && typeof message.entityId === "string") {
@@ -1145,7 +1180,6 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
   });
   panel.iconPath = specExplorePanelIconUri("checklist");
   let autoRefreshEnabled = true;
-  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1155,7 +1189,7 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
       await provider.refresh();
       const view = provider.currentView();
       const uiConceptImages = await collectUiConceptImages(panel.webview, view, uiConceptWorkspaceRoot(view, workspaceRoot));
-      panel.webview.html = renderSpecWorkspaceWebview(view, uiConceptImages, autoRefreshEnabled, panel.webview.cspSource, workbenchLocale);
+      panel.webview.html = renderSpecWorkspaceWebview(view, uiConceptImages, autoRefreshEnabled, panel.webview.cspSource, sharedWorkbenchLocale, sharedWorkbenchTheme);
     } finally {
       rendering = false;
     }
@@ -1176,9 +1210,11 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
   });
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
-      workbenchLocale = message.locale;
-      sharedWorkbenchLocale = message.locale;
-      await render();
+      await updateWorkbenchLocale(message.locale);
+      return;
+    }
+    if (isWorkbenchMessage(message) && message.command === "setWorkbenchTheme") {
+      await updateWorkbenchTheme(normalizeWorkbenchTheme(message.theme));
       return;
     }
     if (isWorkbenchMessage(message) && message.command === "specWorkspaceRequest" && typeof message.content === "string") {
@@ -1221,7 +1257,6 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
   let selectedFeatureId = isFeatureItem(item) ? item.feature.id : undefined;
   let panelOpenState: Record<string, boolean> = {};
   let autoRefreshEnabled = true;
-  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1233,7 +1268,7 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
       if (!selectedFeatureId || !view?.features.some((feature) => feature.id === selectedFeatureId)) {
         selectedFeatureId = preferredFeature(view)?.id;
       }
-      panel.webview.html = renderFeatureSpecWebview(view, selectedFeatureId, autoRefreshEnabled, panelOpenState, workbenchLocale);
+      panel.webview.html = renderFeatureSpecWebview(view, selectedFeatureId, autoRefreshEnabled, panelOpenState, sharedWorkbenchLocale, sharedWorkbenchTheme);
     } finally {
       rendering = false;
     }
@@ -1257,9 +1292,11 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
   });
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (isWorkbenchMessage(message) && message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
-      workbenchLocale = message.locale;
-      sharedWorkbenchLocale = message.locale;
-      await render();
+      await updateWorkbenchLocale(message.locale);
+      return;
+    }
+    if (isWorkbenchMessage(message) && message.command === "setWorkbenchTheme") {
+      await updateWorkbenchTheme(normalizeWorkbenchTheme(message.theme));
       return;
     }
     if (isWorkbenchMessage(message) && message.command === "selectFeature" && typeof message.featureId === "string") {
@@ -1318,20 +1355,18 @@ async function openSystemSettings(provider: SpecExplorerProvider): Promise<void>
     retainContextWhenHidden: true,
   });
   panel.iconPath = specExplorePanelIconUri("settings-gear");
-  let workbenchLocale: WorkbenchLocale = sharedWorkbenchLocale;
   const render = async (): Promise<void> => {
-    panel.webview.html = renderSystemSettingsWebview(await fetchSystemSettings(), workbenchLocale);
+    panel.webview.html = renderSystemSettingsWebview(await fetchSystemSettings(), sharedWorkbenchLocale, sharedWorkbenchTheme);
   };
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (!isWorkbenchMessage(message)) return;
     try {
       if (message.command === "setWorkbenchLocale" && isWorkbenchLocale(message.locale)) {
-        workbenchLocale = message.locale;
-        sharedWorkbenchLocale = message.locale;
-        await render();
+        await updateWorkbenchLocale(message.locale);
         return;
       }
       if (message.command === "setWorkbenchTheme") {
+        await updateWorkbenchTheme(normalizeWorkbenchTheme(message.theme));
         return;
       }
       if (message.command === "refresh") {

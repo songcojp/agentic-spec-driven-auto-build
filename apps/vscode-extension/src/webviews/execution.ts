@@ -19,6 +19,7 @@ import {
   statusClass,
   textBlock,
   webviewNonce,
+  type WorkbenchTheme,
 } from "./shared";
 
 const EXECUTION_QUEUE_GROUPS: Array<{ label: string; statuses: string[]; open: boolean }> = [
@@ -39,6 +40,7 @@ export function renderExecutionWorkbenchWebview(
   selectedKey?: string,
   autoRefreshEnabled = false,
   locale: WorkbenchLocale = "en",
+  theme: WorkbenchTheme = "vscode",
 ): string {
   const nonce = webviewNonce();
   const queue = view ? allQueueItems(view) : [];
@@ -87,7 +89,7 @@ export function renderExecutionWorkbenchWebview(
         </div></details>
       </section>
     </main>
-  `, undefined, locale);
+  `, undefined, locale, theme);
 }
 
 function selectedBlockerItems(item: SpecDriveIdeQueueItem | undefined): SpecDriveIdeQueueItem[] {
