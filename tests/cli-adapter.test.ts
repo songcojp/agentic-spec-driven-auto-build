@@ -290,6 +290,8 @@ test("CLI adapter dry-run validates JSON-managed command templates", () => {
   assert.equal(result.command, "codex");
   assert.equal(result.args?.includes("--output-schema"), true);
   assert.equal(result.args?.includes("/tmp/runner-output.schema.json"), true);
+  assert.equal(result.args?.includes("service_tier=\"fast\""), true);
+  assert.equal(result.args?.includes("features.fast_mode=true"), true);
 });
 
 test("CLI adapter exposes unified execution adapter config", () => {
@@ -302,6 +304,8 @@ test("CLI adapter exposes unified execution adapter config", () => {
   assert.ok(config.capabilities.includes("image-generation"));
   assert.ok(config.capabilities.includes("image-generation:generate"));
   assert.equal(config.defaults.model, "gpt-5.5");
+  assert.equal(config.defaults.serviceTier, "fast");
+  assert.equal(config.defaults.fastMode, true);
   assert.deepEqual(config.inputMapping.argumentTemplate, DEFAULT_CLI_ADAPTER_CONFIG.argumentTemplate);
   assert.deepEqual(config.inputMapping.imageGeneration, DEFAULT_CLI_ADAPTER_CONFIG.imageGeneration);
 });
@@ -825,7 +829,7 @@ test("CLI adapter normalizes snake_case DB row fields to camelCase config", () =
     resume_argument_template: ["resume", "{sessionId}"],
     config_schema: { type: "object" },
     form_schema: { fields: [] },
-    defaults: { model: "gemini-pro", reasoning_effort: "high", sandbox: "workspace-write", approval: "on-request" },
+    defaults: { model: "gemini-pro", reasoning_effort: "high", service_tier: "standard", fast_mode: false, sandbox: "workspace-write", approval: "on-request" },
     environment_allowlist: ["HOME", "PATH"],
     output_mapping: { event_stream: "json", output_schema: "v1", session_id_path: "session_id" },
     status: "active",
@@ -842,6 +846,8 @@ test("CLI adapter normalizes snake_case DB row fields to camelCase config", () =
   assert.equal(normalized.outputMapping.eventStream, "json");
   assert.equal(normalized.defaults.model, "gemini-pro");
   assert.equal(normalized.defaults.reasoningEffort, "high");
+  assert.equal(normalized.defaults.serviceTier, "standard");
+  assert.equal(normalized.defaults.fastMode, false);
   assert.equal(normalized.status, "active");
 });
 
@@ -887,6 +893,8 @@ test("CLI adapter upgrades stale built-in sandbox defaults", () => {
   assert.equal(normalized.schemaVersion, DEFAULT_CLI_ADAPTER_CONFIG.schemaVersion);
   assert.equal(normalized.defaults.sandbox, "danger-full-access");
   assert.equal(normalized.defaults.approval, "never");
+  assert.equal(normalized.defaults.serviceTier, "fast");
+  assert.equal(normalized.defaults.fastMode, true);
 });
 
 test("runner policy resolves development defaults and clamps heartbeat cadence", () => {
@@ -1343,13 +1351,17 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
   });
 
   assert.equal(calls[0].command, "codex");
-  assert.deepEqual(calls[0].args.slice(0, 13), [
+  assert.deepEqual(calls[0].args.slice(0, 17), [
     "-a",
     "never",
     "--sandbox",
     "danger-full-access",
     "-c",
     'model_reasoning_effort="medium"',
+    "-c",
+    'service_tier="fast"',
+    "-c",
+    "features.fast_mode=true",
     "--cd",
     workspaceRoot,
     "-p",
@@ -1358,12 +1370,12 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
     "resume",
     "--ignore-user-config",
   ]);
-  assert.equal(calls[0].args[13], "--json");
-  assert.equal(calls[0].args[14], "-m");
-  assert.equal(calls[0].args[15], "gpt-5.5");
-  assert.equal(calls[0].args[16], "SESSION-OLD");
-  assert.match(calls[0].args[17], /Implement bounded task token=abc123/);
-  assert.match(calls[0].args[17], /matching this schema/);
+  assert.equal(calls[0].args[17], "--json");
+  assert.equal(calls[0].args[18], "-m");
+  assert.equal(calls[0].args[19], "gpt-5.5");
+  assert.equal(calls[0].args[20], "SESSION-OLD");
+  assert.match(calls[0].args[21], /Implement bounded task token=abc123/);
+  assert.match(calls[0].args[21], /matching this schema/);
   assert.equal(calls[0].cwd, workspaceRoot);
   assert.doesNotMatch(result.session.args.join(" "), /abc123/);
   assert.match(result.session.args.join(" "), /token=\[REDACTED\]/);
@@ -1718,11 +1730,15 @@ test("Codex CLI adapter passes output schema for new exec runs", async () => {
     },
   });
 
-  assert.deepEqual(calls[0].args.slice(0, 14), [
+  assert.deepEqual(calls[0].args.slice(0, 18), [
     "-a",
     "never",
     "-c",
     'model_reasoning_effort="medium"',
+    "-c",
+    'service_tier="fast"',
+    "-c",
+    "features.fast_mode=true",
     "--cd",
     policy.workspaceRoot,
     "exec",
@@ -1734,7 +1750,7 @@ test("Codex CLI adapter passes output schema for new exec runs", async () => {
     "gpt-5.5",
     "--output-schema",
   ]);
-  assert.equal(calls[0].args[14], "/tmp/runner-output.schema.json");
+  assert.equal(calls[0].args[18], "/tmp/runner-output.schema.json");
 });
 
 test("Codex CLI adapter terminates variadic image arguments before prompt", () => {

@@ -241,6 +241,8 @@ export const en = {
   executable: "Executable",
   defaultModel: "Default Model",
   defaultReasoningEffort: "Default Reasoning Effort",
+  defaultServiceTier: "Default Service Tier",
+  defaultFastMode: "Fast Mode",
   defaultSandbox: "Default Sandbox",
   defaultApproval: "Default Approval",
   argumentTemplate: "Argument Template",

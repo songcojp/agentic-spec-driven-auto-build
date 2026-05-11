@@ -460,10 +460,11 @@ THE SYSTEM SHALL 通过 CLI Adapter 在目标项目 workspace 中调用 Codex CL
 优先级：Must
 
 WHEN Execution Adapter Layer 启动
-THE SYSTEM SHALL 根据开发阶段策略和任务上下文设置 sandbox mode、approval policy、model、profile、output schema、JSON event stream、workspace root 和 session resume。
+THE SYSTEM SHALL 根据开发阶段策略和任务上下文设置 sandbox mode、approval policy、model、profile、provider-specific speed / service tier、output schema、JSON event stream、workspace root 和 session resume。
 
 验收：
 - [ ] 开发阶段默认 Execution Policy 使用 `danger-full-access` 和 `approval=never`。
+- [ ] `codex-cli` preset 默认启用 Codex CLI Fast mode：adapter defaults 使用 `serviceTier=fast`、`fastMode=true`，命令模板传递 `service_tier="fast"` 和 `features.fast_mode=true`。
 - [ ] 高风险任务在开发阶段不触发编码 CLI 人工确认；敏感文件、危险命令和 forbidden files 仍由 Safety Gate 阻断。
 
 ### REQ-039：执行 Execution Adapter 安全策略
@@ -485,8 +486,8 @@ THE SYSTEM SHALL 通过 active CLI Adapter 解析 executable、argument template
 
 验收：
 - [ ] 默认 `codex-cli` adapter 能生成与现有 Codex 执行等价的命令。
-- [ ] 系统提供 `codex-cli`、`gemini-cli` 和 `claude-cli` 内置 preset；Gemini CLI 通过 headless `--output-format stream-json` 输出接入，使用 `--skip-trust`、`--approval-mode` 和 `-p` 承载非交互执行，并由 Execution Adapter 从 `init`、`message`、`tool_use`、`tool_result`、`error`、`result` 事件中提取 session、日志、token usage 和 SkillOutputContractV1 做事后校验；Claude Code CLI 通过 `claude -p --output-format json --json-schema` 接入，并从 `structured_output` 提取最终 SkillOutputContractV1。
-- [ ] Execution Policy 解析结果与 adapter 配置合并后仍保留 sandbox、approval、model、profile、output schema 和 workspace root 约束。
+- [ ] 系统提供 `codex-cli`、`gemini-cli` 和 `claude-cli` 内置 preset；`codex-cli` preset 通过 `service_tier` 和 `features.fast_mode` 支持 Codex CLI Fast mode；Gemini CLI 通过 headless `--output-format stream-json` 输出接入，使用 `--skip-trust`、`--approval-mode` 和 `-p` 承载非交互执行，并由 Execution Adapter 从 `init`、`message`、`tool_use`、`tool_result`、`error`、`result` 事件中提取 session、日志、token usage 和 SkillOutputContractV1 做事后校验；Claude Code CLI 通过 `claude -p --output-format json --json-schema` 接入，并从 `structured_output` 提取最终 SkillOutputContractV1。
+- [ ] Execution Policy 解析结果与 adapter 配置合并后仍保留 sandbox、approval、model、profile、provider-specific speed / service tier、output schema 和 workspace root 约束。
 - [ ] CLI / RPC adapter 的 `defaults.costRates` 是模型 token 费率唯一配置入口；每次 token 成本计算必须使用该次执行最终 adapter 的费率快照，不得使用当前 active adapter 费率重算历史。
 - [ ] active CLI Adapter 必须在启动前解析并校验项目 workspace root；项目路径缺失、不可读或不是可用 workspace 时，新 Run 进入 blocked 并展示原因。
 - [ ] CLI Adapter 变更写入审计日志，并且不影响已经 running 的 Run。
@@ -503,7 +504,7 @@ THE SYSTEM SHALL 提供 CLI Adapter 配置管理界面，支持查看原始 JSON
 验收：
 - [ ] CLI Adapter 配置以 JSON 作为唯一事实源，表单编辑和原始 JSON 编辑互相同步。
 - [ ] 保存前必须通过 JSON Schema、命令模板、安全策略和必填字段校验。
-- [ ] 用户可以编辑命令参数、安全策略、默认 model/profile、输出映射、session resume 和环境变量 allowlist。
+- [ ] 用户可以编辑命令参数、安全策略、默认 model/profile、provider-specific speed / service tier、输出映射、session resume 和环境变量 allowlist。
 - [ ] 配置保存、启用、禁用和校验失败都写入审计日志并在 UI 展示反馈。
 - [ ] Product Console 浏览器级验证覆盖 JSON 编辑、表单编辑、校验失败和成功保存。
 

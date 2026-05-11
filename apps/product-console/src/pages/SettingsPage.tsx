@@ -183,7 +183,7 @@ function AdapterSettingsEditor({
     setJsonText(JSON.stringify(mutator({ ...base }), null, 2));
   }
 
-  function updateDefaults(key: string, value: string) {
+  function updateDefaults(key: string, value: unknown) {
     updateConfig((config) => ({
       ...config,
       defaults: {
@@ -332,6 +332,16 @@ function AdapterSettingsEditor({
                       label={text.defaultReasoningEffort}
                       value={String(defaults.reasoningEffort ?? "")}
                       onChange={(value) => updateDefaults("reasoningEffort", value)}
+                    />
+                    <SettingsInput
+                      label={text.defaultServiceTier}
+                      value={String(defaults.serviceTier ?? "")}
+                      onChange={(value) => updateDefaults("serviceTier", value)}
+                    />
+                    <SettingsInput
+                      label={text.defaultFastMode}
+                      value={String(defaults.fastMode ?? false)}
+                      onChange={(value) => updateDefaults("fastMode", value === "true")}
                     />
                     <SettingsInput
                       label={text.defaultSandbox}

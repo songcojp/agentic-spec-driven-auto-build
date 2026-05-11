@@ -241,6 +241,8 @@ export const zhCN = {
   executable: "可执行文件",
   defaultModel: "默认模型",
   defaultReasoningEffort: "默认推理强度",
+  defaultServiceTier: "默认服务层级",
+  defaultFastMode: "Fast 模式",
   defaultSandbox: "默认 Sandbox",
   defaultApproval: "默认审批",
   argumentTemplate: "参数模板",

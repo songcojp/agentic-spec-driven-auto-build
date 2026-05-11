@@ -59,6 +59,7 @@ export type { TokenCostRate } from "./adapter-pricing.ts";
 export type RunnerSandboxMode = "read-only" | "workspace-write" | "danger-full-access";
 export type RunnerApprovalPolicy = "untrusted" | "on-failure" | "on-request" | "never" | "bypass";
 export type RunnerReasoningEffort = "low" | "medium" | "high" | "xhigh";
+export type RunnerServiceTier = "standard" | "fast";
 export const SKILL_OUTPUT_STATUSES = [
   "queued",
   "running",
@@ -167,6 +168,10 @@ export type CliAdapterConfig = {
     model?: string;
     reasoningEffort?: RunnerReasoningEffort;
     reasoning_effort?: RunnerReasoningEffort;
+    serviceTier?: RunnerServiceTier;
+    service_tier?: RunnerServiceTier;
+    fastMode?: boolean;
+    fast_mode?: boolean;
     profile?: string;
     sandbox?: RunnerSandboxMode;
     approval?: RunnerApprovalPolicy;
@@ -475,6 +480,8 @@ export function cliAdapterConfigToExecutionAdapterConfig(config: CliAdapterConfi
     defaults: {
       model: config.defaults.model,
       reasoningEffort: config.defaults.reasoningEffort ?? config.defaults.reasoning_effort,
+      serviceTier: config.defaults.serviceTier ?? config.defaults.service_tier,
+      fastMode: config.defaults.fastMode ?? config.defaults.fast_mode,
       profile: config.defaults.profile,
       sandbox: config.defaults.sandbox,
       approval: config.defaults.approval,
@@ -1195,6 +1202,8 @@ export function normalizeCliAdapterConfig(input: Partial<CliAdapterConfig> | Rec
     defaults: {
       model: optionalConfigString(defaults.model) ?? baseConfig.defaults.model,
       reasoningEffort: normalizeReasoningEffort(defaults.reasoningEffort ?? defaults.reasoning_effort) ?? baseConfig.defaults.reasoningEffort,
+      serviceTier: normalizeServiceTier(defaults.serviceTier ?? defaults.service_tier) ?? baseConfig.defaults.serviceTier,
+      fastMode: optionalBoolean(defaults.fastMode ?? defaults.fast_mode) ?? baseConfig.defaults.fastMode,
       profile: optionalConfigString(defaults.profile),
       sandbox: normalizeSandbox(defaults.sandbox) ?? baseConfig.defaults.sandbox,
       approval: normalizeApproval(defaults.approval) ?? baseConfig.defaults.approval,
@@ -1240,6 +1249,8 @@ function upgradeBuiltInAdapterConfig(config: CliAdapterConfig): CliAdapterConfig
       ...config.defaults,
       sandbox: DEFAULT_CLI_ADAPTER_CONFIG.defaults.sandbox,
       approval: DEFAULT_CLI_ADAPTER_CONFIG.defaults.approval,
+      serviceTier: DEFAULT_CLI_ADAPTER_CONFIG.defaults.serviceTier,
+      fastMode: DEFAULT_CLI_ADAPTER_CONFIG.defaults.fastMode,
     },
   };
 }
@@ -1258,6 +1269,13 @@ export function validateCliAdapterConfig(config: CliAdapterConfig): CliAdapterVa
   if (!config.outputMapping.sessionIdPath.trim()) errors.push("outputMapping.sessionIdPath is required");
   if (config.defaults.approval === "bypass") errors.push("default approval may not bypass approvals");
   if (!normalizeReasoningEffort(config.defaults.reasoningEffort)) errors.push("default reasoning effort must be low, medium, high, or xhigh");
+  const serviceTier = config.defaults.serviceTier ?? config.defaults.service_tier;
+  const fastMode = config.defaults.fastMode ?? config.defaults.fast_mode;
+  if (serviceTier !== undefined && !normalizeServiceTier(serviceTier)) errors.push("default service tier must be standard or fast");
+  if (fastMode !== undefined && typeof fastMode !== "boolean") errors.push("default fast mode must be boolean");
+  if (config.id === CODEX_CLI_ADAPTER_CONFIG.id && fastMode === true && serviceTier !== "fast") {
+    errors.push("codex-cli fast mode requires defaults.serviceTier to be fast");
+  }
   if (config.imageGeneration) {
     if (!config.imageGeneration.provider.trim()) errors.push("imageGeneration.provider is required");
     if (!config.imageGeneration.invocation.trim()) errors.push("imageGeneration.invocation is required");
@@ -1320,6 +1338,8 @@ export function renderCliAdapterCommand(input: {
     sandbox: input.policy.sandboxMode,
     model: input.policy.model,
     reasoning_effort: input.policy.reasoningEffort,
+    service_tier: config.defaults.serviceTier ?? config.defaults.service_tier ?? "standard",
+    fast_mode: String(config.defaults.fastMode ?? config.defaults.fast_mode ?? false),
     profile: input.policy.profile ?? "",
     profile_flag: input.policy.profile ? "-p" : "",
     output_schema: input.outputSchemaPath,
@@ -3186,6 +3206,14 @@ function normalizeApproval(value: unknown): RunnerApprovalPolicy | undefined {
 
 function normalizeReasoningEffort(value: unknown): RunnerReasoningEffort | undefined {
   return value === "low" || value === "medium" || value === "high" || value === "xhigh" ? value : undefined;
+}
+
+function normalizeServiceTier(value: unknown): RunnerServiceTier | undefined {
+  return value === "standard" || value === "fast" ? value : undefined;
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
 }
 
 function normalizeAdapterStatus(value: unknown): CliAdapterStatus | undefined {

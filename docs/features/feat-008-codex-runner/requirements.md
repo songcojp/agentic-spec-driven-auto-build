@@ -17,7 +17,7 @@
 - 通过 JSON + JSON Schema 管理 CLI Adapter 配置，隔离 executable、argument template、输出映射和 session resume 逻辑，并符合 HLD 7.8 的 `ExecutionAdapterConfigV1`。
 - 支持 CLI skill invocation contract，将 Spec/UI 操作转换为项目 workspace 内部 Skill prompt。
 - Feature 级 `feature_execution` 通过 `07.execution.dispatch-adapter` 直接读取 Feature Spec 目录执行；CLI Adapter 不要求 `task_graph_tasks` / `tasks` 表存在，也不替 Skill 执行 worktree/PR/merge/cleanup。
-- 根据开发阶段策略和任务上下文设置 sandbox mode、approval policy、model、profile、output schema、JSON event stream、workspace root 和 session resume。
+- 根据开发阶段策略和任务上下文设置 sandbox mode、approval policy、model、profile、provider-specific speed / service tier、output schema、JSON event stream、workspace root 和 session resume。
 - 开发阶段默认使用 `danger-full-access` 和 `approval=never`，不触发编码 CLI 人工确认。
 - 默认不得使用 bypass approvals；敏感文件、危险命令和 forbidden files 仍由 Safety Gate 阻断。
 - 捕获命令输出、JSON/JSONL event stream、CLI session、原始日志和 Execution Adapter 心跳。
@@ -54,7 +54,7 @@
 - CLI Adapter 必须以 `execution_records` 作为执行状态主表；不得为 `cli.run` 创建或更新旧 `runs` 记录。
 - 每次 Execution Adapter run 必须在 `.autobuild/runs/<executionId>/report.json` 写入一份独立 Run Report，合并 exit/session、SkillOutputContractV1、contract validation、产物、usage 和 log refs；Feature execution 默认 expected artifact 指向该 run report，不再写入共享 `.autobuild/reports/feature-execution.json`。
 - CLI Adapter 配置必须以 JSON 为唯一事实源，并支持 dry-run 校验。
-- CLI Adapter 必须提供 `codex-cli`、`gemini-cli` 和 `claude-cli` 内置 adapter preset；Gemini CLI preset 必须通过 headless JSON/JSONL 输出和 SkillOutputContractV1 事后校验接入，不要求 Gemini CLI 支持 Codex 风格自定义 output schema 参数；Claude Code CLI preset 必须通过 `claude -p --output-format json --json-schema` 输出和 `structured_output` 事后校验接入。
+- CLI Adapter 必须提供 `codex-cli`、`gemini-cli` 和 `claude-cli` 内置 adapter preset；`codex-cli` preset 必须支持 Codex CLI Fast mode，并通过 adapter defaults 中的 `serviceTier` / `fastMode` 渲染 `service_tier` 和 `features.fast_mode` 配置覆盖；Gemini CLI preset 必须通过 headless JSON/JSONL 输出和 SkillOutputContractV1 事后校验接入，不要求 Gemini CLI 支持 Codex 风格自定义 output schema 参数；Claude Code CLI preset 必须通过 `claude -p --output-format json --json-schema` 输出和 `structured_output` 事后校验接入。
 - CLI Adapter 配置必须支持可选 `imageGeneration` 接口定义，用于声明 adapter 是否支持直接图像生成、支持哪些图像操作、调用入口、默认图像模型、模型环境变量、必需环境变量和输出格式；该定义必须投影为 Execution Adapter capability，供后续 UI / Scheduler 直接选择可产出 image artifact 的 provider。
 - `codex-cli` preset 的图像生成接口必须声明 Codex CLI 内置 `$imagegen` Skill，默认图像模型为 `gpt-image-2`；`gemini-cli` preset 的图像生成接口必须声明 Nano Banana Gemini CLI extension 命令，包括 `/generate`、`/edit`、`/restore`、`/icon`、`/pattern`、`/story`、`/diagram` 和 `/nanobanana`，并允许通过 `NANOBANANA_MODEL` 切换图像模型。
 - 开发阶段高风险任务默认以 `danger-full-access` 和 `approval=never` 执行；敏感文件、危险命令和 forbidden files 仍必须触发安全规则。
@@ -82,7 +82,7 @@
 - [ ] 每次 run 都有独立 `.autobuild/runs/<executionId>/report.json`，Feature execution 调度默认把该 report 作为 expected artifact。
 - [ ] `result` 可以包含 Skill 专用字段，CLI/RPC Adapter 不按 `skillSlug` 做专用字段校验。
 - [ ] Feature 级 coding prompt 明确要求读取 Feature Spec 三件套并执行 `tasks.md`，不能将 report-only completion 当成成功。
-- [ ] Execution Policy 能根据开发阶段策略解析 sandbox、approval、model、profile 和输出 schema。
+- [ ] Execution Policy 能根据开发阶段策略解析 sandbox、approval、model、profile、provider-specific speed / service tier 和输出 schema。
 - [ ] CLI Adapter JSON 配置可以校验、保存草稿、启用，并在无效时阻塞新 Execution Record。
 - [ ] workspace root 缺失、不可读或缺少所需 Skill 文件时，新 Execution Record blocked 且给出可观察原因。
 - [ ] 默认 Execution Adapter 配置使用 `danger-full-access` 和 `approval=never`。

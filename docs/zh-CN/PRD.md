@@ -750,7 +750,7 @@ Console 中的项目级 `schedule_run` 和 `start_auto_run` 返回调度触发 I
 
 #### FR-070 编码 CLI 执行
 
-系统通过 Runner CLI Adapter 调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价编码 CLI。Codex 是 MVP 默认 adapter，Gemini 和 Claude 是内置可选 adapter preset；Runner 不得把命令模板、参数映射、输出解析和 session resume 逻辑硬编码到调度状态机中。
+系统通过 Runner CLI Adapter 调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价编码 CLI。Codex 是 MVP 默认 adapter，Gemini 和 Claude 是内置可选 adapter preset；Runner 不得把命令模板、参数映射、输出解析和 session resume 逻辑硬编码到调度状态机中。Codex CLI preset 必须支持 Fast mode 配置，通过 adapter defaults 控制 `service_tier` 和 `features.fast_mode`，并在命令模板中以 Codex CLI 配置覆盖方式传递。
 
 编码 CLI 调用必须以当前项目 workspace 启动。workspace root 的来源优先级为当前项目 repository `local_path`、项目 `target_repo_path`；不得回退到 SpecDrive Control Plane 进程运行目录。缺少项目路径、路径不可读、不是可用 workspace，或 workspace 中缺少所需 `.agents/skills/*` / `AGENTS.md` 时，新 Run 必须进入 blocked 并给出可观察原因。
 
@@ -778,10 +778,11 @@ Product Console 和 Spec Workspace 的用户操作不直接执行生成、规划
 * execution results schema mapping
 * session resume mapping
 * safety capability flags
+* provider-specific speed / service tier defaults
 
 #### FR-071 Codex 安全策略
 
-Codex Runner 必须支持 sandbox mode、approval policy、model、profile、output schema、JSON event stream、workspace root 和 session resume。
+Codex Runner 必须支持 sandbox mode、approval policy、model、profile、provider-specific speed / service tier、output schema、JSON event stream、workspace root 和 session resume。
 
 #### FR-072 默认安全配置
 
@@ -795,7 +796,7 @@ Codex Runner 必须支持 sandbox mode、approval policy、model、profile、out
 
 #### FR-073 CLI Adapter JSON 配置
 
-Runner CLI Adapter 配置必须通过 JSON 持久化，并由 JSON Schema 校验。配置至少包含 adapter 身份、命令模板、参数字段、默认模型或 profile、安全策略、输出解析、执行结果映射、session resume、环境变量 allowlist 和可见性元数据。
+Runner CLI Adapter 配置必须通过 JSON 持久化，并由 JSON Schema 校验。配置至少包含 adapter 身份、命令模板、参数字段、默认模型或 profile、provider-specific speed / service tier、安全策略、输出解析、执行结果映射、session resume、环境变量 allowlist 和可见性元数据。
 
 配置变更必须写审计日志，并在生效前通过 dry-run 校验命令模板、必填字段、安全约束和 schema 版本。无效配置不得进入 active 状态，也不得影响正在运行的 Run。
 
