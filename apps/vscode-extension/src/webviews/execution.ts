@@ -198,7 +198,7 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
 }
 
 function renderStateFlowRow([label, value]: [string, string]): string {
-  const stacked = ["Reason", "Review Message", "Review Triggers", "Recommended Actions", "Resume Evidence", "Next Action"].includes(label);
+  const stacked = ["Reason", "Review Message", "Review Triggers", "Recommended Actions", "Resume Evidence", "Message", "References", "Next Action"].includes(label);
   return `<div class="row${stacked ? " row-stacked" : ""}"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
 }
 
@@ -501,7 +501,7 @@ function reviewDecisionButton(
 }
 
 function reviewActionNeedsNote(action: string): boolean {
-  return ["request_review_changes", "update_spec", "reject_review", "rollback_review", "split_review_task"].includes(action);
+  return ["approve_review", "request_review_changes", "update_spec", "reject_review", "rollback_review", "split_review_task"].includes(action);
 }
 
 function reviewReasonLabel(reason: SpecDriveIdeQueueItem["reviewNeededReason"]): string {

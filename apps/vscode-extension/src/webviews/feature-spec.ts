@@ -331,7 +331,7 @@ function reviewFeatureButton(label: string, action: string, icon: string, featur
 }
 
 function reviewActionNeedsNote(action: string): boolean {
-  return ["request_review_changes", "update_spec", "reject_review", "rollback_review", "split_review_task"].includes(action);
+  return ["approve_review", "request_review_changes", "update_spec", "reject_review", "rollback_review", "split_review_task"].includes(action);
 }
 
 function markFeatureReadyButton(label: string, feature: SpecDriveIdeFeatureNode, projectId: string | undefined, source: string): string {

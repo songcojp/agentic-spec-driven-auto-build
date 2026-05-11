@@ -177,6 +177,7 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /renderStateFlow\(selectedItem\)/);
   assert.match(webviewSource, /function renderStateFlowRow\(\[label, value\]: \[string, string\]\): string/);
   assert.match(webviewSource, /"Next Action"\]\.includes\(label\)/);
+  assert.match(webviewSource, /"Message", "References", "Next Action"\]\.includes\(label\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
   assert.match(webviewSource, /Review Message/);
@@ -464,6 +465,7 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.doesNotMatch(extensionSource, /selected && isPassableFeature\(selected\)/);
   assert.doesNotMatch(extensionSource, /approveFeatureReviewButton\("Pass"/);
   assert.match(webviewSource, /reviewNoteRequired: reviewActionNeedsNote\(action\) \? "true" : undefined/);
+  assert.match(webviewSource, /"approve_review", "request_review_changes", "update_spec", "reject_review", "rollback_review", "split_review_task"/);
   assert.match(webviewSource, /Record the review clarification, requested change, or decision note before continuing\./);
   assert.match(webviewSource, /payload\.payload = \{\.\.\.\(payload\.payload \|\| \{\}\), reviewNote: trimmed, clarification: trimmed\}/);
   assert.match(extensionSource, /markFeatureReadyButton\("Ready", feature, projectId, "Feature Detail"\)/);
