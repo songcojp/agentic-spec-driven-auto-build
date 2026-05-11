@@ -1741,6 +1741,64 @@ test("product console resolves draft feature reviews with legal state-flow defau
   assert.equal(result.queries.feature[0].status, "review_needed");
 });
 
+test("feature review approval resolves linked execution queue status", () => {
+  const dbPath = seedReviewData();
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json, updated_at)
+        VALUES ('JOB-FEATURE-REVIEW', 'bull-feature-review', 'specdrive:execution-adapter', 'cli.run', 'review_needed', '{}', '2026-04-28T12:00:00.000Z')`,
+    },
+    {
+      sql: `INSERT INTO execution_records (
+          id, scheduler_job_id, executor_type, operation, project_id, context_json,
+          status, started_at, completed_at, summary, metadata_json, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        "RUN-FEATURE-REVIEW",
+        "JOB-FEATURE-REVIEW",
+        "codex-cli",
+        "feature_execution",
+        "project-1",
+        JSON.stringify({ featureId: "FEAT-011" }),
+        "review_needed",
+        "2026-04-28T11:58:00.000Z",
+        "2026-04-28T12:00:00.000Z",
+        "Feature execution needs review.",
+        "{}",
+        "2026-04-28T12:00:00.000Z",
+      ],
+    },
+  ]);
+  createReviewItem(dbPath, {
+    id: "REV-FEATURE-RUN-APPROVE",
+    featureId: "FEAT-011",
+    runId: "RUN-FEATURE-REVIEW",
+    message: "Feature execution needs review.",
+    reviewNeededReason: "approval_needed",
+    triggerReasons: ["permission_escalation"],
+    now: stableDate,
+  });
+
+  recordApprovalDecision(dbPath, {
+    reviewItemId: "REV-FEATURE-RUN-APPROVE",
+    decision: "approve_continue",
+    actor: "reviewer",
+    reason: "Approve linked execution review.",
+    targetStatus: "ready",
+    now: new Date("2026-04-28T12:05:00.000Z"),
+  });
+
+  const result = runSqlite(dbPath, [], [
+    { name: "review", sql: "SELECT status FROM review_items WHERE id = 'REV-FEATURE-RUN-APPROVE'" },
+    { name: "execution", sql: "SELECT status, completed_at FROM execution_records WHERE id = 'RUN-FEATURE-REVIEW'" },
+    { name: "job", sql: "SELECT status FROM scheduler_job_records WHERE id = 'JOB-FEATURE-REVIEW'" },
+  ]);
+  assert.equal(result.queries.review[0].status, "approved");
+  assert.equal(result.queries.execution[0].status, "completed");
+  assert.equal(result.queries.execution[0].completed_at, "2026-04-28T12:00:00.000Z");
+  assert.equal(result.queries.job[0].status, "completed");
+});
+
 test("product console change requests do not restore terminal done work", () => {
   const dbPath = seedReviewData();
   runSqlite(dbPath, [

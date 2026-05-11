@@ -515,6 +515,7 @@ function approvalTargetStatusStatements(item: ReviewItem, input: RecordApprovalI
         params: [transition.to, updatedAt, item.taskId, item.featureId ?? "", item.taskId, item.featureId ?? "", item.taskId],
       },
       ...parentFeatureStatusStatements(item.featureId, updatedAt, parentFeatureResumeStatusForTaskApproval(item, input)),
+      ...reviewRunStatusStatements(item, input, updatedAt),
     ];
   }
   if (transition.entityType === "feature" && item.featureId) {
@@ -522,9 +523,58 @@ function approvalTargetStatusStatements(item: ReviewItem, input: RecordApprovalI
       { sql: "UPDATE features SET status = ?, updated_at = ? WHERE id = ?", params: [transition.to, updatedAt, item.featureId] },
       ...featureChildRestoreStatements(item, input, updatedAt),
       ...(input.decision === "approve_continue" ? featureReviewGateStatusStatements(item.featureId, updatedAt) : []),
+      ...reviewRunStatusStatements(item, input, updatedAt),
     ];
   }
   return [];
+}
+
+function reviewRunStatusStatements(item: ReviewItem, input: RecordApprovalInput, updatedAt: string): SqlStatement[] {
+  if (!item.runId) {
+    return [];
+  }
+  const status = reviewDecisionRunStatus(input);
+  if (!status) {
+    return [];
+  }
+  return [
+    {
+      sql: `UPDATE execution_records
+        SET status = ?,
+          completed_at = COALESCE(completed_at, ?),
+          updated_at = ?
+        WHERE id = ?`,
+      params: [status, updatedAt, updatedAt, item.runId],
+    },
+    {
+      sql: `UPDATE scheduler_job_records
+        SET status = ?, updated_at = ?
+        WHERE id IN (
+          SELECT scheduler_job_id
+          FROM execution_records
+          WHERE id = ? AND scheduler_job_id IS NOT NULL
+        )`,
+      params: [status, updatedAt, item.runId],
+    },
+  ];
+}
+
+function reviewDecisionRunStatus(input: RecordApprovalInput): string | undefined {
+  switch (input.decision) {
+    case "approve_continue":
+    case "mark_complete":
+      return "completed";
+    case "reject":
+      return "blocked";
+    case "rollback":
+      return "failed";
+    case "request_changes":
+    case "update_spec":
+    case "split_task":
+      return "review_needed";
+    default:
+      return undefined;
+  }
 }
 
 function taskRowExists(dbPath: string, taskId: string): boolean {

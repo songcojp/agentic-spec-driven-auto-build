@@ -578,18 +578,17 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
 });
 
 test("VSCode Feature Spec category panels keep their own scroll containers", () => {
-  assert.match(webviewSource, /renderFeatureGroupedPanels\(features, selected\?\.id\)/);
+  assert.match(webviewSource, /renderFeatureGroupedPanels\(groups, selected\?\.id\)/);
   assert.match(webviewSource, /\.feature-board\{[^}]*grid-template-rows:minmax\(0,1fr\) auto[^}]*overflow:hidden/);
-  assert.match(webviewSource, /function renderFeatureGroupedPanels\(features: SpecDriveIdeFeatureNode\[], selectedFeatureId: string \| undefined\): string/);
-  assert.match(webviewSource, /const completed = sortDoneFeatures\(features\.filter\(isDoneFeature\)\)/);
-  assert.match(webviewSource, /const active = features\.filter\(\(feature\) => !isDoneFeature\(feature\)\)/);
-  assert.match(webviewSource, /renderFeatureGroupPanel\("Other Features", "Active, blocked, ready, and planned", active, selectedFeatureId, true\)/);
-  assert.match(webviewSource, /renderFeatureGroupPanel\("Completed Features", "Completed by default folded", completed, selectedFeatureId, false\)/);
+  assert.match(webviewSource, /function renderFeatureGroupedPanels\(groups: FeaturePanelGroup\[], selectedFeatureId: string \| undefined\): string/);
+  assert.match(webviewSource, /groups\.map\(\(group\) =>/);
+  assert.match(webviewSource, /renderFeatureGroupPanel\(group\.title, group\.statuses, group\.features, selectedFeatureId, group\.open\)/);
+  assert.match(webviewSource, /\{ id: "ready", title: "Ready", statuses: "Ready", features: ready, open: true \}/);
+  assert.doesNotMatch(webviewSource, /Other Features/);
   assert.match(webviewSource, /<details class="feature-panel feature-group-panel" \$\{open \? "open" : ""\}>/);
   assert.match(webviewSource, /\.feature-panel-items\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(190px,1fr\)\)/);
   assert.match(webviewSource, /@media\(max-width:1300px\)[\s\S]*\.feature-panel-items\{grid-template-columns:repeat\(auto-fill,minmax\(170px,1fr\)\)\}/);
   assert.doesNotMatch(webviewSource, /grid-template-columns:minmax\(200px,1fr\) repeat\(2,minmax\(160px,\.78fr\)\)/);
-  assert.doesNotMatch(webviewSource, /groups\.map\(\(group\) => renderFeaturePanel/);
   assert.doesNotMatch(webviewSource, /function renderFeaturePanel/);
   assert.match(webviewSource, /\.feature-panel\[open\]\{height:100%;min-height:0\}/);
   assert.match(webviewSource, /\.feature-panel:not\(\[open\]\)\{display:block;height:auto;min-height:0\}/);

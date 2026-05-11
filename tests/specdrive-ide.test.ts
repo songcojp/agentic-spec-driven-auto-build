@@ -63,6 +63,45 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
   assert.equal(view.factSources.includes("execution_records"), true);
 });
 
+test("SpecDrive IDE queue and execution detail keep DB feature titles when docs index projection is unavailable", () => {
+  const workspaceRoot = makeWorkspace();
+  writeFileSync(join(workspaceRoot, "docs/features/README.md"), [
+    "# Feature Spec Index",
+    "",
+    "| Feature ID | Feature | Folder | Status |",
+    "|---|---|---|---|",
+    "",
+  ].join("\n"));
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, folder)
+        VALUES ('FEAT-001', 'project-ide', 'Project and Repository Foundation', 'ready', 'feat-001-project-repository-foundation')`,
+    },
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json)
+        VALUES ('JOB-FEAT-001', 'bull-feat-001', 'specdrive:execution-adapter', 'rpc.run', 'running', ?)`,
+      params: [JSON.stringify({ operation: "feature_execution", projectId: "project-ide", context: { featureId: "FEAT-001" } })],
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, started_at, summary, metadata_json
+      ) VALUES ('RUN-FEAT-001', 'JOB-FEAT-001', 'codex.rpc', 'feature_execution', 'project-ide', ?, 'running', '2026-05-02T12:00:00.000Z', 'Running foundation work.', '{}')`,
+      params: [JSON.stringify({ featureId: "FEAT-001" })],
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  assert.equal(view.queue.groups.running[0].featureId, "FEAT-001");
+  assert.equal(view.queue.groups.running[0].featureTitle, "Project and Repository Foundation");
+
+  const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-FEAT-001");
+  assert.equal(detail?.featureTitle, "Project and Repository Foundation");
+});
+
 test("SpecDrive IDE feature dependencies come from feature-pool-queue.json", () => {
   const workspaceRoot = makeWorkspace();
   writeFileSync(join(workspaceRoot, "docs/features/README.md"), [

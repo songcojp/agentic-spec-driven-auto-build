@@ -1721,32 +1721,38 @@ function terminalContractTerminationReason(stdout: string, stderr: string): CliC
 
 function extractSkillOutputContract(events: CliJsonEvent[], responseTextPaths: string[] = []): SkillOutputContract | undefined {
   let latest: SkillOutputContract | undefined;
+  let latestTerminal: SkillOutputContract | undefined;
+  const accept = (candidate: SkillOutputContract | undefined) => {
+    if (!candidate) return;
+    latest = candidate;
+    if (isTerminalSkillOutputStatus(candidate.status)) latestTerminal = candidate;
+  };
   for (const event of events) {
     const direct = parseSkillOutputRecord(event);
-    if (direct) latest = direct;
+    accept(direct);
 
     const output = typeof event.output === "object" && event.output !== null ? event.output as Record<string, unknown> : undefined;
     const fromOutput = parseSkillOutputRecord(output);
-    if (fromOutput) latest = fromOutput;
+    accept(fromOutput);
 
     for (const path of responseTextPaths) {
       const value = readJsonPath(event, path);
       const fromMappedRecord = isRecord(value) ? parseSkillOutputRecord(value) : undefined;
-      if (fromMappedRecord) latest = fromMappedRecord;
+      accept(fromMappedRecord);
       const fromMappedText = parseSkillOutputText(typeof value === "string" ? value : undefined);
-      if (fromMappedText) latest = fromMappedText;
+      accept(fromMappedText);
     }
 
     const item = typeof event.item === "object" && event.item !== null ? event.item as Record<string, unknown> : undefined;
     const itemText = typeof item?.text === "string" ? item.text : undefined;
     const fromItemText = parseSkillOutputText(itemText);
-    if (fromItemText) latest = fromItemText;
+    accept(fromItemText);
 
     const responseText = typeof event.response === "string" ? event.response : undefined;
     const fromResponseText = parseSkillOutputText(responseText);
-    if (fromResponseText) latest = fromResponseText;
+    accept(fromResponseText);
   }
-  return latest;
+  return latestTerminal ?? latest;
 }
 
 function parseSkillOutputText(text: string | undefined): SkillOutputContract | undefined {
@@ -3373,7 +3379,7 @@ export function runCommand(
   options: RunCommandOptions = {},
 ): Promise<CliCommandResult> {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd, env: options.env });
+    const child = spawn(command, args, { cwd, env: options.env, stdio: ["ignore", "pipe", "pipe"] });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     let timedOut = false;
@@ -3413,7 +3419,6 @@ export function runCommand(
     };
     refreshActivityTimeout();
 
-    child.stdin?.end();
     child.stdout?.on("data", (chunk: Buffer) => {
       stdout.push(chunk);
       refreshActivityTimeout();

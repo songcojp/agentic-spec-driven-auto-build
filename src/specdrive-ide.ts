@@ -384,6 +384,13 @@ type FeatureIndexEntry = {
   milestone?: string;
 };
 
+type FeatureIdentityProjection = {
+  id: string;
+  title?: string;
+  folder?: string;
+  description?: string;
+};
+
 export function buildSpecDriveIdeView(dbPath: string, options: BuildSpecDriveIdeViewOptions = {}): SpecDriveIdeView {
   const project = resolveProject(dbPath, options);
   const workspaceRoot = options.workspaceRoot ? resolve(options.workspaceRoot) : optionalString(project?.target_repo_path);
@@ -626,6 +633,8 @@ export function buildSpecDriveIdeExecutionDetail(
     durationMs: executionDurationMs(optionalString(row.started_at), optionalString(row.completed_at)),
     updatedAt: optionalString(row.updated_at),
     summary: optionalString(row.summary),
+    featureTitle: featureProjection?.title ?? optionalString(context.featureTitle) ?? optionalString(metadata.featureTitle),
+    featureDescription: featureProjection?.description,
     stateReason,
     resumeTarget: featureProjection?.resumeTarget,
     reviewItemId: reviewProjection?.id,
@@ -2388,6 +2397,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
   ]);
   const groups: Record<string, SpecDriveIdeQueueItem[]> = {};
   const featureById = new Map(features.map((feature) => [feature.id, feature]));
+  const dbFeatureById = readDbFeatureIdentities(dbPath, projectId);
   const latestReviews = readLatestReviewsByFeature(dbPath, projectId);
   const supersededExecutionIds = new Set<string>();
   for (const row of result.queries.queue) {
@@ -2414,6 +2424,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     const executionPreference = executionPreferenceFromQueueParts(context, metadata, payload, optionalString(row.job_type), optionalString(row.executor_type));
     const featureId = optionalString(context.featureId) ?? optionalString(payloadContext.featureId);
     const feature = featureId ? featureById.get(featureId) : undefined;
+    const dbFeature = featureId ? dbFeatureById.get(featureId) : undefined;
     const review = featureId ? latestReviews.get(featureId) : undefined;
     const resumeTarget = feature?.resumeTarget;
     const reviewNeededReason = review?.reviewNeededReason;
@@ -2439,8 +2450,12 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
       durationMs: executionDurationMs(optionalString(row.execution_started_at), optionalString(row.execution_completed_at)),
       updatedAt: optionalString(row.execution_updated_at) ?? optionalString(row.job_updated_at),
       summary: optionalString(row.summary),
-      featureTitle: feature?.title,
-      featureDescription: feature?.description,
+      featureTitle: feature?.title
+        ?? dbFeature?.title
+        ?? optionalString(context.featureTitle)
+        ?? optionalString(payloadContext.featureTitle)
+        ?? optionalString(metadata.featureTitle),
+      featureDescription: feature?.description ?? dbFeature?.description,
       stateReason: queueStateReason({ status, summary: optionalString(row.summary), metadata, resumeTarget, reviewNeededReason }),
       resumeTarget,
       reviewItemId: review?.id,
@@ -2450,6 +2465,29 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     groups[status] = [...(groups[status] ?? []), item];
   }
   return { groups };
+}
+
+function readDbFeatureIdentities(dbPath: string, projectId?: string): Map<string, FeatureIdentityProjection> {
+  const where = projectId ? "WHERE project_id = ?" : "";
+  const result = runSqlite(dbPath, [], [
+    {
+      name: "features",
+      sql: `SELECT id, title, folder FROM features ${where}`,
+      params: projectId ? [projectId] : [],
+    },
+  ]);
+  return new Map(result.queries.features
+    .map((row): FeatureIdentityProjection | undefined => {
+      const id = optionalString(row.id)?.toUpperCase();
+      if (!id) return undefined;
+      return {
+        id,
+        title: optionalString(row.title),
+        folder: optionalString(row.folder),
+      };
+    })
+    .filter((entry): entry is FeatureIdentityProjection => entry !== undefined)
+    .map((entry) => [entry.id, entry]));
 }
 
 function readFeatureDescription(workspaceRoot: string, folder: string): string | undefined {
@@ -2553,22 +2591,25 @@ function readFeatureStateProjection(
   dbPath: string,
   projectId: string | undefined,
   featureId: string,
-): { resumeTarget?: SpecDriveIdeResumeTarget; stateReason?: string; nextAction?: string } | undefined {
+): { title?: string; description?: string; resumeTarget?: SpecDriveIdeResumeTarget; stateReason?: string; nextAction?: string } | undefined {
+  const dbFeature = readDbFeatureIdentities(dbPath, projectId).get(featureId);
   const workspaceRoot = workspaceRootForProject(dbPath, projectId);
-  if (!workspaceRoot) return undefined;
+  if (!workspaceRoot) return dbFeature;
   const featureRoot = join(workspaceRoot, "docs/features");
-  if (!existsSync(featureRoot)) return undefined;
+  if (!existsSync(featureRoot)) return dbFeature;
   const folders = new Set(readdirSync(featureRoot)
     .filter((entry) => statSync(join(featureRoot, entry)).isDirectory())
     .sort());
   const indexEntry = readFeatureIndex(workspaceRoot).find((entry) => entry.id === featureId);
-  const folder = resolveFeatureFolder(featureId, indexEntry?.folder, folders);
+  const folder = resolveFeatureFolder(featureId, indexEntry?.folder ?? dbFeature?.folder, folders);
   const state = readJson(join(featureRoot, folder, "spec-state.json"));
   const blockedReasons = stringArray(state.blockedReasons);
   const resumeTarget = normalizeIdeResumeTarget(state.resumeTarget);
   const nextAction = optionalString(state.nextAction);
   const lastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
   return {
+    title: optionalString(state.title) ?? indexEntry?.title ?? dbFeature?.title ?? (folders.has(folder) ? titleFromFolder(folder) : undefined),
+    description: optionalString(state.description) ?? (folders.has(folder) ? readFeatureDescription(workspaceRoot, folder) : undefined),
     resumeTarget,
     nextAction,
     stateReason: featureStateReason({

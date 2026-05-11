@@ -1639,6 +1639,48 @@ test("CLI adapter preserves a final review_needed contract as a real review gate
   assert.match(result.executionAdapterResult?.summary ?? "", /requirements conflict/);
 });
 
+test("CLI adapter does not regress terminal SkillOutputContract to later running output", async () => {
+  const workspaceRoot = makeWorkspacePath();
+  const policy = resolveRunnerPolicy({
+    runId: "RUN-TERMINAL-THEN-RUNNING",
+    risk: "low",
+    workspaceRoot,
+    now: stableDate,
+  });
+  const invocation = executionInvocation({
+    executionId: "RUN-TERMINAL-THEN-RUNNING",
+    workspaceRoot,
+    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+  });
+
+  const result = await runCliAdapter({
+    policy,
+    prompt: buildExecutionInvocationPrompt(invocation, "Context"),
+    executionInvocation: invocation,
+    now: stableDate,
+    runner: () => ({
+      status: 0,
+      stdout: [
+        skillOutputEvent({ executionId: "RUN-TERMINAL-THEN-RUNNING", status: "running", summary: "Drafting requirements.", producedArtifacts: [] }),
+        skillOutputEvent({
+          executionId: "RUN-TERMINAL-THEN-RUNNING",
+          status: "review_needed",
+          summary: "Review needed: delivery evidence is incomplete.",
+          producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "updated" }],
+        }),
+        skillOutputEvent({ executionId: "RUN-TERMINAL-THEN-RUNNING", status: "running", summary: "Late stale progress event.", producedArtifacts: [] }),
+      ].join("\n"),
+      stderr: "",
+    }),
+  });
+
+  assert.equal(result.executionAdapterResult?.status, "review_needed");
+  assert.equal(result.result.skillOutput?.status, "review_needed");
+  assert.match(result.executionAdapterResult?.summary ?? "", /delivery evidence is incomplete/);
+  const report = JSON.parse(readFileSync(result.rawLog.files?.report ?? "", "utf8")) as Record<string, unknown>;
+  assert.equal(report.status, "review_needed");
+});
+
 test("CLI adapter routes ended non-terminal SkillOutputContract to review", async () => {
   const workspaceRoot = makeWorkspacePath();
   const policy = resolveRunnerPolicy({
