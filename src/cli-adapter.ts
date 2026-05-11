@@ -73,6 +73,8 @@ export const SKILL_OUTPUT_STATUSES = [
 export type SkillOutputStatus = typeof SKILL_OUTPUT_STATUSES[number];
 export type RunnerQueueStatus = SkillOutputStatus;
 const TERMINAL_SKILL_OUTPUT_STATUSES = new Set<SkillOutputStatus>(["completed", "review_needed", "blocked", "failed", "cancelled"]);
+const DEFAULT_TERMINAL_CONTRACT_DRAIN_MS = 10_000;
+const STDIN_WAIT_AFTER_TERMINAL_CONTRACT_PATTERN = /Reading additional input from stdin/i;
 
 export type RunnerPolicy = {
   id: string;
@@ -123,6 +125,7 @@ export type RawExecutionLog = {
   stderr: string;
   events: CliJsonEvent[];
   files?: CliInvocationLogFiles;
+  commandTermination?: CliCommandTermination;
   createdAt: string;
 };
 
@@ -206,6 +209,7 @@ export type RunnerExecutionResultInput = {
   skillOutput?: SkillOutputContract;
   contractValidation?: SkillContractValidationResult;
   logFiles?: CliInvocationLogFiles;
+  commandTermination?: CliCommandTermination;
 };
 
 export type CliInvocationLogFiles = {
@@ -255,10 +259,24 @@ export type CliCommandResult = {
   stdout?: string;
   stderr?: string;
   error?: Error;
+  commandTermination?: CliCommandTermination;
 };
 
 export type CliCommandRunner = (command: string, args: string[], cwd: string) => CliCommandResult;
 export type AsyncCliCommandRunner = (command: string, args: string[], cwd: string) => Promise<CliCommandResult>;
+
+export type CliCommandTerminationReason = "terminal_contract_drain_timeout" | "stdin_wait_after_terminal_contract";
+
+export type CliCommandTermination = {
+  terminatedAfterTerminalContract: boolean;
+  reason: CliCommandTerminationReason;
+};
+
+export type RunCommandOptions = {
+  terminalOutputGraceMs?: number;
+  hasTerminalOutput?: (stdout: string, stderr: string) => boolean;
+  terminationReason?: (stdout: string, stderr: string) => CliCommandTerminationReason;
+};
 
 export type CliAdapterInput = {
   policy: RunnerPolicy;
@@ -272,6 +290,7 @@ export type CliAdapterInput = {
   runner?: CliCommandRunner;
   asyncRunner?: AsyncCliCommandRunner;
   onHeartbeat?: () => void;
+  terminalContractGraceMs?: number;
   now?: Date;
 };
 
@@ -1405,6 +1424,14 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
               input.policy.heartbeatIntervalSeconds,
               input.policy.commandTimeoutMs,
               input.onHeartbeat,
+              {
+                terminalOutputGraceMs: input.terminalContractGraceMs ?? DEFAULT_TERMINAL_CONTRACT_DRAIN_MS,
+                hasTerminalOutput: (stdout) => {
+                  const latest = extractSkillOutputContract(parseJsonEvents(stdout), adapterConfig.outputMapping.responseTextPaths);
+                  return !!latest && isTerminalSkillOutputStatus(latest.status);
+                },
+                terminationReason: terminalContractTerminationReason,
+              },
             );
     } catch (error) {
       writeCliOutputLog(logFiles, {
@@ -1454,6 +1481,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
       stderr: redactLog(stderr),
       events: redactedEvents,
       files: logFiles,
+      commandTermination: result.commandTermination,
       createdAt: completedAt,
     };
     const skillOutput = extractSkillOutputContract(events, adapterConfig.outputMapping.responseTextPaths);
@@ -1470,6 +1498,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
       eventCount: redactedEvents.length,
       sessionId,
       usage,
+      commandTermination: result.commandTermination,
     });
     writeRunReport(input.policy.workspaceRoot, input.policy.runId, {
       runId: input.policy.runId,
@@ -1486,6 +1515,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
       producedArtifacts: skillOutput?.producedArtifacts ?? [],
       logFiles,
       error: stderr || undefined,
+      commandTermination: result.commandTermination,
       completedAt,
     });
     const executionResult: RunnerExecutionResultInput = {
@@ -1502,6 +1532,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
       skillOutput,
       contractValidation,
       logFiles,
+      commandTermination: result.commandTermination,
     };
     const providerSession: ExecutionAdapterProviderSessionV1 = {
       provider: adapterConfig.id,
@@ -1572,6 +1603,12 @@ function projectAdapterRunSummary(
 
 function isTerminalSkillOutputStatus(status: RunnerQueueStatus): boolean {
   return TERMINAL_SKILL_OUTPUT_STATUSES.has(status);
+}
+
+function terminalContractTerminationReason(stdout: string, stderr: string): CliCommandTerminationReason {
+  return STDIN_WAIT_AFTER_TERMINAL_CONTRACT_PATTERN.test(`${stdout}\n${stderr}`)
+    ? "stdin_wait_after_terminal_contract"
+    : "terminal_contract_drain_timeout";
 }
 
 function extractSkillOutputContract(events: CliJsonEvent[], responseTextPaths: string[] = []): SkillOutputContract | undefined {
@@ -2424,6 +2461,7 @@ function writeCliOutputLog(
     eventCount?: number;
     sessionId?: string;
     usage?: Record<string, number>;
+    commandTermination?: CliCommandTermination;
   },
 ): void {
   writeFileSync(files.stdout, redactLog(output.stdout), { encoding: "utf8", mode: 0o600 });
@@ -2439,6 +2477,7 @@ function writeCliOutputLog(
         sessionId: output.sessionId,
         eventCount: output.eventCount ?? 0,
         usage: output.usage,
+        commandTermination: output.commandTermination,
         error: output.error
           ? {
               name: output.error.name,
@@ -2475,6 +2514,7 @@ export function writeRunReport(
     producedArtifacts?: SkillOutputArtifact[];
     logFiles?: Partial<CliInvocationLogFiles>;
     error?: string;
+    commandTermination?: CliCommandTermination;
     completedAt: string;
   },
 ): string | undefined {
@@ -2501,6 +2541,7 @@ export function writeRunReport(
           producedArtifacts: input.producedArtifacts ?? input.skillOutput?.producedArtifacts ?? [],
           logFiles: input.logFiles,
           error: input.error ? redactLog(input.error) : undefined,
+          commandTermination: input.commandTermination,
           completedAt: input.completedAt,
         },
         null,
@@ -3213,25 +3254,46 @@ export function runCommand(
   heartbeatIntervalSeconds: number,
   commandTimeoutMs: number,
   onHeartbeat?: () => void,
+  options: RunCommandOptions = {},
 ): Promise<CliCommandResult> {
   return new Promise((resolve) => {
     const child = spawn(command, args, { cwd });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     let timedOut = false;
+    let terminalOutputSeen = false;
+    let commandTermination: CliCommandTermination | undefined;
+    let terminalOutputTimeout: NodeJS.Timeout | undefined;
     const heartbeat = onHeartbeat
       ? setInterval(onHeartbeat, Math.max(10, heartbeatIntervalSeconds) * 1000)
       : undefined;
     let timeout: NodeJS.Timeout | undefined;
+    let killTimeout: NodeJS.Timeout | undefined;
     const refreshActivityTimeout = () => {
       if (timeout) clearTimeout(timeout);
       timeout = setTimeout(() => {
         timedOut = true;
         child.kill("SIGTERM");
-        setTimeout(() => {
-          if (!child.killed) child.kill("SIGKILL");
-        }, 2000).unref();
+        killTimeout = setTimeout(() => child.kill("SIGKILL"), 2000);
+        killTimeout.unref();
       }, commandTimeoutMs);
+    };
+    const bufferedStdout = () => Buffer.concat(stdout).toString("utf8");
+    const bufferedStderr = () => Buffer.concat(stderr).toString("utf8");
+    const maybeStartTerminalDrain = () => {
+      if (terminalOutputSeen || !options.hasTerminalOutput?.(bufferedStdout(), bufferedStderr())) return;
+      terminalOutputSeen = true;
+      const graceMs = Math.max(0, options.terminalOutputGraceMs ?? DEFAULT_TERMINAL_CONTRACT_DRAIN_MS);
+      terminalOutputTimeout = setTimeout(() => {
+        commandTermination = {
+          terminatedAfterTerminalContract: true,
+          reason: options.terminationReason?.(bufferedStdout(), bufferedStderr()) ?? "terminal_contract_drain_timeout",
+        };
+        child.kill("SIGTERM");
+        killTimeout = setTimeout(() => child.kill("SIGKILL"), 2000);
+        killTimeout.unref();
+      }, graceMs);
+      terminalOutputTimeout.unref();
     };
     refreshActivityTimeout();
 
@@ -3239,29 +3301,37 @@ export function runCommand(
     child.stdout?.on("data", (chunk: Buffer) => {
       stdout.push(chunk);
       refreshActivityTimeout();
+      maybeStartTerminalDrain();
     });
     child.stderr?.on("data", (chunk: Buffer) => {
       stderr.push(chunk);
       refreshActivityTimeout();
+      maybeStartTerminalDrain();
     });
     child.on("error", (error) => {
       if (heartbeat) clearInterval(heartbeat);
       if (timeout) clearTimeout(timeout);
+      if (terminalOutputTimeout) clearTimeout(terminalOutputTimeout);
+      if (killTimeout) clearTimeout(killTimeout);
       resolve({
         status: null,
-        stdout: Buffer.concat(stdout).toString("utf8"),
-        stderr: Buffer.concat(stderr).toString("utf8"),
+        stdout: bufferedStdout(),
+        stderr: bufferedStderr(),
         error,
+        commandTermination,
       });
     });
     child.on("close", (code) => {
       if (heartbeat) clearInterval(heartbeat);
       if (timeout) clearTimeout(timeout);
+      if (terminalOutputTimeout) clearTimeout(terminalOutputTimeout);
+      if (killTimeout) clearTimeout(killTimeout);
       resolve({
         status: code,
-        stdout: Buffer.concat(stdout).toString("utf8"),
-        stderr: Buffer.concat(stderr).toString("utf8"),
+        stdout: bufferedStdout(),
+        stderr: bufferedStderr(),
         error: timedOut ? new Error(`Codex command timed out after ${commandTimeoutMs}ms of output inactivity`) : undefined,
+        commandTermination,
       });
     });
   });

@@ -49,6 +49,8 @@
 - 完成状态的 Feature execution 必须校验 `result.gitDelivery`；缺少 worktree、branch、commit、PR、merge 或 cleanup 证据时，CLI Adapter 将结果投影为 `review_needed`，而不是 `completed`。
 - Execution Adapter 校验有效输出后必须把状态、结果摘要、产物和下一步动作投影回 `docs/features/<feature-id>/spec-state.json`。
 - Execution Adapter 必须校验输出 contract 与输入 contract 的 execution、skill、action 和 Feature 级 traceability 是否一致；输出缺失、JSON 不合法、字段不匹配、必需 artifact 缺失，或进程结束后最后一条 contract 仍为非终态时，Execution Record 必须进入 `review_needed` 并保留原因。
+- CLI Adapter 必须实时识别 stdout 中最后一个有效终态 `SkillOutputContractV1`；若终态 contract 已出现但 provider 进程继续等待 stdin 或未退出，必须在短暂日志排空窗口后终止孤立进程，按最终 contract 投影状态，并在 Execution Record metadata、Run Report 和 raw log output 中记录终止原因。
+- 当终态 contract 后的进程日志出现 `Reading additional input from stdin...` 或等价 stdin 等待信号时，终止原因必须规范化为 `stdin_wait_after_terminal_contract`，不得把该 Run 长期保留为 `running`。
 - CLI Adapter 必须以 `execution_records` 作为执行状态主表；不得为 `cli.run` 创建或更新旧 `runs` 记录。
 - 每次 Execution Adapter run 必须在 `.autobuild/runs/<executionId>/report.json` 写入一份独立 Run Report，合并 exit/session、SkillOutputContractV1、contract validation、产物、usage 和 log refs；Feature execution 默认 expected artifact 指向该 run report，不再写入共享 `.autobuild/reports/feature-execution.json`。
 - CLI Adapter 配置必须以 JSON 为唯一事实源，并支持 dry-run 校验。
@@ -76,6 +78,7 @@
 - [ ] `run_board_tasks` 作为兼容入口仍可产生 `cli.run` scheduler job，但编码执行不依赖 Task Board 或旧 task 表。
 - [ ] Spec/UI 操作可以生成 `ExecutionAdapterInvocationV1.skillInstruction` 驱动的短 prompt，并在 Execution Record metadata 中追踪 workspace、skill phase、expected artifacts 和输出 contract 校验结果。
 - [ ] 有效 `SkillOutputContractV1` 会写入 Execution Record metadata；无效输出会进入 `review_needed` 而不是被当成成功。
+- [ ] 终态 `SkillOutputContractV1` 输出后仍等待 stdin 的 provider 进程会被 CLI Adapter 自动终止，Execution Record / Scheduler Job / ReviewItem / `spec-state.json` 按终态 contract 收敛，并记录 `stdin_wait_after_terminal_contract`。
 - [ ] 每次 run 都有独立 `.autobuild/runs/<executionId>/report.json`，Feature execution 调度默认把该 report 作为 expected artifact。
 - [ ] `result` 可以包含 Skill 专用字段，CLI/RPC Adapter 不按 `skillSlug` 做专用字段校验。
 - [ ] Feature 级 coding prompt 明确要求读取 Feature Spec 三件套并执行 `tasks.md`，不能将 report-only completion 当成成功。

@@ -1753,6 +1753,62 @@ test("Codex CLI adapter closes child stdin for non-interactive runner commands",
   assert.equal(result.rawLog.events[0].stdinClosed, true);
 });
 
+test("CLI adapter terminates a process that waits on stdin after terminal SkillOutputContract", { timeout: 5000 }, async () => {
+  const workspace = mkdtempSync(join(tmpdir(), "specdrive-terminal-contract-"));
+  const scriptPath = join(workspace, "terminal-contract-stall.mjs");
+  const terminalEvent = skillOutputEvent({
+    executionId: "RUN-TERMINAL-STDIN",
+    status: "review_needed",
+    summary: "Implementation is verified; operator approval is required before delivery.",
+    producedArtifacts: [],
+  });
+  writeFileSync(
+    scriptPath,
+    [
+      `console.log(${JSON.stringify(terminalEvent)});`,
+      `console.error("Reading additional input from stdin...");`,
+      "setInterval(() => {}, 1000);",
+    ].join("\n"),
+  );
+  const policy = resolveRunnerPolicy({
+    runId: "RUN-TERMINAL-STDIN",
+    risk: "low",
+    workspaceRoot: workspace,
+    now: stableDate,
+  });
+  const invocation = executionInvocation({
+    executionId: "RUN-TERMINAL-STDIN",
+    workspaceRoot: workspace,
+  });
+
+  const result = await runCliAdapter({
+    policy,
+    prompt: buildExecutionInvocationPrompt(invocation, "Context"),
+    executionInvocation: invocation,
+    now: stableDate,
+    terminalContractGraceMs: 50,
+    outputSchemaPath: "/tmp/runner-terminal-stdin.schema.json",
+    adapterConfig: normalizeCliAdapterConfig({
+      ...DEFAULT_CLI_ADAPTER_CONFIG,
+      executable: process.execPath,
+      argumentTemplate: [scriptPath, "{{prompt}}", "{{output_schema}}"],
+      resumeArgumentTemplate: [],
+      defaults: { model: "node", sandbox: "workspace-write", approval: "never" },
+    }),
+  });
+
+  assert.equal(result.executionAdapterResult?.status, "review_needed");
+  assert.equal(result.result.skillOutput?.summary, "Implementation is verified; operator approval is required before delivery.");
+  assert.deepEqual(result.result.commandTermination, {
+    terminatedAfterTerminalContract: true,
+    reason: "stdin_wait_after_terminal_contract",
+  });
+  const outputLog = JSON.parse(readFileSync(result.rawLog.files?.output ?? "", "utf8"));
+  assert.equal(outputLog.commandTermination.reason, "stdin_wait_after_terminal_contract");
+  const report = JSON.parse(readFileSync(result.rawLog.files?.report ?? "", "utf8"));
+  assert.equal(report.commandTermination.reason, "stdin_wait_after_terminal_contract");
+});
+
 test("CLI command timeout resets after stdout or stderr activity", { timeout: 5000 }, async () => {
   const workspace = mkdtempSync(join(tmpdir(), "specdrive-active-timeout-"));
   const scriptPath = join(workspace, "active-runner.mjs");

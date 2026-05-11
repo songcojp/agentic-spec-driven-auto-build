@@ -596,7 +596,7 @@ Execution Adapter 配置是执行适配层的机器可查询事实源，使用 J
 
 ### CLI Adapter
 
-CLI Adapter 的 job type 为 `cli.run`。它读取 active `kind=cli` adapter config，合并 Execution Policy，构建 `ExecutionAdapterInvocationV1`，在目标 workspace root 中启动 CLI 进程，并把 stdout/stderr、JSON/JSONL events、session id 和结构化输出投影为 `ExecutionAdapterEventV1` / `ExecutionAdapterResultV1`。
+CLI Adapter 的 job type 为 `cli.run`。它读取 active `kind=cli` adapter config，合并 Execution Policy，构建 `ExecutionAdapterInvocationV1`，在目标 workspace root 中启动 CLI 进程，并把 stdout/stderr、JSON/JSONL events、session id 和结构化输出投影为 `ExecutionAdapterEventV1` / `ExecutionAdapterResultV1`。CLI Adapter 必须实时观察 stdout 中最后一个有效 `SkillOutputContractV1`；一旦出现终态 contract，即使 provider 进程随后停留在 stdin 读取或未自然退出，也必须在短暂日志排空窗口后终止孤立进程，按该终态 contract 回写 Execution Record / Scheduler Job / Feature `spec-state.json` / ReviewItem，并把 `stdin_wait_after_terminal_contract` 或等价终止原因写入 raw log、Run Report 和 Execution Record metadata。
 
 ### RPC Adapter
 

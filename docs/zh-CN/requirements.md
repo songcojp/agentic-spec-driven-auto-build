@@ -453,6 +453,7 @@ THE SYSTEM SHALL 通过 CLI Adapter 在目标项目 workspace 中调用 Codex CL
 验收：
 - [ ] CLI Adapter 产出结构化 Execution Result。
 - [ ] 编码 CLI 进程的 workspace root 来自当前项目 repository `local_path` 或 `target_repo_path`，不得使用 SpecDrive Control Plane 进程目录作为兜底。
+- [ ] 编码 CLI 输出最终有效 `SkillOutputContractV1` 后若进程仍停留在 stdin 等待或未自然退出，CLI Adapter 必须在短暂日志排空窗口后终止孤立进程，并按最终 contract 投影 Execution Record、Scheduler Job、ReviewItem 和 `spec-state.json`，不得继续显示为 running。
 
 ### REQ-038：应用 Execution Adapter Layer 安全配置
 来源：PRD 第 6.9 节 FR-071 至 FR-072
@@ -490,6 +491,7 @@ THE SYSTEM SHALL 通过 active CLI Adapter 解析 executable、argument template
 - [ ] active CLI Adapter 必须在启动前解析并校验项目 workspace root；项目路径缺失、不可读或不是可用 workspace 时，新 Run 进入 blocked 并展示原因。
 - [ ] CLI Adapter 变更写入审计日志，并且不影响已经 running 的 Run。
 - [ ] 无 active adapter 或 adapter 配置无效时，Run 进入 blocked 并给出可观察原因。
+- [ ] CLI Adapter 必须记录 terminal contract 后的进程收敛原因；出现 `Reading additional input from stdin...` 等 stdin 等待信号时，Run Report、raw log output 和 Execution Record metadata 必须保留 `stdin_wait_after_terminal_contract` 证据。
 
 ### REQ-066：通过系统设置 JSON 表单管理 CLI Adapter 配置
 来源：PRD 第 6.9 节 FR-073；PRD 第 8.9 节系统设置；用户输入“cli配置通过json管理，支持json表单管理，通过ui直接编辑修改”“增加系统设置，将Cli配置放到系统设置下”

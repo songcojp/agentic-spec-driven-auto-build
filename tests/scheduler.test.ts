@@ -263,15 +263,21 @@ test("cli.run creates a ReviewItem when feature execution returns review_needed"
       summary: "Implementation is verified; AGENTS.md requires operator authorization before commit or PR delivery.",
     })}`,
     stderr: "",
+    commandTermination: {
+      terminatedAfterTerminalContract: true,
+      reason: "stdin_wait_after_terminal_contract",
+    },
   }));
   const rows = runSqlite(dbPath, [], [
-    { name: "run", sql: "SELECT status FROM execution_records WHERE id = 'RUN-CLI-REVIEW'" },
+    { name: "run", sql: "SELECT status, metadata_json FROM execution_records WHERE id = 'RUN-CLI-REVIEW'" },
     { name: "reviews", sql: "SELECT id, project_id, feature_id, run_id, status, review_needed_reason, trigger_reasons_json, recommended_actions_json FROM review_items WHERE run_id = 'RUN-CLI-REVIEW'" },
     { name: "feature", sql: "SELECT status FROM features WHERE id = 'FEAT-CLI'" },
   ]).queries;
+  const metadata = JSON.parse(String(rows.run[0].metadata_json));
 
   assert.equal(result.status, "review_needed");
   assert.equal(rows.run[0].status, "review_needed");
+  assert.equal(metadata.commandTermination.reason, "stdin_wait_after_terminal_contract");
   assert.equal(rows.reviews.length, 1);
   assert.equal(rows.reviews[0].id, "execution-review-RUN-CLI-REVIEW");
   assert.equal(rows.reviews[0].project_id, "project-1");

@@ -622,6 +622,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     contractValidation: result.adapterResult?.result.contractValidation,
     producedArtifacts: result.adapterResult?.result.skillOutput?.producedArtifacts ?? [],
     rawLogRefs: result.adapterResult?.executionAdapterResult?.rawLogRefs ?? [],
+    commandTermination: result.adapterResult?.result.commandTermination,
   };
   runSqlite(dbPath, [
     {
