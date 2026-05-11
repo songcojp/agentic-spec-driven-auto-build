@@ -2,6 +2,7 @@ import type { QueueAction, SpecDriveIdeExecutionDetail, SpecDriveIdeQueueItem, S
 import type { WorkbenchLocale } from "./i18n";
 import {
   autoRefreshSwitch,
+  buttonIcon,
   commandButton,
   compactJsonBlock,
   disabledButtonHtml,
@@ -49,47 +50,145 @@ export function renderExecutionWorkbenchWebview(
   const executionDetail = detail && "metadata" in detail ? detail as SpecDriveIdeExecutionDetail : undefined;
   const selectedBlockers = selectedBlockerItems(selectedItem);
   const blockerApprovalCount = selectedBlockers.length + (executionDetail?.approvalRequests.length ?? 0);
+  const stats = queueStats(queue);
   return renderWorkbenchPage("Execution Workbench", nonce, `
-    <section class="toolbar">
-      ${executionPreferenceControls(view)}
-      ${autoRunButton(view)}
-      ${commandButton("Refresh", "refresh", {})}
-      ${autoRefreshSwitch(autoRefreshEnabled)}
-    </section>
-    <div id="workbench-status" class="status-text" role="status" aria-live="polite">${escapeHtml(selectedItem ? `Selected job: ${selectedItem.executionId ?? selectedItem.schedulerJobId ?? "unknown"} · ${selectedItem.status}` : "Select a job to enable job actions.")}</div>
-    ${renderWorkbenchInputForm()}
-    <main class="execution-layout">
-      <section class="panel execution-queue-column">
-        <div class="panel-title"><h2>Execution Queue</h2><span>${queue.length} items</span></div>
-        ${EXECUTION_QUEUE_GROUPS.map((group) => renderQueueGroup(group.label, queueGroupItems(group.statuses, grouped), selectedKey, group.open)).join("")}
-      </section>
-      <section class="panel current-selected-column">
-        <div class="panel-title selected-title">
-          <div>
-            <h2>Current Selected</h2>
-            <span>${escapeHtml(selectedItem ? `${selectedItem.status} · ${selectedItem.operation ?? selectedItem.jobType ?? "execution"}` : "none")}</span>
+    <style>
+      body{padding:0;background:#071015;overflow:hidden}.workbench-header{display:none}.execution-v2-shell{height:100vh;display:grid;background:linear-gradient(180deg,#081117,#0b1419);color:var(--fg);overflow:hidden}.execution-v2-main{min-width:0;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;height:100vh;overflow:hidden}.execution-v2-topbar{min-height:62px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(126,231,236,.15);background:rgba(5,12,17,.74)}.execution-v2-metrics{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px}.execution-context-card{border:0;border-left:1px solid rgba(126,231,236,.22);border-radius:0;background:transparent;padding:0 0 0 10px}.execution-context-card span{font-size:11px;color:var(--muted)}.execution-context-card strong{font-size:12px;min-height:24px}.execution-v2-top-actions{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}.execution-v2-avatar{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--border);border-radius:999px;color:var(--fg)}.execution-v2-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(126,231,236,.12);background:#071116}.execution-v2-toolbar-title{display:flex;align-items:center;gap:10px;min-width:0}.execution-v2-toolbar-title h1{margin:0;font-size:20px}.execution-v2-toolbar-title span{color:var(--muted)}.execution-v2-toolbar .execution-toolbar{justify-content:flex-end;margin:0}.execution-v2-toolbar .inline-field select{background:#071116}.execution-v2-content{min-height:0;overflow:hidden;padding:10px 14px}.execution-v2-content .workbench-form{margin-bottom:10px}.execution-layout{height:100%;min-height:0;grid-template-columns:minmax(520px,41%) minmax(0,1fr);gap:10px}.panel,.execution-detail-card,.execution-feature-card{background:linear-gradient(180deg,rgba(14,28,35,.96),rgba(8,17,22,.96));border-color:rgba(126,231,236,.20);box-shadow:none}.execution-detail-card>summary{cursor:pointer;list-style:none}.execution-detail-card>summary::-webkit-details-marker{display:none}.execution-detail-card>summary::before{content:"+";color:var(--muted);font-weight:650}.execution-detail-card[open]>summary::before{content:"-"}.execution-queue-column,.current-selected-column{height:100%;min-height:0;overflow:auto}.execution-queue-column{padding:0}.execution-panel-title{padding:9px 10px;margin:0}.execution-queue-header{background:#071116;border-top:1px solid rgba(126,231,236,.10)}.queue-head{background:rgba(11,24,31,.88);padding:7px 10px}.queue-item{min-height:32px;padding:6px 8px}.queue-item .toolbar{margin:0;justify-content:flex-end}.current-selected-column{padding:10px}.selected-title{background:#071116;margin:-10px -10px 10px;padding:9px 10px;border-bottom:1px solid rgba(126,231,236,.18)}.title-actions{min-width:min(100%,620px)}.title-actions button{min-height:28px}.execution-selected-summary{display:none}.state-flow-compact{position:relative;padding:8px 10px;border:1px solid rgba(126,231,236,.18);border-radius:4px;background:#081217;grid-template-columns:repeat(6,minmax(0,1fr))}.state-flow-item{background:transparent;border:0;border-top:2px solid rgba(126,231,236,.24);border-radius:0;text-align:center}.state-flow-reason{grid-column:1/-1;text-align:left;border-top:0;border-bottom:1px solid rgba(126,231,236,.14);padding-bottom:8px}.execution-feature-card{margin:8px 0}.execution-feature-meta{grid-template-columns:repeat(5,minmax(0,1fr));border-color:rgba(126,231,236,.18)}.execution-detail-grid{grid-template-columns:minmax(0,1.2fr) minmax(220px,.75fr) minmax(210px,.7fr);gap:8px}.execution-detail-card-wide{grid-column:auto}.execution-detail-card-full{grid-column:1/-1}.token-consumption-line{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px}.token-consumption-line span{color:var(--muted)}.token-consumption-line strong{font-weight:650}.compact-section{background:transparent;border-color:rgba(126,231,236,.18);margin:0}.compact-section>summary{background:transparent}.section-title{margin:0 0 6px;padding:0 0 6px;border-top:0}.execution-v2-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:30px;padding:5px 14px;border-top:1px solid rgba(126,231,236,.15);background:#071116;color:var(--muted);font-size:12px}.execution-v2-footer div{display:flex;gap:14px;align-items:center;min-width:0}.execution-v2-dot{width:7px;height:7px;border-radius:999px;background:var(--ok);box-shadow:0 0 8px var(--ok)}@media(max-width:1100px){.execution-v2-topbar,.execution-v2-toolbar{grid-template-columns:1fr}.execution-v2-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.execution-layout{grid-template-columns:1fr}.execution-detail-grid{grid-template-columns:1fr}}@media(max-width:620px){.execution-v2-metrics,.execution-feature-meta{grid-template-columns:1fr}.state-flow-compact{grid-template-columns:1fr}.execution-v2-top-actions{display:none}}
+    </style>
+    <div class="execution-v2-shell">
+      <section class="execution-v2-main">
+        <header class="execution-v2-topbar">
+          <div class="execution-v2-metrics">
+            ${executionContextCard("Project", view?.project?.name ?? view?.project?.id ?? "No project", "file")}
+            ${executionContextCard("Branch", "workspace", "branch")}
+            ${executionContextCard("Spec Health", view?.projectInitialization?.blocked ? "Blocked" : "Healthy", view?.projectInitialization?.blocked ? "warning" : "check-circle", view?.projectInitialization?.blocked ? "bad" : "ok")}
+            ${executionContextCard("Queue Load", `${stats.running} Running · ${stats.queued} Queued`, "play", stats.blocked > 0 ? "warn" : "info")}
+            ${executionContextCard("Total Cost", projectCostLabel(view), "dot")}
           </div>
-          <div class="title-actions">${selectedTaskActionButtons(selectedItem)}</div>
-        </div>
-        ${detail ? executionFieldsHtml(detail) : emptyState("No active execution selected.")}
-        <h3>State Flow</h3>
-        ${renderStateFlow(selectedItem)}
-        <h3>Token Consumption</h3>
-        ${renderTokenConsumption(executionDetail)}
-        <details class="compact-section"><summary><h3>Raw Log Refs</h3><span>${executionDetail?.rawLogRefs?.length ?? 0}</span></summary><div class="compact-section-body">
-          ${renderRawLogRefs(detail)}
-        </div></details>
-        <div class="section-title"><h2>Blockers & Approvals</h2><span>${blockerApprovalCount}</span></div>
-        ${renderBlockersAndApprovals(selectedBlockers, executionDetail)}
-        <details class="compact-section" open><summary><h3>Result Projection</h3><span>spec-state.json</span></summary><div class="compact-section-body">
-          ${renderSkillOutputSummary(executionDetail)}
-        </div></details>
-        <details class="compact-section"><summary><h3>Produced Artifacts</h3><span>${executionDetail?.producedArtifacts?.length ?? 0}</span></summary><div class="compact-section-body">
-          ${renderProducedArtifacts(executionDetail)}
-        </div></details>
+          <div class="execution-v2-top-actions"><span>Alerts ${stats.blocked + stats.review}</span><span>Docs</span><span class="execution-v2-avatar">AD</span></div>
+        </header>
+        <section class="execution-v2-toolbar">
+          <div class="execution-v2-toolbar-title"><h1>Execution Workbench</h1><span>/ Runner</span><span class="badge">Page 3 of 5</span></div>
+          <div class="execution-toolbar">
+            ${executionPreferenceControls(view)}
+            ${autoRunButton(view)}
+            ${commandButton("Refresh", "refresh", {})}
+            ${autoRefreshSwitch(autoRefreshEnabled)}
+          </div>
+        </section>
+        <section class="execution-v2-content">
+          <div id="workbench-status" class="status-text" role="status" aria-live="polite">${escapeHtml(selectedItem ? `Selected job: ${selectedItem.executionId ?? selectedItem.schedulerJobId ?? "unknown"} · ${selectedItem.status}` : "Select a job to enable job actions.")}</div>
+          ${renderWorkbenchInputForm()}
+          <main class="execution-layout">
+            <section class="panel execution-queue-column">
+              <div class="panel-title execution-panel-title"><h2>Execution Queue</h2><span>Total: ${queue.length}</span></div>
+              <div class="execution-queue-header" aria-hidden="true"><span>ID</span><span>Title</span><span>Status</span><span>Runner</span><span>Started / Duration</span><span>Action</span></div>
+              ${EXECUTION_QUEUE_GROUPS.map((group) => renderQueueGroup(group.label, queueGroupItems(group.statuses, grouped), selectedKey, group.open)).join("")}
+            </section>
+            <section class="panel current-selected-column">
+              <div class="panel-title selected-title">
+                <div>
+                  <h2>Current Selected</h2>
+                  <span>${escapeHtml(selectedItem ? `${selectedItem.status} · ${selectedItem.operation ?? selectedItem.jobType ?? "execution"}` : "none")}</span>
+                </div>
+                <div class="title-actions">${selectedTaskActionButtons(selectedItem)}</div>
+              </div>
+              <div class="execution-selected-summary">
+                ${detail ? executionFieldsHtml(detail) : emptyState("No active execution selected.")}
+              </div>
+              <h3>State Flow</h3>
+              ${renderStateFlow(selectedItem)}
+              ${renderFeatureSummaryCard(selectedItem)}
+              <div class="execution-detail-grid">
+                <details class="execution-detail-card execution-detail-card-full" open>
+                  <summary class="section-title"><h2>Latest Execution Summary</h2><span>${escapeHtml(selectedItem?.status ?? "none")}</span></summary>
+                  ${renderLatestExecutionSummary(selectedItem)}
+                </details>
+                <details class="execution-detail-card execution-detail-card-full" open>
+                  <summary class="section-title"><h2>Token Consumption</h2><span>${executionDetail?.tokenConsumption ? "recorded" : "none"}</span></summary>
+                  ${renderTokenConsumption(executionDetail)}
+                </details>
+                <details class="execution-detail-card execution-detail-card-full" open>
+                  <summary class="section-title"><h2>Raw Log Refs</h2><span>${executionDetail?.rawLogRefs?.length ?? 0}</span></summary>
+                  ${renderRawLogRefs(detail)}
+                </details>
+                <details class="execution-detail-card execution-detail-card-full" open>
+                  <summary class="section-title"><h2>Blockers & Approvals</h2><span>${blockerApprovalCount}</span></summary>
+                  ${renderBlockersAndApprovals(selectedBlockers, executionDetail)}
+                </details>
+                <details class="execution-detail-card execution-detail-card-full" open>
+                  <summary class="section-title"><h2>Result Projection</h2><span>spec-state.json</span></summary>
+                  ${renderSkillOutputSummary(executionDetail)}
+                </details>
+                <details class="execution-detail-card execution-detail-card-full" open>
+                  <summary class="section-title"><h2>Produced Artifacts</h2><span>${executionDetail?.producedArtifacts?.length ?? 0}</span></summary>
+                  ${renderProducedArtifacts(executionDetail)}
+                </details>
+              </div>
+            </section>
+          </main>
+        </section>
+        <footer class="execution-v2-footer"><span>Last Updated: ${escapeHtml(new Date().toLocaleTimeString("en-US", { hour12: false }))}</span><div><span class="execution-v2-dot"></span><span>All Systems Operational</span><span>Auto Run: ${view?.automation?.status === "running" ? "ON" : "OFF"}</span></div></footer>
       </section>
-    </main>
+    </div>
   `, undefined, locale, theme);
+}
+
+function executionContextCard(label: string, value: string, icon: string, className = "info"): string {
+  return `<div class="execution-context-card"><span>${escapeHtml(label)}</span><strong class="${escapeAttr(className)}">${buttonIcon(icon)}${escapeHtml(value)}</strong></div>`;
+}
+
+function projectCostLabel(view: SpecDriveIdeView | undefined): string {
+  const cost = view?.projectCost;
+  if (!cost) return "USD 0.00";
+  return `${cost.currency || "USD"} ${Number.isFinite(cost.totalUsd) ? cost.totalUsd.toFixed(2) : "0.00"}`;
+}
+
+function queueStats(queue: SpecDriveIdeQueueItem[]): { running: number; queued: number; waiting: number; blocked: number; review: number; completed: number } {
+  return {
+    running: queue.filter((item) => item.status === "running").length,
+    queued: queue.filter((item) => item.status === "queued").length,
+    waiting: queue.filter((item) => item.status === "waiting_input").length,
+    blocked: queue.filter((item) => item.status === "blocked" || item.status === "failed").length,
+    review: queue.filter((item) => item.status === "approval_needed" || item.status === "approval_answered" || item.status === "review_needed").length,
+    completed: queue.filter((item) => item.status === "completed").length,
+  };
+}
+
+function renderFeatureSummaryCard(item: SpecDriveIdeQueueItem | undefined): string {
+  if (!item) return "";
+  const title = item.featureTitle ?? item.featureId ?? item.taskId ?? "Selected execution";
+  const description = item.featureDescription ?? item.summary ?? "No Feature Spec description found.";
+  const rows: Array<[string, string]> = [
+    ["Owner", item.threadId ?? "none"],
+    ["Priority", item.reviewNeededReason ?? "none"],
+    ["Type", item.operation ?? item.jobType ?? "execution"],
+    ["Spec", item.featureId ?? "none"],
+    ["Estimate", item.taskId ?? "none"],
+  ];
+  return `<section class="execution-feature-card">
+    <div class="execution-feature-title"><h3>Feature Spec</h3><strong data-i18n-skip>${escapeHtml(title)}</strong></div>
+    <p data-i18n-skip>${escapeHtml(description)}</p>
+    <div class="execution-feature-meta">${rows.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong><code data-i18n-skip>${escapeHtml(value)}</code></span>`).join("")}</div>
+  </section>`;
+}
+
+function renderLatestExecutionSummary(item: SpecDriveIdeQueueItem | undefined): string {
+  if (!item) return emptyState("No active execution selected.");
+  const currentStep: [string, string] = ["Current Step", item.stateReason ?? item.summary ?? "none"];
+  const rows: Array<[string, string]> = [
+    ["Operation", item.operation ?? item.jobType ?? "execution"],
+    ["Runner", item.adapter ?? item.adapterId ?? item.runMode ?? "none"],
+    ["Started At", item.startedAt ?? "none"],
+    ["Duration", formatDurationMs(item.durationMs) ?? "none"],
+    ["Status", item.status],
+    ["Commit", item.threadId ?? "none"],
+  ];
+  return `<div class="result-group state-flow state-flow-compact execution-summary-flow">${renderSummaryFlowItem(currentStep, true)}${rows.map((row) => renderSummaryFlowItem(row)).join("")}</div>`;
+}
+
+function renderSummaryFlowItem([label, value]: [string, string], wide = false): string {
+  return `<div class="state-flow-item${wide ? " state-flow-reason" : ""}"><span>${escapeHtml(label)}</span><strong data-i18n-skip>${escapeHtml(value)}</strong></div>`;
 }
 
 function selectedBlockerItems(item: SpecDriveIdeQueueItem | undefined): SpecDriveIdeQueueItem[] {
@@ -131,7 +230,7 @@ function renderTokenConsumption(detail: SpecDriveIdeExecutionDetail | undefined)
     ["Pricing", token.pricingStatus],
     ["Pricing Source", pricingSourceLabel(token.pricing)],
   ];
-  return `<div class="token-consumption-grid">${rows.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}</div>`;
+  return `<div class="token-consumption-line">${rows.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong>: ${escapeHtml(value)}</span>`).join("")}</div>`;
 }
 
 function pricingSourceLabel(pricing: Record<string, unknown> | undefined): string {
@@ -182,8 +281,8 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
   if (!item) return emptyState("Select a queue item to inspect its state flow.");
   const resume = item.resumeTarget;
   const rows: Array<[string, string]> = [
-    ["Current Status", item.status],
     ["Reason", item.stateReason ?? item.summary ?? "No state reason recorded."],
+    ["Current Status", item.status],
     ["Review Reason", reviewReasonLabel(item.reviewNeededReason)],
     ["Review Message", item.review?.message ?? "none"],
     ["Review Triggers", item.review?.triggerReasons.join(", ") || "none"],
@@ -365,7 +464,7 @@ function renderGitDeliveryEntry(value: unknown): string {
   const prLink = prUrl
     ? `<a href="${escapeAttr(prUrl)}">${escapeHtml(prUrl)}</a>`
     : `<span class="muted">No PR link recorded.</span>`;
-  return `<div class="result-entry"><span>PR</span><span data-i18n-skip>${prLink}</span></div>`;
+  return `<div class="result-entry result-entry-wide"><span>PR</span><div class="result-content" data-i18n-skip>${prLink}</div></div>`;
 }
 
 function gitDeliveryPrUrl(value: unknown): string | undefined {

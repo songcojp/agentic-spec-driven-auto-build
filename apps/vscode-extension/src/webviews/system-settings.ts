@@ -1,6 +1,7 @@
 import type { AdapterSettingsSection, SystemSettingsViewModel } from "../types";
-import type { WorkbenchLocale } from "./i18n";
+import { workbenchTranslationsForLocale, type WorkbenchLocale } from "./i18n";
 import {
+  buttonIcon,
   commandButton,
   emptyState,
   escapeAttr,
@@ -21,16 +22,43 @@ export function renderSystemSettingsWebview(
   const nonce = webviewNonce();
   const factSources = settings?.factSources ?? [];
   return renderWorkbenchPage("System Settings", nonce, `
-    <section class="settings-toolbar">
-      ${commandButton("Refresh", "refresh", {})}
-      <span id="workbench-status" class="status-text" role="status" aria-live="polite">Settings projection loaded.</span>
-    </section>
-    ${settings ? `
-      <main class="settings-shell">
+    <style>
+      html,body{height:100%;overflow:hidden}
+      body{padding:0}
+      .workbench-header{display:none}
+      .settings-page{height:100vh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;padding:14px 16px 18px}
+      .settings-fixed-top{position:relative;z-index:12;margin:0 0 12px;padding:0 0 10px;background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 96%,#12252b),color-mix(in srgb,var(--bg) 88%,transparent));border-bottom:1px solid var(--border-soft);backdrop-filter:blur(10px)}
+      .settings-fixed-top h1{margin:0;font-size:22px;font-weight:650}
+      .settings-fixed-top .settings-hero{margin:0 0 8px}
+      .settings-fixed-top .settings-toolbar{margin-bottom:0}
+      .settings-content{min-height:0;overflow:auto;padding-right:4px}
+    </style>
+    <div class="settings-page">
+      <div class="settings-fixed-top">
+        <section class="settings-hero">
+          <div>
+            <div class="settings-heading-row">
+              <h1>System Settings</h1>
+              <span class="settings-count-chip">${settings ? settingsCompletionCount(settings, factSources) : "0 / 5"}</span>
+            </div>
+            <p>Configure adapters, defaults, fact sources, and appearance.</p>
+          </div>
+          <div class="settings-health-strip" aria-label="Settings health summary">
+            ${renderHealthPill("Adapters", settings ? adapterOnlineCount(settings) : "0 / 2", "Online", settings ? "ok" : "warn")}
+            ${renderHealthPill("Fact Sources", String(factSources.length), "configured", factSources.length > 0 ? "ok" : "warn")}
+          </div>
+        </section>
+        <section class="settings-toolbar">
+          ${commandButton("Refresh", "refresh", {})}
+          <span id="workbench-status" class="status-text" role="status" aria-live="polite">Settings projection loaded.</span>
+        </section>
+      </div>
+      ${settings ? `
+      <main class="settings-shell settings-content">
         ${renderSettingsRail(settings, factSources)}
         <div class="settings-main">
           ${renderAppearanceSection(locale, theme)}
-          ${renderExecutionPreferenceSection(settings.projectExecutionPreference)}
+          ${renderExecutionPreferenceSection(settings.projectExecutionPreference, locale)}
           <div class="settings-adapter-matrix">
             ${renderAdapterSection("CLI Adapter", "cli", settings.cliAdapter)}
             ${renderAdapterSection("RPC Adapter", "rpc", settings.rpcAdapter)}
@@ -43,8 +71,17 @@ export function renderSystemSettingsWebview(
           </section>
         </div>
       </main>
-    ` : emptyState("System settings are unavailable.")}
+      ` : `<main class="settings-content">${emptyState("System settings are unavailable.")}</main>`}
+    </div>
   `, undefined, locale, theme);
+}
+
+function renderHealthPill(label: string, value: string, suffix: string, className: string): string {
+  return `<span class="settings-health-pill"><span>${escapeHtml(label)}</span><strong class="${escapeAttr(className)}">${escapeHtml(value)} <span>${escapeHtml(suffix)}</span></strong></span>`;
+}
+
+function translateStatic(locale: WorkbenchLocale, source: string): string {
+  return locale === "en" ? source : workbenchTranslationsForLocale(locale)[source] ?? source;
 }
 
 function renderAppearanceSection(locale: WorkbenchLocale, theme: WorkbenchTheme): string {
@@ -60,7 +97,7 @@ function renderAppearanceSection(locale: WorkbenchLocale, theme: WorkbenchTheme)
     ["highContrast", "High Contrast"],
   ];
   return `<section class="settings-panel settings-appearance">
-    <div class="settings-panel-title"><h2>Appearance</h2><span>Language & Theme</span></div>
+    <div class="settings-panel-title"><h2>Appearance</h2><span>Set your language and visual theme.</span></div>
     <div class="appearance-grid">
       <label class="appearance-field">
         <span>Language</span>
@@ -83,17 +120,20 @@ function renderSettingsRail(settings: SystemSettingsViewModel, factSources: stri
   const active = preference?.active ?? {};
   const cliValidation = settings.cliAdapter?.validation;
   const rpcValidation = settings.rpcAdapter?.validation;
+  const cards = [
+    settingsSummaryCard("Project", preference?.projectId ?? "none", "ok", "Project context"),
+    settingsSummaryCard("Provider Adapter", String(active.adapterId ?? "none"), statusClass(preference?.validation?.valid ? "passed" : "failed"), "Execution default"),
+    settingsSummaryCard("CLI Adapter", validationLabel(cliValidation), statusClass(cliValidation?.valid ? "passed" : "failed"), "Command runner"),
+    settingsSummaryCard("RPC Adapter", validationLabel(rpcValidation), statusClass(rpcValidation?.valid ? "passed" : "failed"), "App server lane"),
+    settingsSummaryCard("Fact Sources", String(factSources.length), factSources.length > 0 ? "ok" : "warn", "Configured sources"),
+  ];
   return `<aside class="settings-rail" aria-label="Settings Summary">
     <div class="settings-rail-title">
       <h2>Settings Summary</h2>
-      <span>${factSources.length} sources</span>
+      <span>${settingsCompletionCount(settings, factSources)}</span>
     </div>
     <div class="settings-summary-list">
-      ${summaryRow("Project", preference?.projectId ?? "none", "info")}
-      ${summaryRow("Provider Adapter", String(active.adapterId ?? "none"), statusClass(preference?.validation?.valid ? "passed" : "failed"))}
-      ${summaryRow("CLI Adapter", validationLabel(cliValidation), statusClass(cliValidation?.valid ? "passed" : "failed"))}
-      ${summaryRow("RPC Adapter", validationLabel(rpcValidation), statusClass(rpcValidation?.valid ? "passed" : "failed"))}
-      ${summaryRow("Fact Sources", String(factSources.length), factSources.length > 0 ? "ok" : "warn")}
+      ${cards.join("")}
     </div>
     <h3>Fact Sources</h3>
     <div class="settings-source-list">
@@ -102,10 +142,14 @@ function renderSettingsRail(settings: SystemSettingsViewModel, factSources: stri
   </aside>`;
 }
 
-function summaryRow(label: string, value: string, className: string): string {
-  return `<div class="settings-summary-row">
-    <span>${escapeHtml(label)}</span>
-    <strong class="${escapeAttr(className)}">${escapeHtml(value)}</strong>
+function settingsSummaryCard(label: string, value: string, className: string, caption: string): string {
+  return `<div class="settings-summary-card">
+    <div>
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+      <small>${escapeHtml(caption)}</small>
+    </div>
+    <span class="settings-card-status ${escapeAttr(className)}">${buttonIcon(className === "warn" || className === "bad" || className === "error" ? "warning" : "check-circle")}</span>
   </div>`;
 }
 
@@ -114,7 +158,7 @@ function validationLabel(validation: { valid: boolean } | undefined): string {
   return validation.valid ? "valid" : "invalid";
 }
 
-function renderExecutionPreferenceSection(section: SystemSettingsViewModel["projectExecutionPreference"]): string {
+function renderExecutionPreferenceSection(section: SystemSettingsViewModel["projectExecutionPreference"], locale: WorkbenchLocale): string {
   if (!section) {
     return `<section class="settings-panel settings-execution-defaults">
       <div class="settings-panel-title"><h2>Project Execution Defaults</h2><span class="muted">unavailable</span></div>
@@ -126,25 +170,43 @@ function renderExecutionPreferenceSection(section: SystemSettingsViewModel["proj
   const validation = section.validation ?? { valid: false, errors: ["Execution preference validation result is unavailable."] };
   return `<section class="settings-panel settings-execution-defaults">
     <div class="settings-panel-title">
-      <h2>Project Execution Defaults</h2>
+      <div><h2>Project Execution Defaults</h2><p>Defaults used when starting new executions.</p></div>
       <span class="settings-status-chip ${statusClass(validation.valid ? "passed" : "failed")}">${validation.valid ? "valid" : "invalid"}</span>
     </div>
-    <div class="settings-meta-grid">
-      <div class="settings-meta-row"><span>Project</span><span><code>${escapeHtml(section.projectId ?? "none")}</code></span></div>
-      <div class="settings-meta-row"><span>Provider Adapter</span><span><code>${escapeHtml(String(active.adapterId ?? "none"))}</code></span></div>
+    <div class="settings-defaults-grid">
+      <div>
+        <label class="settings-field">
+          <span>Active Provider Preset</span>
+          <select class="settings-select" aria-label="${escapeAttr(translateStatic(locale, "Active provider preset"))}">
+            <option>${escapeHtml(String(active.adapterId ?? "none"))}</option>
+          </select>
+        </label>
+        <label class="settings-field">
+          <span>Execution Mode</span>
+          <select class="settings-select" aria-label="${escapeAttr(translateStatic(locale, "Execution mode"))}">
+            <option>${escapeHtml(translateStatic(locale, "Plan -> Execute -> Verify"))}</option>
+          </select>
+        </label>
+      </div>
+      <div class="settings-meta-grid settings-default-metrics">
+        <div class="settings-meta-row"><span>Project</span><span><code>${escapeHtml(section.projectId ?? "none")}</code></span></div>
+        <div class="settings-meta-row"><span>Provider Adapter</span><span><code>${escapeHtml(String(active.adapterId ?? "none"))}</code></span></div>
+        <div class="settings-meta-row"><span>Validation</span><span class="${statusClass(validation.valid ? "passed" : "failed")}">${validation.valid ? "No errors" : `${validation.errors.length} errors`}</span></div>
+      </div>
+      <div>
+        <h3>Config (JSON)</h3>
+        <textarea id="${editorId}" class="settings-editor settings-editor-compact" spellcheck="false" aria-label="Project execution preference JSON">${escapeHtml(JSON.stringify({
+          projectId: section.projectId,
+          adapterId: active.adapterId,
+        }, null, 2))}</textarea>
+      </div>
     </div>
     <h3>Provider Presets</h3>
     <div class="settings-preset-row">
       ${section.cliAdapters.map((adapter) => executionPreferencePresetButton("CLI", editorId, section.projectId, adapter)).join("")}
       ${section.rpcAdapters.map((adapter) => executionPreferencePresetButton("RPC", editorId, section.projectId, adapter)).join("")}
     </div>
-    <h3>Validation Errors</h3>
-    ${renderErrors(validation.errors)}
-    <h3>JSON Config</h3>
-    <textarea id="${editorId}" class="settings-editor settings-editor-compact" spellcheck="false" aria-label="Project execution preference JSON">${escapeHtml(JSON.stringify({
-      projectId: section.projectId,
-      adapterId: active.adapterId,
-    }, null, 2))}</textarea>
+    ${validation.errors.length ? `<h3>Validation Errors</h3>${renderErrors(validation.errors)}` : ""}
     <div class="settings-actionbar">
       ${settingsCommandButton("Save Default", "save_project_execution_preference", "settings", editorId)}
     </div>
@@ -180,10 +242,14 @@ function renderAdapterSection(title: string, kind: AdapterKind, section: Adapter
   const disableAction = kind === "cli" ? "disable_cli_adapter_config" : "disable_rpc_adapter_config";
   return `<section class="settings-panel settings-adapter-panel">
     <div class="settings-panel-title">
-      <h2>${escapeHtml(title)}</h2>
+      <div class="settings-title-with-icon">${buttonIcon(kind === "cli" ? "file" : "branch")}<h2>${escapeHtml(title)}</h2></div>
       <span class="settings-status-chip ${statusClass(validation.valid ? "passed" : "failed")}">${validation.valid ? "valid" : "invalid"}</span>
     </div>
-    <div class="settings-meta-grid">
+    <div class="settings-card-toolbar">
+      <span class="${activeId ? "ok" : "warn"}">${activeId ? "Active" : "Inactive"}</span>
+      <span class="${draftId ? "draft" : "muted"}">${draftId ? "Draft saved" : "No draft"}</span>
+    </div>
+    <div class="settings-meta-grid settings-adapter-stats">
       <div class="settings-meta-row"><span>Active</span><span><code>${escapeHtml(activeId ?? "none")}</code></span></div>
       <div class="settings-meta-row"><span>Draft</span><span><code>${escapeHtml(draftId ?? "none")}</code></span></div>
       <div class="settings-meta-row"><span>Status</span><span class="${statusClass(stringField(source, "status"))}">${escapeHtml(stringField(source, "status") ?? "unknown")}</span></div>
@@ -191,18 +257,24 @@ function renderAdapterSection(title: string, kind: AdapterKind, section: Adapter
       ${renderPricingSummary(source)}
       ${renderLastCheck(kind, section)}
     </div>
-    ${renderPricingEditor(editorId, source)}
-    <h3>Presets</h3>
-    <div class="settings-preset-row">
-      ${presets.map((preset) => commandButton(stringField(preset, "displayName") ?? stringField(preset, "id") ?? "Preset", "loadSettingsPreset", {
-        editorId,
-        presetJson: JSON.stringify(preset, null, 2),
-      })).join("") || emptyState("No presets returned.")}
+    <div class="settings-adapter-workspace">
+      <div>
+        <h3>Active Preset</h3>
+        <div class="settings-preset-row">
+          ${presets.map((preset) => commandButton(stringField(preset, "displayName") ?? stringField(preset, "id") ?? "Preset", "loadSettingsPreset", {
+            editorId,
+            presetJson: JSON.stringify(preset, null, 2),
+          })).join("") || emptyState("No presets returned.")}
+        </div>
+        ${renderPricingEditor(editorId, source)}
+        <h3>Config (JSON)</h3>
+        <textarea id="${editorId}" class="settings-editor" spellcheck="false" aria-label="${escapeAttr(title)} JSON">${escapeHtml(JSON.stringify(source, null, 2))}</textarea>
+      </div>
+      <div class="settings-validation-column">
+        <h3>Validation</h3>
+        ${renderErrors(validation.errors)}
+      </div>
     </div>
-    <h3>Validation Errors</h3>
-    ${renderErrors(validation.errors)}
-    <h3>JSON Config</h3>
-    <textarea id="${editorId}" class="settings-editor" spellcheck="false" aria-label="${escapeAttr(title)} JSON">${escapeHtml(JSON.stringify(source, null, 2))}</textarea>
     <div class="settings-actionbar">
       ${settingsCommandButton("Validate", validateAction, entityType, editorId)}
       ${settingsCommandButton("Save Draft", saveAction, entityType, editorId)}
@@ -219,6 +291,21 @@ function renderPricingSummary(source: Record<string, unknown>): string {
   const pricingModels = costRates ? Object.keys(costRates).filter(Boolean) : [];
   return `<div class="settings-meta-row"><span>Pricing Model</span><span><code>${escapeHtml(model)}</code></span></div>
     <div class="settings-meta-row"><span>Pricing Rates</span><span>${escapeHtml(pricingModels.length ? pricingModels.join(", ") : "none")}</span></div>`;
+}
+
+function settingsCompletionCount(settings: SystemSettingsViewModel, factSources: string[]): string {
+  const preferenceValid = settings.projectExecutionPreference?.validation?.valid ? 1 : 0;
+  const cliValid = settings.cliAdapter?.validation?.valid ? 1 : 0;
+  const rpcValid = settings.rpcAdapter?.validation?.valid ? 1 : 0;
+  const factsValid = factSources.length > 0 ? 1 : 0;
+  const appearanceAvailable = 1;
+  return `${preferenceValid + cliValid + rpcValid + factsValid + appearanceAvailable} / 5`;
+}
+
+function adapterOnlineCount(settings: SystemSettingsViewModel): string {
+  const total = [settings.cliAdapter, settings.rpcAdapter].filter(Boolean).length;
+  const valid = [settings.cliAdapter, settings.rpcAdapter].filter((section) => section?.validation?.valid).length;
+  return `${valid} / ${total || 2}`;
 }
 
 function renderPricingEditor(editorId: string, source: Record<string, unknown>): string {
