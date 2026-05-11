@@ -16,7 +16,8 @@ if (!section) {
   throw new Error("Cannot find Agentic Spec required skill section in agentic-spec-standard.md.");
 }
 
-const required = Array.from(section.matchAll(/^\d{2}\.[a-z0-9-]+\.[a-z0-9-]+$/gm), (match) => match[0]);
+const SKILL_SLUG_PATTERN = /^(?:using-agent-skills|\d{2}\.[a-z0-9-]+\.[a-z0-9-]+)$/;
+const required = Array.from(section.matchAll(/^(?:using-agent-skills|\d{2}\.[a-z0-9-]+\.[a-z0-9-]+)$/gm), (match) => match[0]);
 const requiredSet = new Set(required);
 const entries = readdirSync(skillsRoot)
   .filter((entry) => statSync(join(skillsRoot, entry)).isDirectory())
@@ -25,7 +26,7 @@ const entrySet = new Set(entries);
 
 const missing = required.filter((slug) => !entrySet.has(slug));
 const extra = entries.filter((slug) => !requiredSet.has(slug));
-const invalid = entries.filter((slug) => !/^\d{2}\.[a-z0-9-]+\.[a-z0-9-]+$/.test(slug));
+const invalid = entries.filter((slug) => !SKILL_SLUG_PATTERN.test(slug));
 const mismatched = [];
 
 for (const slug of entries) {

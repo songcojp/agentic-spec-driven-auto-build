@@ -420,7 +420,7 @@ function executionInvocation(): ExecutionAdapterInvocationV1 {
 
 function skillOutput(): SkillOutputContract {
   return {
-    contractVersion: "skill-contract/v1",
+    contractVersion: "skill-contract/v2",
     executionId: "RUN-APP",
     skillSlug: "07.execution.dispatch-adapter",
     requestedAction: "feature_execution",
@@ -441,7 +441,34 @@ function validJourneyResult(): Record<string, unknown> {
     requirementCoverage: [{ requirementId: "REQ-VSC-010", status: "passed", evidence: ["tests/codex-rpc-adapter.test.ts"] }],
     acceptanceEvidence: [{ scenarioId: "AC-RPC", status: "passed", evidence: ["Codex RPC event projection"] }],
     journeyEvidence: [{ userStoryId: "US-RPC", scenario: "run feature through RPC adapter", status: "passed", evidence: ["Codex RPC event projection"] }],
+    deliveryFidelity: validDeliveryFidelity(),
     gitDelivery: validGitDelivery(),
+  };
+}
+
+function validDeliveryFidelity(): Record<string, unknown> {
+  return {
+    sourceIntent: [{ id: "INTENT-RPC", summary: "Run a Feature through the RPC adapter.", sourceRef: "docs/features/feat-016/requirements.md", status: "preserved" }],
+    journeys: [{ id: "US-RPC", summary: "RPC feature execution", status: "verified", obligations: ["BO-RPC"] }],
+    behaviorObligations: [{ id: "BO-RPC", sourceRef: "AC-RPC", description: "Project Skill output through RPC into execution result.", status: "verified", evidenceRefs: ["EV-RPC"] }],
+    handoffs: [
+      { from: "define", to: "plan", preservedObligations: ["BO-RPC"], losses: [], status: "passed" },
+      { from: "build", to: "verify", preservedObligations: ["BO-RPC"], losses: [], status: "passed" },
+      { from: "verify", to: "review", preservedObligations: ["BO-RPC"], losses: [], status: "passed" },
+    ],
+    losses: [],
+    evidence: [{
+      id: "EV-RPC",
+      type: "rpc_event_projection",
+      mode: "no_seed",
+      assertion: "state_change_roundtrip",
+      source: "tests/codex-rpc-adapter.test.ts",
+      covers: ["BO-RPC", "AC-RPC", "US-RPC"],
+      status: "passed",
+      artifactRefs: ["raw-log://RUN-APP/rpc-events"],
+    }],
+    agentReviews: [{ role: "code-reviewer", reviewer: "independent", status: "passed", findings: [], evidenceRefs: ["EV-RPC"] }],
+    completionDecision: { status: "passed", reason: "RPC projection preserves Skill output and execution result.", decidedBy: "release-reviewer", unresolvedLosses: [] },
   };
 }
 

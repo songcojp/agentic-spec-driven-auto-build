@@ -24,6 +24,9 @@ export type ReviewTrigger =
   | "journey_not_closed"
   | "acceptance_gap"
   | "evidence_missing"
+  | "quality_evidence_gap"
+  | "test_semantics_gap"
+  | "journey_bypassed_by_fixture"
   | "delivery_evidence_missing"
   | "delivery_not_closed";
 

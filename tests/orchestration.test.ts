@@ -274,6 +274,8 @@ test("feature aggregation requires tasks, acceptance, spec alignment, and requir
       tasks: [],
       acceptancePassed: true,
       journeyClosurePassed: true,
+      deliveryFidelityPassed: true,
+      gitDeliveryPassed: true,
       specAlignmentPassed: true,
       requiredTestsPassed: true,
     }),
@@ -290,11 +292,12 @@ test("feature aggregation requires tasks, acceptance, spec alignment, and requir
       tasks: [{ taskId: "TASK-001", status: "done" }],
       acceptancePassed: true,
       journeyClosurePassed: true,
+      deliveryFidelityPassed: true,
       gitDeliveryPassed: true,
       specAlignmentPassed: true,
       requiredTestsPassed: true,
     }),
-    { status: "done", reason: "Tasks, acceptance, Journey Closure Gate, Git Delivery Gate, spec alignment, and required tests are complete." },
+    { status: "done", reason: "Tasks, acceptance, Journey Closure Gate, Delivery Fidelity Gate, Git Delivery Gate, spec alignment, and required tests are complete." },
   );
 
   assert.deepEqual(
@@ -303,13 +306,14 @@ test("feature aggregation requires tasks, acceptance, spec alignment, and requir
       tasks: [{ taskId: "TASK-001", status: "done" }],
       acceptancePassed: true,
       journeyClosurePassed: false,
+      deliveryFidelityPassed: true,
       gitDeliveryPassed: true,
       specAlignmentPassed: true,
       requiredTestsPassed: true,
     }),
     {
       status: "review_needed",
-      reason: "Done is gated by acceptance, Journey Closure Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
+      reason: "Done is gated by acceptance, Journey Closure Gate, Delivery Fidelity Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
       reviewNeededReason: "clarification_needed",
     },
   );
@@ -320,13 +324,32 @@ test("feature aggregation requires tasks, acceptance, spec alignment, and requir
       tasks: [{ taskId: "TASK-001", status: "done" }],
       acceptancePassed: true,
       journeyClosurePassed: true,
+      deliveryFidelityPassed: false,
+      gitDeliveryPassed: true,
+      specAlignmentPassed: true,
+      requiredTestsPassed: true,
+    }),
+    {
+      status: "review_needed",
+      reason: "Done is gated by acceptance, Journey Closure Gate, Delivery Fidelity Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
+      reviewNeededReason: "clarification_needed",
+    },
+  );
+
+  assert.deepEqual(
+    aggregateFeatureStatus({
+      featureId: "FEAT-004",
+      tasks: [{ taskId: "TASK-001", status: "done" }],
+      acceptancePassed: true,
+      journeyClosurePassed: true,
+      deliveryFidelityPassed: true,
       gitDeliveryPassed: false,
       specAlignmentPassed: true,
       requiredTestsPassed: true,
     }),
     {
       status: "review_needed",
-      reason: "Done is gated by acceptance, Journey Closure Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
+      reason: "Done is gated by acceptance, Journey Closure Gate, Delivery Fidelity Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
       reviewNeededReason: "clarification_needed",
     },
   );
@@ -337,13 +360,14 @@ test("feature aggregation requires tasks, acceptance, spec alignment, and requir
       tasks: [{ taskId: "TASK-001", status: "done" }],
       acceptancePassed: true,
       journeyClosurePassed: true,
+      deliveryFidelityPassed: true,
       gitDeliveryPassed: true,
       specAlignmentPassed: false,
       requiredTestsPassed: true,
     }),
     {
       status: "review_needed",
-      reason: "Done is gated by acceptance, Journey Closure Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
+      reason: "Done is gated by acceptance, Journey Closure Gate, Delivery Fidelity Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
       reviewNeededReason: "clarification_needed",
     },
   );

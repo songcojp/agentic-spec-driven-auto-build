@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "featureId": "FEAT-023",
+  "status": "in-progress",
+  "currentJob": null,
+  "blockedReasons": [],
+  "reviewNeededReason": null,
+  "lastResult": null,
+  "nextAction": "Run targeted verification and close FEAT-023 delivery notes.",
+  "updatedAt": "2026-05-11T00:00:00.000Z"
+}

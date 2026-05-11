@@ -1,0 +1,56 @@
+# FEAT-023 Full Lifecycle Delivery Fidelity — 设计
+
+Feature ID: FEAT-023
+来源需求: REQ-087 至 REQ-091
+HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Review Center、Skill Output Contract
+
+## 1. 架构决策
+
+- 保留现有 00-14 skill 编号作为内部兼容层，新增 lifecycle-first 视图作为调度、技能选择和审查的主心智模型。
+- 新增 `.agents/skills/using-agent-skills` 元技能，负责根据任务跨度选择 Define、Plan、Build、Verify、Review、Ship 生命阶段、项目 skills 和 agent persona。
+- `07.execution.dispatch-adapter` 的 `feature_execution` completed 输出升级为 `skill-contract/v2`，通过 `result.deliveryFidelity` 表达全流程保真账本。
+- Control Plane 不接管 prompt 推理，但必须校验结构性不变式：v2 契约、未关闭损失、独立审查、fixture 旁路、证据 artifact refs 和完成决策。
+- Review Center 将 Delivery Fidelity 失败投影为可查询 ReviewItem trigger，使用户能看到损失发生阶段而不是只看到“证据不足”。
+
+## 2. Delivery Fidelity Ledger
+
+`result.deliveryFidelity` 包含：
+
+| 字段 | 说明 |
+|---|---|
+| `sourceIntent` | 进入工作流的产品意图、需求、评审或操作员输入。 |
+| `journeys` | 从 source intent 保留下来的用户或系统旅程。 |
+| `behaviorObligations` | 可执行、可测试的行为义务。 |
+| `handoffs` | Define -> Plan -> Build -> Verify -> Review -> Ship 的交接记录。 |
+| `losses` | 一等质量损失：intent、journey、interaction、state、data、task、implementation shortcut、test bypass、review gap、delivery gap。 |
+| `evidence` | 结构化证明行，包含 type、mode、assertion、source、covers、status、artifactRefs。 |
+| `agentReviews` | 独立 Test/QA/Review/Release agent 或 owner-thread 等价 pass。 |
+| `completionDecision` | 完成决策、理由、决策角色和未关闭损失。 |
+
+## 3. Agent Registry
+
+| Agent | 责任 |
+|---|---|
+| Product Interpreter | 保留用户、边界、成功样例和非目标。 |
+| Requirement Critic | 检查需求是否原子、可观察、可测试、可追踪。 |
+| Interaction Designer | 将旅程落到 UI/API/state/data 行为。 |
+| Task Slicer | 拆成垂直行为义务，标明 fixture 边界。 |
+| Implementation Agent | 实现 scoped 变更，不自证完成。 |
+| Test Engineer | 设计测试义务、负向样本和命令路径。 |
+| Browser QA | 验证真实或等价 runtime interaction。 |
+| Code Reviewer | 审查代码、架构、安全、spec drift 和测试缺口。 |
+| Release Reviewer | 判断交付证据、PR/merge/cleanup 和未关闭损失。 |
+
+## 4. 校验策略
+
+- `validateSkillOutputContract` 对 `feature_execution` completed 要求 `skill-contract/v2`。
+- `assessDeliveryFidelityGate` 拒绝缺失账本、open P0/P1 loss、open P2 loss、未验证行为义务、断裂 handoff、fixture-only evidence、entry/text-only evidence、缺 artifact refs 和 self-review-only closure。
+- Scheduler 将 `quality_evidence_gap`、`test_semantics_gap`、`journey_bypassed_by_fixture` 路由到 `review_needed`。
+- Feature Aggregator 把 Delivery Fidelity Gate 与 acceptance、Journey Closure、Git Delivery、Spec Alignment、required tests 一起作为 Done 条件。
+
+## 5. 验证策略
+
+- Contract tests 覆盖 v2、deliveryFidelity 缺失、未关闭损失、fixture-only evidence、self-review-only closure。
+- Scheduler tests 覆盖 Delivery Fidelity 失败创建 ReviewItem。
+- Orchestration tests 覆盖 Delivery Fidelity Gate 参与 Done 判定。
+- Skill validation 覆盖新增元技能和更新后的 Skill 文档。

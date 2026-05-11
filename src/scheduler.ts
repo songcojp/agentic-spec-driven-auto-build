@@ -699,10 +699,14 @@ function executionReviewNeededReason(
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
   if (
     text.includes("journey closure gate") ||
+    text.includes("delivery fidelity gate") ||
     text.includes("git delivery gate") ||
     text.includes("journey_not_closed") ||
     text.includes("acceptance_gap") ||
     text.includes("evidence_missing") ||
+    text.includes("quality_evidence_gap") ||
+    text.includes("test_semantics_gap") ||
+    text.includes("journey_bypassed_by_fixture") ||
     text.includes("delivery_evidence_missing") ||
     text.includes("delivery_not_closed")
   ) {
@@ -715,11 +719,14 @@ function executionReviewNeededReason(
 
 function executionReviewTriggers(summary: string, metadata?: Record<string, unknown>): ReviewTrigger[] {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (/\bevidence_missing\b/.test(text) || text.includes("journey closure gate")) return ["evidence_missing"];
   if (text.includes("journey_not_closed")) return ["journey_not_closed"];
   if (text.includes("acceptance_gap")) return ["acceptance_gap"];
+  if (text.includes("journey_bypassed_by_fixture")) return ["journey_bypassed_by_fixture"];
+  if (text.includes("test_semantics_gap")) return ["test_semantics_gap"];
+  if (text.includes("quality_evidence_gap") || text.includes("delivery fidelity gate")) return ["quality_evidence_gap"];
   if (text.includes("delivery_not_closed")) return ["delivery_not_closed"];
   if (text.includes("delivery_evidence_missing") || text.includes("git delivery gate")) return ["delivery_evidence_missing"];
-  if (text.includes("evidence_missing") || text.includes("journey closure gate")) return ["evidence_missing"];
   if (/\b(approve|approval|authorize|permission|commit|pull request|\bpr\b|agents\.md)\b/.test(text)) {
     return ["permission_escalation"];
   }

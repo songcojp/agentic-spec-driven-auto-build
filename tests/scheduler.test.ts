@@ -246,7 +246,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(JSON.parse(String(rows.runs[0].metadata_json)).contractValidation.valid, true);
   assert.equal(rows.task[0].status, "scheduled");
   assert.deepEqual(rows.sessions.map((row) => [row.session_id, row.exit_code]), [["SESSION-CLI", 0]]);
-  assert.match(String(rows.logs[0].stdout), /skill-contract\/v1/);
+  assert.match(String(rows.logs[0].stdout), /skill-contract\/v2/);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -623,7 +623,7 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
         type: "turn/completed",
         status: "completed",
         output: {
-          contractVersion: "skill-contract/v1",
+          contractVersion: "skill-contract/v2",
           executionId: "RUN-APP-SERVER",
           skillSlug: "07.execution.dispatch-adapter",
           requestedAction: "feature_execution",
@@ -970,6 +970,7 @@ test("cli.run routes completed feature execution without Git delivery evidence t
         requirementCoverage: [{ requirementId: "REQ-CLI", status: "passed", evidence: ["tests/scheduler.test.ts"] }],
         acceptanceEvidence: [{ scenarioId: "AC-CLI", status: "passed", evidence: ["run report"] }],
         journeyEvidence: [{ userStoryId: "US-CLI", scenario: "user completes feature flow", status: "passed", evidence: ["run report"] }],
+        deliveryFidelity: validDeliveryFidelity(),
       },
     })}`,
     stderr: "",
@@ -991,6 +992,48 @@ test("cli.run routes completed feature execution without Git delivery evidence t
   assert.match(String(rows.reviews[0].body), /Git Delivery Gate/);
 });
 
+test("cli.run routes completed feature execution with fidelity loss to review_needed", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-fidelity-gap-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-FIDELITY-GAP"), () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-FIDELITY-GAP"}\n${skillOutputEvent("RUN-FIDELITY-GAP", {
+      result: {
+        ...validJourneyResult(),
+        deliveryFidelity: validDeliveryFidelity({
+          losses: [{
+            type: "test_bypass",
+            severity: "P1",
+            status: "open",
+            description: "Verification used an API fixture instead of the user behavior.",
+            owner: "test-engineer",
+            evidenceRefs: [],
+          }],
+        }),
+      },
+    })}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "run", sql: "SELECT status, summary, metadata_json FROM execution_records WHERE id = 'RUN-FIDELITY-GAP'" },
+    { name: "reviews", sql: "SELECT status, review_needed_reason, trigger_reasons_json, body FROM review_items WHERE run_id = 'RUN-FIDELITY-GAP'" },
+  ]).queries;
+  const metadata = JSON.parse(String(rows.run[0].metadata_json));
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(rows.run[0].status, "review_needed");
+  assert.match(String(rows.run[0].summary), /Delivery Fidelity Gate failed: quality_evidence_gap/);
+  assert.equal(metadata.contractValidation.valid, false);
+  assert.match(metadata.contractValidation.reasons.join("\n"), /unclosed critical loss P1:test_bypass/);
+  assert.equal(rows.reviews[0].status, "review_needed");
+  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
+  assert.match(String(rows.reviews[0].trigger_reasons_json), /quality_evidence_gap/);
+  assert.match(String(rows.reviews[0].body), /Delivery Fidelity Gate/);
+});
+
 test("cli.run accepts completed foundation feature with explicit downstream journey exemption", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-foundation-"));
   prepareSkillWorkspace(root);
@@ -1001,6 +1044,10 @@ test("cli.run accepts completed foundation feature with explicit downstream jour
     status: 0,
     stdout: `{"type":"session","session_id":"SESSION-FOUNDATION"}\n${skillOutputEvent("RUN-FOUNDATION-EXEMPT", {
       result: {
+        deliveryFidelity: validDeliveryFidelity({
+          journeys: [],
+          sourceIntent: [{ id: "INTENT-FOUNDATION", summary: "Foundation work supports downstream UI closure.", sourceRef: "docs/features/FEAT-CLI/requirements.md", status: "preserved" }],
+        }),
         foundationExemption: {
           exempt: true,
           reason: "Infrastructure-only adapter needed before user journeys can close.",
@@ -1078,7 +1125,7 @@ function skillOutputEvent(executionId: string, overrides: {
   result?: Record<string, unknown>;
 } = {}): string {
   const output = {
-    contractVersion: "skill-contract/v1",
+    contractVersion: overrides.skillSlug ? "skill-contract/v1" : "skill-contract/v2",
     executionId,
     skillSlug: overrides.skillSlug ?? "07.execution.dispatch-adapter",
     requestedAction: overrides.requestedAction ?? "feature_execution",
@@ -1099,7 +1146,7 @@ function skillOutputEvent(executionId: string, overrides: {
 
 function skillOutputObject(executionId: string): Record<string, unknown> {
   return {
-    contractVersion: "skill-contract/v1",
+    contractVersion: "skill-contract/v2",
     executionId,
     skillSlug: "07.execution.dispatch-adapter",
     requestedAction: "feature_execution",
@@ -1119,7 +1166,35 @@ function validJourneyResult(): Record<string, unknown> {
     requirementCoverage: [{ requirementId: "REQ-CLI", status: "passed", evidence: ["tests/scheduler.test.ts"] }],
     acceptanceEvidence: [{ scenarioId: "AC-CLI", status: "passed", evidence: ["run report"] }],
     journeyEvidence: [{ userStoryId: "US-CLI", scenario: "user completes feature flow", status: "passed", evidence: ["run report"] }],
+    deliveryFidelity: validDeliveryFidelity(),
     gitDelivery: validGitDelivery(),
+  };
+}
+
+function validDeliveryFidelity(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    sourceIntent: [{ id: "INTENT-CLI", summary: "Feature execution preserves the requested behavior.", sourceRef: "docs/features/FEAT-CLI/requirements.md", status: "preserved" }],
+    journeys: [{ id: "US-CLI", summary: "User completes feature flow", status: "verified", obligations: ["BO-CLI"] }],
+    behaviorObligations: [{ id: "BO-CLI", sourceRef: "AC-CLI", description: "Complete the feature behavior and verify it.", status: "verified", evidenceRefs: ["EV-CLI"] }],
+    handoffs: [
+      { from: "define", to: "plan", preservedObligations: ["BO-CLI"], losses: [], status: "passed" },
+      { from: "plan", to: "build", preservedObligations: ["BO-CLI"], losses: [], status: "passed" },
+      { from: "build", to: "verify", preservedObligations: ["BO-CLI"], losses: [], status: "passed" },
+    ],
+    losses: [],
+    evidence: [{
+      id: "EV-CLI",
+      type: "browser_interaction",
+      mode: "no_seed",
+      assertion: "state_change_roundtrip",
+      source: "tests/scheduler.test.ts",
+      covers: ["BO-CLI", "AC-CLI", "US-CLI"],
+      status: "passed",
+      artifactRefs: ["raw-log://RUN-CLI/output"],
+    }],
+    agentReviews: [{ role: "test-engineer", reviewer: "independent", status: "passed", findings: [], evidenceRefs: ["EV-CLI"] }],
+    completionDecision: { status: "passed", reason: "Fidelity chain is closed.", decidedBy: "release-reviewer", unresolvedLosses: [] },
+    ...overrides,
   };
 }
 

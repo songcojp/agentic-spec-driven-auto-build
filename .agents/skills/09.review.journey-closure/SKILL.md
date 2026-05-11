@@ -27,6 +27,8 @@ produced code.
   artifact consistency before implementation.
 - Do not replace `09.review.code-diff`; that skill reviews diffs and spec
   drift.
+- Do not treat this as the only quality step. It consumes the Delivery Fidelity
+  Ledger and reports where lifecycle losses remain.
 - Do not mark historical completed Features back to open automatically. Report
   gaps for audit or follow-up routing.
 
@@ -34,7 +36,8 @@ produced code.
 
 1. Read PRD user journeys, EARS requirements, UI spec or prototype references,
    Feature `requirements.md`, `design.md`, `tasks.md`, execution result,
-   produced artifacts, tests, screenshots, logs, and review items.
+   Delivery Fidelity Ledger, produced artifacts, tests, screenshots, logs, and
+   review items.
 2. Build a closure matrix across:
    - P1 user stories and journey checkpoints.
    - `REQ-*`, `NFR-*`, `EDGE-*`, and acceptance criteria.
@@ -49,11 +52,15 @@ produced code.
    why no direct user journey exists, names downstream closure Features, and
    lists integration evidence that proves the foundation is consumable.
 5. Return `completed` only when every P1 journey checkpoint, acceptance item,
-   and requirement row is closed or a valid foundation exemption applies.
+   requirement row, and lifecycle handoff is closed or a valid foundation
+   exemption applies.
 6. Return `review_needed` when closure is missing. Use one of these reasons:
    - `journey_not_closed`
    - `acceptance_gap`
    - `evidence_missing`
+   - `quality_evidence_gap`
+   - `test_semantics_gap`
+   - `journey_bypassed_by_fixture`
 7. Return `blocked` only when required input artifacts are unavailable and no
    closure judgment can be made.
 
@@ -64,6 +71,7 @@ produced code.
 - Acceptance and task evidence mapping.
 - Missing journey, acceptance, or evidence rows.
 - Foundation exemption decision when applicable.
+- Delivery Fidelity losses and handoff gaps.
 - Required fixes before the Feature can be projected to `completed`.
 
 ## Output Contract
@@ -92,6 +100,8 @@ produced code.
   requirement IDs.
 - `foundationExemption`: object or `null`; when present it must include
   `exempt`, `reason`, `downstreamFeatures`, and `integrationEvidence`.
+- `deliveryFidelity`: lifecycle ledger summary, including open losses and
+  independent review evidence.
 - `missingEvidence`: array of missing or insufficient evidence rows.
 - `requiredFixes`: array of concrete fixes or follow-up routes.
 

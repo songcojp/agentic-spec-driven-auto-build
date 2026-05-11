@@ -7,7 +7,8 @@ description: "Execute the Agentic Spec 09 review workflow for release readiness 
 
 ## Purpose
 
-Use this skill to perform the Agentic Spec `09` `review` workflow step for `release-readiness`. Keep the workflow reusable across Agentic Spec projects and avoid product-specific assumptions.
+Use this skill to decide whether a Feature can ship after implementation,
+verification, review, and delivery evidence have been collected.
 
 ## When to Use
 
@@ -23,11 +24,17 @@ Read only the artifacts needed for the request, preferring references over copie
 
 ## Workflow
 
-1. Confirm the requested action and identify the relevant Agentic Spec phase, object, and state.
-2. Read the minimum source references needed to make the result traceable.
-3. Produce the requested workflow result, preserving existing IDs, states, and evidence links unless the invocation explicitly asks for a change.
-4. Record assumptions, blockers, and follow-up actions in the output instead of inventing missing facts.
-5. Keep implementation-specific details out of the skill unless they are passed as constraints or evidence.
+1. Read Feature Spec, execution result, Delivery Fidelity Ledger, journey
+   closure, test coverage, evidence completeness, code review, Git delivery,
+   PR/check state, release notes, and open ReviewItems.
+2. Confirm no open P0/P1 loss remains and any P2 loss has an accepted/deferred
+   decision with owner and follow-up.
+3. Confirm `completionDecision` was made by a Release Reviewer or equivalent
+   independent pass, not only by the Implementation Agent.
+4. Return `review_needed` for missing merge/check/cleanup evidence, unclosed
+   losses, self-review-only completion, or unresolved spec drift.
+5. Record assumptions, blockers, and follow-up actions in the output instead of
+   inventing missing facts.
 
 ## Output Contract
 
@@ -38,4 +45,6 @@ Return the project-local `SkillOutputContractV1` when invoked by an adapter. Ech
 - The output is traceable to the referenced Agentic Spec artifacts.
 - The result stays within the `09` `review` boundary.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
+- Release readiness accounts for Delivery Fidelity, Journey Closure, test
+  semantics, evidence completeness, Git delivery, and cleanup.
 - No product-specific UI, database, scheduler, or adapter behavior is hardcoded into the skill.

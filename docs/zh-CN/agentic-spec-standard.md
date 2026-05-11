@@ -710,9 +710,9 @@ the system shall <response>.
 
 ---
 
-## 6.3.1 Journey Closure Gate
+## 6.3.1 Delivery Fidelity And Journey Closure
 
-Agentic Spec 不允许仅凭任务勾选、提交、PR、单元测试或执行 Skill 自我声明来判定 Feature 完成。Feature 完成必须经过独立的用户旅程闭环验收。
+Agentic Spec 不允许仅凭任务勾选、提交、PR、单元测试或执行 Skill 自我声明来判定 Feature 完成。Feature 完成必须经过全流程 Delivery Fidelity 审查和独立的用户旅程闭环验收。质量不是最后一道门，而是 Define、Plan、Build、Verify、Review、Ship 每次 handoff 都要保留的交付事实。
 
 该 Gate 借鉴成熟 Agent/Skill 库中的分层模式：执行 Agent/Skill 负责实现和收集证据，eval / QA / critic 类 Skill 负责独立判断完成度。SpecDrive 中对应的独立 Gate 是：
 
@@ -723,18 +723,34 @@ Agentic Spec 不允许仅凭任务勾选、提交、PR、单元测试或执行 S
 职责边界：
 
 - `05.feature.decompose`：按用户故事纵切 Feature，在 `requirements.md` 生成 `User Journey Coverage`，在 `tasks.md` 生成 `Journey Checkpoint` 和 `Git Delivery Checkpoint`。
-- `07.execution.dispatch-adapter`：实现、测试、更新任务状态，管理 Feature worktree / branch / commit / PR / merge / cleanup，并收集 `requirementCoverage`、`acceptanceEvidence`、`journeyEvidence`、`gitDelivery` 或合法 `foundationExemption`。
+- `using-agent-skills`：根据任务跨度选择 lifecycle、Skill 和 Product Interpreter / Requirement Critic / Interaction Designer / Task Slicer / Implementation Agent / Test Engineer / Browser QA / Code Reviewer / Release Reviewer 等职责。
+- `07.execution.dispatch-adapter`：实现、测试、更新任务状态，管理 Feature worktree / branch / commit / PR / merge / cleanup，并收集 `requirementCoverage`、`acceptanceEvidence`、`journeyEvidence`、`deliveryFidelity`、`gitDelivery` 或合法 `foundationExemption`。
 - `09.review.spec-consistency`：检查规划产物一致性和 Journey Checkpoint 覆盖。
 - `09.review.code-diff`：检查 diff、spec drift 和缺失的 Journey evidence。
 - `09.review.journey-closure`：只判断用户旅程、需求、任务、验收场景和证据是否闭环，不实现功能。
 
-Feature execution 返回 `completed` 时，专用 `result` 必须包含：
+Feature execution 返回 `completed` 时，必须使用 `skill-contract/v2`，专用 `result` 必须包含：
 
 ```json
 {
   "requirementCoverage": [],
   "acceptanceEvidence": [],
   "journeyEvidence": [],
+  "deliveryFidelity": {
+    "sourceIntent": [],
+    "journeys": [],
+    "behaviorObligations": [],
+    "handoffs": [],
+    "losses": [],
+    "evidence": [],
+    "agentReviews": [],
+    "completionDecision": {
+      "status": "passed",
+      "reason": "...",
+      "decidedBy": "release-reviewer",
+      "unresolvedLosses": []
+    }
+  },
   "foundationExemption": null,
   "gitDelivery": {
     "ownerWorkspace": "...",
@@ -753,13 +769,16 @@ Feature execution 返回 `completed` 时，专用 `result` 必须包含：
 }
 ```
 
-`SkillOutputContractV1.traceability` 仍只包含 `featureId`。`REQ-*`、任务 ID、验收场景、Journey Checkpoint、截图、日志、测试命令、PR/commit 证据全部放入专用 `result` 或产物摘要中。
+Skill output traceability 仍只包含 `featureId`。`REQ-*`、任务 ID、验收场景、Journey Checkpoint、截图、日志、测试命令、PR/commit 证据全部放入专用 `result` 或产物摘要中。`skill-contract/v1` 只作为 legacy 或非 feature execution 输出读取，不得作为新 Feature completed 的依据。
 
 若用户旅程未闭环，Scheduler、Execution Record 和 Feature `spec-state.json` 必须投影为 `review_needed`。原因使用：
 
 - `journey_not_closed`
 - `acceptance_gap`
 - `evidence_missing`
+- `quality_evidence_gap`
+- `test_semantics_gap`
+- `journey_bypassed_by_fixture`
 - `delivery_evidence_missing`
 - `delivery_not_closed`
 
@@ -2262,6 +2281,12 @@ Skill 应该是：
 ---
 
 ## 13.4 Agentic Spec 必备 Skill 清单
+
+### Meta / Lifecycle Skills
+
+```text
+using-agent-skills
+```
 
 ### 00 Intake Skills
 

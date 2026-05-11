@@ -20,6 +20,7 @@ This repository is a spec-driven autonomous coding system. Treat the spec artifa
 - If implementation intent, acceptance criteria, or file scope is unclear, stop for clarification before making risky changes.
 - For Chinese docs, preserve Chinese structure, numbering, and terminology unless the user asks for a language or tone change.
 - For any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix, treat `.agents/skills/10.change.classify/SKILL.md` as the Spec protocol. Triage through that skill-owned protocol before editing, update the mainline spec lane first, and do not create project-level scratch requirement files under `docs/features/` or target-project `change-management.md` / `change-disposition-checklist.md` documents.
+- For broad delivery work that spans requirements, planning, implementation, verification, review, or release, use `.agents/skills/using-agent-skills/SKILL.md` to route the task through Define, Plan, Build, Verify, Review, and Ship responsibilities. The 00-14 skill numbers are an internal compatibility layer; do not let them hide missing lifecycle handoffs, behavior obligations, or quality losses.
 
 ## Skill-vs-Code Decision
 
@@ -43,13 +44,15 @@ When a new requirement or capability is proposed, evaluate **before writing any 
 
 - For ordinary questions, exploratory reading, simple edits, small docs updates, simple commands, and direct bug fixes, use the normal Codex workflow instead of project-local skills unless the user explicitly specifies a skill.
 - If the user explicitly names a project-local skill, follow that skill from `.agents/skills/<skill-name>/SKILL.md`.
+- Use `using-agent-skills` when a task needs lifecycle-wide workflow, specialist agent responsibilities, or Delivery Fidelity Ledger routing before choosing lower-level skills.
 - Use `00.intake.collect-context` for read-only repository exploration.
 - Use `02.requirements.convert-ears` when PRD, PR/RP, product prose, or natural-language requirements must become EARS requirements.
 - Use `02.requirements.validate-testability` before consuming requirements for planning.
 - Use `07.execution.prepare-context`, `06.planning.estimate-risk`, `03.hld.review-architecture`, `03.hld.define-data-flow`, `03.hld.define-adapter-model`, `06.planning.prepare-execution-plan`, `05.feature.decompose`, and `09.review.spec-consistency` for the planning pipeline (in that order). `06.planning.prepare-execution-plan` checks environment startability and command availability—it is not a spec document producer. `09.review.spec-consistency` is the final planning gate (after `05.feature.decompose`) **and** may be re-run as a pre-implementation gate after `tasks.md` is complete but before `07.execution.dispatch-adapter` begins, to catch contradictions introduced during task slicing.
 - Use `07.execution.dispatch-adapter` for bounded implementation tasks with an approved Feature Spec, design constraints, allowed scope, and verification commands. Before starting implementation, verify that the project constitution (`memory/constitution.md` or equivalent) constraints are respected; flag violations in the task notes rather than silently proceeding.
-- Use `08.test.run-tests` for targeted, regression, browser, build, or acceptance verification.
+- Use `08.test.run-tests` for targeted, regression, browser, build, or acceptance verification; tests must prove behavior obligations, not only entry text, API-seeded state, or command success.
 - Use `09.review.code-diff` for code/spec review findings and delivery-risk reports. When reviewing implementation, check for spec drift—behavior that diverges from `REQ-*` requirements—and report it as a finding alongside code quality issues.
+- Use `09.review.test-coverage` and `09.review.evidence-completeness` when delivery confidence depends on test semantics, artifact evidence, Delivery Fidelity, or independent review.
 - Use `10.change.update-mainline-spec` when an **existing** requirement ID must be changed, corrected, deprecated, or superseded. Use `10.change.create-request` when a brand-new requirement with a new stable ID must be added. When uncertain which applies, check: if a target ID already exists, use `10.change.update-mainline-spec`; if no target ID exists yet, use `10.change.create-request`.
 - Use `10.change.classify` as the governed entry point when the request is an add-or-change requirement flow or when routing between requirement intake and spec evolution is uncertain.
 - Use `14.release.prepare-pr` only after implementation, tests, and review are complete.

@@ -175,6 +175,7 @@ export type FeatureAggregationInput = {
   tasks: Pick<TaskGraphTask, "taskId" | "status">[];
   acceptancePassed: boolean;
   journeyClosurePassed: boolean;
+  deliveryFidelityPassed: boolean;
   gitDeliveryPassed: boolean;
   specAlignmentPassed: boolean;
   requiredTestsPassed: boolean;
@@ -426,12 +427,12 @@ export function aggregateFeatureStatus(input: FeatureAggregationInput): { status
     };
   }
   if (input.tasks.every((task) => task.status === "done" || task.status === "delivered")) {
-    if (input.acceptancePassed && input.journeyClosurePassed && input.gitDeliveryPassed && input.specAlignmentPassed && input.requiredTestsPassed) {
-      return { status: "done", reason: "Tasks, acceptance, Journey Closure Gate, Git Delivery Gate, spec alignment, and required tests are complete." };
+    if (input.acceptancePassed && input.journeyClosurePassed && input.deliveryFidelityPassed && input.gitDeliveryPassed && input.specAlignmentPassed && input.requiredTestsPassed) {
+      return { status: "done", reason: "Tasks, acceptance, Journey Closure Gate, Delivery Fidelity Gate, Git Delivery Gate, spec alignment, and required tests are complete." };
     }
     return {
       status: "review_needed",
-      reason: "Done is gated by acceptance, Journey Closure Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
+      reason: "Done is gated by acceptance, Journey Closure Gate, Delivery Fidelity Gate, Git Delivery Gate, Spec Alignment Check, and required tests.",
       reviewNeededReason: input.reviewNeededReason ?? "clarification_needed",
     };
   }

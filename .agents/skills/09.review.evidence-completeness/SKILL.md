@@ -7,7 +7,9 @@ description: "Execute the Agentic Spec 09 review workflow for evidence completen
 
 ## Purpose
 
-Use this skill to perform the Agentic Spec `09` `review` workflow step for `evidence-completeness`. Keep the workflow reusable across Agentic Spec projects and avoid product-specific assumptions.
+Use this skill to decide whether evidence is complete enough to support a
+delivery decision across the full Define -> Plan -> Build -> Verify -> Review
+-> Ship lifecycle.
 
 ## When to Use
 
@@ -23,11 +25,17 @@ Read only the artifacts needed for the request, preferring references over copie
 
 ## Workflow
 
-1. Confirm the requested action and identify the relevant Agentic Spec phase, object, and state.
-2. Read the minimum source references needed to make the result traceable.
-3. Produce the requested workflow result, preserving existing IDs, states, and evidence links unless the invocation explicitly asks for a change.
-4. Record assumptions, blockers, and follow-up actions in the output instead of inventing missing facts.
-5. Keep implementation-specific details out of the skill unless they are passed as constraints or evidence.
+1. Read source intent, requirements, Feature Spec, execution result, tests,
+   logs, screenshots/traces, review findings, Git delivery evidence, and the
+   Delivery Fidelity Ledger.
+2. Confirm every source intent and behavior obligation has an evidence row with
+   a source, status, covers list, and artifact refs.
+3. Confirm every handoff preserved obligations or recorded a closed/deferred
+   loss.
+4. Confirm independent Test/QA/Review/Release evidence exists for completed
+   feature execution.
+5. Return `review_needed` for missing artifact refs, self-review-only closure,
+   fixture-only evidence, entry/text-only evidence, or open P0/P1 losses.
 
 ## Output Contract
 
@@ -38,4 +46,6 @@ Return the project-local `SkillOutputContractV1` when invoked by an adapter. Ech
 - The output is traceable to the referenced Agentic Spec artifacts.
 - The result stays within the `09` `review` boundary.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
+- Evidence proves behavior obligations and delivery handoffs, not only file
+  edits, test command success, commit creation, or PR existence.
 - No product-specific UI, database, scheduler, or adapter behavior is hardcoded into the skill.

@@ -8,9 +8,9 @@ description: "Implement bounded coding tasks through Codex. Use when a scheduled
 ## Purpose
 
 Implement bounded Feature Spec work and collect implementation, verification,
-delivery, requirement, acceptance, and journey evidence. This skill does not
-own the final product-completion verdict; `09.review.journey-closure` is the
-independent closure gate.
+delivery, requirement, acceptance, journey, and Delivery Fidelity evidence. This
+skill does not own the final product-completion verdict; independent test,
+journey, evidence, code, and release reviews must be recorded before completion.
 
 ## Use When
 
@@ -24,6 +24,8 @@ repository context to modify code safely.
 - Do not return `completed` for evidence-only, report-only, API-only,
   ViewModel-only, or mock-test-only work when the Feature contains a user-facing
   journey.
+- Do not use seed data, API fixtures, or page-entry checks as substitutes for
+  the behavior under test.
 - Do not treat commit, PR, task status, or tests alone as final product closure.
 
 Use this skill for implementation tasks after planning and scheduling. The skill
@@ -68,8 +70,9 @@ Before editing, the mainline agent must:
 
 - Inspect repository state and preserve unrelated changes.
 - Complete requirements and design review gates.
-- Build a feature execution ledger covering every planned task, owner, owned
-  files, status, verification evidence, and blocking risk.
+- Build a Delivery Fidelity Ledger covering source intent, journeys, behavior
+  obligations, handoffs, losses, evidence, agent reviews, every planned task,
+  owner, owned files, status, verification evidence, and blocking risk.
 - Assign disjoint file scopes before starting worker subagents.
 
 Delegate only bounded work:
@@ -129,6 +132,13 @@ combined diff, and delivers one explainable PR for the Feature.
   `requirementCoverage`, `acceptanceEvidence`, and `journeyEvidence`, or a valid
   `foundationExemption` with downstream closure Features and integration
   evidence.
+- Do not return `completed` unless `contractVersion` is `skill-contract/v2` and
+  `result.deliveryFidelity` proves Define -> Plan -> Build -> Verify -> Review
+  -> Ship preserved the Feature's behavior obligations.
+- Do not return `completed` with any open P0/P1 loss. P2 losses must be closed,
+  accepted, or explicitly deferred with a responsible owner and evidence.
+- Do not let the implementation agent self-close delivery. Record independent
+  Test Engineer, Browser QA, Code Reviewer, or Release Reviewer evidence.
 - Do not put `requirementCoverage`, `acceptanceEvidence`, or `journeyEvidence`
   only inside `details`, `items`, report prose, or produced artifact summaries.
   They must be direct structured arrays on `result` so the Journey Closure Gate
@@ -169,17 +179,21 @@ At finalization:
    - Task execution ambiguity: add or update a dedicated clarification and decision section in the relevant `tasks.md` or delivery notes.
    Record the chosen option, rationale, rejected alternatives, traceability IDs, and residual risk. If the decision needs user approval, do not auto-decide; return `clarification_needed`.
 6. Create an implementation plan before editing. The plan must name the intended file scope, code path, test plan, review focus, traceability IDs, subagent delegation plan, and ledger entries for every planned task. Stop with `risk_review_needed` if the plan exceeds approved scope.
-7. Inspect current files before editing and preserve unrelated user changes.
-8. Delegate bounded exploration or implementation work when it can reduce main-thread context or run safely in parallel. Keep ownership scopes disjoint and update the ledger after every subagent result.
-9. Implement the smallest change that satisfies the task and local patterns, either directly in the owner thread or through scoped worker subagents.
-10. Integrate worker outputs in the owner thread, inspect the combined diff, and confirm every changed file is within the approved file scope.
-11. Run code review before test execution. Review the scoped diff for correctness, spec drift, architecture violations, missed edge cases, security risks, and test gaps. Use review subagents when useful, but the mainline agent must decide and record the final review outcome.
-12. Fix required code review findings before running the test flow. If a finding requires requirement or design changes, route through clarification, risk review, or spec evolution before continuing.
-13. Add or update focused tests when behavior, contracts, state, or user-visible UI changes.
-14. Run targeted verification and capture command results. Use verification subagents only to analyze failures or propose focused recovery; final acceptance evidence must be confirmed by the mainline agent.
-15. Map implemented work to Journey Checkpoints. For each P1 user story covered by the Feature, capture runtime evidence that the user-visible scenario works. For UI-bearing Features, this means browser-level or equivalent interaction evidence; API, ViewModel, schema, or mock tests are supporting evidence only.
-16. If the Feature is foundation-only, populate `foundationExemption` with the reason, downstream closure Features, and integration evidence. Do not invent an exemption for a user-facing Feature.
-17. After verification passes and the ledger shows every completed task as implemented, reviewed, and verified, synchronize the implemented Feature Spec tasks in `docs/features/<feature-id>/tasks.md` using the existing task block structure. The task file must remain parseable by the Feature Spec Webview task parser (`parseFeatureTasksMarkdown()` in `src/specdrive-ide.ts`) because Feature item task completion counts depend on the parsed task IDs and statuses. Each implemented task must have a parser-compatible heading ID such as `T-001-01`, `T-021-12`, or `TASK-001`, plus a standalone `状态:` or `Status:` line. If the source task file uses compact legacy rows such as `- T001-01: ... Requirements: ... Verification: ...`, first normalize the affected rows into task blocks and normalize IDs to the generated parseable form, for example `T001-01` -> `T-001-01`.
+7. Create the Delivery Fidelity Ledger before editing. Convert source intent and
+   user/system journeys into behavior obligations. For each planned handoff,
+   record what must be preserved and what evidence will close it.
+8. Inspect current files before editing and preserve unrelated user changes.
+9. Delegate bounded exploration or implementation work when it can reduce main-thread context or run safely in parallel. Keep ownership scopes disjoint and update the ledger after every subagent result.
+10. Implement the smallest change that satisfies the task and local patterns, either directly in the owner thread or through scoped worker subagents.
+11. Integrate worker outputs in the owner thread, inspect the combined diff, and confirm every changed file is within the approved file scope.
+12. Run code review before test execution. Review the scoped diff for correctness, spec drift, architecture violations, missed edge cases, security risks, and test gaps. Use review subagents when useful, but the mainline agent must decide and record the final review outcome.
+13. Fix required code review findings before running the test flow. If a finding requires requirement or design changes, route through clarification, risk review, or spec evolution before continuing.
+14. Add or update focused tests when behavior, contracts, state, or user-visible UI changes.
+15. Run targeted verification and capture command results. Use verification subagents only to analyze failures or propose focused recovery; final acceptance evidence must be confirmed by the mainline agent.
+16. Map implemented work to Journey Checkpoints. For each P1 user story covered by the Feature, capture runtime evidence that the user-visible scenario works. For UI-bearing Features, this means browser-level or equivalent interaction evidence; API, ViewModel, schema, or mock tests are supporting evidence only.
+17. Update `result.deliveryFidelity`: close handoffs, attach behavior-obligation evidence, record any losses, and add independent test/QA/review/release decisions. API fixtures may appear only as precondition evidence; never as the sole behavior proof.
+18. If the Feature is foundation-only, populate `foundationExemption` with the reason, downstream closure Features, and integration evidence. Do not invent an exemption for a user-facing Feature.
+19. After verification passes and the ledger shows every completed task as implemented, reviewed, and verified, synchronize the implemented Feature Spec tasks in `docs/features/<feature-id>/tasks.md` using the existing task block structure. The task file must remain parseable by the Feature Spec Webview task parser (`parseFeatureTasksMarkdown()` in `src/specdrive-ide.ts`) because Feature item task completion counts depend on the parsed task IDs and statuses. Each implemented task must have a parser-compatible heading ID such as `T-001-01`, `T-021-12`, or `TASK-001`, plus a standalone `状态:` or `Status:` line. If the source task file uses compact legacy rows such as `- T001-01: ... Requirements: ... Verification: ...`, first normalize the affected rows into task blocks and normalize IDs to the generated parseable form, for example `T001-01` -> `T-001-01`.
     For each completed task, update its `状态:` or `Status:` line from `todo`, `pending`, `in_progress`, `blocked`, or another non-terminal pending value to `done`. Preserve or recreate the surrounding heading and fields, for example:
     ```md
     ### T-001-01 Task title
@@ -191,13 +205,13 @@ At finalization:
     完成标准: ...
     ```
     Do not mark a task `done` when implementation is blocked, verification fails, or the task was not actually completed. If a task file already defines an explicit blocked-status convention, follow that convention for blocked work; otherwise leave the existing task status unchanged and report the blocker in the skill output.
-18. Inspect run usage artifacts for token/cost observation and record parent-run and subagent visibility in `subagentUsageSummary`.
-19. Confirm the implementation checkout, whether sibling worktree or fallback branch in `workspaceRoot`, contains only scoped changes intended for this task, then commit them on the feature branch with a narrow Conventional Commit message.
-20. Use `gh` for GitHub delivery: authenticate or report the blocker, push/set upstream as needed, create a pull request with traceability, changed files, verification results, deviations, and residual risks, then record the PR URL.
-21. Use `gh pr checks` or the configured equivalent to inspect required checks. If checks or required reviews are pending or failing, stop with `approval_needed`, `review_needed`, or `blocked` instead of claiming delivery is complete.
-22. Use `gh pr merge` only after required checks/reviews pass and project policy allows merge.
-23. After the PR is merged, delete the remote feature branch through `gh` or the PR merge cleanup option when available. Delete the local feature branch only when policy allows and only after confirming no uncommitted changes remain. If a sibling worktree was created, remove it after confirming it is clean.
-24. Report any deviations, blockers, cleanup failures, missing commit evidence, missing PR evidence, token visibility gaps, missing Journey Checkpoint evidence, or required spec evolution.
+20. Inspect run usage artifacts for token/cost observation and record parent-run and subagent visibility in `subagentUsageSummary`.
+21. Confirm the implementation checkout, whether sibling worktree or fallback branch in `workspaceRoot`, contains only scoped changes intended for this task, then commit them on the feature branch with a narrow Conventional Commit message.
+22. Use `gh` for GitHub delivery: authenticate or report the blocker, push/set upstream as needed, create a pull request with traceability, changed files, verification results, deviations, and residual risks, then record the PR URL.
+23. Use `gh pr checks` or the configured equivalent to inspect required checks. If checks or required reviews are pending or failing, stop with `approval_needed`, `review_needed`, or `blocked` instead of claiming delivery is complete.
+24. Use `gh pr merge` only after required checks/reviews pass and project policy allows merge.
+25. After the PR is merged, delete the remote feature branch through `gh` or the PR merge cleanup option when available. Delete the local feature branch only when policy allows and only after confirming no uncommitted changes remain. If a sibling worktree was created, remove it after confirming it is clean.
+26. Report any deviations, blockers, cleanup failures, missing commit evidence, missing PR evidence, token visibility gaps, missing Journey Checkpoint evidence, unclosed Delivery Fidelity losses, or required spec evolution.
 
 ## Review Gates
 

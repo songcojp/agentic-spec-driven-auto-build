@@ -27,6 +27,7 @@
 | FEAT-020 | IDE Diagnostics and UX Refinement | `feat-020-ide-diagnostics-ux` | done | REQ-083 | M8 | FEAT-016、FEAT-017、FEAT-019 |
 | FEAT-021 | IDE Workbench Webviews | `feat-021-ide-execution-webview` | done / execution-preference-followup | REQ-084、REQ-086 | M8 | FEAT-016、FEAT-019、FEAT-020 |
 | FEAT-022 | IDE System Settings Webview | `feat-022-ide-system-settings-webview` | done / execution-preference-followup | REQ-085、REQ-086 | M8 | FEAT-016、FEAT-018、FEAT-021 |
+| FEAT-023 | Full Lifecycle Delivery Fidelity | `feat-023-full-lifecycle-delivery-fidelity` | in-progress | REQ-087 至 REQ-091 | M9 | FEAT-002、FEAT-004、FEAT-008、FEAT-011、FEAT-012 |
 
 FEAT-013 当前补充 Execution Adapter / Scheduler UI refinement：任务调度中心已改为执行队列视图，主列表展示 `scheduler_job_records` 中的 `cli.run` / 后续 `rpc.run` Job，并下钻到 Execution Record、payload context、执行结果 和日志。旧 `feature.select -> feature.plan -> cli.run` 流水线卡片已废弃；Feature 级编码执行由 `07.execution.dispatch-adapter` 直接读取 Feature Spec 目录中的 `requirements.md`、`design.md`、`tasks.md`，不再依赖平台 `task_graph_tasks` / `tasks` 表。
 
@@ -34,7 +35,9 @@ FEAT-013 当前补充 Execution Adapter / Scheduler UI refinement：任务调度
 
 2026-05-03 update：自主执行下一 Feature 选择由 `06.planning.replan` 负责推理，输入为 Feature Pool Queue、Feature index、Feature `spec-state.json`、依赖完成情况、最近 Execution Record 和 resume/skip hints。Control Plane 只执行通过队列、三件套、依赖、resume 和 active execution 安全校验的选择，并把 CLI/app-server 的 `approval_needed`、`blocked`、`review_needed`、`failed` 投影到 Feature `spec-state.json` 和 Execution Workbench。独立 `push_feature_spec_pool` 步骤已废弃，项目级 `schedule_run` 和 `start_auto_run` 直接承担 Feature 选择与入队执行。
 
-2026-05-03 adapter redesign：执行层不再使用 Runner 作为核心概念，统一改为 Execution Adapter Layer。FEAT-008 是 CLI Adapter 迁移来源，负责 `cli.run`、Codex CLI、Gemini CLI 和本机进程执行；FEAT-018 是 RPC Adapter 迁移来源，负责 `rpc.run`、Codex RPC、HTTP/JSON-RPC/WebSocket 远程执行。迁移顺序为先落 `ExecutionAdapterConfigV1` / `ExecutionAdapterInvocationV1` / `ExecutionAdapterEventV1` / `ExecutionAdapterResultV1` 接口，再迁移 Codex CLI provider，再迁移 Codex RPC provider，最后清理 UI、数据库兼容字段和历史命名。
+2026-05-03 adapter redesign：执行层不再使用 Runner 作为核心概念，统一改为 Execution Adapter Layer。FEAT-008 是 CLI Adapter 迁移来源，负责 `cli.run`、Codex CLI、Gemini CLI、Claude Code CLI 和本机进程执行；FEAT-018 是 RPC Adapter 迁移来源，负责 `rpc.run`、Codex RPC、HTTP/JSON-RPC/WebSocket 远程执行。迁移顺序为先落 `ExecutionAdapterConfigV1` / `ExecutionAdapterInvocationV1` / `ExecutionAdapterEventV1` / `ExecutionAdapterResultV1` 接口，再迁移 Codex CLI provider，再迁移 Codex RPC provider，最后清理 UI、数据库兼容字段和历史命名。
+
+2026-05-11 delivery fidelity update：FEAT-023 将 Agentic Spec 从“编号阶段 + 最终 gate”升级为 lifecycle-first 的 Delivery Lifecycle OS。Define、Plan、Build、Verify、Review、Ship 每个 handoff 都必须保留 source intent、journey、behavior obligation、loss、evidence 和 independent review；`feature_execution` completed 输出必须使用 `skill-contract/v2` 和 `result.deliveryFidelity`。
 
 ## Dependency Tree
 
@@ -75,6 +78,8 @@ FEAT-000 System Bootstrap
         │           (also requires FEAT-017)
         │           └── FEAT-021 IDE Workbench Webviews
         │               └── FEAT-022 IDE System Settings Webview
+        └── FEAT-023 Full Lifecycle Delivery Fidelity
+            (also requires FEAT-002, FEAT-008, FEAT-011, FEAT-012)
 ```
 
 ### Direct Dependencies
@@ -104,6 +109,7 @@ FEAT-000 System Bootstrap
 | FEAT-020 | FEAT-016、FEAT-017、FEAT-019 |
 | FEAT-021 | FEAT-016、FEAT-019、FEAT-020 |
 | FEAT-022 | FEAT-016、FEAT-018、FEAT-021 |
+| FEAT-023 | FEAT-002、FEAT-004、FEAT-008、FEAT-011、FEAT-012 |
 
 ## Delivery Order
 
@@ -117,6 +123,7 @@ FEAT-000 System Bootstrap
 8. FEAT-013 exposes the operational surfaces over the control-plane state.
 9. FEAT-016 to FEAT-020 add the VSCode IDE surface, RPC Adapter for Codex RPC, IDE execution loop, and diagnostics refinement after Product Console and Execution Adapter foundations exist.
 10. FEAT-021 adds independent VSCode Webview Web UIs for Execution Workbench, Spec Workspace, and Feature Spec; they must not reuse Product Console pages, routes, navigation, App Shell, or component implementation.
+11. FEAT-023 upgrades autonomous delivery to lifecycle-first Delivery Fidelity across skills, contracts, review routing, and Feature aggregation.
 
 ## Spec Evolution Notes
 
@@ -136,6 +143,7 @@ FEAT-000 System Bootstrap
 | ADD-006 | FEAT-008 / FEAT-013 | CLI 调用升级为 CLI Adapter；adapter 配置以 JSON 为唯一事实源，并通过 Product Console 系统设置中的 JSON 表单直接编辑、dry-run 校验和启用；Execution Console 只展示配置健康摘要和跳转入口。 | 已执行 FEAT-008 `TASK-009` 至 `TASK-012`（CLI Adapter 配置持久化、dry-run 校验、Execution Adapter 阶段阻断路径、通过单测验证）；已执行 FEAT-013 `TASK-029` 至 `TASK-032`（System Settings 页面、CLI 配置页、JSON 编辑器 + 表单编辑器、受控命令 dry-run / 保存草稿 / 启用 / 禁用）；FEAT-013 `TASK-033` 浏览器级验证待执行。 |
 | ADD-008 | FEAT-008 / FEAT-013 | CLI Adapter 增加 Google Gemini CLI 支持；`codex-cli` 仍为默认 preset，`gemini-cli` 可在 System Settings 中加载、编辑、dry-run 并启用。Gemini CLI 通过 headless JSON/JSONL 输出接入，仍以 SkillOutputContractV1 作为 SpecDrive 执行契约。 | 当前 patch 增加内置 `gemini-cli` preset、provider-neutral session/response 解析、Settings preset UI 和 adapter/scheduler/console 单测；不新增数据库表或 schema migration。 |
 | ADD-009 | FEAT-008 / FEAT-022 | CLI Adapter 增加 Claude Code CLI 支持；`claude-cli` 作为内置可选 preset，可在 Product Console 与 VSCode System Settings 中加载、编辑、dry-run 并启用。Claude Code CLI 通过 `claude -p --output-format json --json-schema` 接入，并从 `structured_output` 提取 SkillOutputContractV1。 | 当前 patch 增加内置 `claude-cli` preset、完整 stdout JSON 解析、structured output 提取、Settings preset UI 和 adapter/scheduler/console 单测；不新增数据库表或 schema migration。 |
+| ADD-010 | FEAT-023 | Agentic delivery 升级为 lifecycle-first Delivery Fidelity；`feature_execution` completed 使用 `skill-contract/v2` 和 `result.deliveryFidelity`，Review Center 投影 quality loss。 | 当前 patch 增加 `using-agent-skills`、Delivery Fidelity Gate、质量损失 trigger、Feature Aggregator gate 和 FEAT-023 Feature Spec。 |
 | CHG-017 | FEAT-008 / FEAT-013 | 实现过程发现 Execution Adapter Queue Worker 在 `cli_adapter_configs` 表非空但无 active row 时不阻断新 Run，且 SettingsPage 缺少 `disable_cli_adapter_config` 按鈕。 | 已在 `src/scheduler.ts` `loadRunnerTaskContext` 补充适配器数龐查询并添加阻断逻辑；已在 SettingsPage 添加禁用按鈕；已补充 CLI Adapter 校验、normalize 和阻断行为单测；全部 298 测试通过。 |
 | CHG-015 | FEAT-004 / FEAT-008 / FEAT-013 / FEAT-014 | 调度系统升级为 BullMQ + Redis；SQLite 仍是业务事实源。当前模型由 CHG-018 收敛为 `<executor>.run` Job + Execution Record，`run_board_tasks` / Spec 操作入队 `cli.run` 后由 Worker 执行。 | 已执行 FEAT-004、FEAT-008、FEAT-013、FEAT-014 scheduler job / execution record 持久化与控制台展示。 |
 | CHG-016 | FEAT-004 / FEAT-008 / FEAT-013 | Product Console / Spec 操作转换为 CLI skill invocation contract，并通过 active CLI Adapter 在当前项目 workspace 中调用编码 CLI；平台不恢复 Skill Registry 或 Skill Center。 | 已执行 FEAT-004 `TASK-017`、FEAT-008 `TASK-014` 至 `TASK-016`、FEAT-013 `TASK-035` 至 `TASK-036`。 |

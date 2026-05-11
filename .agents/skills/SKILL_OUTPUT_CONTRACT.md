@@ -1,10 +1,10 @@
-# SkillOutputContractV1
+# SkillOutputContractV1 / V2
 
-Project-local skills may stream `SkillOutputContractV1` JSON objects while invoked by the Scheduler, CLI Adapter, RPC Adapter, or Execution Workbench. The final result must be the last valid `SkillOutputContractV1` object in the stream.
+Project-local skills may stream `SkillOutputContractV1` or `SkillOutputContractV2` JSON objects while invoked by the Scheduler, CLI Adapter, RPC Adapter, or Execution Workbench. The final result must be the last valid Skill output contract object in the stream.
 
 The common contract is optimized for the Execution Workbench display:
 
-- `contractVersion`: always `"skill-contract/v1"`.
+- `contractVersion`: `"skill-contract/v1"` for legacy and non-feature workflow outputs; `"skill-contract/v2"` for completed `feature_execution` outputs.
 - `executionId`: echo the invocation `executionId`.
 - `skillSlug`: echo the invocation `skillSlug`.
 - `requestedAction`: echo the invocation `requestedAction`.
@@ -25,17 +25,44 @@ checkpoints, test commands, screenshots, PR links, and review decisions belong
 in the skill-specific `result` object or produced artifact summaries.
 
 For `07.execution.dispatch-adapter` with `requestedAction =
-"feature_execution"`, `status = "completed"` is valid only when `result`
-contains all of the following closure evidence:
+"feature_execution"`, `status = "completed"` is valid only with
+`contractVersion = "skill-contract/v2"` and when `result` contains all of the
+following closure evidence:
 
 - `requirementCoverage`: non-empty coverage rows for the implemented
   requirements.
 - `acceptanceEvidence`: non-empty acceptance scenario evidence.
 - `journeyEvidence`: non-empty user story or Journey Checkpoint evidence.
+- `deliveryFidelity`: the Delivery Fidelity Ledger that proves the Feature kept
+  product intent intact through Define, Plan, Build, Verify, Review, and Ship.
 - `gitDelivery`: Feature Git lifecycle evidence, including owner workspace,
   implementation workspace or approved fallback, worktree, branch, commit hash,
   PR URL, checks, merge, remote branch cleanup, local branch cleanup, and
   worktree cleanup.
+
+`deliveryFidelity` is not a final quality badge. It is a chain-of-custody record
+for software intent. It must include:
+
+- `sourceIntent`: PRD, requirement, review, or operator intent that entered the
+  workflow.
+- `journeys`: user or system journeys preserved from source intent.
+- `behaviorObligations`: executable behavior slices derived from the journeys.
+- `handoffs`: Define -> Plan -> Build -> Verify -> Review -> Ship transitions,
+  including preserved obligations and any losses.
+- `losses`: first-class loss records with type, severity, status, owner, and
+  evidence refs. Loss types are `intent_loss`, `journey_loss`,
+  `interaction_loss`, `state_loss`, `data_loss`, `task_loss`,
+  `implementation_shortcut`, `test_bypass`, `review_gap`, and `delivery_gap`.
+- `evidence`: structured proof rows with evidence type, mode, assertion, source,
+  covered obligations, status, and artifact refs.
+- `agentReviews`: independent Test/QA/Review/Release review rows.
+- `completionDecision`: the final delivery decision and unresolved losses.
+
+Completed feature execution must not have open P0/P1 losses. P2 losses must be
+closed, accepted, or explicitly deferred. API fixtures may prepare preconditions,
+but they cannot satisfy the behavior under test. Entry, text, or page-presence
+assertions alone are not enough to close a behavior obligation. The
+implementation agent cannot be the only reviewer for its own completion.
 
 A foundation-only Feature may omit direct journey evidence only when
 `result.foundationExemption` is present and includes:
@@ -48,8 +75,10 @@ A foundation-only Feature may omit direct journey evidence only when
 Passing tests, creating a commit, opening a PR, or marking tasks done is not by
 itself enough for a completed feature execution. Missing or failed journey
 closure evidence must produce `review_needed` with `journey_not_closed`,
-`acceptance_gap`, or `evidence_missing`. Missing or incomplete Git delivery
-evidence must produce `review_needed`, `approval_needed`, or `blocked` with
+`acceptance_gap`, or `evidence_missing`. Missing Delivery Fidelity evidence must
+produce `review_needed` with `quality_evidence_gap`, `test_semantics_gap`, or
+`journey_bypassed_by_fixture`. Missing or incomplete Git delivery evidence must
+produce `review_needed`, `approval_needed`, or `blocked` with
 `delivery_evidence_missing` or `delivery_not_closed`.
 
 Closure fields must be direct structured arrays on `result`, and `gitDelivery`
@@ -64,7 +93,7 @@ Do not return shorthand JSON such as `{"summary": "...", "status": "...", "evide
 
 ```json
 {
-  "contractVersion": "skill-contract/v1",
+  "contractVersion": "skill-contract/v2",
   "executionId": "<echo invocation.executionId>",
   "skillSlug": "<echo invocation.skillSlug>",
   "requestedAction": "<echo invocation.requestedAction>",
@@ -87,6 +116,21 @@ Do not return shorthand JSON such as `{"summary": "...", "status": "...", "evide
     "requirementCoverage": [],
     "acceptanceEvidence": [],
     "journeyEvidence": [],
+    "deliveryFidelity": {
+      "sourceIntent": [],
+      "journeys": [],
+      "behaviorObligations": [],
+      "handoffs": [],
+      "losses": [],
+      "evidence": [],
+      "agentReviews": [],
+      "completionDecision": {
+        "status": "passed",
+        "reason": "<why delivery is closed>",
+        "decidedBy": "release-reviewer",
+        "unresolvedLosses": []
+      }
+    },
     "gitDelivery": {
       "ownerWorkspace": "<owner checkout>",
       "implementationWorkspace": "<feature worktree or explicit fallback workspace>",

@@ -14,8 +14,11 @@
 
 ## 生命周期视图
 
+Agentic Spec 的主模型是 Define、Plan、Build、Verify、Review、Ship 的 Delivery Lifecycle OS。00-14 Skill 编号保留为内部兼容层；当两者发生张力时，优先保证 lifecycle handoff 中的产品意图、行为义务、证据和损失记录不丢失。
+
 | 阶段 | 主要 Skill | 目的 |
 | --- | --- | --- |
+| 工作流路由 | `using-agent-skills` | 根据任务跨度选择生命周期、项目 Skill 和 Product Interpreter / Requirement Critic / Test Engineer / Reviewer 等 agent persona。 |
 | 项目治理 | `00.intake.generate-project-intake` | 建立项目目标、仓库边界、信任级别、审批规则和受保护路径。 |
 | 需求生成 | `02.requirements.convert-ears` | 将 PRD、PR/RP 或自然语言产品输入拆成可测试的 EARS 需求。 |
 | 需求变更 | `10.change.create-request`, `10.change.update-mainline-spec`, `10.change.impact-analysis` | 处理新增需求、已有需求修订和阻塞性歧义。 |
@@ -30,11 +33,17 @@
 
 所有由 Spec Workspace、Feature Pool 或 Runner 调起的项目级 Skill 均通过 `ExecutionAdapterInvocationV1.skillInstruction` 接收任务指令。Adapter 输入必须包含 `workspaceRoot`、Feature 级上下文、当前 `specState`、traceability、constraints、输出 schema，以及 `skillInstruction` 中的 `skillSlug`、`requestedAction`、`sourcePaths`、`expectedArtifacts` 和可选操作员输入。Skill 不应从数据库推断 Spec 状态。
 
-Skill 输出必须使用 `SkillOutputContractV1`，包含 `status`、`summary`、`nextAction`、`producedArtifacts`、Feature 级 traceability 和 result。Runner 校验输出后将状态投影回 `docs/features/<feature-id>/spec-state.json`，同时把执行事实保存在 Execution Record、scheduler job、runner heartbeats 和 raw logs 中。`queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`completed` 必须原样进入运行事实；`approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 等中断态必须带可恢复的 `resumeTarget` 或 Review/Recovery 路由。通用输出 Contract 的机器真源在调用端 schema；项目级 Skill 文档只补充本技能 `result` 的专用字段语义，供 Execution Workbench 分组展示执行详情。
+Skill 输出必须使用 `SkillOutputContractV1` 或 `SkillOutputContractV2`，包含 `status`、`summary`、`nextAction`、`producedArtifacts`、Feature 级 traceability 和 result。Runner 校验输出后将状态投影回 `docs/features/<feature-id>/spec-state.json`，同时把执行事实保存在 Execution Record、scheduler job、runner heartbeats 和 raw logs 中。`queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`completed` 必须原样进入运行事实；`approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 等中断态必须带可恢复的 `resumeTarget` 或 Review/Recovery 路由。通用输出 Contract 的机器真源在调用端 schema；项目级 Skill 文档只补充本技能 `result` 的专用字段语义，供 Execution Workbench 分组展示执行详情。
 
-Feature execution 的 Git 生命周期属于 Skill result 专用语义：`07.execution.dispatch-adapter` 返回 `completed` 时必须在 `result.gitDelivery` 中提供 owner workspace、implementation worktree、branch、commit、PR、checks、merge、远程分支清理、本地分支清理和 worktree 清理证据。平台代码只调度、记录、校验和展示这些证据；缺少证据时投影为 `review_needed`、`approval_needed` 或 `blocked`。
+Feature execution 的完成语义使用 `skill-contract/v2`：`07.execution.dispatch-adapter` 返回 `completed` 时必须在 `result.deliveryFidelity` 中提供 sourceIntent、journeys、behaviorObligations、handoffs、losses、evidence、agentReviews 和 completionDecision，并在 `result.gitDelivery` 中提供 owner workspace、implementation worktree、branch、commit、PR、checks、merge、远程分支清理、本地分支清理和 worktree 清理证据。平台代码只调度、记录、校验和展示这些证据；缺少证据、存在未关闭 P0/P1 loss、fixture-only evidence、entry/text-only evidence 或 self-review-only closure 时投影为 `review_needed`、`approval_needed` 或 `blocked`。
 
 ## Skill 清单
+
+### 元技能与工作流路由
+
+| Skill | 当前内容状态 | 何时使用 | 主要输入 | 主要输出 |
+| --- | --- | --- | --- | --- |
+| `using-agent-skills` | 新增 | 任务跨越需求、规划、实现、验证、评审或交付，需要选择 lifecycle、project skill 和 agent persona 时。 | 用户请求、PRD/requirements/HLD/Feature Spec、当前状态、风险和运行环境。 | Define/Plan/Build/Verify/Review/Ship 路由、agent registry 分工、Delivery Fidelity Ledger 要求、跳过阶段理由。 |
 
 ### 需求与规格类
 
@@ -69,8 +78,8 @@ Feature execution 的 Git 生命周期属于 Skill result 专用语义：`07.exe
 | Skill | 当前内容状态 | 何时使用 | 主要输入 | 主要输出 |
 | --- | --- | --- | --- | --- |
 | `06.planning.replan` | 基础骨架 | 自主执行循环需要从 Feature Pool Queue 中选择下一项可执行 Feature 时。 | `feature-pool-queue.json`、Feature index、各 Feature `spec-state.json`、依赖完成情况、最近 Execution Record、resume/skip hints。 | `select_next_feature` 决策：selected/none/blocked、featureId、reason、blockedReasons、dependencyFindings、resumeRequiredFeatures、skippedFeatures。 |
-| `07.execution.dispatch-adapter` | 基础骨架 | 有已批准 Feature Spec、设计约束、允许文件范围和验证命令的受控实现；Feature 级执行可直接读取 Feature Spec 目录，不要求平台 task 表。 | Feature Spec 目录（`requirements.md`、`design.md`、`tasks.md`）、限制性需求、设计约束、允许文件范围、验证命令。 | 代码/测试/配置/必要文档变更、验证结果、残余风险、`SkillOutputContractV1`。 |
-| `08.test.run-tests` | 基础骨架 | 需要目标测试、回归测试、浏览器测试、构建或验收验证时。 | 任务/Feature 验收标准、仓库测试命令、运行环境。 | 命令结果、失败分类、Status Checker 可消费证据、下一步建议。 |
+| `07.execution.dispatch-adapter` | 中等完整 | 有已批准 Feature Spec、设计约束、允许文件范围和验证命令的受控实现；Feature 级执行可直接读取 Feature Spec 目录，不要求平台 task 表。 | Feature Spec 目录（`requirements.md`、`design.md`、`tasks.md`）、限制性需求、设计约束、允许文件范围、验证命令。 | 代码/测试/配置/必要文档变更、Delivery Fidelity Ledger、Journey/Git closure、验证结果、残余风险、`SkillOutputContractV2`。 |
+| `08.test.run-tests` | 中等完整 | 需要目标测试、回归测试、浏览器测试、构建或验收验证时。 | 任务/Feature 验收标准、behavior obligations、仓库测试命令、运行环境。 | 命令结果、test obligations、失败分类、行为证据、Status Checker 可消费证据、下一步建议。 |
 | `12.recovery.classify-failure` | 基础骨架 | 任务失败、命令失败、状态检查失败或 Runner 报错后，需要受限恢复时。 | 失败类型、失败命令、摘要、相关文件、fingerprint、历史尝试、重试上限。 | 恢复分类、执行动作、变更文件或重试命令、验证证据、剩余重试预算。 |
 
 ### 评审、交付与钩子类
@@ -79,6 +88,8 @@ Feature execution 的 Git 生命周期属于 Skill result 专用语义：`07.exe
 | --- | --- | --- | --- | --- |
 | `09.review.code-diff` | 中等完整 | 需要代码、规格或交付评审结论，尤其需要检查实现是否偏离 `REQ-*` 时。 | diff、requirements、design、tasks、测试证据、Review Center 上下文。 | 阻塞问题、建议项、规格漂移发现、证据引用、审批或修复建议。 |
 | `09.review.journey-closure` | 中等完整 | Feature execution 返回 completed 后，独立判断用户故事、需求、任务、验收场景和证据是否闭环。 | PRD/requirements、UI spec、Feature Spec、执行结果、测试、截图、日志和 Review Item。 | closed/not_closed/exempt 决策、requirementCoverage、journeyEvidence、acceptanceEvidence、缺口原因和修复路由。 |
+| `09.review.test-coverage` | 中等完整 | 需要判断测试是否真实覆盖行为义务，而不是只看命令通过时。 | behavior obligations、测试计划、命令输出、截图/trace/log、Feature Spec。 | coverage decision、test semantics gap、fixture bypass、缺失行为证明和修复路由。 |
+| `09.review.evidence-completeness` | 中等完整 | 需要判断 Delivery Fidelity、Journey、Git 和 artifact evidence 是否足够支持完成决策时。 | Delivery Fidelity Ledger、执行结果、ReviewItem、测试和交付证据。 | evidence completeness decision、缺失 artifact、open loss、self-review-only closure 和 recommended actions。 |
 | `14.release.prepare-pr` | 基础骨架 | 实现、测试、评审完成后，需要提交、推送和创建 PR 时。 | 干净的目标 diff、Feature/任务范围、验证证据、远端配置。 | commit hash、分支、PR URL 或失败证据、交付说明。 |
 | `07.execution.update-state` | 中等完整 | 生命周期状态变化只需要执行一个确定的副作用时。 | 触发事件、当前状态、目标副作用、相关证据。 | 触发事件、已执行副作用、幂等键或重复处理说明、失败路由。 |
 
@@ -119,13 +130,16 @@ Feature execution 的 Git 生命周期属于 Skill result 专用语义：`07.exe
 
 ### 已规划任务进入编码交付
 
-1. `07.execution.dispatch-adapter`
-2. `08.test.run-tests`
-3. `12.recovery.classify-failure`，仅当验证失败且允许恢复。
-4. `09.review.code-diff`
-5. `09.review.journey-closure`
-6. `14.release.prepare-pr`
-7. `07.execution.update-state`，用于状态更新、证据挂载、审计记录或最终快照。
+1. `using-agent-skills`
+2. `07.execution.dispatch-adapter`
+3. `08.test.run-tests`
+4. `12.recovery.classify-failure`，仅当验证失败且允许恢复。
+5. `09.review.code-diff`
+6. `09.review.test-coverage`
+7. `09.review.evidence-completeness`
+8. `09.review.journey-closure`
+9. `14.release.prepare-pr`
+10. `07.execution.update-state`，用于状态更新、证据挂载、审计记录或最终快照。
 
 ## 当前补充优先级
 
@@ -140,10 +154,12 @@ Feature execution 的 Git 生命周期属于 Skill result 专用语义：`07.exe
 7. `06.planning.prepare-execution-plan`
 8. `07.execution.dispatch-adapter`
 9. `08.test.run-tests`
-10. `12.recovery.classify-failure`
-11. `14.release.prepare-pr`
-12. `00.intake.collect-context`
-13. `00.intake.generate-project-intake`
+10. `09.review.test-coverage`
+11. `09.review.evidence-completeness`
+12. `12.recovery.classify-failure`
+13. `14.release.prepare-pr`
+14. `00.intake.collect-context`
+15. `00.intake.generate-project-intake`
 
 优先补充顺序建议遵循执行风险：先补规划和一致性检查类，再补编码、测试和交付类。这样可以先把“什么应该被做、什么不能被做”固定下来，再让执行类 Skill 消费这些边界。
 

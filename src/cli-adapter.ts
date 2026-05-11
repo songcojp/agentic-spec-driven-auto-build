@@ -335,7 +335,7 @@ export type SkillOutputArtifact = {
 };
 
 export type SkillOutputContract = {
-  contractVersion: "skill-contract/v1";
+  contractVersion: "skill-contract/v1" | "skill-contract/v2";
   executionId: string;
   skillSlug: string;
   requestedAction: string;
@@ -355,6 +355,12 @@ export type SkillContractValidationResult = {
 export type JourneyClosureGate = {
   passed: boolean;
   reason?: "journey_not_closed" | "acceptance_gap" | "evidence_missing";
+  details: string[];
+};
+
+export type DeliveryFidelityGate = {
+  passed: boolean;
+  reason?: "quality_evidence_gap" | "test_semantics_gap" | "journey_bypassed_by_fixture";
   details: string[];
 };
 
@@ -620,6 +626,7 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
     "requirementCoverage",
     "acceptanceEvidence",
     "journeyEvidence",
+    "deliveryFidelity",
     "foundationExemption",
     "verification",
     "tasks",
@@ -673,6 +680,154 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
           scenario: { type: "string" },
           status: { type: "string" },
           evidence: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    deliveryFidelity: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "sourceIntent",
+        "journeys",
+        "behaviorObligations",
+        "handoffs",
+        "losses",
+        "evidence",
+        "agentReviews",
+        "completionDecision",
+      ],
+      properties: {
+        sourceIntent: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "summary", "sourceRef", "status"],
+            properties: {
+              id: { type: "string" },
+              summary: { type: "string" },
+              sourceRef: { type: "string" },
+              status: { type: "string" },
+            },
+          },
+        },
+        journeys: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "summary", "status", "obligations"],
+            properties: {
+              id: { type: "string" },
+              summary: { type: "string" },
+              status: { type: "string" },
+              obligations: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        behaviorObligations: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "sourceRef", "description", "status", "evidenceRefs"],
+            properties: {
+              id: { type: "string" },
+              sourceRef: { type: "string" },
+              description: { type: "string" },
+              status: { type: "string" },
+              evidenceRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        handoffs: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["from", "to", "preservedObligations", "losses", "status"],
+            properties: {
+              from: { type: "string" },
+              to: { type: "string" },
+              preservedObligations: { type: "array", items: { type: "string" } },
+              losses: { type: "array", items: { type: "string" } },
+              status: { type: "string" },
+            },
+          },
+        },
+        losses: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["type", "severity", "status", "description", "owner", "evidenceRefs"],
+            properties: {
+              type: {
+                type: "string",
+                enum: [
+                  "intent_loss",
+                  "journey_loss",
+                  "interaction_loss",
+                  "state_loss",
+                  "data_loss",
+                  "task_loss",
+                  "implementation_shortcut",
+                  "test_bypass",
+                  "review_gap",
+                  "delivery_gap",
+                ],
+              },
+              severity: { type: "string", enum: ["P0", "P1", "P2", "P3"] },
+              status: { type: "string", enum: ["open", "closed", "deferred", "accepted"] },
+              description: { type: "string" },
+              owner: { type: "string" },
+              evidenceRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        evidence: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "type", "mode", "assertion", "source", "covers", "status", "artifactRefs"],
+            properties: {
+              id: { type: "string" },
+              type: { type: "string" },
+              mode: { type: "string" },
+              assertion: { type: "string" },
+              source: { type: "string" },
+              covers: { type: "array", items: { type: "string" } },
+              status: { type: "string" },
+              artifactRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        agentReviews: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["role", "reviewer", "status", "findings", "evidenceRefs"],
+            properties: {
+              role: { type: "string" },
+              reviewer: { type: "string" },
+              status: { type: "string" },
+              findings: { type: "array", items: { type: "string" } },
+              evidenceRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        completionDecision: {
+          type: "object",
+          additionalProperties: false,
+          required: ["status", "reason", "decidedBy", "unresolvedLosses"],
+          properties: {
+            status: { type: "string" },
+            reason: { type: "string" },
+            decidedBy: { type: "string" },
+            unresolvedLosses: { type: "array", items: { type: "string" } },
+          },
         },
       },
     },
@@ -1145,6 +1300,11 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- Do not satisfy feature_execution by only creating a report JSON file or by only summarizing planned work.",
         "- If the Feature Spec tasks cannot be implemented from the available source paths, return status blocked with the missing decision or file scope.",
         "- producedArtifacts must list the actual code, test, config, or documentation files created or updated while executing the Feature Spec.",
+        "- Completed feature_execution outputs must use contractVersion skill-contract/v2. Use v1 only for legacy non-feature skill outputs.",
+        "- For completed feature_execution, result.deliveryFidelity must carry the Delivery Fidelity Ledger: sourceIntent, journeys, behaviorObligations, handoffs, losses, evidence, agentReviews, and completionDecision.",
+        "- Every handoff must preserve upstream behavior obligations. Any intent_loss, journey_loss, interaction_loss, state_loss, data_loss, task_loss, implementation_shortcut, test_bypass, review_gap, or delivery_gap must be recorded and closed or explicitly deferred.",
+        "- API fixtures may only prepare preconditions; they cannot satisfy the behavior under test. Entry/text/page-presence checks alone are insufficient acceptance evidence.",
+        "- The implementation agent cannot self-close delivery. Include independent Test/QA/Review/Release agent review evidence or return review_needed.",
         "- For completed feature_execution, result must include requirementCoverage, acceptanceEvidence, and journeyEvidence, unless result.foundationExemption explicitly names downstream closure Features and integration evidence.",
         "- For completed feature_execution, result.gitDelivery must include ownerWorkspace, implementationWorkspace, worktree, branch, commitHash, prUrl, checks, merge, remoteBranchCleanup, localBranchCleanup, and worktreeCleanup evidence. If PR, merge, or cleanup cannot complete, return review_needed, approval_needed, or blocked instead of completed.",
         "- Do not hide requirementCoverage, acceptanceEvidence, or journeyEvidence inside details, items, or other prose-only fields; they must be direct structured arrays on result.",
@@ -1459,7 +1619,7 @@ function parseSkillOutputText(text: string | undefined): SkillOutputContract | u
 }
 
 function parseSkillOutputRecord(record: Record<string, unknown> | undefined): SkillOutputContract | undefined {
-  if (!record || record.contractVersion !== "skill-contract/v1") return undefined;
+  if (!record || (record.contractVersion !== "skill-contract/v1" && record.contractVersion !== "skill-contract/v2")) return undefined;
   const status = normalizeQueueStatus(typeof record.status === "string" ? record.status : undefined);
   if (!status) return undefined;
   const traceability = parseTraceabilityContract(record.traceability);
@@ -1475,7 +1635,7 @@ function parseSkillOutputRecord(record: Record<string, unknown> | undefined): Sk
   if (nextAction === undefined) return undefined;
   if (typeof record.result !== "object" || record.result === null || Array.isArray(record.result)) return undefined;
   return {
-    contractVersion: "skill-contract/v1",
+    contractVersion: record.contractVersion,
     executionId: String(record.executionId ?? ""),
     skillSlug: String(record.skillSlug ?? ""),
     requestedAction: String(record.requestedAction ?? ""),
@@ -1529,7 +1689,13 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
   if (typeof output.summary !== "string" || output.summary.trim().length === 0) reasons.push("Skill output summary is required.");
   if (output.nextAction !== null && typeof output.nextAction !== "string") reasons.push("Skill output nextAction must be a string or null.");
   if (typeof output.result !== "object" || output.result === null || Array.isArray(output.result)) reasons.push("Skill output result must be an object.");
-  if (output.contractVersion !== "skill-contract/v1") reasons.push(`Skill output contractVersion mismatch: ${output.contractVersion}.`);
+  const featureExecution = isFeatureExecutionInvocation(invocation, output);
+  if (output.contractVersion !== "skill-contract/v1" && output.contractVersion !== "skill-contract/v2") {
+    reasons.push(`Skill output contractVersion mismatch: ${output.contractVersion}.`);
+  }
+  if (featureExecution && output.status === "completed" && output.contractVersion !== "skill-contract/v2") {
+    reasons.push("Feature execution completed outputs must use skill-contract/v2 with deliveryFidelity.");
+  }
   if (output.executionId !== invocation.executionId) reasons.push(`Skill output executionId mismatch: ${output.executionId}.`);
   if (output.skillSlug !== instruction.skillSlug) reasons.push(`Skill output skillSlug mismatch: ${output.skillSlug}.`);
   if (output.requestedAction !== instruction.requestedAction) reasons.push(`Skill output requestedAction mismatch: ${output.requestedAction}.`);
@@ -1537,6 +1703,10 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
   const journeyClosure = assessJourneyClosureGate(invocation, output);
   if (!journeyClosure.passed) {
     reasons.push(`Journey Closure Gate failed: ${journeyClosure.reason ?? "journey_not_closed"}${journeyClosure.details.length ? ` (${journeyClosure.details.join("; ")})` : ""}.`);
+  }
+  const deliveryFidelity = assessDeliveryFidelityGate(invocation, output);
+  if (!deliveryFidelity.passed) {
+    reasons.push(`Delivery Fidelity Gate failed: ${deliveryFidelity.reason ?? "quality_evidence_gap"}${deliveryFidelity.details.length ? ` (${deliveryFidelity.details.join("; ")})` : ""}.`);
   }
   const gitDelivery = assessGitDeliveryGate(invocation, output);
   if (!gitDelivery.passed) {
@@ -1586,6 +1756,109 @@ export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV
   return { passed: true, details: ["journeyEvidence, acceptanceEvidence, and requirementCoverage passed"] };
 }
 
+export function assessDeliveryFidelityGate(invocation: ExecutionAdapterInvocationV1 | undefined, output: SkillOutputContract | undefined): DeliveryFidelityGate {
+  if (!invocation || !output || output.status !== "completed" || !isFeatureExecutionInvocation(invocation, output)) {
+    return { passed: true, details: [] };
+  }
+  const result = output.result;
+  const deliveryFidelity = result.deliveryFidelity;
+  if (typeof deliveryFidelity !== "object" || deliveryFidelity === null || Array.isArray(deliveryFidelity)) {
+    return { passed: false, reason: "quality_evidence_gap", details: ["deliveryFidelity is required"] };
+  }
+  const ledger = deliveryFidelity as Record<string, unknown>;
+  const missing: string[] = [];
+  const sourceIntent = arrayFromRecordField(ledger, "sourceIntent");
+  const behaviorObligations = arrayFromRecordField(ledger, "behaviorObligations");
+  const handoffs = arrayFromRecordField(ledger, "handoffs");
+  const evidence = arrayFromRecordField(ledger, "evidence");
+  const agentReviews = arrayFromRecordField(ledger, "agentReviews");
+  const losses = arrayFromRecordField(ledger, "losses");
+  if (sourceIntent.length === 0) missing.push("sourceIntent is required");
+  if (behaviorObligations.length === 0) missing.push("behaviorObligations is required");
+  if (handoffs.length === 0) missing.push("handoffs are required");
+  if (evidence.length === 0) missing.push("evidence is required");
+  if (agentReviews.length === 0) missing.push("agentReviews are required");
+  const completionDecision = ledger.completionDecision;
+  if (typeof completionDecision !== "object" || completionDecision === null || Array.isArray(completionDecision)) {
+    missing.push("completionDecision is required");
+  }
+  if (missing.length > 0) {
+    return { passed: false, reason: "quality_evidence_gap", details: missing };
+  }
+
+  const openCriticalLosses = losses
+    .filter(isRecord)
+    .filter((entry) => ["P0", "P1"].includes(String(entry.severity)) && !isClosedLossStatus(entry.status))
+    .map((entry) => `${entry.severity}:${entry.type}`);
+  if (openCriticalLosses.length > 0) {
+    return { passed: false, reason: "quality_evidence_gap", details: openCriticalLosses.map((entry) => `unclosed critical loss ${entry}`) };
+  }
+
+  const openP2Losses = losses
+    .filter(isRecord)
+    .filter((entry) => String(entry.severity) === "P2" && String(entry.status) === "open")
+    .map((entry) => `${entry.severity}:${entry.type}`);
+  if (openP2Losses.length > 0) {
+    return { passed: false, reason: "quality_evidence_gap", details: openP2Losses.map((entry) => `P2 loss must be closed or deferred ${entry}`) };
+  }
+
+  const unverifiedObligations = behaviorObligations
+    .filter(isRecord)
+    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.evidenceRefs))
+    .map((entry) => String(entry.id ?? "unnamed obligation"));
+  if (unverifiedObligations.length > 0) {
+    return { passed: false, reason: "test_semantics_gap", details: unverifiedObligations.map((entry) => `behavior obligation lacks verification evidence: ${entry}`) };
+  }
+
+  const brokenHandoffs = handoffs
+    .filter(isRecord)
+    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.preservedObligations))
+    .map((entry) => `${String(entry.from ?? "unknown")} -> ${String(entry.to ?? "unknown")}`);
+  if (brokenHandoffs.length > 0) {
+    return { passed: false, reason: "quality_evidence_gap", details: brokenHandoffs.map((entry) => `handoff did not preserve obligations: ${entry}`) };
+  }
+
+  const evidenceRecords = evidence.filter(isRecord);
+  const allFixtureOrSeeded = evidenceRecords.length > 0 && evidenceRecords.every((entry) => {
+    const mode = String(entry.mode ?? "").toLowerCase();
+    return mode === "fixture" || mode === "seed" || mode === "seeded" || mode === "seed_fixture";
+  });
+  if (allFixtureOrSeeded) {
+    return { passed: false, reason: "journey_bypassed_by_fixture", details: ["evidence cannot be only seed or fixture based"] };
+  }
+  const allEntryOnly = evidenceRecords.length > 0 && evidenceRecords.every((entry) => {
+    const assertion = String(entry.assertion ?? "").toLowerCase();
+    return assertion.includes("entry") || assertion.includes("text_presence") || assertion.includes("page_presence");
+  });
+  if (allEntryOnly) {
+    return { passed: false, reason: "test_semantics_gap", details: ["evidence cannot only assert entry or text presence"] };
+  }
+  const missingEvidenceArtifacts = evidenceRecords
+    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.covers) || !nonEmptyArray(entry.artifactRefs))
+    .map((entry) => String(entry.id ?? "unnamed evidence"));
+  if (missingEvidenceArtifacts.length > 0) {
+    return { passed: false, reason: "quality_evidence_gap", details: missingEvidenceArtifacts.map((entry) => `evidence row lacks covers/artifacts or did not pass: ${entry}`) };
+  }
+
+  const hasIndependentReview = agentReviews
+    .filter(isRecord)
+    .some((entry) => {
+      const role = String(entry.role ?? "").toLowerCase();
+      return isPassedEvidence(entry)
+        && (role.includes("test") || role.includes("qa") || role.includes("review") || role.includes("release"))
+        && !role.includes("implementation");
+    });
+  if (!hasIndependentReview) {
+    return { passed: false, reason: "quality_evidence_gap", details: ["independent Test/QA/Review/Release agent review is required"] };
+  }
+
+  const decision = completionDecision as Record<string, unknown>;
+  if (!isPassedEvidence(decision) || !nonEmptyString(decision.decidedBy)) {
+    return { passed: false, reason: "quality_evidence_gap", details: ["completionDecision must be passed and name the deciding role"] };
+  }
+  return { passed: true, details: ["deliveryFidelity ledger passed"] };
+}
+
 export function assessGitDeliveryGate(invocation: ExecutionAdapterInvocationV1 | undefined, output: SkillOutputContract | undefined): GitDeliveryGate {
   if (!invocation || !output || output.status !== "completed" || !isFeatureExecutionInvocation(invocation, output)) {
     return { passed: true, details: [] };
@@ -1631,6 +1904,11 @@ function isFeatureExecutionInvocation(invocation: ExecutionAdapterInvocationV1, 
     || output.skillSlug === "07.execution.dispatch-adapter";
 }
 
+function arrayFromRecordField(record: Record<string, unknown>, field: string): unknown[] {
+  const value = record[field];
+  return Array.isArray(value) ? value : [];
+}
+
 function isValidFoundationExemption(value: unknown): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
   const record = value as Record<string, unknown>;
@@ -1645,6 +1923,11 @@ function isValidDeliveryExemption(value: unknown): boolean {
   const record = value as Record<string, unknown>;
   if (record.approved !== true) return false;
   return nonEmptyString(record.reason) && nonEmptyArray(record.evidence);
+}
+
+function isClosedLossStatus(value: unknown): boolean {
+  const status = String(value ?? "").toLowerCase();
+  return status === "closed" || status === "deferred" || status === "accepted";
 }
 
 function isPassedDeliveryStatus(value: unknown): boolean {
@@ -2670,6 +2953,9 @@ function outputSchemaForExecutionInvocation(schema: Record<string, unknown>, inv
   const cloned = JSON.parse(JSON.stringify(schema)) as Record<string, unknown>;
   const properties = cloned.properties;
   if (properties && typeof properties === "object" && !Array.isArray(properties)) {
+    if (invocation?.skillInstruction.skillSlug === "07.execution.dispatch-adapter") {
+      ((properties as Record<string, unknown>).contractVersion as Record<string, unknown>).const = "skill-contract/v2";
+    }
     (properties as Record<string, unknown>).result = invocation?.skillInstruction.skillSlug === "05.feature.decompose"
       ? TASK_SLICING_RESULT_SCHEMA
       : FEATURE_EXECUTION_RESULT_SCHEMA;

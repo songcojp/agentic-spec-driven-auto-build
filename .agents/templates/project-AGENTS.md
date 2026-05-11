@@ -69,13 +69,16 @@ State fact ownership:
 
 ## Spec Workflow
 
-1. Intake or evolve requirements through the skill-owned change protocol.
-2. Update mainline docs first: PRD when product scope changes, then `requirements.md`, then `hld.md` when architecture or system boundaries change.
-3. Sync downstream Feature Specs: update `docs/features/README.md`, affected feature `requirements.md`, `design.md`, `tasks.md`, and feature state notes.
-4. Run consistency checks before planning or implementation consumes changed specs.
-5. Implement only the approved Feature Spec or task scope.
-6. Verify with the smallest meaningful command first, then broader checks when shared behavior, state, persistence, contracts, or UI are affected.
-7. Record evidence, known risks, and follow-up work in the affected Feature Spec or delivery notes.
+Use the Delivery Lifecycle OS as the primary workflow model: Define, Plan,
+Build, Verify, Review, and Ship. The 00-14 skill numbers are an internal
+compatibility layer, not a reason to skip lifecycle responsibilities.
+
+1. Define: intake or evolve requirements through the skill-owned change protocol and preserve source intent, users, non-goals, success examples, and failure examples.
+2. Plan: update mainline docs first, then turn journeys into behavior obligations, Feature Specs, task blocks, test obligations, and handoff expectations.
+3. Build: implement only the approved Feature Spec or task scope and preserve the Delivery Fidelity Ledger.
+4. Verify: prove behavior obligations with the smallest meaningful command first; UI and multi-step flows need browser or equivalent runtime evidence.
+5. Review: independently check code, spec drift, test semantics, evidence completeness, and open losses.
+6. Ship: record PR/merge/cleanup evidence, delivery notes, state projection, known risks, and follow-up work.
 
 ## SpecDrive Workflow Skills
 
@@ -97,6 +100,7 @@ State fact ownership:
 ## Skill Reference
 
 - `10.change.classify`: Triage requirement additions, changes, deprecations, clarifications, traceability fixes, and coverage gaps through the skill-owned change protocol.
+- `using-agent-skills`: Route broad work through Define/Plan/Build/Verify/Review/Ship, local skills, and specialist agent responsibilities.
 - `10.change.create-request`: Add brand-new `REQ-*`, `NFR-*`, or `EDGE-*` requirements with traceability and downstream sync.
 - `10.change.update-mainline-spec`: Change, correct, supersede, deprecate, clarify, or re-trace existing requirements and specs.
 - `10.change.impact-analysis`: Resolve unclear product intent, acceptance criteria, or technical boundaries.
@@ -110,9 +114,11 @@ State fact ownership:
 - `05.feature.decompose`: Split product scope into Feature Specs or executable tasks.
 - `09.review.spec-consistency`: Verify planning outputs agree before implementation.
 - `06.planning.replan`: Select the next executable Feature from queue, dependencies, state, and operator hints.
-- `07.execution.dispatch-adapter`: Implement bounded tasks through Codex while preserving scope and evidence.
-- `08.test.run-tests`: Run and analyze verification commands.
+- `07.execution.dispatch-adapter`: Implement bounded tasks through Codex while preserving scope, Delivery Fidelity, Journey Closure, and Git delivery evidence.
+- `08.test.run-tests`: Run and analyze verification commands against behavior obligations.
 - `09.review.code-diff`: Produce review findings and delivery-risk reports.
+- `09.review.test-coverage`: Review whether tests prove behavior obligations rather than only command success.
+- `09.review.evidence-completeness`: Review Delivery Fidelity, Journey, Git, and artifact evidence before completion.
 - `12.recovery.classify-failure`: Plan bounded recovery for failed tasks.
 - `07.execution.update-state`: Perform deterministic lifecycle side effects for state transitions.
 - `00.intake.generate-project-intake`: Create or update project governance.

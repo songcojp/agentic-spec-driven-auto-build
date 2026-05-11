@@ -122,7 +122,7 @@ function executionInvocation(): ExecutionAdapterInvocationV1 {
 
 function skillOutput(): SkillOutputContract {
   return {
-    contractVersion: "skill-contract/v1",
+    contractVersion: "skill-contract/v2",
     executionId: "RUN-APP",
     skillSlug: "07.execution.dispatch-adapter",
     requestedAction: "feature_execution",
@@ -143,7 +143,34 @@ function validJourneyResult(): Record<string, unknown> {
     requirementCoverage: [{ requirementId: "REQ-VSC-010", status: "passed", evidence: ["tests/gemini-rpc-adapter.test.ts"] }],
     acceptanceEvidence: [{ scenarioId: "AC-GEMINI", status: "passed", evidence: ["Gemini ACP event projection"] }],
     journeyEvidence: [{ userStoryId: "US-GEMINI", scenario: "run feature through Gemini ACP adapter", status: "passed", evidence: ["Gemini ACP event projection"] }],
+    deliveryFidelity: validDeliveryFidelity(),
     gitDelivery: validGitDelivery(),
+  };
+}
+
+function validDeliveryFidelity(): Record<string, unknown> {
+  return {
+    sourceIntent: [{ id: "INTENT-GEMINI", summary: "Run a Feature through the Gemini ACP adapter.", sourceRef: "docs/features/feat-016/requirements.md", status: "preserved" }],
+    journeys: [{ id: "US-GEMINI", summary: "Gemini ACP feature execution", status: "verified", obligations: ["BO-GEMINI"] }],
+    behaviorObligations: [{ id: "BO-GEMINI", sourceRef: "AC-GEMINI", description: "Project Skill output through Gemini ACP into execution result.", status: "verified", evidenceRefs: ["EV-GEMINI"] }],
+    handoffs: [
+      { from: "define", to: "plan", preservedObligations: ["BO-GEMINI"], losses: [], status: "passed" },
+      { from: "build", to: "verify", preservedObligations: ["BO-GEMINI"], losses: [], status: "passed" },
+      { from: "verify", to: "review", preservedObligations: ["BO-GEMINI"], losses: [], status: "passed" },
+    ],
+    losses: [],
+    evidence: [{
+      id: "EV-GEMINI",
+      type: "rpc_event_projection",
+      mode: "no_seed",
+      assertion: "state_change_roundtrip",
+      source: "tests/gemini-rpc-adapter.test.ts",
+      covers: ["BO-GEMINI", "AC-GEMINI", "US-GEMINI"],
+      status: "passed",
+      artifactRefs: ["raw-log://RUN-APP/gemini-acp-events"],
+    }],
+    agentReviews: [{ role: "code-reviewer", reviewer: "independent", status: "passed", findings: [], evidenceRefs: ["EV-GEMINI"] }],
+    completionDecision: { status: "passed", reason: "Gemini ACP projection preserves Skill output and execution result.", decidedBy: "release-reviewer", unresolvedLosses: [] },
   };
 }
 

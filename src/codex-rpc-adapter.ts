@@ -637,7 +637,7 @@ function candidateJsonObjects(text: string): string[] {
 
 function isSkillOutput(value: unknown): value is SkillOutputContract {
   if (!isRecord(value)) return false;
-  return value.contractVersion === "skill-contract/v1"
+  return (value.contractVersion === "skill-contract/v1" || value.contractVersion === "skill-contract/v2")
     && typeof value.executionId === "string"
     && typeof value.skillSlug === "string"
     && typeof value.requestedAction === "string"

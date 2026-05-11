@@ -7,7 +7,9 @@ description: "Execute the Agentic Spec 09 review workflow for test coverage with
 
 ## Purpose
 
-Use this skill to perform the Agentic Spec `09` `review` workflow step for `test-coverage`. Keep the workflow reusable across Agentic Spec projects and avoid product-specific assumptions.
+Use this skill to determine whether the executed tests prove the intended
+behavior obligations. It reviews test semantics, not only whether a command was
+green.
 
 ## When to Use
 
@@ -23,11 +25,17 @@ Read only the artifacts needed for the request, preferring references over copie
 
 ## Workflow
 
-1. Confirm the requested action and identify the relevant Agentic Spec phase, object, and state.
-2. Read the minimum source references needed to make the result traceable.
-3. Produce the requested workflow result, preserving existing IDs, states, and evidence links unless the invocation explicitly asks for a change.
-4. Record assumptions, blockers, and follow-up actions in the output instead of inventing missing facts.
-5. Keep implementation-specific details out of the skill unless they are passed as constraints or evidence.
+1. Read PRD/requirements/Feature Spec, behavior obligations, test plan,
+   executed commands, artifacts, and Delivery Fidelity evidence.
+2. Map each P0/P1/P2 behavior obligation to at least one test or runtime proof.
+3. Reject coverage that only checks page entry, text presence, mocked ViewModel
+   state, or API-seeded outcomes when the requirement is user-facing behavior.
+4. Verify fixture policy: API/seed setup can establish preconditions but cannot
+   be counted as the user action under test.
+5. Record coverage gaps as `test_bypass`, `journey_loss`,
+   `interaction_loss`, `state_loss`, or `data_loss` with owner and severity.
+6. Return pass only when required obligations have meaningful proof and open
+   gaps have an explicit defer/accept decision.
 
 ## Output Contract
 
@@ -38,4 +46,6 @@ Return the project-local `SkillOutputContractV1` when invoked by an adapter. Ech
 - The output is traceable to the referenced Agentic Spec artifacts.
 - The result stays within the `09` `review` boundary.
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
+- Test semantics are judged against behavior obligations, not against generic
+  command success.
 - No product-specific UI, database, scheduler, or adapter behavior is hardcoded into the skill.

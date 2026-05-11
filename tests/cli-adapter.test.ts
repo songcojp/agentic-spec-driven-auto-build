@@ -96,7 +96,7 @@ function skillOutputEvent(overrides: Partial<{
   result: Record<string, unknown>;
 }> = {}): string {
   const output = {
-    contractVersion: "skill-contract/v1",
+    contractVersion: "skill-contract/v2",
     executionId: overrides.executionId ?? "RUN-SKILL",
     skillSlug: overrides.skillSlug ?? "02.requirements.convert-ears",
     requestedAction: overrides.requestedAction ?? "generate_ears",
@@ -120,6 +120,7 @@ function featureExecutionResult(): Record<string, unknown> {
     requirementCoverage: [{ requirementId: "REQ-001", status: "passed", evidence: ["unit test"] }],
     acceptanceEvidence: [{ scenarioId: "AC-001", status: "passed", evidence: ["integration test"] }],
     journeyEvidence: [{ userStoryId: "US-001", scenario: "primary flow", status: "passed", evidence: ["browser evidence"] }],
+    deliveryFidelity: validDeliveryFidelity(),
     foundationExemption: null,
     verification: [{ command: "npm test", status: "passed", summary: "Tests passed." }],
     tasks: { done: ["TASK-001"], blocked: [] },
@@ -129,6 +130,33 @@ function featureExecutionResult(): Record<string, unknown> {
     tokenUsage: { parentUsagePresent: true, subagentUsageObservable: false },
     risks: [],
     blockedReason: null,
+  };
+}
+
+function validDeliveryFidelity(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    sourceIntent: [{ id: "INTENT-001", summary: "User can complete the primary flow.", sourceRef: "docs/features/FEAT-008/requirements.md", status: "preserved" }],
+    journeys: [{ id: "US-001", summary: "Primary flow", status: "verified", obligations: ["BO-001"] }],
+    behaviorObligations: [{ id: "BO-001", sourceRef: "AC-001", description: "Complete and persist the primary flow.", status: "verified", evidenceRefs: ["EV-001"] }],
+    handoffs: [
+      { from: "define", to: "plan", preservedObligations: ["BO-001"], losses: [], status: "passed" },
+      { from: "plan", to: "build", preservedObligations: ["BO-001"], losses: [], status: "passed" },
+      { from: "build", to: "verify", preservedObligations: ["BO-001"], losses: [], status: "passed" },
+    ],
+    losses: [],
+    evidence: [{
+      id: "EV-001",
+      type: "browser_interaction",
+      mode: "no_seed",
+      assertion: "state_change_roundtrip",
+      source: "tests/e2e/primary-flow.spec.ts",
+      covers: ["BO-001", "AC-001", "US-001"],
+      status: "passed",
+      artifactRefs: ["playwright-report/primary-flow.zip"],
+    }],
+    agentReviews: [{ role: "browser-qa", reviewer: "independent", status: "passed", findings: [], evidenceRefs: ["EV-001"] }],
+    completionDecision: { status: "passed", reason: "No open P0/P1 loss remains.", decidedBy: "release-reviewer", unresolvedLosses: [] },
+    ...overrides,
   };
 }
 
@@ -481,7 +509,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
     expectedArtifacts: [],
   });
   const valid = {
-    contractVersion: "skill-contract/v1",
+    contractVersion: "skill-contract/v2",
     executionId: "RUN-FEATURE-CLOSURE",
     skillSlug: "07.execution.dispatch-adapter",
     requestedAction: "feature_execution",
@@ -495,10 +523,77 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
 
   assert.equal(validateSkillOutputContract(invocation, valid).valid, true);
 
+  const legacyV1 = validateSkillOutputContract(invocation, { ...valid, contractVersion: "skill-contract/v1" });
+  assert.equal(legacyV1.valid, false);
+  assert.match(legacyV1.reasons.join("\n"), /skill-contract\/v2/);
+
   const missingJourney = validateSkillOutputContract(invocation, { ...valid, result: {} });
   assert.equal(missingJourney.valid, false);
   assert.match(missingJourney.reasons.join("\n"), /Journey Closure Gate failed: evidence_missing/);
-	  assert.match(missingJourney.reasons.join("\n"), /journeyEvidence is required/);
+  assert.match(missingJourney.reasons.join("\n"), /journeyEvidence is required/);
+
+  const missingFidelity = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      ...featureExecutionResult(),
+      deliveryFidelity: undefined,
+    },
+  });
+  assert.equal(missingFidelity.valid, false);
+  assert.match(missingFidelity.reasons.join("\n"), /Delivery Fidelity Gate failed: quality_evidence_gap/);
+  assert.match(missingFidelity.reasons.join("\n"), /deliveryFidelity is required/);
+
+  const openIntentLoss = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      ...featureExecutionResult(),
+      deliveryFidelity: validDeliveryFidelity({
+        losses: [{
+          type: "intent_loss",
+          severity: "P1",
+          status: "open",
+          description: "Primary user intent was dropped during task slicing.",
+          owner: "task-slicer",
+          evidenceRefs: [],
+        }],
+      }),
+    },
+  });
+  assert.equal(openIntentLoss.valid, false);
+  assert.match(openIntentLoss.reasons.join("\n"), /unclosed critical loss P1:intent_loss/);
+
+  const fixtureOnlyEvidence = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      ...featureExecutionResult(),
+      deliveryFidelity: validDeliveryFidelity({
+        evidence: [{
+          id: "EV-FIXTURE",
+          type: "api_contract",
+          mode: "fixture",
+          assertion: "state_change_roundtrip",
+          source: "tests/e2e/fixture-only.spec.ts",
+          covers: ["BO-001"],
+          status: "passed",
+          artifactRefs: ["test-results/fixture-only.txt"],
+        }],
+      }),
+    },
+  });
+  assert.equal(fixtureOnlyEvidence.valid, false);
+  assert.match(fixtureOnlyEvidence.reasons.join("\n"), /journey_bypassed_by_fixture/);
+
+  const selfReviewOnly = validateSkillOutputContract(invocation, {
+    ...valid,
+    result: {
+      ...featureExecutionResult(),
+      deliveryFidelity: validDeliveryFidelity({
+        agentReviews: [{ role: "implementation-agent", reviewer: "owner", status: "passed", findings: [], evidenceRefs: ["EV-001"] }],
+      }),
+    },
+  });
+  assert.equal(selfReviewOnly.valid, false);
+  assert.match(selfReviewOnly.reasons.join("\n"), /independent Test\/QA\/Review\/Release agent review is required/);
 
   const missingDelivery = validateSkillOutputContract(invocation, {
     ...valid,
@@ -552,6 +647,10 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   const foundation = validateSkillOutputContract(invocation, {
     ...valid,
     result: {
+      deliveryFidelity: validDeliveryFidelity({
+        journeys: [],
+        sourceIntent: [{ id: "INTENT-FOUNDATION", summary: "Adapter foundation enables downstream user journeys.", sourceRef: "docs/features/FEAT-008/requirements.md", status: "preserved" }],
+      }),
       foundationExemption: {
         exempt: true,
         reason: "Adapter foundation; no user-facing journey exists until the downstream UI feature.",
@@ -573,7 +672,7 @@ test("feature execution runs receive a strict closure-evidence result output sch
   });
   let schema: Record<string, unknown> | undefined;
   const output = {
-    contractVersion: "skill-contract/v1",
+    contractVersion: "skill-contract/v2",
     executionId: "RUN-FEATURE-SCHEMA",
     skillSlug: "07.execution.dispatch-adapter",
     requestedAction: "feature_execution",
@@ -604,6 +703,7 @@ test("feature execution runs receive a strict closure-evidence result output sch
   });
 
   const properties = schema?.properties as Record<string, unknown>;
+  assert.deepEqual(properties.contractVersion, { type: "string", const: "skill-contract/v2" });
   const result = properties.result as Record<string, unknown>;
   assert.equal(result.additionalProperties, false);
   assert.deepEqual(result.required, [
@@ -615,6 +715,7 @@ test("feature execution runs receive a strict closure-evidence result output sch
     "requirementCoverage",
     "acceptanceEvidence",
     "journeyEvidence",
+    "deliveryFidelity",
     "foundationExemption",
     "verification",
     "tasks",
