@@ -1560,6 +1560,77 @@ test("SpecDrive IDE projects pending Feature review item for Webview approval", 
   assert.equal(detail?.resumeTarget?.status, "running");
 });
 
+test("SpecDrive IDE Webview approve_review completes without input and requeues adapter with input", async () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  seedIdeReviewExecution(dbPath, "NO-INPUT");
+  const scheduler = createMemoryScheduler(dbPath);
+  const config = makeConfig(workspaceRoot, dbPath);
+  const controlPlane = createControlPlaneServer(config, {
+    status: "ready",
+    version: "test",
+    schemaVersion: 29,
+    artifactRoot: join(workspaceRoot, ".autobuild"),
+  }, { scheduler });
+  await listen(controlPlane.server, config);
+  const address = controlPlane.server.address();
+  const port = address && typeof address === "object" ? address.port : 0;
+
+  try {
+    const completeReceipt = await postJson(`http://127.0.0.1:${port}/ide/commands`, {
+      action: "approve_review",
+      entityType: "review_item",
+      entityId: "REV-IDE-NO-INPUT",
+      requestedBy: "vscode-extension",
+      reason: "Approve review from IDE Webview with no operator input.",
+      payload: { reviewNote: "", clarification: "" },
+    });
+
+    assert.equal(completeReceipt.status, "accepted");
+    assert.equal(completeReceipt.ideCommandType, "controlled_command");
+    assert.equal(completeReceipt.reviewInputMode, "completed_without_input");
+    let rows = runSqlite(dbPath, [], [
+      { name: "execution", sql: "SELECT status FROM execution_records WHERE id = 'RUN-IDE-NO-INPUT'" },
+      { name: "job", sql: "SELECT status FROM scheduler_job_records WHERE id = 'JOB-IDE-NO-INPUT'" },
+    ]).queries;
+    assert.equal(rows.execution[0].status, "completed");
+    assert.equal(rows.job[0].status, "completed");
+    assert.equal(readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016").status, "completed");
+
+    seedIdeReviewExecution(dbPath, "WITH-INPUT");
+    const continueReceipt = await postJson(`http://127.0.0.1:${port}/ide/commands`, {
+      action: "approve_review",
+      entityType: "review_item",
+      entityId: "REV-IDE-WITH-INPUT",
+      requestedBy: "vscode-extension",
+      reason: "Approve review from IDE Webview with operator input.",
+      payload: { reviewNote: "Use this reviewer answer and continue automatically.", clarification: "Use this reviewer answer and continue automatically." },
+    });
+
+    assert.equal(continueReceipt.status, "accepted");
+    assert.equal(continueReceipt.ideCommandType, "controlled_command");
+    assert.equal(continueReceipt.reviewInputMode, "adapter_requeued");
+    assert.equal(continueReceipt.executionId, "RUN-IDE-WITH-INPUT");
+    rows = runSqlite(dbPath, [], [
+      { name: "execution", sql: "SELECT status, completed_at FROM execution_records WHERE id = 'RUN-IDE-WITH-INPUT'" },
+      { name: "job", sql: "SELECT status, payload_json FROM scheduler_job_records WHERE id = 'JOB-IDE-WITH-INPUT'" },
+    ]).queries;
+    assert.equal(rows.execution[0].status, "queued");
+    assert.equal(rows.execution[0].completed_at, null);
+    assert.equal(rows.job[0].status, "queued");
+    assert.equal(scheduler.jobs.some((job) => job.schedulerJobId === "JOB-IDE-WITH-INPUT"), true);
+    const payload = JSON.parse(String(rows.job[0].payload_json));
+    assert.equal(payload.context.reviewContinuation.approvalNote, "Use this reviewer answer and continue automatically.");
+    assert.equal(readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016").status, "queued");
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      controlPlane.server.close((error) => error ? reject(error) : resolve());
+    });
+  }
+});
+
 test("SpecDrive IDE pass command marks blocked Feature and latest execution completed", () => {
   const workspaceRoot = makeWorkspace();
   const dbPath = makeDbPath();
@@ -2102,6 +2173,52 @@ function seedProject(dbPath: string, workspaceRoot: string): void {
       sql: `INSERT INTO repository_connections (id, project_id, provider, local_path, default_branch)
         VALUES ('repo-ide', 'project-ide', 'local', ?, 'main')`,
       params: [workspaceRoot],
+    },
+  ]);
+}
+
+function seedIdeReviewExecution(dbPath: string, suffix: string): void {
+  const normalized = suffix.toUpperCase().replace(/[^A-Z0-9]+/g, "-");
+  const runId = `RUN-IDE-${normalized}`;
+  const jobId = `JOB-IDE-${normalized}`;
+  const reviewId = `REV-IDE-${normalized}`;
+  const bullmqJobId = `bull-ide-${normalized.toLowerCase()}`;
+  const payload = {
+    executionId: runId,
+    operation: "feature_execution",
+    projectId: "project-ide",
+    context: {
+      featureId: "FEAT-016",
+      featureSpecPath: "docs/features/feat-016-specdrive-ide-foundation",
+    },
+  };
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json, updated_at)
+        VALUES ('FEAT-016', 'project-ide', 'SpecDrive IDE Foundation', 'review_needed', 10, 'feat-016-specdrive-ide-foundation', '["REQ-074"]', '2026-05-02T12:00:00.000Z')
+        ON CONFLICT(id) DO UPDATE SET status = 'review_needed', updated_at = '2026-05-02T12:00:00.000Z'`,
+    },
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json, updated_at)
+        VALUES (?, ?, 'specdrive:execution-adapter', 'cli.run', 'review_needed', ?, '2026-05-02T12:00:00.000Z')`,
+      params: [jobId, bullmqJobId, JSON.stringify(payload)],
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, started_at, completed_at, summary, metadata_json, updated_at
+      ) VALUES (?, ?, 'codex-cli', 'feature_execution', 'project-ide', ?, 'review_needed',
+        '2026-05-02T11:59:00.000Z', '2026-05-02T12:00:00.000Z', 'Review FEAT-016 before continuing.', '{}', '2026-05-02T12:00:00.000Z')`,
+      params: [runId, jobId, JSON.stringify(payload.context)],
+    },
+    {
+      sql: `INSERT INTO review_items (
+          id, project_id, feature_id, run_id, status, severity, review_needed_reason,
+          trigger_reasons_json, recommended_actions_json, reference_refs_json, body, created_at, updated_at
+        ) VALUES (?, 'project-ide', 'FEAT-016', ?, 'review_needed', 'medium', 'approval_needed',
+          '["permission_escalation"]', '["approve_continue","request_changes","reject"]', '[]',
+          '{"message":"Review FEAT-016 before continuing."}', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z')`,
+      params: [reviewId, runId],
     },
   ]);
 }

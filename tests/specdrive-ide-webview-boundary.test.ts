@@ -76,7 +76,16 @@ test("VSCode IDE Webviews expose independent workbench commands", () => {
   const commands = new Set((extensionPackage.contributes?.commands ?? []).map((command) => command.command));
 
   assert.equal(extensionPackage.contributes?.configuration?.properties?.["specdrive.openSpecWorkspaceOnStartup"]?.default, false);
+  assert.equal(extensionPackage.contributes?.configuration?.properties?.["specdrive.productConsoleUrl"]?.default, "http://127.0.0.1:45173");
   assert.match(extensionSource, /extensionConfig\("openSpecWorkspaceOnStartup", false\)/);
+  assert.match(extensionSource, /productConsoleManager = new ProductConsoleManager\(context\)/);
+  assert.match(extensionSource, /class ProductConsoleManager implements vscode\.Disposable/);
+  assert.match(extensionSource, /CONSOLE_API_BASE_URL: controlPlaneUrl/);
+  assert.match(extensionSource, /\["run", "console:dev", "--", "--host", host, "--port", String\(port\)\]/);
+  assert.match(extensionSource, /void ensureProductConsoleReady\(\)\.catch/);
+  assert.match(extensionSource, /const baseUrl = await ensureProductConsoleReady\(\)/);
+  assert.match(extensionSource, /function resolveProductConsoleRepoRoot/);
+  assert.match(extensionSource, /apps", "product-console", "vite\.config\.ts"/);
   assert.match(extensionSource, /function collapsibleStateFor/);
   assert.match(extensionSource, /element\.type === "root"\) return vscode\.TreeItemCollapsibleState\.Expanded/);
 
@@ -206,8 +215,9 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(sharedWebviewSource, /@media \(max-width:1100px\).*\.state-flow-compact,\.feature-state-flow-compact\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(sharedWebviewSource, /\.state-flow-reason\{grid-column:1\/-1\}/);
   assert.match(webviewSource, /function renderStateFlowRow\(\[label, value\]: \[string, string\]\): string/);
-  assert.match(webviewSource, /"Next Action"\]\.includes\(label\)/);
-  assert.match(webviewSource, /"Message", "References", "Next Action"\]\.includes\(label\)/);
+  assert.match(webviewSource, /renderStateFlowRow\(\["Next Step", stateFlowNextAction\(item\)\]\)/);
+  assert.match(webviewSource, /const gridSpan = label === "Next Step" \? ` style="grid-column:1\/-1"` : ""/);
+  assert.match(webviewSource, /"Message", "References", "Next Step"\]\.includes\(label\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
   assert.match(webviewSource, /Review Message/);
@@ -520,13 +530,16 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(webviewSource, /renderFeatureStateFlow\(feature\)/);
   assert.match(webviewSource, /state-flow feature-state-flow-compact/);
   assert.match(webviewSource, /function renderFeatureStateItem\(\[label, value\]: \[string, string\]\): string/);
+  assert.match(webviewSource, /\["Current", feature\.status\]/);
+  assert.match(webviewSource, /\["Execution", featureExecutionLabel\(feature\)\]/);
+  assert.match(webviewSource, /renderFeatureStateRow\(\["Next Step", featureStateNextAction\(feature\)\]\)/);
   assert.match(sharedWebviewSource, /\.feature-state-flow-compact\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(sharedWebviewSource, /@media \(max-width:1100px\).*\.state-flow-compact,\.feature-state-flow-compact\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(webviewSource, /function renderFeatureDescription\(feature: SpecDriveIdeFeatureNode\): string/);
   assert.match(webviewSource, /feature\.description \?\? "No Feature Spec description found\."/);
   assert.match(webviewSource, /<h3>Feature Spec Description<\/h3>/);
   assert.match(webviewSource, /renderFeatureStateRow/);
-  assert.match(webviewSource, /<div class="feature-state-row"><span>\$\{escapeHtml\(label\)\}<\/span><span>\$\{escapeHtml\(value\)\}<\/span><\/div>/);
+  assert.match(webviewSource, /<div class="feature-state-row" style="grid-column:1\/-1"><span>\$\{escapeHtml\(label\)\}<\/span><span>\$\{escapeHtml\(value\)\}<\/span><\/div>/);
   assert.match(webviewSource, /\.feature-state-row\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
@@ -566,7 +579,7 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(webviewSource, /function renderFeatureArtifacts\(documents: SpecDriveIdeDocument\[\]\): string/);
   assert.match(webviewSource, /const fileName = document\.path\.split\(\//);
   assert.match(webviewSource, /<strong>\$\{escapeHtml\(fileName\)\}<\/strong>/);
-  assert.match(webviewSource, />Open<\/button>/);
+  assert.match(webviewSource, /commandButton\("Open", "openDocument"/);
   assert.match(webviewSource, /<div class="task-chip-row">/);
   assert.doesNotMatch(webviewSource, /<h3>Acceptance<\/h3>/);
   assert.match(webviewSource, /\.feature-artifacts\{display:grid;gap:5px\}/);
@@ -651,6 +664,10 @@ test("VSCode Spec Workspace keeps global skill input at top and document actions
   assert.match(specWorkspaceWebviewSource, /class="spec-v2-inspector"/);
   assert.match(specWorkspaceWebviewSource, /renderSourceDocumentsCard\(view, t\)/);
   assert.match(specWorkspaceWebviewSource, /renderRequirementQueueCard\(view, t\)/);
+  assert.match(specWorkspaceWebviewSource, /<section class="spec-card spec-feature-card">/);
+  assert.match(specWorkspaceWebviewSource, /<div class="spec-card-scroll">\$\{features\.length === 0/);
+  assert.match(specWorkspaceWebviewSource, /\.spec-feature-card\{display:grid;grid-template-rows:auto auto minmax\(0,1fr\) auto;min-height:0\}/);
+  assert.match(specWorkspaceWebviewSource, /\.spec-card-scroll\{min-height:0;max-height:260px;overflow:auto;scrollbar-gutter:stable\}/);
   assert.match(specWorkspaceWebviewSource, /renderTraceabilityCard\(view, t\)/);
   assert.match(specWorkspaceWebviewSource, /renderDiagnosticsCard\(view, t\)/);
   assert.match(specWorkspaceWebviewSource, /renderConceptCard\(uiConceptImages, t\)/);

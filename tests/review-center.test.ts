@@ -7,6 +7,7 @@ import { initializeSchema, listTables, MIGRATIONS, SCHEMA_VERSION } from "../src
 import { runSqlite } from "../src/sqlite.ts";
 import { listAuditEvents } from "../src/persistence.ts";
 import { submitConsoleCommand } from "../src/product-console.ts";
+import { createMemoryScheduler } from "../src/scheduler.ts";
 import {
   assertApprovalPresentForTerminalStatus,
   createReviewItem,
@@ -1797,6 +1798,147 @@ test("feature review approval resolves linked execution queue status", () => {
   assert.equal(result.queries.execution[0].status, "completed");
   assert.equal(result.queries.execution[0].completed_at, "2026-04-28T12:00:00.000Z");
   assert.equal(result.queries.job[0].status, "completed");
+});
+
+test("product console approve_review without input completes linked run and Feature spec state", () => {
+  const dbPath = seedReviewData();
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "feat-011-review-complete-"));
+  const featureDir = join(workspaceRoot, "docs", "features", "feat-011-review-center");
+  mkdirSync(featureDir, { recursive: true });
+  writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n");
+  writeFileSync(join(featureDir, "design.md"), "# Design\n");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n");
+  writeFileSync(join(featureDir, "spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-011",
+    status: "review_needed",
+    executionStatus: "review_needed",
+    updatedAt: stableDate.toISOString(),
+    blockedReasons: [],
+    currentJob: { schedulerJobId: "JOB-APPROVE-NO-INPUT", executionId: "RUN-APPROVE-NO-INPUT", operation: "feature_execution" },
+    history: [],
+  }, null, 2));
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [workspaceRoot] },
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json, updated_at)
+        VALUES ('JOB-APPROVE-NO-INPUT', 'bull-approve-no-input', 'specdrive:execution-adapter', 'cli.run', 'review_needed', '{}', '2026-04-28T12:00:00.000Z')`,
+    },
+    {
+      sql: `INSERT INTO execution_records (
+          id, scheduler_job_id, executor_type, operation, project_id, context_json,
+          status, started_at, completed_at, summary, metadata_json, updated_at
+        ) VALUES ('RUN-APPROVE-NO-INPUT', 'JOB-APPROVE-NO-INPUT', 'codex-cli', 'feature_execution', 'project-1',
+          '{"featureId":"FEAT-011"}', 'review_needed', '2026-04-28T11:58:00.000Z', NULL, 'Feature execution needs review.', '{}', '2026-04-28T12:00:00.000Z')`,
+    },
+  ]);
+  createReviewItem(dbPath, {
+    id: "REV-APPROVE-NO-INPUT",
+    featureId: "FEAT-011",
+    runId: "RUN-APPROVE-NO-INPUT",
+    message: "Feature execution needs review.",
+    reviewNeededReason: "approval_needed",
+    triggerReasons: ["permission_escalation"],
+    now: stableDate,
+  });
+
+  submitConsoleCommand(dbPath, {
+    action: "approve_review",
+    entityType: "review_item",
+    entityId: "REV-APPROVE-NO-INPUT",
+    requestedBy: "reviewer",
+    reason: "Approve finished execution.",
+    now: new Date("2026-04-28T12:05:00.000Z"),
+  });
+
+  const result = runSqlite(dbPath, [], [
+    { name: "execution", sql: "SELECT status, completed_at FROM execution_records WHERE id = 'RUN-APPROVE-NO-INPUT'" },
+    { name: "job", sql: "SELECT status FROM scheduler_job_records WHERE id = 'JOB-APPROVE-NO-INPUT'" },
+  ]);
+  assert.equal(result.queries.execution[0].status, "completed");
+  assert.equal(result.queries.execution[0].completed_at, "2026-04-28T12:05:00.000Z");
+  assert.equal(result.queries.job[0].status, "completed");
+  const specState = JSON.parse(readFileSync(join(featureDir, "spec-state.json"), "utf8"));
+  assert.equal(specState.status, "completed");
+  assert.equal(specState.executionStatus, "completed");
+});
+
+test("product console approve_review with input requeues linked adapter job", () => {
+  const dbPath = seedReviewData();
+  const scheduler = createMemoryScheduler(dbPath);
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "feat-011-review-continue-"));
+  const featureDir = join(workspaceRoot, "docs", "features", "feat-011-review-center");
+  mkdirSync(featureDir, { recursive: true });
+  writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n");
+  writeFileSync(join(featureDir, "design.md"), "# Design\n");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n");
+  writeFileSync(join(featureDir, "spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-011",
+    status: "review_needed",
+    executionStatus: "review_needed",
+    updatedAt: stableDate.toISOString(),
+    blockedReasons: [],
+    currentJob: { schedulerJobId: "JOB-APPROVE-WITH-INPUT", executionId: "RUN-APPROVE-WITH-INPUT", operation: "feature_execution" },
+    history: [],
+  }, null, 2));
+  const payload = {
+    executionId: "RUN-APPROVE-WITH-INPUT",
+    operation: "feature_execution",
+    projectId: "project-1",
+    context: { featureId: "FEAT-011", featureSpecPath: "docs/features/feat-011-review-center" },
+  };
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [workspaceRoot] },
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json, updated_at)
+        VALUES ('JOB-APPROVE-WITH-INPUT', 'bull-approve-with-input', 'specdrive:execution-adapter', 'cli.run', 'review_needed', ?, '2026-04-28T12:00:00.000Z')`,
+      params: [JSON.stringify(payload)],
+    },
+    {
+      sql: `INSERT INTO execution_records (
+          id, scheduler_job_id, executor_type, operation, project_id, context_json,
+          status, started_at, completed_at, summary, metadata_json, updated_at
+        ) VALUES ('RUN-APPROVE-WITH-INPUT', 'JOB-APPROVE-WITH-INPUT', 'codex-cli', 'feature_execution', 'project-1',
+          '{"featureId":"FEAT-011","featureSpecPath":"docs/features/feat-011-review-center"}',
+          'review_needed', '2026-04-28T11:58:00.000Z', '2026-04-28T12:00:00.000Z', 'Feature execution needs review.', '{}', '2026-04-28T12:00:00.000Z')`,
+    },
+  ]);
+  createReviewItem(dbPath, {
+    id: "REV-APPROVE-WITH-INPUT",
+    featureId: "FEAT-011",
+    runId: "RUN-APPROVE-WITH-INPUT",
+    message: "Feature execution needs review.",
+    reviewNeededReason: "approval_needed",
+    triggerReasons: ["permission_escalation"],
+    now: stableDate,
+  });
+
+  const receipt = submitConsoleCommand(dbPath, {
+    action: "approve_review",
+    entityType: "review_item",
+    entityId: "REV-APPROVE-WITH-INPUT",
+    requestedBy: "reviewer",
+    reason: "Approve with clarification.",
+    payload: { reviewNote: "Please apply the reviewer clarification automatically." },
+    now: new Date("2026-04-28T12:05:00.000Z"),
+  }, { scheduler });
+
+  const result = runSqlite(dbPath, [], [
+    { name: "execution", sql: "SELECT status, completed_at, metadata_json FROM execution_records WHERE id = 'RUN-APPROVE-WITH-INPUT'" },
+    { name: "job", sql: "SELECT status, payload_json FROM scheduler_job_records WHERE id = 'JOB-APPROVE-WITH-INPUT'" },
+  ]);
+  assert.equal(receipt.status, "accepted");
+  assert.equal(receipt.executionId, "RUN-APPROVE-WITH-INPUT");
+  assert.equal(result.queries.execution[0].status, "queued");
+  assert.equal(result.queries.execution[0].completed_at, null);
+  assert.equal(result.queries.job[0].status, "queued");
+  assert.equal(scheduler.jobs.some((job) => job.schedulerJobId === "JOB-APPROVE-WITH-INPUT"), true);
+  const queuedPayload = JSON.parse(String(result.queries.job[0].payload_json));
+  assert.equal(queuedPayload.context.reviewContinuation.approvalNote, "Please apply the reviewer clarification automatically.");
+  const specState = JSON.parse(readFileSync(join(featureDir, "spec-state.json"), "utf8"));
+  assert.equal(specState.status, "queued");
+  assert.equal(specState.executionStatus, "queued");
 });
 
 test("product console change requests do not restore terminal done work", () => {

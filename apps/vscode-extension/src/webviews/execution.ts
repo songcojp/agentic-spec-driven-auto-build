@@ -292,9 +292,9 @@ function renderStateFlow(item: SpecDriveIdeQueueItem | undefined): string {
     ["Duration", formatDurationMs(item.durationMs) ?? "none"],
     ["Resume Target", resume ? `${resume.status} via ${resume.source}` : "none"],
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
-    ["Next Action", stateFlowNextAction(item)],
   ];
-  return `<div class="result-group state-flow state-flow-compact">${rows.map(renderStateFlowItem).join("")}</div>`;
+  const nextStep = renderStateFlowRow(["Next Step", stateFlowNextAction(item)]);
+  return `<div class="result-group state-flow state-flow-compact">${rows.map(renderStateFlowItem).join("")}${nextStep}</div>`;
 }
 
 function renderStateFlowItem([label, value]: [string, string]): string {
@@ -303,8 +303,9 @@ function renderStateFlowItem([label, value]: [string, string]): string {
 }
 
 function renderStateFlowRow([label, value]: [string, string]): string {
-  const stacked = ["Reason", "Review Message", "Review Triggers", "Recommended Actions", "Resume Evidence", "Message", "References", "Next Action"].includes(label);
-  return `<div class="row${stacked ? " row-stacked" : ""}"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
+  const stacked = ["Reason", "Review Message", "Review Triggers", "Recommended Actions", "Resume Evidence", "Message", "References", "Next Step"].includes(label);
+  const gridSpan = label === "Next Step" ? ` style="grid-column:1/-1"` : "";
+  return `<div class="row${stacked ? " row-stacked" : ""}"${gridSpan}><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
 }
 
 function renderStateFlowCard(item: SpecDriveIdeQueueItem): string {

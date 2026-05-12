@@ -299,6 +299,11 @@ export type IdeSpecChangeReceipt =
     currentTextHash?: string;
   };
 
+export type IdeControlledCommandReceipt = ConsoleCommandReceipt & {
+  ideCommandType: "controlled_command";
+  reviewInputMode?: "adapter_requeued" | "completed_without_input";
+};
+
 export type IdeQueueAction =
   | "enqueue"
   | "run_now"
@@ -863,6 +868,26 @@ export async function submitIdeQueueCommand(
 
   blockedReasons.push(`Unsupported IDE queue action: ${command.queueAction}`);
   return base();
+}
+
+export function submitIdeControlledCommand(
+  dbPath: string,
+  command: ConsoleCommandInput,
+  options: { scheduler?: SchedulerClient } = {},
+): IdeControlledCommandReceipt {
+  const receipt = submitConsoleCommand(dbPath, command, { scheduler: options.scheduler });
+  const reviewNote = optionalString(command.payload?.reviewNote)?.trim()
+    ?? optionalString(command.payload?.clarification)?.trim()
+    ?? optionalString(command.payload?.userInput)?.trim();
+  return {
+    ...receipt,
+    ideCommandType: "controlled_command",
+    reviewInputMode: command.action === "approve_review" && command.entityType === "review_item"
+      ? reviewNote
+        ? "adapter_requeued"
+        : "completed_without_input"
+      : undefined,
+  };
 }
 
 export function submitIdeSpecChangeRequest(

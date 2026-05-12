@@ -37,6 +37,7 @@ import {
   buildSpecDriveIdeView,
   isIdeQueueCommandV1,
   isSpecChangeRequestV1,
+  submitIdeControlledCommand,
   submitIdeQueueCommand,
   submitIdeSpecChangeRequest,
 } from "./specdrive-ide.ts";
@@ -269,10 +270,10 @@ async function routeRequest(
     if (request.method === "POST" && url.pathname === "/ide/commands") {
       const body = await readJsonBody(request);
       writeJson(response, 202, isSpecChangeRequestV1(body)
-        ? submitIdeSpecChangeRequest(config.dbPath, body, { scheduler: options.scheduler })
-        : isIdeQueueCommandV1(body)
-          ? await submitIdeQueueCommand(config.dbPath, body, { scheduler: options.scheduler })
-          : submitConsoleCommand(config.dbPath, body as ConsoleCommandInput, { scheduler: options.scheduler }));
+          ? submitIdeSpecChangeRequest(config.dbPath, body, { scheduler: options.scheduler })
+          : isIdeQueueCommandV1(body)
+            ? await submitIdeQueueCommand(config.dbPath, body, { scheduler: options.scheduler })
+            : submitIdeControlledCommand(config.dbPath, body as ConsoleCommandInput, { scheduler: options.scheduler }));
       return;
     }
 

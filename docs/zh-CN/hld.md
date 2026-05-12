@@ -97,7 +97,7 @@ MVP 采用本地优先的控制面架构：
 | REQ-046, REQ-047, REQ-057 | 7.12, 9, 10, 11, 12, 15 | Review Center 是高风险、阻塞、澄清和审批动作的统一入口。 |
 | REQ-048, REQ-049, REQ-050 | 7.13, 8, 9, 10, 12, 14, 15 | Delivery Manager 生成 PR、交付报告和 Spec Evolution 建议。 |
 | REQ-051 | 7.9, 8, 9, 10, 12, 14 | Execution Result 是状态判断、恢复、审批和交付报告的共享证据格式。 |
-| REQ-052, REQ-053, REQ-054, REQ-055, REQ-056, REQ-061, REQ-062, REQ-063, REQ-064, REQ-066, REQ-067 | 7.11, 9, 12, 14, 15 | Product Console 展示 Dashboard、Dashboard Board、Spec、Skill、Subagent 和 Execution Adapter 状态，并提供项目创建、项目切换、Spec Sources 扫描状态、系统设置、CLI Adapter JSON 表单配置和默认中文的界面语言切换。 |
+| REQ-052, REQ-053, REQ-054, REQ-055, REQ-056, REQ-061, REQ-062, REQ-063, REQ-064, REQ-066, REQ-067 | 7.11, 9, 12, 14, 15 | Product Console 展示 Dashboard、Dashboard Board、Spec、Skill、Subagent 和 Execution Adapter 状态，并提供项目创建、项目切换、Spec Sources 扫描状态、系统设置、CLI Adapter JSON 表单配置、默认中文的界面语言切换和默认浅色的主题偏好。 |
 | REQ-058 | 8, 12, 13 | MVP 核心实体必须持久化并支持恢复。 |
 | REQ-069, REQ-070, REQ-071, REQ-072, REQ-073 | 7.14, 8, 9 | Chat Interface 提供悬浮面板、意图分类、受控命令派发、高风险二次确认和会话/消息持久化。 |
 | REQ-074, REQ-075, REQ-076, REQ-077, REQ-078, REQ-079 | 7.15, 8, 9, 10, 15 | VSCode Extension 提供工作区识别、Spec Explorer、文档交互、SpecChangeRequest、IDE command receipt 和 Task Queue 管理。 |

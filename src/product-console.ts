@@ -2717,6 +2717,7 @@ export function submitConsoleCommand(dbPath: string, input: ConsoleCommandInput,
   const rpcSettingsValidation = executeRpcAdapterCommand(dbPath, input, acceptedAt);
   const projectExecutionPreferenceValidation = executeProjectExecutionPreferenceCommand(dbPath, input, acceptedAt);
   const approvalRecord = executeReviewCommand(dbPath, input, acceptedAt);
+  const reviewContinuationResult = executeReviewContinuationCommand(dbPath, input, acceptedAt, scheduler);
   const scheduleResult = executeScheduleCommand(dbPath, input, acceptedAt, scheduler);
   const autoRunResult = executeAutoRunCommand(dbPath, input, acceptedAt, scheduler);
   const featureReviewResult = executeFeatureReviewCommand(dbPath, input, acceptedAt);
@@ -2731,6 +2732,7 @@ export function submitConsoleCommand(dbPath: string, input: ConsoleCommandInput,
     ...(rpcSettingsValidation?.blockedReasons ?? []),
     ...(projectExecutionPreferenceValidation?.blockedReasons ?? []),
     ...(scheduleResult?.blockedReasons ?? []),
+    ...(reviewContinuationResult?.blockedReasons ?? []),
     ...(autoRunResult?.blockedReasons ?? []),
     ...(featureReviewResult?.blockedReasons ?? []),
     ...(featureReadyResult?.blockedReasons ?? []),
@@ -2754,6 +2756,7 @@ export function submitConsoleCommand(dbPath: string, input: ConsoleCommandInput,
       specSkill: specSkillResult,
       featureReview: featureReviewResult,
       featureReady: featureReadyResult,
+      reviewContinuation: reviewContinuationResult,
       autoRun: autoRunResult,
       scheduleTriggerId: scheduleResult?.triggerId,
       schedulerJobId: scheduleResult?.schedulerJobId ?? autoRunResult?.schedulerJobId,
@@ -2778,9 +2781,9 @@ export function submitConsoleCommand(dbPath: string, input: ConsoleCommandInput,
     approvalRecordId: approvalRecord?.id,
     featureId: optionalString(specIntakeResult?.featureId) ?? optionalString(featureReviewResult?.featureId) ?? optionalString(featureReadyResult?.featureId),
     scheduleTriggerId: scheduleResult?.triggerId ?? autoRunResult?.scheduleTriggerId,
-    schedulerJobId: scheduleResult?.schedulerJobId ?? specSkillResult?.schedulerJobId ?? autoRunResult?.schedulerJobId,
+    schedulerJobId: reviewContinuationResult?.schedulerJobId ?? scheduleResult?.schedulerJobId ?? specSkillResult?.schedulerJobId ?? autoRunResult?.schedulerJobId,
     schedulerJobIds: boardResult?.schedulerJobIds,
-    executionId: specSkillResult?.executionId ?? scheduleResult?.executionId ?? autoRunResult?.executionId ?? optionalString(featureReviewResult?.executionId),
+    executionId: reviewContinuationResult?.executionId ?? specSkillResult?.executionId ?? scheduleResult?.executionId ?? autoRunResult?.executionId ?? optionalString(featureReviewResult?.executionId),
     executionIds: boardResult?.runIds,
     runId: specSkillResult?.executionId,
     runIds: boardResult?.runIds,
@@ -5025,6 +5028,118 @@ function executeReviewCommand(dbPath: string, input: ConsoleCommandInput, accept
   return record;
 }
 
+function executeReviewContinuationCommand(
+  dbPath: string,
+  input: ConsoleCommandInput,
+  acceptedAt: string,
+  scheduler: SchedulerClient,
+): { schedulerJobId?: string; executionId?: string; blockedReasons: string[] } | undefined {
+  if (input.action !== "approve_review" || input.entityType !== "review_item") {
+    return undefined;
+  }
+  const reviewNote = optionalString(input.payload?.reviewNote)?.trim()
+    ?? optionalString(input.payload?.clarification)?.trim()
+    ?? optionalString(input.payload?.userInput)?.trim();
+  if (!reviewNote) {
+    return undefined;
+  }
+  const item = listReviewCenterItems(dbPath).find((entry) => entry.id === input.entityId);
+  if (!item?.runId) {
+    return { blockedReasons: [`Review item ${input.entityId} has no linked execution to continue.`] };
+  }
+  const row = runSqlite(dbPath, [], [
+    {
+      name: "target",
+      sql: `SELECT
+          er.id AS execution_id,
+          er.scheduler_job_id,
+          er.project_id,
+          er.context_json,
+          er.metadata_json,
+          sj.bullmq_job_id,
+          sj.job_type,
+          sj.payload_json
+        FROM execution_records er
+        LEFT JOIN scheduler_job_records sj ON sj.id = er.scheduler_job_id
+        WHERE er.id = ?
+        LIMIT 1`,
+      params: [item.runId],
+    },
+  ]).queries.target[0];
+  const executionId = optionalString(row?.execution_id);
+  const schedulerJobId = optionalString(row?.scheduler_job_id);
+  const bullmqJobId = optionalString(row?.bullmq_job_id);
+  const jobType = optionalString(row?.job_type);
+  if (!executionId || !schedulerJobId || !bullmqJobId || !isReplayableExecutionSchedulerJobType(jobType)) {
+    return {
+      executionId,
+      schedulerJobId,
+      blockedReasons: [`Review item ${input.entityId} cannot continue because its linked scheduler metadata is incomplete.`],
+    };
+  }
+  if (!scheduler.requeueExistingJob) {
+    return { executionId, schedulerJobId, blockedReasons: ["Scheduler is required to continue approved review input."] };
+  }
+  const payload = parseJsonObject(row.payload_json);
+  const payloadContext = parseJsonObject(payload.context);
+  const executionContext = parseJsonObject(row.context_json);
+  const projectId = optionalString(row.project_id) ?? optionalString(payload.projectId) ?? item.projectId;
+  const runPayload = {
+    ...payload,
+    executionId,
+    operation: optionalString(payload.operation) ?? optionalString(executionContext.operation) ?? "feature_execution",
+    projectId,
+    requestedAction: "continue_review_with_input",
+    context: {
+      ...payloadContext,
+      ...executionContext,
+      reviewContinuation: {
+        reviewItemId: item.id,
+        approvalNote: reviewNote,
+        approvedBy: input.requestedBy,
+        approvedAt: acceptedAt,
+      },
+    },
+    executionPreference: parseJsonObject(payload.executionPreference).adapterId
+      ? payload.executionPreference as Parameters<NonNullable<SchedulerClient["requeueExistingJob"]>>[0]["payload"]["executionPreference"]
+      : payload.executionPreference,
+  };
+  runSqlite(dbPath, [
+    {
+      sql: "UPDATE scheduler_job_records SET status = 'queued', payload_json = ?, error = NULL, updated_at = ? WHERE id = ?",
+      params: [JSON.stringify(runPayload), acceptedAt, schedulerJobId],
+    },
+    {
+      sql: "UPDATE execution_records SET status = 'queued', completed_at = NULL, metadata_json = ?, updated_at = ? WHERE id = ?",
+      params: [
+        JSON.stringify({
+          ...parseJsonObject(row.metadata_json),
+          reviewContinuation: {
+            reviewItemId: item.id,
+            approvedAt: acceptedAt,
+            approvedBy: input.requestedBy,
+          },
+        }),
+        acceptedAt,
+        executionId,
+      ],
+    },
+  ]);
+  updateFeatureSpecStateForReviewContinuation(dbPath, item, {
+    acceptedAt,
+    reviewNote,
+    executionId,
+    schedulerJobId,
+  });
+  scheduler.requeueExistingJob({
+    schedulerJobId,
+    bullmqJobId,
+    jobType,
+    payload: runPayload,
+  });
+  return { schedulerJobId, executionId, blockedReasons: [] };
+}
+
 function reviewDecisionInputForCommand(input: ConsoleCommandInput, item?: ReturnType<typeof listReviewCenterItems>[number]): Pick<RecordApprovalInput, "decision" | "targetStatus"> | undefined {
   const payloadTargetStatus = optionalString(input.payload?.targetStatus) as RecordApprovalInput["targetStatus"] | undefined;
   switch (input.action) {
@@ -5067,7 +5182,9 @@ function updateFeatureSpecStateForReviewDecision(
   const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, item.featureId);
   const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
   if (!featureFolder) return;
-  const stateStatus = reviewTargetToFileSpecStatus(input.targetStatus);
+  const stateStatus = input.decision === "approve_continue" && item.runId
+    ? "completed"
+    : reviewTargetToFileSpecStatus(input.targetStatus);
   if (!stateStatus) return;
   try {
     const now = new Date(input.acceptedAt);
@@ -5098,6 +5215,52 @@ function updateFeatureSpecStateForReviewDecision(
     }));
   } catch {
     // Approval records and state_transitions remain authoritative if the operator-facing file projection fails.
+  }
+}
+
+function updateFeatureSpecStateForReviewContinuation(
+  dbPath: string,
+  item: ReturnType<typeof listReviewCenterItems>[number],
+  input: {
+    acceptedAt: string;
+    reviewNote: string;
+    executionId: string;
+    schedulerJobId: string;
+  },
+): void {
+  if (!item.featureId || item.taskId || !item.projectId) return;
+  const project = getProject(dbPath, item.projectId);
+  const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, item.projectId, project?.targetRepoPath);
+  if (!workspaceRoot) return;
+  const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, item.featureId);
+  const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
+  if (!featureFolder) return;
+  try {
+    const now = new Date(input.acceptedAt);
+    const current = readFileSpecState(workspaceRoot, featureFolder, item.featureId, now);
+    writeFileSpecState(workspaceRoot, featureFolder, mergeFileSpecState(current, {
+      status: "queued",
+      executionStatus: "queued",
+      blockedReasons: [],
+      currentJob: {
+        ...current.currentJob,
+        schedulerJobId: input.schedulerJobId,
+        executionId: input.executionId,
+        operation: current.currentJob?.operation ?? "feature_execution",
+        queuedAt: input.acceptedAt,
+        completedAt: undefined,
+      },
+      nextAction: "Review input approved; waiting for Runner to continue this Feature.",
+      resumeTarget: undefined,
+    }, {
+      now,
+      source: "review_center",
+      summary: `Review input approved for adapter continuation: ${input.reviewNote}`,
+      schedulerJobId: input.schedulerJobId,
+      executionId: input.executionId,
+    }));
+  } catch {
+    // Approval records and execution_records remain authoritative if the operator-facing file projection fails.
   }
 }
 

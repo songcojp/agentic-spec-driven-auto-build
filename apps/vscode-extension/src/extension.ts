@@ -29,6 +29,7 @@ import { normalizeWorkbenchTheme, type WorkbenchTheme } from "./webviews/shared"
 import { renderSystemSettingsWebview } from "./webviews/system-settings";
 
 let controlPlaneManager: BundledControlPlaneManager | undefined;
+let productConsoleManager: ProductConsoleManager | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
 let startupSpecWorkspaceOpened = false;
 const WEBVIEW_AUTO_REFRESH_INTERVAL_MS = 60_000;
@@ -53,6 +54,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(diagnostics);
   controlPlaneManager = new BundledControlPlaneManager(context);
   context.subscriptions.push(controlPlaneManager);
+  productConsoleManager = new ProductConsoleManager(context);
+  context.subscriptions.push(productConsoleManager);
   const provider = new SpecExplorerProvider(diagnostics, context);
   context.subscriptions.push(vscode.window.createTreeView("specdrive.specExplorer", { treeDataProvider: provider }));
   context.subscriptions.push(vscode.commands.registerCommand("specdrive.refresh", () => provider.refresh()));
@@ -227,6 +230,106 @@ class BundledControlPlaneManager implements vscode.Disposable {
           reject(new Error(`SpecDrive bundled server exited before ready: code=${String(code)} signal=${String(signal)} ${stderr.trim()}`.trim()));
         }
       });
+    });
+  }
+}
+
+class ProductConsoleManager implements vscode.Disposable {
+  private process: ChildProcessWithoutNullStreams | undefined;
+  private runtimeUrl: string | undefined;
+  private startPromise: Promise<string> | undefined;
+
+  constructor(private readonly context: vscode.ExtensionContext) {}
+
+  async ensureReady(controlPlaneUrl: string): Promise<string> {
+    const configuredUrl = configuredProductConsoleUrl();
+    if (await isProductConsoleHealthy(configuredUrl)) {
+      this.runtimeUrl = configuredUrl;
+      return configuredUrl;
+    }
+
+    if (!this.startPromise) {
+      this.startPromise = this.startProductConsole(controlPlaneUrl).catch((error) => {
+        this.startPromise = undefined;
+        throw error;
+      });
+    }
+    return this.startPromise;
+  }
+
+  currentUrl(): string | undefined {
+    return this.runtimeUrl;
+  }
+
+  dispose(): void {
+    this.process?.kill();
+    this.process = undefined;
+    this.startPromise = undefined;
+  }
+
+  private async startProductConsole(controlPlaneUrl: string): Promise<string> {
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspaceRoot) return configuredProductConsoleUrl();
+
+    const repoRoot = await resolveProductConsoleRepoRoot(this.context, workspaceRoot);
+    if (!repoRoot) {
+      throw new Error("SpecDrive Product Console source was not found. Start it manually with npm run console:dev, or update specdrive.productConsoleUrl.");
+    }
+
+    const configuredUrl = new URL(configuredProductConsoleUrl());
+    const configuredPort = configuredUrl.port ? Number(configuredUrl.port) : 45173;
+    const port = await findFreePort(Number.isInteger(configuredPort) ? configuredPort : 45173);
+    const host = configuredUrl.hostname || "127.0.0.1";
+    const command = process.platform === "win32" ? "npm.cmd" : "npm";
+    const args = ["run", "console:dev", "--", "--host", host, "--port", String(port)];
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      CONSOLE_API_BASE_URL: controlPlaneUrl,
+      CONSOLE_PORT: String(port),
+    };
+
+    const child = spawn(command, args, { cwd: repoRoot, env, stdio: "pipe" });
+    this.process = child;
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+
+    const url = `${configuredUrl.protocol}//${host}:${port}`;
+    return await new Promise((resolve, reject) => {
+      let output = "";
+      const timeout = setTimeout(() => {
+        reject(new Error(`SpecDrive Product Console did not become ready on ${url}. ${output.trim()}`.trim()));
+      }, 30000);
+
+      const checkReady = async () => {
+        if (await isProductConsoleHealthy(url)) {
+          clearTimeout(timeout);
+          this.runtimeUrl = url;
+          void this.context.workspaceState.update("specdrive.runtimeProductConsoleUrl", this.runtimeUrl);
+          resolve(url);
+        }
+      };
+
+      child.stdout.on("data", (chunk) => {
+        output += chunk;
+        void checkReady();
+      });
+      child.stderr.on("data", (chunk) => {
+        output += chunk;
+        void checkReady();
+      });
+      child.once("error", (error) => {
+        clearTimeout(timeout);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      });
+      child.once("exit", (code, signal) => {
+        this.process = undefined;
+        this.startPromise = undefined;
+        if (!this.runtimeUrl) {
+          clearTimeout(timeout);
+          reject(new Error(`SpecDrive Product Console exited before ready: code=${String(code)} signal=${String(signal)} ${output.trim()}`.trim()));
+        }
+      });
+      void checkReady();
     });
   }
 }
@@ -1729,7 +1832,7 @@ function isAbsolutePath(path: string): boolean {
 }
 
 async function openProductConsole(item: unknown, provider: SpecExplorerProvider): Promise<void> {
-  const baseUrl = vscode.workspace.getConfiguration("specdrive").get("productConsoleUrl", provider.currentView()?.productConsole?.defaultUrl ?? "http://127.0.0.1:5173");
+  const baseUrl = await ensureProductConsoleReady();
   const path = isQueueItem(item)
     ? provider.currentView()?.productConsole?.links.queue ?? "/#runner"
     : provider.currentView()?.productConsole?.links.workspace ?? "/#spec";
@@ -2070,6 +2173,15 @@ async function ensureControlPlaneReady(): Promise<string> {
   return await controlPlaneManager?.ensureReady() ?? configuredControlPlaneUrl();
 }
 
+function configuredProductConsoleUrl(): string {
+  return productConsoleManager?.currentUrl() ?? extensionConfig("productConsoleUrl", "http://127.0.0.1:45173");
+}
+
+async function ensureProductConsoleReady(): Promise<string> {
+  const controlPlaneUrl = await ensureControlPlaneReady();
+  return await productConsoleManager?.ensureReady(controlPlaneUrl) ?? configuredProductConsoleUrl();
+}
+
 function extensionConfig<T>(key: string, defaultValue: T): T {
   return vscode.workspace.getConfiguration("specdrive").get(key, defaultValue);
 }
@@ -2078,6 +2190,9 @@ async function openSpecWorkspaceOnStartup(provider: SpecExplorerProvider): Promi
   if (startupSpecWorkspaceOpened || !extensionConfig("openSpecWorkspaceOnStartup", false)) return;
   if (!provider.currentView()?.recognized) return;
   startupSpecWorkspaceOpened = true;
+  void ensureProductConsoleReady().catch((error) => {
+    void vscode.window.showWarningMessage(error instanceof Error ? error.message : String(error));
+  });
   await openSpecWorkspace(provider);
 }
 
@@ -2085,6 +2200,37 @@ async function isHealthy(baseUrl: string): Promise<boolean> {
   try {
     const response = await fetch(new URL("/health", baseUrl));
     return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function isProductConsoleHealthy(baseUrl: string): Promise<boolean> {
+  try {
+    const response = await fetch(baseUrl);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveProductConsoleRepoRoot(context: vscode.ExtensionContext, workspaceRoot: string): Promise<string | undefined> {
+  const candidates = [
+    workspaceRoot,
+    join(context.extensionPath, "..", ".."),
+  ];
+  for (const candidate of candidates) {
+    if (await fileExists(join(candidate, "package.json")) && await fileExists(join(candidate, "apps", "product-console", "vite.config.ts"))) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(vscode.Uri.file(path));
+    return true;
   } catch {
     return false;
   }

@@ -52,6 +52,7 @@ declare const __dirname: string;
 declare const process: {
   execPath: string;
   env: Record<string, string | undefined>;
+  platform: string;
 };
 
 declare module "vscode" {
@@ -255,6 +256,7 @@ declare module "vscode" {
       options?: { enableScripts?: boolean; retainContextWhenHidden?: boolean; localResourceRoots?: Uri[] },
     ): WebviewPanel;
     function showErrorMessage(message: string): Thenable<string | undefined>;
+    function showWarningMessage(message: string): Thenable<string | undefined>;
     function showInputBox(options?: { prompt?: string; value?: string }): Thenable<string | undefined>;
     function showQuickPick(items: string[], options?: { placeHolder?: string }): Thenable<string | undefined>;
   }

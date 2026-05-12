@@ -24,6 +24,7 @@ Spec Evolution:
 - CHG-017：任务调度中心重构为执行 Job 队列视图。Job 与 Feature 解耦，Feature/Task/Project 只作为 payload context；`runs` 领域词替换为 Execution Record / 执行记录；旧 `feature.select -> feature.plan -> cli.run` 流水线废弃。
 - CHG-019：用户确认 Feature 编码执行不再依赖 `task_graph_tasks` / `tasks`；`07.execution.dispatch-adapter` 直接读取 Feature Spec 目录中的 `requirements.md`、`design.md`、`tasks.md` 并执行。Product Console 的 Feature 级调度只需校验完整 Feature Spec 目录和 workspace，不要求 Task Board 任务表存在。
 - CHG-020：用户接受统一紧凑工作台概念图，要求 Product Console 与 VSCode IDE 使用同一套工作台 UI；旧 Console 视觉和页面组织可以放弃，但必须保留 Control Plane API、受控命令、真实数据 ViewModel、项目隔离和审计边界。语言切换与主题切换必须集中在 System Settings，Console 支持 VS Code / Light / Dark / High Contrast 主题。
+- CHG-066：用户要求 Product Console 默认使用 light 主题；首次打开且没有已保存主题偏好时必须默认浅色，后续主题切换继续由 System Settings 持久化。
 
 ## Scope
 
@@ -53,7 +54,7 @@ Spec Evolution:
 - Review Center 页面展示待审批列表、风险筛选、diff、Evidence、审批操作、项目规则写入和 Spec Evolution 写入入口。
 - Audit Center 页面展示审计摘要、Audit Timeline、命令回执、阻塞原因、状态转换、Evidence、Execution Record、Job 和 Approval 关联记录，并使用 `docs/ui/audit-center-concept.png` 作为实现基线。
 - Product Console 必须提供用户可访问的前端应用入口、页面路由和可交互控件；Control Plane JSON API、Query Model 或 ViewModel 不构成用户 UI 完成证据。
-- Product Console 必须默认使用中文界面，并提供可见语言切换入口；切换范围覆盖导航、页面标题、操作按钮、状态标签、空态、错误态、反馈提示和确认信息。
+- Product Console 必须默认使用中文界面，并在没有已保存主题偏好时默认使用浅色主题；系统设置提供可见语言和主题切换入口。语言切换范围覆盖导航、页面标题、操作按钮、状态标签、空态、错误态、反馈提示和确认信息；主题切换范围覆盖 shell、panel、表格、按钮、状态徽标和表单。
 - Product Console 必须采用与 VSCode IDE Webview 一致的紧凑工作台信息架构和视觉 token；允许重新组织 Dashboard、Project Home、Spec Workspace、Runner / Execution、Audit / Review 和 System Settings 的页面壳层，但不得减少关键数据项、操作按钮、证据、日志、成本、配置或受控命令入口。
 - Product Console 的语言切换和主题切换必须位于 System Settings；全局 header 不再放置语言切换控件。主题选择支持 VS Code、Light、Dark 和 High Contrast，并在刷新后保留。
 
@@ -108,6 +109,7 @@ Spec Evolution:
 - [ ] 浏览器级验证覆盖 Console 首屏、页面切换、真实数据渲染、空态/错误态和一个受控命令动作；API 层测试不能单独满足 UI 验收。
 - [ ] FEAT-013 不得标记为 `done`，除非用户可访问 UI 与现有 API/ViewModel 同时完成并通过验证。
 - [ ] Product Console 首次打开默认展示中文界面。
+- [ ] Product Console 首次打开且没有已保存主题偏好时默认使用浅色主题。
 - [ ] 语言切换后当前页面和后续导航使用所选语言，刷新后仍保留用户选择。
 - [ ] 语言切换不得翻译或改写 Evidence、diff、日志、文件路径、命令输出和用户输入内容。
 - [ ] 浏览器级验证覆盖默认中文和至少一次语言切换。
@@ -131,7 +133,7 @@ Spec Evolution:
 - [ ] 浏览器级验证覆盖 Spec Workspace / Task Board 执行动作返回 scheduler job、execution id、workspace、skill phase、blocked reason 和 Evidence 摘要。
 - [ ] 浏览器级验证覆盖 Feature 级 `schedule_run` 不依赖 `task_graph_tasks` / `tasks`，完整 Feature Spec 目录可入队，缺失三件套时展示 blocked reason。
 - [ ] 浏览器级验证覆盖 Runner Console 调度/运行按钮仍返回 command receipt，且不会绕过 Console Command Gateway。
-- [ ] 浏览器级验证覆盖统一紧凑工作台 UI：System Settings 中的语言/主题切换、四种主题渲染、关键操作按钮不缺失、关键数据项不减少、页面级滚动不产生多层详情滚动。
+- [ ] 浏览器级验证覆盖统一紧凑工作台 UI：首次打开默认浅色主题、System Settings 中的语言/主题切换、四种主题渲染、关键操作按钮不缺失、关键数据项不减少、页面级滚动不产生多层详情滚动。
 
 ## Risks and Open Questions
 

@@ -131,10 +131,10 @@ function readInitialLocale(): Locale {
 
 function readInitialTheme(): ConsoleTheme {
   if (typeof window === "undefined") {
-    return "vscode";
+    return "light";
   }
   const value = window.localStorage.getItem(themeStorageKey);
-  return value === "light" || value === "dark" || value === "highContrast" || value === "vscode" ? value : "vscode";
+  return value === "light" || value === "dark" || value === "highContrast" || value === "vscode" ? value : "light";
 }
 
 function readInitialProjectId(): string {

@@ -196,10 +196,11 @@ test("defaults to Chinese and persists language switching", async ({ page }) => 
 test("changes console theme from System Settings and keeps the compact workbench shell", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.locator(".console-workbench")).toHaveAttribute("data-console-theme", "vscode");
+  await expect(page.locator(".console-workbench")).toHaveAttribute("data-console-theme", "light");
   await expect(page.getByLabel("主题")).toHaveCount(0);
 
   await page.getByRole("button", { name: "系统设置", exact: true }).click();
+  await expect(page.getByRole("button", { name: "浅色" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "浅色" }).click();
   await expect(page.locator(".console-workbench")).toHaveAttribute("data-console-theme", "light");
   await page.getByRole("button", { name: "高对比度" }).click();

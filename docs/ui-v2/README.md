@@ -12,7 +12,7 @@ These images are the accepted dark-theme compact workbench concept set for the u
 
 Notes:
 
-- Theme: dark default.
+- Theme: concept images use dark tokens; Product Console runtime defaults to Light when no saved preference exists.
 - Generated target: 1920x1200.
 - Actual PNG size returned by the image generation backend: 1586x992.
 - Source directory: `/home/john/.codex/generated_images/019e162f-433b-71e0-bf03-b6c179288e1d/`.

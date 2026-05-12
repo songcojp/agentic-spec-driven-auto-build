@@ -309,7 +309,8 @@ function featureStatusKey(feature: SpecDriveIdeFeatureNode): string {
 function renderFeatureStateFlow(feature: SpecDriveIdeFeatureNode): string {
   const resume = feature.resumeTarget;
   const rows: Array<[string, string]> = [
-    ["Current / Execution", `${feature.status} / ${featureExecutionLabel(feature)}`],
+    ["Current", feature.status],
+    ["Execution", featureExecutionLabel(feature)],
     ["Reason", feature.stateReason ?? firstFeatureStateReason(feature)],
     ["Review Reason", feature.latestReviewNeededReason ?? "none"],
     ["Review Message", feature.latestReview?.message ?? "none"],
@@ -317,9 +318,9 @@ function renderFeatureStateFlow(feature: SpecDriveIdeFeatureNode): string {
     ["Recommended Actions", feature.latestReview?.recommendedActions.join(", ") || "none"],
     ["Resume Target", resume ? `${resume.status} via ${resume.source}` : "none"],
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
-    ["Next Action", featureStateNextAction(feature)],
   ];
-  return `<div class="result-group state-flow feature-state-flow-compact">${rows.map(renderFeatureStateItem).join("")}</div>`;
+  const nextStep = renderFeatureStateRow(["Next Step", featureStateNextAction(feature)]);
+  return `<div class="result-group state-flow feature-state-flow-compact">${rows.map(renderFeatureStateItem).join("")}${nextStep}</div>`;
 }
 
 function renderFeatureStateItem([label, value]: [string, string]): string {
@@ -328,7 +329,7 @@ function renderFeatureStateItem([label, value]: [string, string]): string {
 }
 
 function renderFeatureStateRow([label, value]: [string, string]): string {
-  return `<div class="feature-state-row"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
+  return `<div class="feature-state-row" style="grid-column:1/-1"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
 }
 
 function renderFeatureReviewDetails(feature: SpecDriveIdeFeatureNode): string {
