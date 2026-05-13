@@ -834,15 +834,16 @@ export async function runCodexAppServerRunJob(
   }
 
   const now = new Date();
+  const adapterDefaults = adapterConfig?.defaults ?? {};
   const policy = resolveRunnerPolicy({
     runId: payload.executionId,
     risk: loaded.risk,
     workspaceRoot: loaded.workspaceRoot,
-    model: loaded.adapter.defaults.model,
-    reasoningEffort: loaded.adapter.defaults.reasoningEffort,
-    profile: loaded.adapter.defaults.profile,
-    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : loaded.adapter.defaults.sandbox,
-    requestedApprovalPolicy: loaded.adapter.defaults.approval,
+    model: adapterDefaults.model ?? loaded.adapter.defaults.model,
+    reasoningEffort: adapterDefaults.reasoningEffort ?? adapterDefaults.reasoning_effort ?? loaded.adapter.defaults.reasoningEffort,
+    profile: adapterDefaults.profile ?? loaded.adapter.defaults.profile,
+    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : adapterDefaults.sandbox ?? loaded.adapter.defaults.sandbox,
+    requestedApprovalPolicy: adapterDefaults.approval ?? loaded.adapter.defaults.approval,
     now,
   });
   const safety = evaluateRunnerSafety({
@@ -1160,15 +1161,16 @@ export async function runGeminiAcpRunJob(
   }
 
   const now = new Date();
+  const adapterDefaults = adapterConfig?.defaults ?? {};
   const policy = resolveRunnerPolicy({
     runId: payload.executionId,
     risk: loaded.risk,
     workspaceRoot: loaded.workspaceRoot,
-    model: loaded.adapter.defaults.model,
-    reasoningEffort: loaded.adapter.defaults.reasoningEffort,
-    profile: loaded.adapter.defaults.profile,
-    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : loaded.adapter.defaults.sandbox,
-    requestedApprovalPolicy: loaded.adapter.defaults.approval,
+    model: adapterDefaults.model ?? loaded.adapter.defaults.model,
+    reasoningEffort: adapterDefaults.reasoningEffort ?? adapterDefaults.reasoning_effort ?? loaded.adapter.defaults.reasoningEffort,
+    profile: adapterDefaults.profile ?? loaded.adapter.defaults.profile,
+    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : adapterDefaults.sandbox ?? loaded.adapter.defaults.sandbox,
+    requestedApprovalPolicy: adapterDefaults.approval ?? loaded.adapter.defaults.approval,
     now,
   });
   const safety = evaluateRunnerSafety({
@@ -1816,6 +1818,7 @@ function loadAppServerAdapterConfig(dbPath: string, adapterId?: string): CodexAp
     transport: normalizeAppServerTransport(row.transport),
     endpoint: optionalString(row.endpoint),
     requestTimeoutMs: Number(row.request_timeout_ms ?? DEFAULT_CODEX_APP_SERVER_ADAPTER_CONFIG.requestTimeoutMs),
+    defaults: parseJsonObject(row.defaults_json),
     status: String(row.status) === "disabled" ? "disabled" : "active",
     updatedAt: optionalString(row.updated_at),
   };
@@ -1878,6 +1881,7 @@ function loadGeminiAcpAdapterConfig(dbPath: string, adapterId?: string): GeminiA
     transport: normalizeAppServerTransport(row.transport),
     endpoint: optionalString(row.endpoint),
     requestTimeoutMs: Number(row.request_timeout_ms ?? DEFAULT_GEMINI_ACP_ADAPTER_CONFIG.requestTimeoutMs),
+    defaults: parseJsonObject(row.defaults_json),
     status: String(row.status) === "disabled" ? "disabled" : "active",
     updatedAt: optionalString(row.updated_at),
   };

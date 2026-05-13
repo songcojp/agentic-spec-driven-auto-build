@@ -39,6 +39,7 @@ import {
   type CliAdapterValidationResult,
   type RunnerApprovalPolicy,
   type RunnerQueueStatus,
+  type RunnerReasoningEffort,
   type RunnerSandboxMode,
 } from "./cli-adapter.ts";
 import {
@@ -6506,11 +6507,29 @@ function normalizeRpcAdapterConfig(input: Record<string, unknown> | Partial<RpcA
     requestTimeoutMs: Number(input.requestTimeoutMs ?? input.request_timeout_ms ?? base.requestTimeoutMs),
     defaults: {
       model: optionalString(inputDefaults.model) ?? baseDefaults.model,
+      reasoningEffort: normalizeRpcReasoningEffort(inputDefaults.reasoningEffort ?? inputDefaults.reasoning_effort)
+        ?? baseDefaults.reasoningEffort
+        ?? baseDefaults.reasoning_effort,
+      profile: optionalString(inputDefaults.profile) ?? baseDefaults.profile,
+      sandbox: normalizeRpcSandbox(inputDefaults.sandbox) ?? baseDefaults.sandbox,
+      approval: normalizeRpcApproval(inputDefaults.approval) ?? baseDefaults.approval,
       costRates: normalizeCostRates(inputDefaults.costRates ?? inputDefaults.cost_rates ?? baseDefaults.costRates),
     },
     status,
     updatedAt: optionalString(input.updatedAt) ?? optionalString(input.updated_at) ?? new Date().toISOString(),
   };
+}
+
+function normalizeRpcReasoningEffort(value: unknown): RunnerReasoningEffort | undefined {
+  return value === "low" || value === "medium" || value === "high" || value === "xhigh" ? value : undefined;
+}
+
+function normalizeRpcSandbox(value: unknown): RunnerSandboxMode | undefined {
+  return value === "read-only" || value === "workspace-write" || value === "danger-full-access" ? value : undefined;
+}
+
+function normalizeRpcApproval(value: unknown): RunnerApprovalPolicy | undefined {
+  return value === "untrusted" || value === "on-failure" || value === "on-request" || value === "never" || value === "bypass" ? value : undefined;
 }
 
 function persistCliAdapterConfig(

@@ -40,8 +40,10 @@ test("system settings fallback exposes Codex default model pricing for clean ini
   const settings = buildSystemSettingsView(dbPath);
 
   assert.equal(settings.cliAdapter.active.id, "codex-cli");
+  assert.equal(settings.cliAdapter.active.defaults.reasoningEffort, "high");
   assert.deepEqual(settings.cliAdapter.active.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
   assert.equal(settings.rpcAdapter.active.id, "codex-rpc-default");
+  assert.equal(settings.rpcAdapter.active.defaults?.reasoningEffort, "high");
   assert.deepEqual(settings.rpcAdapter.active.defaults?.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
 });
 
@@ -1067,6 +1069,7 @@ test("system settings exposes CLI adapter config and governed activation", () =>
   assert.deepEqual(initial.cliAdapter.presets.map((preset) => preset.id), ["codex-cli", "gemini-cli", "claude-cli"]);
   assert.equal(initial.cliAdapter.validation.valid, true);
   assert.equal(initial.rpcAdapter.active.id, "codex-rpc-default");
+  assert.equal(initial.rpcAdapter.active.defaults?.reasoningEffort, "high");
   assert.deepEqual(initial.rpcAdapter.presets.map((preset) => preset.id), ["codex-rpc-default", "gemini-acp-default"]);
   assert.equal(initial.rpcAdapter.validation.valid, true);
   assert.equal(initial.commands.some((command) => command.action === "activate_cli_adapter_config"), true);

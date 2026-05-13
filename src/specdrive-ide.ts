@@ -2406,6 +2406,7 @@ function loadAppServerAdapterConfig(dbPath: string): CodexAppServerAdapterConfig
     transport: String(row.transport) === "unix" || String(row.transport) === "websocket" ? String(row.transport) as "unix" | "websocket" : "stdio",
     endpoint: optionalString(row.endpoint),
     requestTimeoutMs: Number(row.request_timeout_ms ?? DEFAULT_CODEX_APP_SERVER_ADAPTER_CONFIG.requestTimeoutMs),
+    defaults: parseJsonObject(row.defaults_json),
     status: String(row.status) === "disabled" ? "disabled" : "active",
     updatedAt: optionalString(row.updated_at),
   };

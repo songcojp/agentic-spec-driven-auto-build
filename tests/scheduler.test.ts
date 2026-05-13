@@ -694,6 +694,7 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   const result = await runCodexAppServerRunJob(dbPath, cliRunPayload("RUN-APP-SERVER"), transport);
   const rows = runSqlite(dbPath, [], [
     { name: "run", sql: "SELECT status, metadata_json FROM execution_records WHERE id = 'RUN-APP-SERVER'" },
+    { name: "policy", sql: "SELECT model, reasoning_effort FROM runner_policies WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "session", sql: "SELECT session_id, command, args_json, exit_code FROM cli_session_records WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "log", sql: "SELECT stdout FROM raw_execution_logs WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "statusChecks", sql: "SELECT kind, summary FROM status_check_results WHERE run_id = 'RUN-APP-SERVER'" },
@@ -711,6 +712,8 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   assert.equal(metadata.model, "gpt-5.5");
   assert.equal(metadata.cwd, root);
   assert.equal(metadata.contractValidation.valid, true);
+  assert.equal(rows.policy[0].model, "gpt-5.5");
+  assert.equal(rows.policy[0].reasoning_effort, "high");
   assert.equal(rows.session[0].session_id, "THREAD-APP");
   assert.equal(rows.session[0].command, "codex");
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["app-server"]);

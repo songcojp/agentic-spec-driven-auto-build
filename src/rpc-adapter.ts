@@ -1,4 +1,9 @@
-import type { CliJsonEvent } from "./cli-adapter.ts";
+import type {
+  CliJsonEvent,
+  RunnerApprovalPolicy,
+  RunnerReasoningEffort,
+  RunnerSandboxMode,
+} from "./cli-adapter.ts";
 import {
   validateCostRates,
   type AdapterPricingDefaults,
@@ -25,6 +30,14 @@ export type RpcAdapterTransport = {
   close?(): Promise<void> | void;
 };
 
+export type RpcAdapterDefaults = AdapterPricingDefaults & {
+  reasoningEffort?: RunnerReasoningEffort;
+  reasoning_effort?: RunnerReasoningEffort;
+  profile?: string;
+  sandbox?: RunnerSandboxMode;
+  approval?: RunnerApprovalPolicy;
+};
+
 export type RpcAdapterConfig = {
   id: string;
   displayName: string;
@@ -34,7 +47,7 @@ export type RpcAdapterConfig = {
   transport: "stdio" | "unix" | "http" | "jsonrpc" | "websocket";
   endpoint?: string;
   requestTimeoutMs: number;
-  defaults?: AdapterPricingDefaults;
+  defaults?: RpcAdapterDefaults;
   status: "active" | "disabled";
   updatedAt?: string;
 };

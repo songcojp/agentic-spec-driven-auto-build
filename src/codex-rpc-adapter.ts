@@ -106,6 +106,7 @@ export const DEFAULT_CODEX_APP_SERVER_ADAPTER_CONFIG: CodexAppServerAdapterConfi
   requestTimeoutMs: 120_000,
   defaults: {
     model: "gpt-5.5",
+    reasoningEffort: "high",
     costRates: {
       "gpt-5.5": CODEX_GPT_5_5_STANDARD_COST_RATE,
     },

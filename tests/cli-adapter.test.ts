@@ -949,6 +949,7 @@ test("CLI adapter upgrades stale built-in sandbox defaults", () => {
   assert.equal(normalized.schemaVersion, DEFAULT_CLI_ADAPTER_CONFIG.schemaVersion);
   assert.equal(normalized.defaults.sandbox, "danger-full-access");
   assert.equal(normalized.defaults.approval, "never");
+  assert.equal(normalized.defaults.reasoningEffort, "high");
   assert.equal(normalized.defaults.serviceTier, "fast");
   assert.equal(normalized.defaults.fastMode, true);
   assert.deepEqual(normalized.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
@@ -966,7 +967,7 @@ test("runner policy resolves development defaults and clamps heartbeat cadence",
   assert.equal(lowRisk.sandboxMode, "danger-full-access");
   assert.equal(lowRisk.approvalPolicy, "never");
   assert.equal(lowRisk.model, "gpt-5.5");
-  assert.equal(lowRisk.reasoningEffort, "medium");
+  assert.equal(lowRisk.reasoningEffort, "high");
   assert.equal(lowRisk.heartbeatIntervalSeconds, 10);
 
   const highRisk = resolveRunnerPolicy({
@@ -1414,7 +1415,7 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
     "--sandbox",
     "danger-full-access",
     "-c",
-    'model_reasoning_effort="medium"',
+    'model_reasoning_effort="high"',
     "-c",
     'service_tier="fast"',
     "-c",
@@ -1835,7 +1836,7 @@ test("Codex CLI adapter passes output schema for new exec runs", async () => {
     "-a",
     "never",
     "-c",
-    'model_reasoning_effort="medium"',
+    'model_reasoning_effort="high"',
     "-c",
     'service_tier="fast"',
     "-c",
@@ -3110,7 +3111,7 @@ test("runner artifacts persist for audit and console lookup", async () => {
   assert.equal(rows.queries.policy[0].sandbox_mode, "danger-full-access");
   assert.equal(rows.queries.policy[0].approval_policy, "never");
   assert.equal(rows.queries.policy[0].model, "gpt-5.5");
-  assert.equal(rows.queries.policy[0].reasoning_effort, "medium");
+  assert.equal(rows.queries.policy[0].reasoning_effort, "high");
   assert.equal(rows.queries.heartbeat[0].queue_status, "completed");
   assert.equal(rows.queries.session[0].session_id, "S-1");
   assert.equal(rows.queries.session[0].exit_code, 0);

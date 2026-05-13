@@ -3,7 +3,7 @@ import type { ExecutionAdapterInvocationV1 } from "./execution-adapter-contracts
 import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "./openai-pricing.ts";
 
 const CODEX_DEFAULT_MODEL = "gpt-5.5";
-const CODEX_DEFAULT_REASONING_EFFORT: RunnerReasoningEffort = "medium";
+const CODEX_DEFAULT_REASONING_EFFORT: RunnerReasoningEffort = "high";
 const CODEX_CLI_IMAGE_ARTIFACT_RULES = [
   "- Expected image artifacts must be real raster image files generated through the Codex CLI-specific image generation feature. In Codex CLI, explicitly invoke the built-in $imagegen skill when generating these PNGs.",
   "- Do not satisfy expected image artifacts with SVG, HTML/CSS, Mermaid, ASCII wireframes, base64 text, or Markdown descriptions.",
@@ -15,7 +15,7 @@ const CODEX_CLI_IMAGE_ARTIFACT_RULES = [
 export const CODEX_CLI_ADAPTER_CONFIG: CliAdapterConfig = {
   id: "codex-cli",
   displayName: "Codex CLI",
-  schemaVersion: 4,
+  schemaVersion: 5,
   executable: "codex",
   argumentTemplate: [
     "-a",

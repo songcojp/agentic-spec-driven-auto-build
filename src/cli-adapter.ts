@@ -464,7 +464,7 @@ export type RunnerConsoleSnapshot = {
   heartbeatStale: boolean;
 };
 
-const DEFAULT_REASONING_EFFORT: RunnerReasoningEffort = "medium";
+const DEFAULT_REASONING_EFFORT: RunnerReasoningEffort = DEFAULT_CLI_ADAPTER_CONFIG.defaults.reasoningEffort ?? "high";
 const DEFAULT_COMMAND_TIMEOUT_MS = 15 * 60 * 1000;
 
 export function cliAdapterConfigToExecutionAdapterConfig(config: CliAdapterConfig): ExecutionAdapterConfigV1 {
@@ -1328,6 +1328,7 @@ function upgradeBuiltInAdapterConfig(config: CliAdapterConfig): CliAdapterConfig
       ...config.defaults,
       sandbox: DEFAULT_CLI_ADAPTER_CONFIG.defaults.sandbox,
       approval: DEFAULT_CLI_ADAPTER_CONFIG.defaults.approval,
+      reasoningEffort: DEFAULT_CLI_ADAPTER_CONFIG.defaults.reasoningEffort,
       serviceTier: DEFAULT_CLI_ADAPTER_CONFIG.defaults.serviceTier,
       fastMode: DEFAULT_CLI_ADAPTER_CONFIG.defaults.fastMode,
     },
