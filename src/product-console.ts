@@ -7,6 +7,7 @@ import {
   createFeatureSpec,
   extractVersion,
   mergeFileSpecState,
+  parseFeatureTasksMarkdown,
   projectSpecArtifact,
   readFileSpecState,
   scanSpecSources,
@@ -3263,9 +3264,17 @@ function validateFeatureSpecDirectory(workspaceRoot: string, featureSpecPath: st
   }
   const required = ["requirements.md", "design.md", "tasks.md"];
   const missing = required.filter((file) => !existsSync(join(workspaceRoot, normalized, file)));
-  return missing.length > 0
+  const blockedReasons = missing.length > 0
     ? [`Feature execution requires a complete Feature Spec directory: ${normalized} is missing ${missing.join(", ")}.`]
     : [];
+  const tasksPath = join(workspaceRoot, normalized, "tasks.md");
+  if (!missing.includes("tasks.md")) {
+    const tasks = parseFeatureTasksMarkdown(readFileSync(tasksPath, "utf8"));
+    if (tasks.length === 0) {
+      blockedReasons.push(`Feature execution requires parser-compatible tasks.md: ${normalized}/tasks.md has no parseable TASK entries.`);
+    }
+  }
+  return blockedReasons;
 }
 
 function scheduleRunWorkspaceRoot(dbPath: string, projectId?: string, targetRepoPath?: string): string | undefined {

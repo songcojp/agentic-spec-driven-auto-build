@@ -1256,7 +1256,7 @@ test("schedule_run chooses run mode and provider from job override before projec
   mkdirSync(join(projectPath, "docs", "features", "feat-001-provider"), { recursive: true });
   writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "requirements.md"), "# Feature Spec: FEAT-001 Provider\n", "utf8");
   writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "DELETE FROM execution_records" },
     { sql: "DELETE FROM scheduler_job_records" },
@@ -1780,7 +1780,7 @@ test("spec workspace builds Feature Spec List from docs features packages", () =
     "utf8",
   );
   writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1929,14 +1929,14 @@ test("project schedule_run executes the skill-planned queue artifact", () => {
     "utf8",
   );
   writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   writeFileSync(
     join(projectPath, "docs", "features", "feat-002-ticket-scan", "requirements.md"),
     "# Feature Spec: FEAT-002 Ticket Scan\n\n- REQ-LOT-002: The system shall scan lottery ticket images.",
     "utf8",
   );
   writeFileSync(join(projectPath, "docs", "features", "feat-002-ticket-scan", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-002-ticket-scan", "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "feat-002-ticket-scan", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1989,7 +1989,7 @@ test("start Auto Run accepts a feature-selection skill decision before enqueuing
     const id = folder.startsWith("feat-001") ? "FEAT-001" : "FEAT-002";
     writeFileSync(join(projectPath, "docs", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n`, "utf8");
     writeFileSync(join(projectPath, "docs", "features", folder, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
   writeFileSync(join(projectPath, "docs", "features", "feature-pool-queue.json"), JSON.stringify({
     features: [
@@ -2045,7 +2045,7 @@ test("start Auto Run enables automation while recording unsafe feature-selection
     const id = folder.startsWith("feat-001") ? "FEAT-001" : "FEAT-002";
     writeFileSync(join(projectPath, "docs", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n`, "utf8");
     writeFileSync(join(projectPath, "docs", "features", folder, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
   writeFileSync(join(projectPath, "docs", "features", "feature-pool-queue.json"), JSON.stringify({
     features: [
@@ -2103,7 +2103,7 @@ test("start Auto Run enables automation when the skill queue plan is missing", (
     "utf8",
   );
   writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -2199,7 +2199,7 @@ test("start Auto Run writes file-backed state and can skip to the next Feature",
     const id = folder.startsWith("feat-001") ? "FEAT-001" : "FEAT-002";
     writeFileSync(join(projectPath, "docs", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n\n- REQ-${id.slice(-3)}: The system shall run this Feature.`, "utf8");
     writeFileSync(join(projectPath, "docs", "features", folder, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
   writeFileSync(join(projectPath, "docs", "features", "feature-pool-queue.json"), JSON.stringify({
     features: [
@@ -2299,7 +2299,7 @@ test("start Auto Run accepts skill queue plan P-level priorities", () => {
       "utf8",
     );
     writeFileSync(join(projectPath, "docs", "features", featureId, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", featureId, "tasks.md"), "# Tasks\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "features", featureId, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
@@ -2557,7 +2557,7 @@ test("console schedule command records scheduler triggers without bypassing boun
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [{ sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] }]);
   runSqlite(dbPath, [
     { sql: "DELETE FROM execution_records" },
@@ -2666,7 +2666,7 @@ test("schedule_run dispatches queued jobs immediately when project automation is
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-001 Ticket Capture\n\n- REQ-001: The system shall run this Feature.", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ?, automation_enabled = 1 WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -2727,6 +2727,42 @@ test("console schedule command blocks feature execution when Feature Spec direct
   assert.deepEqual(result.queries.jobs, []);
 });
 
+test("console schedule command blocks feature execution when tasks.md has no parseable task blocks", () => {
+  const dbPath = makeDbPath();
+  seedConsoleData(dbPath);
+  const scheduler = createMemoryScheduler(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "feature-execution-unparseable-tasks-"));
+  const featureDir = join(projectPath, "docs", "features", "feat-013-product-console");
+  mkdirSync(featureDir, { recursive: true });
+  writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
+  writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n\n- Implement something without a task id.\n", "utf8");
+  runSqlite(dbPath, [
+    { sql: "DELETE FROM execution_records" },
+    { sql: "DELETE FROM scheduler_job_records" },
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+    { sql: "UPDATE features SET status = 'ready' WHERE id = 'FEAT-013'" },
+  ]);
+
+  const receipt = submitConsoleCommand(dbPath, {
+    action: "schedule_run",
+    entityType: "feature",
+    entityId: "FEAT-013",
+    requestedBy: "operator",
+    reason: "Schedule unparseable feature execution.",
+    payload: { projectId: "project-1", mode: "manual" },
+    now: stableDate,
+  }, { scheduler });
+  const result = runSqlite(dbPath, [], [
+    { name: "jobs", sql: "SELECT id FROM scheduler_job_records" },
+  ]);
+
+  assert.equal(receipt.status, "blocked");
+  assert.match(receipt.blockedReasons?.join("\n") ?? "", /parser-compatible tasks\.md/);
+  assert.equal(receipt.schedulerJobId, undefined);
+  assert.deepEqual(result.queries.jobs, []);
+});
+
 test("console schedule command blocks duplicate active manual Feature execution", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
@@ -2736,7 +2772,7 @@ test("console schedule command blocks duplicate active manual Feature execution"
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "DELETE FROM execution_records" },
     { sql: "DELETE FROM scheduler_job_records" },
@@ -2783,7 +2819,7 @@ test("console schedule command queues another Feature while one is active", () =
     mkdirSync(featureDir, { recursive: true });
     writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
     writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n", "utf8");
+    writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
   runSqlite(dbPath, [
     { sql: "DELETE FROM execution_records" },
@@ -2830,7 +2866,7 @@ test("console schedule command blocks completed Feature execution", () => {
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n", "utf8");
+  writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   writeFileSync(join(featureDir, "spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-013",

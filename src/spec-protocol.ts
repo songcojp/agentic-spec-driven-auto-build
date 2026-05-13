@@ -154,6 +154,15 @@ export type FeatureSpec = {
   status: FeatureStatus;
 };
 
+export type ParsedFeatureTask = {
+  id: string;
+  title: string;
+  status: string;
+  description?: string;
+  verification?: string;
+  line: number;
+};
+
 export type FileSpecState = {
   schemaVersion: 1;
   featureId: string;
@@ -724,6 +733,67 @@ export function projectSpecArtifact(spec: FeatureSpec, artifactRoot: string): st
   const path = safeSpecArtifactPath(specsDir, spec.id);
   writeFileSync(path, `${JSON.stringify(spec, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   return path;
+}
+
+export function parseFeatureTasksMarkdown(content: string): ParsedFeatureTask[] {
+  const lines = content.split(/\r?\n/);
+  const tasks: ParsedFeatureTask[] = [];
+  let current: ParsedFeatureTask | undefined;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const headingMatch = line.match(/^#{2,4}\s+(?:\[(?<checkbox>[ xX])\]\s*)?(?<id>T(?:ASK)?-?[A-Z0-9-]+|TASK-\d+|T\d+)\s*:?\s*(?<title>.*)$/);
+    const listMatch = line.match(/^\s*[-*]\s+(?:\[(?<checkbox>[ xX])\]\s*)?(?<id>T(?:ASK)?-?[A-Z0-9-]+|TASK-\d+|T\d+)\s*:?\s*(?<title>.*)$/);
+    const plainMatch = line.match(/^(?<id>T(?:ASK)?-?[A-Z0-9-]+|TASK-\d+|T\d+)\s*:?\s*(?<title>.*)$/);
+    const match = headingMatch ?? listMatch ?? plainMatch;
+    if (match?.groups?.id) {
+      current = {
+        id: normalizeFeatureTaskId(match.groups.id),
+        title: cleanFeatureTaskTitle(match.groups.title),
+        status: featureTaskStatusFromLine(line, match.groups.checkbox),
+        line: index,
+      };
+      tasks.push(current);
+      continue;
+    }
+    if (!current) continue;
+    const status = line.match(/^\s*状态\s*[:：]\s*(.+)$/)?.[1] ?? line.match(/^\s*Status\s*[:：]\s*(.+)$/i)?.[1];
+    if (status) {
+      current.status = normalizeFeatureTaskStatus(status);
+      continue;
+    }
+    const description = line.match(/^\s*描述\s*[:：]\s*(.+)$/)?.[1] ?? line.match(/^\s*Description\s*[:：]\s*(.+)$/i)?.[1];
+    if (description) {
+      current.description = description.trim();
+      continue;
+    }
+    const verification = line.match(/^\s*验证\s*[:：]\s*(.+)$/)?.[1] ?? line.match(/^\s*Verification\s*[:：]\s*(.+)$/i)?.[1];
+    if (verification) {
+      current.verification = verification.trim();
+    }
+  }
+  return tasks;
+}
+
+function normalizeFeatureTaskId(value: string): string {
+  const upper = value.toUpperCase();
+  const compact = upper.match(/^T(?<feature>\d{3})-(?<task>\d{2,})$/);
+  return compact?.groups ? `T-${compact.groups.feature}-${compact.groups.task}` : upper;
+}
+
+function cleanFeatureTaskTitle(value: string | undefined): string {
+  return (value ?? "").replace(/^[-:：\s]+/, "").trim() || "Untitled task";
+}
+
+function featureTaskStatusFromLine(line: string, checkbox?: string): string {
+  const explicit = line.match(/\b状态\s*[:：]\s*([^\s,，;；.。]+)/)?.[1]
+    ?? line.match(/\bStatus\s*[:：]\s*([^\s,，;；.。]+)/i)?.[1];
+  if (explicit) return normalizeFeatureTaskStatus(explicit);
+  if (checkbox) return checkbox.toLowerCase() === "x" ? "done" : "todo";
+  return "unknown";
+}
+
+function normalizeFeatureTaskStatus(value: string): string {
+  return value.trim().replace(/[.。]+$/, "");
 }
 
 export function specStateRelativePath(featureFolder: string): string {
