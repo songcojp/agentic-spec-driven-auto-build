@@ -72,7 +72,7 @@ function invocation(): ExecutionAdapterInvocationV1 {
     constraints: { allowedFiles: [], risk: "low" },
     outputSchema: {},
     skillInstruction: {
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       requestedAction: "feature_execution",
       sourcePaths: ["docs/features/feat-quality/requirements.md"],
       expectedArtifacts: [],
@@ -84,7 +84,7 @@ function output(overrides: Record<string, unknown> = {}): SkillOutputContract {
   return {
     contractVersion: "skill-contract/v2",
     executionId: "RUN-QUALITY",
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Feature implemented.",

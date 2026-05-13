@@ -30,7 +30,7 @@ Feature 名称: IDE Workbench Webviews
 - CHG-032（2026-05-03）：用户要求 `Blocked`、`In-Process`、`Todo` 拆分为三个独立 Feature 分类 panel，不再合并展示。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-033（2026-05-03）：用户要求 `Feature List` 和 `Dependency Graph` 合并为一个按钮，点击后修改按钮文字并切换视图。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-034（2026-05-03）：用户确认 VSCode Feature Spec Webview 中 Feature 身份必须从 `docs/features/README.md` 获取，数据库 Feature 记录和非 index 目录不得生成 Feature 列表项；目录扫描只用于校验 index 中的 folder 和读取三件套。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
-- CHG-035（2026-05-04）：用户反馈点击 Clarification 后任务队列中没有出现技能调用任务；澄清提交必须进入 `10.change.impact-analysis` 调度队列，而不是只记录 `update_spec` 回执。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
+- CHG-035（2026-05-04）：用户反馈点击 Clarification 后任务队列中没有出现技能调用任务；澄清提交必须进入 `manage-spec-change` 调度队列，而不是只记录 `update_spec` 回执。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-036（2026-05-04）：用户要求 VSCode Execution Workbench 顶部任务操作必须基于选中任务启用；部分按钮必须按选中任务状态切换，例如 Pause / Resume；队列任务必须支持选中操作，避免顶部按钮默认作用于未确认任务。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-037（2026-05-04）：用户要求顶部 `Start Auto Run` 使用两种状态；其它顶部任务按钮默认禁用，只有选中任务后才能启用。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-038（2026-05-04）：用户反馈按钮状态不正确；自动执行按钮状态必须来自项目自动执行状态和最新 start / pause / resume 审计事件，不能由队列中是否存在 running / queued 任务推断。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
@@ -50,7 +50,7 @@ Feature 名称: IDE Workbench Webviews
 - CHG-054（2026-05-07）：用户澄清 `Pass` 只用于临时重置状态；VSCode Feature Spec Webview 在 `need review` / `review_needed` 状态必须提供与 Product Console 一致的 ReviewItem 审批入口，审批通过后恢复继续执行；默认 Webview 不再显示 `Pass` 按钮。影响 REQ-046、REQ-047、REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-055（2026-05-07）：用户要求 Job / Project 历史累计总费用保留两位小数并四舍五入；该规则只影响累计总费用，不改变单次执行费用的精度。影响 REQ-084 和 FEAT-021，作为完成 Feature 的 follow-up 修订。
 - CHG-057（2026-05-10）：用户要求 VSCode IDE 补齐 Spec 全操作入口：需求变更、澄清、新增、审批、恢复、重试等按钮必须按 Spec、Feature Spec、Job 的对象状态显示和启用。影响 REQ-084 和 FEAT-021，作为状态流转 UI follow-up 修订。
-- CHG-058（2026-05-10）：用户澄清需求新增/变更协议应固化在 `.agents/skills/10.change.*` 中，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；New Requirement 成功后只代表主线需求入口完成，Feature Spec 拆分/同步由后续 `split_feature_specs` / `05.feature.decompose` 继续。影响 REQ-063、REQ-084 和 FEAT-021，作为目标项目协议边界 follow-up 修订。
+- CHG-058（2026-05-10）：用户澄清需求新增/变更协议应固化在 `.agents/skills/manage-spec-change/SKILL.md` 中，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；New Requirement 成功后只代表主线需求入口完成，Feature Spec 拆分/同步由后续 `split_feature_specs` / `decompose-feature-specs` 继续。影响 REQ-063、REQ-084 和 FEAT-021，作为目标项目协议边界 follow-up 修订。
 - CHG-059（2026-05-10）：用户要求 New Requirement、Requirement Change 和 Clarification 都必须推进到可直接实现的 Feature Spec，包括 Feature index、Feature Pool Queue 和 `spec-state.json` 状态修改；处理完成后用户应能直接通过 UI 调度执行。影响 REQ-084 和 FEAT-021，替代 CHG-058 中“后续再 split”的处理方式。
 - CHG-060（2026-05-10）：用户反馈 VSCode IDE 所有页面自动刷新会导致需求新增、变更、澄清录入内容丢失；输入信息应以聊天对话框形态展示，自动刷新、手动刷新或 Webview 重新渲染不得重置未提交草稿。影响 REQ-084 和 FEAT-021，作为输入稳定性 follow-up 修订。
 - CHG-061（2026-05-10）：用户反馈 Feature Spec 和 Execution Workbench 详情区域只显示 Feature 编号时无法判断任务内容；详情必须显示 Feature Spec 标题和描述信息。影响 REQ-084 和 FEAT-021，作为详情可读性 follow-up 修订。
@@ -79,16 +79,16 @@ Feature 名称: IDE Workbench Webviews
 - [x] `Feature Spec` 右侧详情面板支持查看选中 Feature 的 artifacts、acceptance、latest run、blockers、traceability，并提供打开需求/设计/任务和调度执行等 VSCode 内操作。
 - [x] Webview 所有有副作用动作都通过 extension host 调用 Control Plane command API；不得直接访问 SQLite、Scheduler 内部队列或运行状态文件。
 - [x] Webview 可以复用 shared contract/type 定义和 query/command API，但不得把 Product Console ViewModel 作为插件 UI 的事实源。
-- [x] `Feature Spec` 顶部提供 New Feature 按钮，点击后弹出输入框；输入自然语言内容并提交后，Webview 只提交受控需求输入，后续由模型判定进入 `10.change.create-request` 或 `10.change.update-mainline-spec` 流程。
+- [x] `Feature Spec` 顶部提供 New Feature 按钮，点击后弹出输入框；输入自然语言内容并提交后，Webview 只提交受控需求输入，后续由模型判定进入 `manage-spec-change` 或 `manage-spec-change` 流程。
 - [x] New Feature 提交必须展示 command receipt、路由结论、影响文档和阻塞原因；前端不得用关键字、是否填写 requirement id 等规则硬编码新增/变更判定。
-- [x] New Requirement / New Feature 的需求入口不得在目标项目创建 `change-management.md` 或 `change-disposition-checklist.md`；协议规则由 `.agents/skills/10.change.*` 承载，新增事实进入 PRD、`requirements.md`、HLD、Feature Specs 或状态/证据记录。
+- [x] New Requirement / New Feature 的需求入口不得在目标项目创建 `change-management.md` 或 `change-disposition-checklist.md`；协议规则由 `.agents/skills/manage-spec-change/SKILL.md` 承载，新增事实进入 PRD、`requirements.md`、HLD、Feature Specs 或状态/证据记录。
 - [x] New Requirement、Requirement Change 和 Clarification 的 Skill 调用必须以 `feature_spec_ready_for_execution` 为目标：处理完成时同步 Feature Spec 三件套、`docs/features/README.md`、`docs/features/feature-pool-queue.json` 和 Feature `spec-state.json`，并将 Feature 置为 `ready` 以便用户直接从 UI 调度执行；无法 ready 时必须返回 blocked / review_needed。
 - [x] `Feature Spec` 刷新时必须以 `docs/features/README.md` 作为 Feature 身份来源；数据库 Feature 记录和未写入 index 的目录不得生成 Feature 列表项。刷新仍读取 index 中 folder 对应的 `requirements.md` / `design.md` / `tasks.md`，并识别缺失 folder、缺失三件套和状态冲突。
 - [x] 因需求新增流程未经过 Feature 拆分而导致 `docs/features/README.md` 未更新时，Feature Spec Webview 不显示该目录为 Feature 列表项，也不显示独立 `Feature Index Sync` 信息区块；应由需求新增 Skill 或后续规格同步补齐 Feature index。
 - [x] 需求新增 Skill 创建或更新 Feature Spec 时必须同步 `docs/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
 - [x] 点击 Feature 后，详情面板必须解析该 Feature 的 `tasks.md`，展示任务 ID、任务标题、状态、描述和验证命令；Markdown 缺失或格式无法解析时展示 blocked reason。
 - [x] 状态为 `need review` / `review_needed` 的 Feature Spec 必须在 Feature Spec Webview 工具栏和详情面板提供 ReviewItem 审批入口；点击后通过 Control Plane 执行与 Product Console 一致的 `approve_review` 命令，审批通过后恢复继续执行。
-- [x] 状态为 `need review` / `review_needed` 的 Feature Spec 仍可通过 Clarify 入口提交澄清内容；澄清提交以 `clarification` 意图进入 Spec change request，并由 Control Plane 排入 `10.change.impact-analysis` 技能调用任务，不由前端硬编码需求变更或新增路由。
+- [x] 状态为 `need review` / `review_needed` 的 Feature Spec 仍可通过 Clarify 入口提交澄清内容；澄清提交以 `clarification` 意图进入 Spec change request，并由 Control Plane 排入 `manage-spec-change` 技能调用任务，不由前端硬编码需求变更或新增路由。
 - [x] `Pass` 只作为临时状态重置命令保留，不作为 Feature Spec Webview 的默认入口展示；后端 `mark_feature_complete` 仍可通过受控命令将 Feature 状态、`spec-state.json.executionStatus`、当前或最近 `feature_execution` Execution Record 和对应 Scheduler Job 标记为 `completed`，并清空 blocked reasons。
 - [x] pause、resume、retry、cancel、skip 和 Review 审批后的状态变化必须由 Control Plane 同步 Scheduler Job、Execution Record、Feature `spec-state.json.history` 和必要的 `resumeTarget`；Webview 只展示投影和提交受控命令。
 - [x] Feature Spec 详情面板不得展示 Evidence 区域或 Evidence 验收项；详情只展示 artifacts、tasks、blockers、traceability、最新运行 token/cost、Git delivery 生命周期摘要和可执行动作。Artifacts 必须合并原 acceptance 状态，每行展示文件名、状态和 Open 按钮。

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Requirement Validation"
+  short_description: "Validate requirements for quality and readiness. Use before "
+  default_prompt: "Use $validate-requirements to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

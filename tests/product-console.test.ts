@@ -737,13 +737,13 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   const skillOutput = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-SKILL",
-    skillSlug: "05.feature.decompose",
+    skillName: "decompose-feature-specs",
     requestedAction: "split_feature_specs",
     status: "completed",
     summary: "Feature specs split and queue plan created.",
     nextAction: "Push the Feature Spec pool.",
     tokenUsage: { inputTokens: 1200, cachedInputTokens: 200, outputTokens: 320, reasoningOutputTokens: 80, totalTokens: 1600 },
-    inputContract: { skillSlug: "05.feature.decompose", required: ["featureId", "workspaceRoot"] },
+    inputContract: { skillName: "decompose-feature-specs", required: ["featureId", "workspaceRoot"] },
     outputContract: { contractVersion: "skill-contract/v1", required: ["status"], resultShape: { featureCount: "number" } },
     producedArtifacts: [{ path: "docs/features/feature-pool-queue.json", kind: "json", status: "created" }],
     traceability: { featureId: "FEAT-013" },
@@ -817,7 +817,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
       params: [
         JSON.stringify({ featureId: "FEAT-013", skillPhase: "split_feature_specs" }),
         JSON.stringify({
-          skillSlug: "05.feature.decompose",
+          skillName: "decompose-feature-specs",
           skillOutputContract: progressOutput,
           producedArtifacts: progressOutput.producedArtifacts,
         }),
@@ -866,7 +866,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
       params: [
         JSON.stringify({ featureId: "FEAT-013", skillPhase: "generate_ui_spec" }),
         JSON.stringify({
-          skillSlug: "04.ui.generate-spec",
+          skillName: "design-ui-spec",
           skillPhase: "generate_ui_spec",
           workspaceRoot: projectPath,
           executionInvocation: {
@@ -878,7 +878,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
             constraints: { allowedFiles: [], risk: "low" },
             outputSchema: {},
             skillInstruction: {
-              skillSlug: "04.ui.generate-spec",
+              skillName: "design-ui-spec",
               requestedAction: "generate_ui_spec",
               sourcePaths: ["docs/zh-CN/requirements.md"],
               expectedArtifacts: [],
@@ -887,7 +887,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
           skillOutputContract: {
             contractVersion: "skill-contract/v1",
             executionId: "RUN-METADATA-OUTPUT",
-            skillSlug: "04.ui.generate-spec",
+            skillName: "design-ui-spec",
             requestedAction: "generate_ui_spec",
             status: "completed",
             summary: "UI spec generated from persisted metadata.",
@@ -1328,8 +1328,8 @@ test("project initialization provisions AGENTS and .agents runtime for CLI runs"
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-agent-runtime-"));
   mkdirSync(join(projectPath, "docs"), { recursive: true });
-  mkdirSync(join(projectPath, ".agents", "skills", "05.feature.decompose"), { recursive: true });
-  writeFileSync(join(projectPath, ".agents", "skills", "05.feature.decompose", "SKILL.md"), "# Project custom task slicing skill\n", "utf8");
+  mkdirSync(join(projectPath, ".agents", "skills", "decompose-feature-specs"), { recursive: true });
+  writeFileSync(join(projectPath, ".agents", "skills", "decompose-feature-specs", "SKILL.md"), "# Project custom task slicing skill\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1348,10 +1348,10 @@ test("project initialization provisions AGENTS and .agents runtime for CLI runs"
   assert.equal(receipt.status, "accepted");
   assert.equal(existsSync(join(projectPath, "AGENTS.md")), true);
   assert.equal(existsSync(join(projectPath, ".agents")), true);
-  assert.equal(existsSync(join(projectPath, ".agents", "skills", "05.feature.decompose", "SKILL.md")), true);
-  assert.equal(existsSync(join(projectPath, ".agents", "skills", "10.change.create-request", "SKILL.md")), true);
+  assert.equal(existsSync(join(projectPath, ".agents", "skills", "decompose-feature-specs", "SKILL.md")), true);
+  assert.equal(existsSync(join(projectPath, ".agents", "skills", "manage-spec-change", "SKILL.md")), true);
   assert.equal(
-    readFileSync(join(projectPath, ".agents", "skills", "05.feature.decompose", "SKILL.md"), "utf8"),
+    readFileSync(join(projectPath, ".agents", "skills", "decompose-feature-specs", "SKILL.md"), "utf8"),
     "# Project custom task slicing skill\n",
   );
 });
@@ -1497,8 +1497,8 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
   assert.deepEqual(result.queries.reports.map((row) => row.kind), ["spec_source_scan", "spec_source_upload"]);
   assert.equal(generateReceipt.executionId, result.queries.executions[0].id);
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "02.requirements.convert-ears");
-  assert.equal(jobPayload.context.skillSlug, "02.requirements.convert-ears");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "convert-ears-requirements");
+  assert.equal(jobPayload.context.skillName, "convert-ears-requirements");
   assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/requirements.md"]);
 });
 
@@ -1628,7 +1628,7 @@ test("spec workspace records EARS generation as a CLI skill run instead of direc
   assert.equal(receipt.featureId, undefined);
   assert.equal(Object.prototype.hasOwnProperty.call(payload.traceability, "changeIds"), false);
   const skillInvocation = runner.skillInvocations.find((entry) => entry.runId === receipt.executionId);
-  assert.equal(skillInvocation?.skillSlug, "02.requirements.convert-ears");
+  assert.equal(skillInvocation?.skillName, "convert-ears-requirements");
   assert.equal(workspace.features.some((feature) => feature.id.startsWith("FEAT-INTAKE-")), false);
 });
 
@@ -1656,13 +1656,13 @@ test("generate HLD dispatches the project HLD skill and writes hld.md", () => {
   assert.equal(receipt.status, "accepted");
   assert.equal(receipt.featureId, undefined);
   assert.equal(payload.projectId, "project-1");
-  assert.equal(payload.context.skillSlug, "03.hld.generate");
+  assert.equal(payload.context.skillName, "design-architecture");
   assert.equal(payload.requestedAction, "generate_hld");
   assert.deepEqual(payload.context.expectedArtifacts, ["docs/hld.md"]);
   assert.equal(payload.context.expectedArtifacts.includes("docs/design.md"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(payload.traceability, "changeIds"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "03.hld.generate");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-architecture");
   assert.equal(runner.schedulerJobs.find((job) => job.executionId === receipt.executionId)?.name, "Generate project HLD");
 });
 
@@ -1763,7 +1763,7 @@ test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs
   assert.equal(receipt.status, "accepted");
   assert.equal(receipt.featureId, undefined);
   assert.equal(payload.projectId, "project-1");
-  assert.equal(payload.context.skillSlug, "05.feature.decompose");
+  assert.equal(payload.context.skillName, "decompose-feature-specs");
   assert.equal(payload.requestedAction, "split_feature_specs");
   assert.equal(payload.context.sourcePaths.includes("docs/PRD.md"), true);
   assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
@@ -1773,7 +1773,7 @@ test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs
   assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/tasks.md"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "05.feature.decompose");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "decompose-feature-specs");
 });
 
 test("split Feature Specs preserves uploaded PRD source for task-slicing context", () => {
@@ -1813,7 +1813,7 @@ test("split Feature Specs preserves uploaded PRD source for task-slicing context
   const payload = JSON.parse(String(result.queries.jobs[0].payload_json));
 
   assert.equal(receipt.status, "accepted");
-  assert.equal(payload.context.skillSlug, "05.feature.decompose");
+  assert.equal(payload.context.skillName, "decompose-feature-specs");
   assert.equal(payload.context.sourcePaths[0], uploadedSourcePath);
   assert.equal(payload.context.sourcePaths.includes(".autobuild/specs/uploads/requirements.md"), true);
   assert.equal(payload.context.sourcePaths.includes("docs/PRD.md"), true);
@@ -1933,7 +1933,7 @@ test("start Auto Run accepts a feature-selection skill decision before enqueuing
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Use 06.planning.replan output.",
+    reason: "Use plan-feature-execution output.",
     payload: {
       featureSelectionResult: {
         decision: "selected",
@@ -1954,8 +1954,8 @@ test("start Auto Run accepts a feature-selection skill decision before enqueuing
 
   assert.equal(receipt.status, "accepted");
   assert.equal(context.featureId, "FEAT-002");
-  assert.equal(context.selection.skillSlug, "06.planning.replan");
-  assert.equal(context.selection.source, "06.planning.replan");
+  assert.equal(context.selection.skillName, "plan-feature-execution");
+  assert.equal(context.selection.source, "plan-feature-execution");
   assert.match(context.selection.reason, /selected by reasoning/);
 });
 
@@ -1989,7 +1989,7 @@ test("start Auto Run enables automation while recording unsafe feature-selection
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Reject unsafe 06.planning.replan output.",
+    reason: "Reject unsafe plan-feature-execution output.",
     payload: {
       featureSelectionResult: {
         decision: "selected",
@@ -2074,7 +2074,7 @@ test("start Auto Run replays an existing queued project job before selecting new
         context: {
           featureId: "FEAT-001",
           workspaceRoot: "/tmp/specdrive-project",
-          skillSlug: "07.execution.dispatch-adapter",
+          skillName: "implement-feature",
           skillPhase: "feature_execution",
         },
       })],
@@ -2273,14 +2273,14 @@ test("generate UI Spec dispatches the UI spec skill from project-level Spec Work
   assert.equal(receipt.status, "accepted");
   assert.equal(receipt.featureId, undefined);
   assert.equal(payload.projectId, "project-1");
-  assert.equal(payload.context.skillSlug, "04.ui.generate-spec");
+  assert.equal(payload.context.skillName, "design-ui-spec");
   assert.equal(payload.requestedAction, "generate_ui_spec");
   assert.deepEqual(payload.context.imagePaths ?? [], []);
   assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/ui/ui-spec.md"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), true);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "04.ui.generate-spec");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-ui-spec");
 });
 
 test("spec intake workflow displays the actual discovered source instead of a default PRD path", () => {
@@ -2543,7 +2543,7 @@ test("console schedule command records scheduler triggers without bypassing boun
   assert.equal(cliRunPayload.projectId, "project-1");
   assert.equal(cliRunPayload.context.featureId, "FEAT-013");
   assert.equal(cliRunPayload.context.featureSpecPath, "docs/features/feat-013-product-console");
-  assert.equal(cliRunPayload.context.skillSlug, "07.execution.dispatch-adapter");
+  assert.equal(cliRunPayload.context.skillName, "implement-feature");
   assert.equal(cliRunPayload.context.skillPhase, "feature_execution");
   assert.equal(cliRunPayload.context.workspaceRoot, projectPath);
   assert.deepEqual(cliRunPayload.context.expectedArtifacts, [`.autobuild/runs/${cliRunPayload.executionId}/report.json`]);

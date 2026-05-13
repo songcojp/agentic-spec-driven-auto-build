@@ -7,8 +7,8 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 ## 1. 架构决策
 
 - 保留现有 00-14 skill 编号作为内部兼容层，新增 lifecycle-first 视图作为调度、技能选择和审查的主心智模型。
-- 新增 `.agents/skills/using-agent-skills` 元技能，负责根据任务跨度选择 Define、Plan、Build、Verify、Review、Ship 生命阶段、项目 skills 和 agent persona。
-- `07.execution.dispatch-adapter` 的 `feature_execution` completed 输出升级为 `skill-contract/v2`，通过 `result.deliveryFidelity` 表达全流程保真账本。
+- 新增 `.agents/skills/use-specdrive-lifecycle` 元技能，负责根据任务跨度选择 Define、Plan、Build、Verify、Review、Ship 生命阶段、项目 skills 和 agent persona。
+- `implement-feature` 的 `feature_execution` completed 输出升级为 `skill-contract/v2`，通过 `result.deliveryFidelity` 表达全流程保真账本。
 - UI/App 变更必须通过 `result.runtimeEvidence` 证明 app launch、route、用户操作、状态变化、reload 持久化或等价断言、负向/边界路径和 screenshot / trace / log 证据；foundation/stateless 只能通过 `runtimeExemption` 显式豁免。
 - Control Plane 不接管 prompt 推理，但必须校验结构性不变式：v2 契约、未关闭损失、独立审查、fixture 旁路、证据 artifact refs 和完成决策。
 - Review Center 将 Delivery Fidelity / Runtime Evidence 失败投影为可查询 ReviewItem trigger，使用户能看到损失发生阶段而不是只看到“证据不足”。
@@ -62,7 +62,7 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 
 ## 5. Spec Artifact Granularity Gate
 
-`09.review.spec-granularity` 是 Delivery Fidelity 的上游 Plan/ready 门。它不检查“文件是否存在”，而是检查每层文档是否足够向下传递：
+`review-delivery-evidence` 是 Delivery Fidelity 的上游 Plan/ready 门。它不检查“文件是否存在”，而是检查每层文档是否足够向下传递：
 
 | Artifact | Owns | Fails When |
 |---|---|---|
@@ -76,7 +76,7 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 
 ## 5.1 Spec Document Quality Repair Loop
 
-`.agents/skills/SPEC_DOC_QUALITY_LOOP.md` 是所有 Spec 文档生成/更新 Skill 的共享协议。它适用于项目章程、PRD、requirements、HLD、UI Spec、Feature Spec `requirements.md` / `design.md` / `tasks.md`、Feature index、Feature Pool Queue、ADR 和后续向规划或执行传递的 Markdown / JSON 规格产物。
+`skill-local references/quality-loop.md` 是所有 Spec 文档生成/更新 Skill 的共享协议。它适用于项目章程、PRD、requirements、HLD、UI Spec、Feature Spec `requirements.md` / `design.md` / `tasks.md`、Feature index、Feature Pool Queue、ADR 和后续向规划或执行传递的 Markdown / JSON 规格产物。
 
 运行职责：
 

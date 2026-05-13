@@ -59,17 +59,17 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 
 ### T-021-11 需求新增 Skill 同步 Feature index
 状态: done
-描述: 修改 `10.change.create-request` 流程，要求新增或更新 Feature Spec 后必须同步 `docs/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
-验证: `git diff --check`，检查 `.agents/skills/10.change.create-request/SKILL.md` 明确 Feature index 同步责任。
+描述: 修改 `manage-spec-change` 流程，要求新增或更新 Feature Spec 后必须同步 `docs/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
+验证: `git diff --check`，检查 `.agents/skills/manage-spec-change/SKILL.md` 明确 Feature index 同步责任。
 
 ### T-021-11A 目标项目变更协议收拢到技能
 状态: done
-描述: 修改 `10.change.classify`、`10.change.create-request`、`10.change.update-mainline-spec` 和目标项目 `AGENTS.md` 模板，要求需求新增/变更协议由技能承载，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；当 New Requirement 仅完成主线需求追加时，将 Feature Spec 拆分/同步作为后续 `split_feature_specs` / `05.feature.decompose` 工作。
+描述: 修改 `manage-spec-change`、`manage-spec-change`、`manage-spec-change` 和目标项目 `AGENTS.md` 模板，要求需求新增/变更协议由技能承载，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；当 New Requirement 仅完成主线需求追加时，将 Feature Spec 拆分/同步作为后续 `split_feature_specs` / `decompose-feature-specs` 工作。
 验证: `node --test tests/projects.test.ts tests/specdrive-ide.test.ts`，`git diff --check`。
 
 ### T-021-11B Spec 变更入口生成可调度 Feature Spec
 状态: done
-描述: 调整 New Requirement、Requirement Change 和 Clarification 的后端路由，要求技能调用以 `feature_spec_ready_for_execution` 为目标，输出可执行 Feature Spec 三件套、Feature index、Feature Pool Queue 和 `spec-state.json` ready 状态；Requirement Change 不再只写 `spec_evolution` 记录，而是排入 `10.change.update-mainline-spec` 技能任务。
+描述: 调整 New Requirement、Requirement Change 和 Clarification 的后端路由，要求技能调用以 `feature_spec_ready_for_execution` 为目标，输出可执行 Feature Spec 三件套、Feature index、Feature Pool Queue 和 `spec-state.json` ready 状态；Requirement Change 不再只写 `spec_evolution` 记录，而是排入 `manage-spec-change` 技能任务。
 验证: `node --test tests/specdrive-ide.test.ts tests/cli-adapter.test.ts`，`npm run ide:build`，`git diff --check`。
 
 ### T-021-12 Feature 详情 tasks.md 任务解析
@@ -104,7 +104,7 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 
 ### T-021-18 Clarification 技能队列路由
 状态: done
-描述: VSCode Spec Workspace / Feature Review 的 `clarification` 提交由 Control Plane 路由为 `resolve_clarification`，并在任务队列中创建 `10.change.impact-analysis` 技能调用任务。
+描述: VSCode Spec Workspace / Feature Review 的 `clarification` 提交由 Control Plane 路由为 `resolve_clarification`，并在任务队列中创建 `manage-spec-change` 技能调用任务。
 验证: `node --test tests/specdrive-ide.test.ts` 覆盖 `clarification` receipt、scheduler job 和技能上下文。
 
 ### T-021-19 Execution Workbench 选中任务操作

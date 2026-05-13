@@ -1,0 +1,6 @@
+interface:
+  display_name: "Execution Recovery"
+  short_description: "Recover failed or blocked SpecDrive execution. Use for failu"
+  default_prompt: "Use $recover-execution to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

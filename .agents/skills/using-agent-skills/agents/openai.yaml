@@ -1,4 +1,0 @@
-interface:
-  display_name: "Using Agent Skills"
-  short_description: "Route work through lifecycle agents"
-  default_prompt: "Use $using-agent-skills to select the lifecycle workflow, project skills, specialist agent responsibilities, Delivery Fidelity Ledger, verification, review, and delivery route for this SpecDrive task."

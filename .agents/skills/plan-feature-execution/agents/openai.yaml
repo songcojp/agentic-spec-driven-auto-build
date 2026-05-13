@@ -1,0 +1,6 @@
+interface:
+  display_name: "Feature Execution Planning"
+  short_description: "Plan executable Feature work. Use for task DAG reasoning, de"
+  default_prompt: "Use $plan-feature-execution to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

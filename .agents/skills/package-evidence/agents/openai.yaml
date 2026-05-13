@@ -1,0 +1,6 @@
+interface:
+  display_name: "Evidence Packaging"
+  short_description: "Package audit and evidence artifacts. Use for evidence colle"
+  default_prompt: "Use $package-evidence to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

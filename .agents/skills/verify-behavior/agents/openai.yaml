@@ -1,0 +1,6 @@
+interface:
+  display_name: "Behavior Verification"
+  short_description: "Verify implemented behavior. Use for test planning, unit/int"
+  default_prompt: "Use $verify-behavior to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

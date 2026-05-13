@@ -1,0 +1,6 @@
+interface:
+  display_name: "Architecture Design"
+  short_description: "Design project or feature architecture. Use for HLD generati"
+  default_prompt: "Use $design-architecture to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

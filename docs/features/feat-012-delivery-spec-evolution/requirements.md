@@ -10,7 +10,7 @@
 
 ## Scope
 
-- Feature 达到交付条件后由 `07.execution.dispatch-adapter` 或补交付的 `14.release.prepare-pr` 通过本机 `gh` CLI 创建 PR。
+- Feature 达到交付条件后由 `implement-feature` 或补交付的 `prepare-release` 通过本机 `gh` CLI 创建 PR。
 - PR 内容包含 Feature 摘要、完成任务、关联 requirements、测试结果、风险说明、审批记录、回滚方案和未完成事项。
 - 一轮交付完成后生成 Delivery Report，包含完成内容、变更文件、验收结果、测试摘要、Git delivery 生命周期证据、失败和恢复记录、风险项、下一步建议和 Spec 演进建议。
 - 当实现发现需求不准确、验收不可测、代码库现实与计划冲突、审批改变范围、测试暴露边界缺失或运行指标暴露新约束时，生成 Spec Evolution 建议。

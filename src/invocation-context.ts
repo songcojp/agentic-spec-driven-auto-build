@@ -25,7 +25,7 @@ export type InvocationContextManifest = {
     featureId?: string;
     taskId?: string;
     requestedAction: string;
-    skillSlug: string;
+    skillName: string;
     sourceRefs: string[];
   };
   controlPlaneFacts: {
@@ -77,7 +77,7 @@ export function buildInvocationContextManifest(invocation: ExecutionAdapterInvoc
       featureId: invocation.featureId ?? invocation.traceability.featureId,
       taskId: invocation.traceability.taskId,
       requestedAction: invocation.skillInstruction.requestedAction,
-      skillSlug: invocation.skillInstruction.skillSlug,
+      skillName: invocation.skillInstruction.skillName,
       sourceRefs: invocation.skillInstruction.sourcePaths,
     },
     controlPlaneFacts: {
@@ -127,7 +127,7 @@ export function renderInvocationContextManifest(manifest: InvocationContextManif
     "Task:",
     `- featureId: ${manifest.task.featureId ?? "none"}`,
     `- taskId: ${manifest.task.taskId ?? "none"}`,
-    `- skillSlug: ${manifest.task.skillSlug}`,
+    `- skillName: ${manifest.task.skillName}`,
     `- requestedAction: ${manifest.task.requestedAction}`,
     "Source refs:",
     ...manifest.task.sourceRefs.map((ref) => `- ${ref}`),

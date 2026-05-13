@@ -717,17 +717,17 @@ Agentic Spec 不允许仅凭任务勾选、提交、PR、单元测试或执行 S
 该 Gate 借鉴成熟 Agent/Skill 库中的分层模式：执行 Agent/Skill 负责实现和收集证据，eval / QA / critic 类 Skill 负责独立判断完成度。SpecDrive 中对应的独立 Gate 是：
 
 ```text
-09.review.journey-closure
+review-delivery-evidence
 ```
 
 职责边界：
 
-- `05.feature.decompose`：按用户故事纵切 Feature，在 `requirements.md` 生成 `User Journey Coverage`，在 `tasks.md` 生成 `Journey Checkpoint` 和 `Git Delivery Checkpoint`。
-- `using-agent-skills`：根据任务跨度选择 lifecycle、Skill 和 Product Interpreter / Requirement Critic / Interaction Designer / Task Slicer / Implementation Agent / Test Engineer / Browser QA / Code Reviewer / Release Reviewer 等职责。
-- `07.execution.dispatch-adapter`：实现、测试、更新任务状态，管理 Feature worktree / branch / commit / PR / merge / cleanup，并收集 `requirementCoverage`、`acceptanceEvidence`、`journeyEvidence`、`deliveryFidelity`、`gitDelivery` 或合法 `foundationExemption`。
-- `09.review.spec-consistency`：检查规划产物一致性和 Journey Checkpoint 覆盖。
-- `09.review.code-diff`：检查 diff、spec drift 和缺失的 Journey evidence。
-- `09.review.journey-closure`：只判断用户旅程、需求、任务、验收场景和证据是否闭环，不实现功能。
+- `decompose-feature-specs`：按用户故事纵切 Feature，在 `requirements.md` 生成 `User Journey Coverage`，在 `tasks.md` 生成 `Journey Checkpoint` 和 `Git Delivery Checkpoint`。
+- `use-specdrive-lifecycle`：根据任务跨度选择 lifecycle、Skill 和 Product Interpreter / Requirement Critic / Interaction Designer / Task Slicer / Implementation Agent / Test Engineer / Browser QA / Code Reviewer / Release Reviewer 等职责。
+- `implement-feature`：实现、测试、更新任务状态，管理 Feature worktree / branch / commit / PR / merge / cleanup，并收集 `requirementCoverage`、`acceptanceEvidence`、`journeyEvidence`、`deliveryFidelity`、`gitDelivery` 或合法 `foundationExemption`。
+- `review-code-spec`：检查规划产物一致性和 Journey Checkpoint 覆盖。
+- `review-code-spec`：检查 diff、spec drift 和缺失的 Journey evidence。
+- `review-delivery-evidence`：只判断用户旅程、需求、任务、验收场景和证据是否闭环，不实现功能。
 
 Feature execution 返回 `completed` 时，必须使用 `skill-contract/v2`，专用 `result` 必须包含：
 
@@ -1183,7 +1183,7 @@ sync。
 | UI Spec | 页面、视图、弹窗、状态、用户动作、interaction matrix、数据绑定、保存/校验/reload 断言、浏览器验收。 | 只有概念图、截图、入口或 happy path。 |
 | Feature Spec | 垂直用户旅程、Feature-scoped design、parser-compatible tasks、Journey Checkpoints、验收证据计划。 | P1 journey 没有 requirement row、design path、task block 或 evidence plan。 |
 
-`09.review.spec-granularity` 负责跨层审查。失败原因使用
+`review-delivery-evidence` 负责跨层审查。失败原因使用
 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、
 `state_data_gap`、`task_gap`、`evidence_gap`。失败时 Feature 或相关
 workflow 必须进入 `review_needed` / `clarification_needed` /
@@ -2306,253 +2306,57 @@ Skill 应该是：
 
 ## 13.2 Skill 命名规范
 
-格式：
+Agentic Spec Skill 必须采用 OpenAI / Agent Skills 目录规范：
+
+1. 每个 Skill 是 `.agents/skills/<skill-name>/` 下的独立目录。
+2. 每个 Skill 必须包含 `SKILL.md`。
+3. `SKILL.md` frontmatter 只使用 `name` 与 `description`。
+4. `name` 必须等于目录名。
+5. `name` 只允许小写字母、数字和连字符，禁止点号、阶段编号前缀、空格和下划线。
+6. 可选的 Agent 适配配置放在 `agents/openai.yaml`。
+7. 长合同、示例和质量循环说明应放在 Skill 本地 `references/*.md`；模板放在 `assets/`；确定性辅助脚本放在 `scripts/`。
+
+命名格式：
 
 ```text
-<phase>.<domain>.<action>
+<verb>-<domain>-<object>
 ```
 
 示例：
 
 ```text
-01.prd.generate
-02.requirements.convert-ears
-05.feature.decompose
-07.execution.dispatch-adapter
-12.recovery.restore-checkpoint
+refine-product-intent
+convert-ears-requirements
+decompose-feature-specs
+implement-feature
+recover-execution
 ```
 
 ---
 
-## 13.3 阶段前缀
+## 13.3 Agentic Spec 必备 Skill 清单
 
-| 前缀 | 阶段             |
-| -- | -------------- |
-| 00 | Intake         |
-| 01 | PRD            |
-| 02 | Requirements   |
-| 03 | HLD            |
-| 04 | UI / Prototype |
-| 05 | Feature        |
-| 06 | Planning       |
-| 07 | Execution      |
-| 08 | Test           |
-| 09 | Review         |
-| 10 | Change         |
-| 11 | Approval       |
-| 12 | Recovery       |
-| 13 | Audit          |
-| 14 | Release        |
-| 15 | Maintenance    |
+必备目录必须与下表完全一致；不保留旧阶段编号、dotted slug、alias 或 replacement 映射。
 
----
-
-## 13.4 Agentic Spec 必备 Skill 清单
-
-### Meta / Lifecycle Skills
-
-```text
-using-agent-skills
-```
-
-### 00 Intake Skills
-
-```text
-00.intake.collect-context
-00.intake.normalize-input
-00.intake.identify-constraints
-00.intake.extract-open-questions
-00.intake.generate-project-intake
-```
-
----
-
-### 01 PRD Skills
-
-```text
-01.prd.generate
-01.prd.refine
-01.prd.validate-completeness
-01.prd.extract-goals
-01.prd.extract-non-goals
-01.prd.map-user-journeys
-01.prd.define-acceptance
-```
-
----
-
-### 02 Requirements Skills
-
-```text
-02.requirements.convert-ears
-02.requirements.normalize
-02.requirements.assign-ids
-02.requirements.validate-testability
-02.requirements.detect-conflicts
-02.requirements.update-traceability
-```
-
----
-
-### 03 HLD Skills
-
-```text
-03.hld.generate
-03.hld.decompose-modules
-03.hld.define-state-flow
-03.hld.define-data-flow
-03.hld.define-adapter-model
-03.hld.review-architecture
-03.hld.generate-adr
-```
-
----
-
-### 04 UI / Prototype Skills
-
-```text
-04.ui.generate-spec
-04.ui.generate-page-list
-04.ui.define-interactions
-04.ui.define-states
-04.prototype.generate-png
-04.prototype.generate-html
-04.prototype.generate-index
-04.prototype.validate-mapping
-```
-
----
-
-### 05 Feature Skills
-
-```text
-05.feature.decompose
-05.feature.generate-requirements
-05.feature.generate-design
-05.feature.generate-tasks
-05.feature.validate-scope
-05.feature.update-index
-05.feature.update-status
-```
-
----
-
-### 06 Planning Skills
-
-```text
-06.planning.build-task-dag
-06.planning.resolve-dependencies
-06.planning.estimate-risk
-06.planning.select-adapter
-06.planning.prepare-execution-plan
-06.planning.replan
-```
-
----
-
-### 07 Execution Skills
-
-```text
-07.execution.prepare-context
-07.execution.bind-spec-refs
-07.execution.dispatch-adapter
-07.execution.monitor-run
-07.execution.capture-events
-07.execution.collect-result
-07.execution.update-state
-```
-
----
-
-### 08 Test Skills
-
-```text
-08.test.generate-plan
-08.test.generate-unit-tests
-08.test.generate-integration-tests
-08.test.run-tests
-08.test.analyze-failures
-08.test.map-to-acceptance
-```
-
----
-
-### 09 Review Skills
-
-```text
-09.review.spec-consistency
-09.review.spec-granularity
-09.review.code-diff
-09.review.journey-closure
-09.review.security
-09.review.test-coverage
-09.review.evidence-completeness
-09.review.release-readiness
-```
-
----
-
-### 10 Change Skills
-
-```text
-10.change.create-request
-10.change.classify
-10.change.impact-analysis
-10.change.update-mainline-spec
-10.change.update-feature-spec
-10.change.invalidate-evidence
-10.change.trigger-replan
-```
-
----
-
-### 11 Approval Skills
-
-```text
-11.approval.prepare-gate
-11.approval.request-human-review
-11.approval.record-decision
-11.approval.resume-run
-11.approval.reject-and-replan
-```
-
----
-
-### 12 Recovery Skills
-
-```text
-12.recovery.capture-checkpoint
-12.recovery.validate-checkpoint
-12.recovery.classify-failure
-12.recovery.restore-checkpoint
-12.recovery.resume-run
-12.recovery.mark-blocked
-```
-
----
-
-### 13 Audit Skills
-
-```text
-13.audit.write-log
-13.audit.collect-evidence
-13.audit.update-requirement-matrix
-13.audit.update-feature-matrix
-13.audit.update-change-matrix
-13.audit.generate-evidence-pack
-```
-
----
-
-### 14 Release Skills
-
-```text
-14.release.prepare-pr
-14.release.generate-release-notes
-14.release.verify-release-gate
-14.release.archive-run
-14.release.mark-released
-```
+| Skill | 职责 |
+| --- | --- |
+| `use-specdrive-lifecycle` | 路由 Define、Plan、Build、Verify、Review、Ship 生命周期和专业 agent 职责。 |
+| `collect-project-context` | 只读收集项目、仓库、命令、约束、宪法和实现上下文。 |
+| `refine-product-intent` | 整理 PRD、目标、非目标、用户旅程、验收标准和开放问题。 |
+| `convert-ears-requirements` | 将 PRD、PR/RP、产品 brief 或自然语言输入转换为 EARS 需求。 |
+| `validate-requirements` | 检查需求原子性、可测试性、冲突、追踪和下游可消费性。 |
+| `manage-spec-change` | 治理新增、修订、澄清、废弃、影响分析和重规划入口。 |
+| `design-architecture` | 生成或更新 HLD、ADR、数据流、状态流、Adapter/API/事件/文件契约。 |
+| `design-ui-spec` | 生成 UI Spec、页面清单、交互/状态规则和 prototype/artifact 映射。 |
+| `decompose-feature-specs` | 拆分 Feature Specs，生成或维护 requirements/design/tasks/index/status。 |
+| `plan-feature-execution` | 处理依赖、风险、任务 DAG、执行计划、可启动性、replan 和自动选择。 |
+| `implement-feature` | 执行受控实现，绑定规格引用，捕获事件，收集结果并更新执行状态。 |
+| `verify-behavior` | 生成测试计划，补充测试，运行目标/回归/浏览器/构建/验收验证并分析失败。 |
+| `review-code-spec` | 评审代码 diff、安全、规格一致性和实现偏离。 |
+| `review-delivery-evidence` | 评审用户旅程闭环、测试覆盖、证据完整性和发布准备度。 |
+| `recover-execution` | 分类失败，恢复 checkpoint，标记阻塞，恢复运行并验证恢复结果。 |
+| `package-evidence` | 收集证据，生成 evidence pack，更新 requirement/feature/change 矩阵和审计日志。 |
+| `prepare-release` | 执行发布门、生成 release notes、准备 PR、标记发布和归档运行。 |
 
 ---
 

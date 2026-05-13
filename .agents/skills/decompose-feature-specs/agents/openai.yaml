@@ -1,0 +1,6 @@
+interface:
+  display_name: "Feature Spec Decomposition"
+  short_description: "Decompose product and architecture scope into implementation"
+  default_prompt: "Use $decompose-feature-specs to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

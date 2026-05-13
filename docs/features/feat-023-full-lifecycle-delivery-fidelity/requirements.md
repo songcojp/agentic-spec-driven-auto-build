@@ -36,8 +36,8 @@ Feature 名称: Full Lifecycle Delivery Fidelity
 ## 验收标准
 
 - [ ] 主线 PRD、requirements、HLD 和 skills 文档定义 Delivery Lifecycle OS、Delivery Fidelity Ledger、agent registry、loss taxonomy 和 v2 输出契约。
-- [ ] `.agents/skills/using-agent-skills` 作为元技能存在，并能把任务路由到 Define、Plan、Build、Verify、Review、Ship 生命周期。
-- [ ] `07.execution.dispatch-adapter`、`08.test.run-tests`、`09.review.test-coverage`、`09.review.evidence-completeness`、`09.review.journey-closure` 明确消费或产出 Delivery Fidelity 证据。
+- [ ] `.agents/skills/use-specdrive-lifecycle` 作为元技能存在，并能把任务路由到 Define、Plan、Build、Verify、Review、Ship 生命周期。
+- [ ] `implement-feature`、`verify-behavior`、`review-delivery-evidence`、`review-delivery-evidence`、`review-delivery-evidence` 明确消费或产出 Delivery Fidelity 证据。
 - [ ] `feature_execution` 的 completed 输出必须使用 `skill-contract/v2`，并在 `result.deliveryFidelity` 中提供完整账本。
 - [ ] UI/App 变更的 `feature_execution` completed 输出必须提供 `result.runtimeEvidence`；foundation/stateless 变更必须提供 `result.runtimeExemption` 和证据引用。
 - [ ] 缺少 Delivery Fidelity、存在 open P0/P1 loss、fixture-only evidence、entry/text-only evidence 或 self-review-only closure 时，Execution Record 进入 `review_needed`。
@@ -47,10 +47,10 @@ Feature 名称: Full Lifecycle Delivery Fidelity
 - [ ] 每次 Run 创建 `.autobuild/runs/<executionId>/WORKPAD.md` 和 `workpad.json`，作为执行过程、验收、旅程、runtime 验证和证据索引。
 - [ ] VSCode Execution Workbench 和 Feature Spec 详情展示质量证据、Workpad、日志、截图/trace、PR/check 和 ReviewItem 状态；Product Console 不新增主质量 UI。
 - [ ] 主线 PRD、requirements、HLD、UI Spec 和 Feature Spec 都定义最小颗粒度：PRD 写用户/流程/子能力/样例/非目标；requirements 写 EARS 行为单元；HLD 写系统级事实源/状态/接口/运行/测试；UI Spec 写 interaction matrix；Feature Spec 写垂直 journey、design path、task block、Journey Checkpoint 和 evidence plan。
-- [ ] 新增 `09.review.spec-granularity`，跨 PRD -> requirements -> HLD -> UI Spec -> Feature Spec 审计颗粒度，失败时输出 `review_needed` 和 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
+- [ ] 新增 `review-delivery-evidence`，跨 PRD -> requirements -> HLD -> UI Spec -> Feature Spec 审计颗粒度，失败时输出 `review_needed` 和 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
 - [ ] Rapid FEAT-016 作为下游 golden sample，审计能解释 App Studio 旧实现为何失败、FEAT-016 为什么不能伪装 completed，以及每个 BO-016 义务如何关闭。
-- [ ] 所有 Spec 文档生成/更新 Skill 返回 `completed` 前都执行 `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`，由调用方 Skill 声明 `qualityLoopPlan`，选择本次 `qualityReviewSkill` / `repairOwner`，再由 Quality Review Subagent 和 Repair Subagent 执行最多 10 轮检测/修复。
-- [ ] `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` 不维护产物类型到质检 Skill 的中央路由表；若调用方未声明可用质检 Skill 或修复 owner，必须返回 blocked / review_needed。
+- [ ] 所有 Spec 文档生成/更新 Skill 返回 `completed` 前都执行 `skill-local references/quality-loop.md`，由调用方 Skill 声明 `qualityLoopPlan`，选择本次 `qualityReviewSkill` / `repairOwner`，再由 Quality Review Subagent 和 Repair Subagent 执行最多 10 轮检测/修复。
+- [ ] `skill-local references/quality-loop.md` 不维护产物类型到质检 Skill 的中央路由表；若调用方未声明可用质检 Skill 或修复 owner，必须返回 blocked / review_needed。
 - [ ] 质量循环没有 `in_scope_repairable` gap、下一次修复越过 scope、需要新产品/架构决策、重复同一 gap 指纹或达到 10 轮时，必须返回 `clarification_needed`、`review_needed`、`risk_review_needed` 或 `blocked`，不得继续推进下游。
 - [ ] 生成 Skill 的 `result.qualityRepairLoop` 必须记录 `qualityLoopPlan`、subagent 使用情况、已用轮次、最终决策、剩余 gap 和退出原因。
 

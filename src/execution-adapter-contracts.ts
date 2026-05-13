@@ -51,7 +51,7 @@ export type ExecutionAdapterResumeV1 = {
 };
 
 export type ExecutionAdapterSkillInstructionV1 = {
-  skillSlug: string;
+  skillName: string;
   requestedAction: string;
   sourcePaths: string[];
   imagePaths?: string[];

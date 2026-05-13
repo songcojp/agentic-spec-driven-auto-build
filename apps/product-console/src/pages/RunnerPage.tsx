@@ -93,16 +93,16 @@ function friendlyStatus(job: RunnerSchedulerJob, text: UiStrings): string {
   return job.status;
 }
 
-function friendlyWork(job: RunnerSchedulerJob, invocation: { skillSlug?: string; skillPhase?: string } | undefined, text: UiStrings): string {
-  const skillSlug = invocation?.skillSlug ?? stringifyContextValue(job.context?.skillSlug);
+function friendlyWork(job: RunnerSchedulerJob, invocation: { skillName?: string; skillPhase?: string } | undefined, text: UiStrings): string {
+  const skillName = invocation?.skillName ?? stringifyContextValue(job.context?.skillName);
   const phase = invocation?.skillPhase ?? stringifyContextValue(job.context?.skillPhase);
   const operation = job.operation ?? phase;
-  if (skillSlug === "feat-implement-skill" || phase === "task_execution") return text.workTaskExecution;
-  if (skillSlug === "create-project-hld" || operation === "generate_hld") return text.workGenerateHld;
-  if (skillSlug === "pr-ears-requirement-decomposition-skill" || operation === "generate_ears") return text.workGenerateEars;
-  if (skillSlug === "task-slicing-skill" || operation === "split_feature_specs") return text.workSplitFeatures;
-  if (skillSlug === "ui-spec-skill" || operation === "generate_ui_spec") return text.workGenerateUiSpec;
-  if (skillSlug === "technical-context-skill") return text.workCollectContext;
+  if (skillName === "implement-feature" || phase === "task_execution") return text.workTaskExecution;
+  if (skillName === "design-architecture" || operation === "generate_hld") return text.workGenerateHld;
+  if (skillName === "convert-ears-requirements" || operation === "generate_ears") return text.workGenerateEars;
+  if (skillName === "decompose-feature-specs" || operation === "split_feature_specs") return text.workSplitFeatures;
+  if (skillName === "design-ui-spec" || operation === "generate_ui_spec") return text.workGenerateUiSpec;
+  if (skillName === "collect-project-context") return text.workCollectContext;
   return text.workExecuteTask;
 }
 
@@ -160,7 +160,7 @@ function JobDetailDrawer({
 }: {
   job?: RunnerSchedulerJob;
   text: UiStrings;
-  invocation?: { skillSlug?: string; skillPhase?: string; workspaceRoot?: string; resultSummary?: string; output?: SkillOutputModel };
+  invocation?: { skillName?: string; skillPhase?: string; workspaceRoot?: string; resultSummary?: string; output?: SkillOutputModel };
   recentLog?: { runId: string; stdout: string; stderr: string; createdAt: string };
   error?: string;
   open: boolean;
@@ -234,7 +234,7 @@ function JobDetailDrawer({
                   [text.currentRun, runId ?? text.none],
                   [text.queueName, job.queueName],
                   [text.workspace, job.workspaceRoot ?? invocation?.workspaceRoot ?? text.none],
-                  [text.skillInvocations, invocation?.skillSlug ?? stringifyContextValue(job.context?.skillSlug) ?? text.none],
+                  [text.skillInvocations, invocation?.skillName ?? stringifyContextValue(job.context?.skillName) ?? text.none],
                   [text.skillPhase, invocation?.skillPhase ?? stringifyContextValue(job.context?.skillPhase) ?? text.none],
                 ]}
               />

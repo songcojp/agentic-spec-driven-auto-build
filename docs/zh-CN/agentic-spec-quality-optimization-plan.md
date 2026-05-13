@@ -16,7 +16,7 @@
 
 - `docs/zh-CN/agentic-spec-standard.md` 定义了通用 Agentic Spec 标准。
 - `.agents/skills/` 定义了需求、规划、执行、测试、评审、恢复、交付等工作流 Skill。
-- `.agents/skills/SKILL_OUTPUT_CONTRACT.md` 定义了结构化 Skill 输出契约。
+- `caller-provided output schema and skill-local references/specdrive-output.md` 定义了结构化 Skill 输出契约。
 - `src/spec-protocol.ts` 定义了 Feature Spec、File Spec State、Requirement、Acceptance Criteria、Test Scenario 等数据结构。
 - `src/status-checker.ts` 已经实现 runner 状态、命令检查、diff 风险、allowed/forbidden files、secret findings、spec alignment 等检查。
 - `src/memory.ts` 已经实现 Project Memory、版本记录、压缩、回滚、恢复注入文本。
@@ -49,10 +49,10 @@ SpecDrive 的方向应更进一步：
 当前很多质量要求已经写入：
 
 - `agentic-spec-standard.md`
-- `SKILL_OUTPUT_CONTRACT.md`
-- `07.execution.dispatch-adapter/SKILL.md`
-- `08.test.run-tests/SKILL.md`
-- `09.review.journey-closure/SKILL.md`
+- 旧全局输出合同文件
+- `implement-feature/SKILL.md`
+- `verify-behavior/SKILL.md`
+- `review-delivery-evidence/SKILL.md`
 
 但部分规则仍依赖 Agent 自觉遵守。系统层还需要进一步强制：
 
@@ -688,7 +688,7 @@ export type InvocationContextManifest = {
     featureId?: string;
     taskId?: string;
     requestedAction: string;
-    skillSlug: string;
+    skillName: string;
     sourceRefs: string[];
   };
 
@@ -823,10 +823,10 @@ src/status-checker.ts
 修改：
 
 ```text
-.agents/skills/SKILL_OUTPUT_CONTRACT.md
-.agents/skills/07.execution.dispatch-adapter/SKILL.md
-.agents/skills/08.test.run-tests/SKILL.md
-.agents/skills/09.review.journey-closure/SKILL.md
+caller-provided output schema and skill-local references/specdrive-output.md
+.agents/skills/implement-feature/SKILL.md
+.agents/skills/verify-behavior/SKILL.md
+.agents/skills/review-delivery-evidence/SKILL.md
 ```
 
 补充 `runtimeEvidence` 字段与 app usability gate 要求。

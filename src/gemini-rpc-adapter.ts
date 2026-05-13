@@ -563,7 +563,7 @@ function isSkillOutput(value: unknown): value is SkillOutputContract {
   return isRecord(value)
     && (value.contractVersion === "skill-contract/v1" || value.contractVersion === "skill-contract/v2")
     && typeof value.executionId === "string"
-    && typeof value.skillSlug === "string"
+    && typeof value.skillName === "string"
     && typeof value.requestedAction === "string"
     && typeof value.status === "string"
     && typeof value.summary === "string"

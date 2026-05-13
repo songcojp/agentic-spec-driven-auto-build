@@ -641,7 +641,7 @@ export function buildSpecDriveIdeExecutionDetail(
     jobType: optionalString(row.job_type) ?? optionalString(metadata.jobType),
     featureId,
     taskId: optionalString(context.taskId),
-    adapter: optionalString(metadata.skillSlug) ?? optionalString(metadata.adapterId),
+    adapter: optionalString(metadata.skillName) ?? optionalString(metadata.adapterId),
     threadId: optionalString(metadata.threadId),
     turnId: optionalString(metadata.turnId),
     startedAt: optionalString(row.started_at),
@@ -2494,10 +2494,10 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
       jobType: optionalString(row.job_type),
       featureId,
       taskId: optionalString(context.taskId) ?? optionalString(payloadContext.taskId),
-      adapter: optionalString(metadata.skillSlug)
+      adapter: optionalString(metadata.skillName)
         ?? optionalString(metadata.adapterId)
         ?? optionalString(executionPreference?.adapterId)
-        ?? optionalString(payloadContext.skillSlug),
+        ?? optionalString(payloadContext.skillName),
       runMode: executionPreference?.runMode,
       adapterId: executionPreference?.adapterId,
       preferenceSource: executionPreference?.source,

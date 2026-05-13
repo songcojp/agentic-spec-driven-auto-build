@@ -248,7 +248,7 @@ test("initializeProjectPhase1 creates SpecDrive gitignore and AGENTS guidance", 
   assert.match(agents, /## Spec Workflow/);
   assert.match(agents, /## SpecDrive Workflow Skills/);
   assert.match(agents, /## Skill Reference/);
-  assert.match(agents, /10.change.classify/);
+  assert.match(agents, /manage-spec-change/);
   assert.match(agents, /Do not create project-level scratch requirement files under `docs\/features\/`/);
   assert.match(agents, /skill-owned change protocol/);
   assert.match(agents, /Do not create target-project `docs\/change-management\.md`/);

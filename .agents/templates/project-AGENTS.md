@@ -63,15 +63,18 @@ State fact ownership:
 
 ## Spec Operations
 
-- Requirement addition or change: follow the skill-owned protocol in `.agents/skills/10.change.classify/SKILL.md`, then route to `10.change.create-request` for new IDs or `10.change.update-mainline-spec` for existing IDs.
-- PRD to EARS: use `02.requirements.convert-ears`.
-- HLD generation: use `03.hld.generate`.
-- UI Spec generation: use `04.ui.generate-spec` after PRD, requirements, and HLD exist.
-- Feature splitting: use `05.feature.decompose` after planning context, architecture, data model, contracts, quickstart validation, and consistency checks are complete.
-- Feature execution: use `07.execution.dispatch-adapter` only for bounded tasks with approved requirements, design constraints, allowed scope, and verification commands.
-- Verification: use `08.test.run-tests` for targeted, regression, browser, build, or acceptance checks.
-- Review: use `09.review.code-diff` for spec drift, code risk, test gaps, delivery risk, or approval findings.
-- Delivery: use `14.release.prepare-pr` only after implementation, verification, and review are complete.
+- Requirement addition or change: follow `.agents/skills/manage-spec-change/SKILL.md`.
+- PRD and product intent refinement: use `refine-product-intent`.
+- PRD to EARS: use `convert-ears-requirements`.
+- Requirement quality checks: use `validate-requirements`.
+- HLD, ADR, data, state, and adapter contract generation: use `design-architecture`.
+- UI Spec, interaction, state, and prototype artifact generation: use `design-ui-spec`.
+- Feature splitting and task slicing: use `decompose-feature-specs` after planning context, architecture, data model, contracts, quickstart validation, and consistency checks are complete.
+- Feature execution planning and selection: use `plan-feature-execution`.
+- Feature execution: use `implement-feature` only for bounded tasks with approved requirements, design constraints, allowed scope, and verification commands.
+- Verification: use `verify-behavior` for targeted, regression, browser, build, or acceptance checks.
+- Review: use `review-code-spec` and `review-delivery-evidence` for spec drift, code risk, test gaps, delivery risk, journey closure, or approval findings.
+- Delivery: use `prepare-release` only after implementation, verification, and review are complete.
 
 ## Change And Drift Protocol
 
@@ -85,8 +88,8 @@ State fact ownership:
 ## Spec Workflow
 
 Use the Delivery Lifecycle OS as the primary workflow model: Define, Plan,
-Build, Verify, Review, and Ship. The 00-14 skill numbers are an internal
-compatibility layer, not a reason to skip lifecycle responsibilities.
+Build, Verify, Review, and Ship. Project-local skills use OpenAI-style names;
+old dotted phase names are not valid for new routing.
 
 1. Define: intake or evolve requirements through the skill-owned change protocol and preserve source intent, users, non-goals, success examples, and failure examples.
 2. Plan: update mainline docs first, then turn journeys into behavior obligations, Feature Specs, task blocks, test obligations, and handoff expectations.
@@ -114,31 +117,23 @@ compatibility layer, not a reason to skip lifecycle responsibilities.
 
 ## Skill Reference
 
-- `10.change.classify`: Triage requirement additions, changes, deprecations, clarifications, traceability fixes, and coverage gaps through the skill-owned change protocol.
-- `using-agent-skills`: Route broad work through Define/Plan/Build/Verify/Review/Ship, local skills, and specialist agent responsibilities.
-- `10.change.create-request`: Add brand-new `REQ-*`, `NFR-*`, or `EDGE-*` requirements with traceability and downstream sync.
-- `10.change.update-mainline-spec`: Change, correct, supersede, deprecate, clarify, or re-trace existing requirements and specs.
-- `10.change.impact-analysis`: Resolve unclear product intent, acceptance criteria, or technical boundaries.
-- `02.requirements.validate-testability`: Check requirement quality, readiness, and traceability.
-- `07.execution.prepare-context`: Gather repository facts and implementation constraints for planning.
-- `06.planning.estimate-risk`: Record bounded technical decisions and rejected alternatives.
-- `03.hld.review-architecture`: Produce feature-level architecture plans.
-- `03.hld.define-data-flow`: Design persistence, state, event, and ownership changes.
-- `03.hld.define-adapter-model`: Design API, CLI, event, file, UI view-model, and integration contracts.
-- `06.planning.prepare-execution-plan`: Check startability, commands, environment, and blockers before slicing tasks.
-- `05.feature.decompose`: Split product scope into Feature Specs or executable tasks.
-- `09.review.spec-consistency`: Verify planning outputs agree before implementation.
-- `09.review.spec-granularity`: Review whether PRD, requirements, HLD, UI Spec, and Feature Spec artifacts are granular enough before downstream design, tasks, ready state, or execution.
-- `06.planning.replan`: Select the next executable Feature from queue, dependencies, state, and operator hints.
-- `07.execution.dispatch-adapter`: Implement bounded tasks through Codex while preserving scope, Delivery Fidelity, Journey Closure, and Git delivery evidence.
-- `08.test.run-tests`: Run and analyze verification commands against behavior obligations.
-- `09.review.code-diff`: Produce review findings and delivery-risk reports.
-- `09.review.test-coverage`: Review whether tests prove behavior obligations rather than only command success.
-- `09.review.evidence-completeness`: Review Delivery Fidelity, Journey, Git, and artifact evidence before completion.
-- `12.recovery.classify-failure`: Plan bounded recovery for failed tasks.
-- `07.execution.update-state`: Perform deterministic lifecycle side effects for state transitions.
-- `00.intake.generate-project-intake`: Create or update project governance.
-- `14.release.prepare-pr`: Prepare delivery commits and pull requests after review and verification.
+- `use-specdrive-lifecycle`: Route broad work through Define/Plan/Build/Verify/Review/Ship, local skills, and specialist agent responsibilities.
+- `collect-project-context`: Gather project governance, repository facts, commands, constraints, and implementation context.
+- `refine-product-intent`: Refine PRD, product brief, goals, non-goals, user journeys, acceptance criteria, and open questions.
+- `convert-ears-requirements`: Convert PRD, PR/RP, product prose, or natural-language input into EARS requirements.
+- `validate-requirements`: Check requirement quality, readiness, conflicts, testability, and traceability.
+- `manage-spec-change`: Triage and apply requirement additions, changes, deprecations, clarifications, traceability fixes, coverage gaps, and replan triggers.
+- `design-architecture`: Produce HLD, ADR, feature architecture plans, data/state flow, and adapter/API/event/file contracts.
+- `design-ui-spec`: Produce UI Spec, page list, interaction/state rules, prototype artifacts, and artifact mapping checks.
+- `decompose-feature-specs`: Split product scope into Feature Specs or executable tasks, and maintain Feature requirements/design/tasks/index/status.
+- `plan-feature-execution`: Resolve dependencies, estimate risk, build task DAGs, prepare execution plans, select adapters, and replan/select executable work.
+- `implement-feature`: Implement bounded tasks while preserving scope, Delivery Fidelity, Journey Closure, state updates, and Git delivery evidence.
+- `verify-behavior`: Generate or run verification commands, analyze failures, and map behavior evidence to acceptance obligations.
+- `review-code-spec`: Produce code/spec/security/consistency review findings and delivery-risk reports.
+- `review-delivery-evidence`: Review journey closure, test semantics, evidence completeness, and release readiness.
+- `recover-execution`: Plan and execute bounded recovery for failed tasks and checkpoint restoration.
+- `package-evidence`: Collect evidence packs, matrices, and audit logs.
+- `prepare-release`: Prepare delivery commits, release notes, pull requests, release markers, and run archives after review and verification.
 
 ## Implementation Rules
 

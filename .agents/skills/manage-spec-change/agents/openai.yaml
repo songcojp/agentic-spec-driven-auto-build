@@ -1,0 +1,6 @@
+interface:
+  display_name: "Spec Change Management"
+  short_description: "Manage SpecDrive requirement and spec changes. Use when addi"
+  default_prompt: "Use $manage-spec-change to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

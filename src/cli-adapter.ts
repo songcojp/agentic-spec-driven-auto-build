@@ -368,7 +368,7 @@ export type SkillOutputArtifact = {
 export type SkillOutputContract = {
   contractVersion: "skill-contract/v1" | "skill-contract/v2";
   executionId: string;
-  skillSlug: string;
+  skillName: string;
   requestedAction: string;
   status: SkillOutputStatus;
   summary: string;
@@ -598,7 +598,7 @@ export const DEFAULT_OUTPUT_SCHEMA = {
   required: [
     "contractVersion",
     "executionId",
-    "skillSlug",
+    "skillName",
     "requestedAction",
     "status",
     "summary",
@@ -610,7 +610,7 @@ export const DEFAULT_OUTPUT_SCHEMA = {
   properties: {
     contractVersion: { type: "string", const: "skill-contract/v1" },
     executionId: { type: "string" },
-    skillSlug: { type: "string" },
+    skillName: { type: "string" },
     requestedAction: { type: "string" },
     summary: { type: "string" },
     nextAction: { type: ["string", "null"] },
@@ -1248,10 +1248,10 @@ export function isTrustedDocsDirectWriteInvocation(invocation?: ExecutionAdapter
 export function isTrustedDirectWriteInvocation(invocation?: ExecutionAdapterInvocationV1, allowedFiles: string[] = []): boolean {
   if (!invocation) return false;
   const instruction = invocation.skillInstruction;
-  if (!isSafeSkillSlug(instruction.skillSlug)) return false;
+  if (!isSafeSkillName(instruction.skillName)) return false;
 
   const safeAllowedFiles = allowedFiles.filter(isSafeWorkspaceWritePath);
-  if (instruction.skillSlug === "07.execution.dispatch-adapter") {
+  if (instruction.skillName === "implement-feature") {
     return safeAllowedFiles.length > 0 && safeAllowedFiles.length === allowedFiles.length;
   }
 
@@ -1488,7 +1488,7 @@ export function validateWorkspaceRoot(workspaceRoot: string | undefined): Worksp
 
 export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvocationV1, _context = ""): string {
   const instruction = invocation.skillInstruction;
-  const taskSlicingRules = instruction.skillSlug === "05.feature.decompose"
+  const taskSlicingRules = instruction.skillName === "decompose-feature-specs"
     ? [
         "- For split_feature_specs, decompose PRD, EARS requirements, and HLD into implementation-ready Feature Spec package directories.",
         "- Do not treat .autobuild/specs/FEAT-INTAKE-*.json as a Feature Spec package; it is only an intake artifact.",
@@ -1497,7 +1497,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- In the task-slicing result, include features, queuePlan, dependencyGraph, userStoryMapping, verificationPlan, and openQuestions.",
       ]
     : [];
-  const featureCodingRules = instruction.skillSlug === "07.execution.dispatch-adapter" && invocation.operation === "feature_execution"
+  const featureCodingRules = instruction.skillName === "implement-feature" && invocation.operation === "feature_execution"
     ? [
         "- For feature_execution, treat the Feature Spec directory in sourcePaths as the implementation scope.",
         "- Read requirements.md, design.md, and tasks.md from that Feature Spec directory, then implement the concrete tasks described there.",
@@ -1516,7 +1516,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- Passing tests or a commit alone is not sufficient for completed; close the Journey Checkpoint and Git delivery lifecycle or return review_needed with journey_not_closed, acceptance_gap, evidence_missing, or delivery_evidence_missing.",
       ]
     : [];
-  const clarificationRules = instruction.skillSlug === "10.change.impact-analysis" || instruction.requestedAction === "resolve_clarification"
+  const clarificationRules = instruction.skillName === "manage-spec-change" || instruction.requestedAction === "resolve_clarification"
     ? [
         "- For resolve_clarification, treat operatorInput.clarificationText or operatorInput.comment as an operator-provided answer/decision, not as a new question to ask back.",
         "- Apply the operator-provided answer to the most relevant expected spec artifact or source path when it resolves an existing ambiguity.",
@@ -1540,7 +1540,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     `Execution ID: ${invocation.executionId}`,
     `Operation: ${invocation.operation}`,
     `Feature: ${invocation.featureId ?? "none"}`,
-    `Skill: ${instruction.skillSlug}`,
+    `Skill: ${instruction.skillName}`,
     `Action: ${instruction.requestedAction}`,
     "",
     "Source paths to read:",
@@ -1554,11 +1554,11 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     "- Use only skills discovered from this workspace's .agents/skills directory.",
     "- Treat AGENTS.md and the referenced source paths as governing context.",
     "- Stream progress only as SkillOutputContractV1 objects with status running, waiting_input, or approval_needed; the final SkillOutputContractV1 object must be the last valid contract in the stream.",
-    "- The JSON object must include contractVersion, executionId, skillSlug, requestedAction, status, summary, nextAction, producedArtifacts, traceability, and result.",
+    "- The JSON object must include contractVersion, executionId, skillName, requestedAction, status, summary, nextAction, producedArtifacts, traceability, and result.",
     "- Final status must be completed, review_needed, blocked, failed, or cancelled. Use review_needed only for a real human/risk review gate with a clear reason in summary or result.reviewNeededReason.",
     "- Each producedArtifacts item must include path, kind, status, checksum, and summary; use null for checksum or summary when unknown.",
     "- traceability must include only featureId; use null when no Feature applies. Do not include requirementIds, taskId, changeIds, or other non-Feature traceability in the common output contract.",
-    "- The output contract must use contractVersion skill-contract/v1 and echo executionId, skillSlug, requestedAction, and traceability.featureId from this task instruction.",
+    "- The output contract must use contractVersion skill-contract/v1 and echo executionId, skillName, requestedAction, and traceability.featureId from this task instruction.",
     "- When Feature state is present in source files, treat it as the machine-readable Feature state. Return status and result fields that allow the scheduler to patch docs/features/<feature-id>/spec-state.json.",
     "- Produce the expected artifacts and list every produced or intentionally unchanged artifact in producedArtifacts.",
     "- Prefer writing expected artifacts directly to the workspace paths named in this task instruction.",
@@ -1882,7 +1882,7 @@ function parseSkillOutputRecord(record: Record<string, unknown> | undefined): Sk
   return {
     contractVersion: record.contractVersion,
     executionId: String(record.executionId ?? ""),
-    skillSlug: String(record.skillSlug ?? ""),
+    skillName: String(record.skillName ?? ""),
     requestedAction: String(record.requestedAction ?? ""),
     status,
     summary: String(record.summary ?? ""),
@@ -1942,7 +1942,7 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
     reasons.push("Feature execution completed outputs must use skill-contract/v2 with deliveryFidelity.");
   }
   if (output.executionId !== invocation.executionId) reasons.push(`Skill output executionId mismatch: ${output.executionId}.`);
-  if (output.skillSlug !== instruction.skillSlug) reasons.push(`Skill output skillSlug mismatch: ${output.skillSlug}.`);
+  if (output.skillName !== instruction.skillName) reasons.push(`Skill output skillName mismatch: ${output.skillName}.`);
   if (output.requestedAction !== instruction.requestedAction) reasons.push(`Skill output requestedAction mismatch: ${output.requestedAction}.`);
   if (!sameOptionalString(output.traceability.featureId, invocation.featureId ?? invocation.traceability.featureId)) reasons.push("Skill output traceability.featureId mismatch.");
   const completionGate = validateFeatureCompletion({
@@ -2976,16 +2976,16 @@ function isMaterializedSpecArtifact(artifact: string): boolean {
 }
 
 function outputSchemaForExecutionInvocation(schema: Record<string, unknown>, invocation: ExecutionAdapterInvocationV1 | undefined): Record<string, unknown> {
-  if (invocation?.skillInstruction.skillSlug !== "05.feature.decompose"
-    && !(invocation?.skillInstruction.skillSlug === "07.execution.dispatch-adapter"
+  if (invocation?.skillInstruction.skillName !== "decompose-feature-specs"
+    && !(invocation?.skillInstruction.skillName === "implement-feature"
       && (invocation.operation === "feature_execution" || invocation.skillInstruction.requestedAction === "feature_execution"))) return schema;
   const cloned = JSON.parse(JSON.stringify(schema)) as Record<string, unknown>;
   const properties = cloned.properties;
   if (properties && typeof properties === "object" && !Array.isArray(properties)) {
-    if (invocation?.skillInstruction.skillSlug === "07.execution.dispatch-adapter") {
+    if (invocation?.skillInstruction.skillName === "implement-feature") {
       ((properties as Record<string, unknown>).contractVersion as Record<string, unknown>).const = "skill-contract/v2";
     }
-    (properties as Record<string, unknown>).result = invocation?.skillInstruction.skillSlug === "05.feature.decompose"
+    (properties as Record<string, unknown>).result = invocation?.skillInstruction.skillName === "decompose-feature-specs"
       ? TASK_SLICING_RESULT_SCHEMA
       : FEATURE_EXECUTION_RESULT_SCHEMA;
   }
@@ -3222,8 +3222,8 @@ function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
-function isSafeSkillSlug(value: string): boolean {
-  return /^\d{2}\.[a-z0-9-]+\.[a-z0-9-]+(?:\.[a-z0-9-]+)?$/.test(value);
+function isSafeSkillName(value: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
 
 function isSafeWorkspaceWritePath(value: string): boolean {

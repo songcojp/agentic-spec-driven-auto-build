@@ -41,8 +41,8 @@ test("Codex RPC request sequence initializes, starts a thread, and starts a sche
   assert.match(turnInput[0].text ?? "", /Run the skill\./);
   assert.deepEqual(turnInput[1], {
     type: "skill",
-    name: "07.execution.dispatch-adapter",
-    path: ".agents/skills/07.execution.dispatch-adapter/SKILL.md",
+    name: "implement-feature",
+    path: ".agents/skills/implement-feature/SKILL.md",
   });
 });
 
@@ -415,7 +415,7 @@ function executionInvocation(): ExecutionAdapterInvocationV1 {
     },
     outputSchema: {},
     skillInstruction: {
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       requestedAction: "feature_execution",
       sourcePaths: ["docs/features/feat-016/requirements.md"],
       expectedArtifacts: [],
@@ -427,7 +427,7 @@ function skillOutput(): SkillOutputContract {
   return {
     contractVersion: "skill-contract/v2",
     executionId: "RUN-APP",
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Implemented.",

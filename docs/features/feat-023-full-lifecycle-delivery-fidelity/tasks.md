@@ -11,14 +11,14 @@ Feature ID: FEAT-023
 描述: 更新 PRD、requirements、HLD、skills 文档和 Feature index，定义 Delivery Lifecycle OS、Delivery Fidelity Ledger、agent registry、loss taxonomy 和 v2 contract。
 验证: `git diff --check`
 
-### T-023-02 using-agent-skills meta skill
+### T-023-02 use-specdrive-lifecycle meta skill
 状态: done
-描述: 新增 `.agents/skills/using-agent-skills`，用于 lifecycle-first workflow、skill 和 agent persona 路由。
+描述: 新增 `.agents/skills/use-specdrive-lifecycle`，用于 lifecycle-first workflow、skill 和 agent persona 路由。
 验证: `npm run skills:validate`
 
 ### T-023-03 Execution and review skill upgrades
 状态: done
-描述: 更新 `07.execution.dispatch-adapter`、`08.test.run-tests`、`09.review.test-coverage`、`09.review.evidence-completeness`、`09.review.journey-closure`，要求行为义务、handoff、损失和独立审查证据。
+描述: 更新 `implement-feature`、`verify-behavior`、`review-delivery-evidence`、`review-delivery-evidence`、`review-delivery-evidence`，要求行为义务、handoff、损失和独立审查证据。
 验证: `npm run skills:validate`
 
 ### T-023-04 Skill contract v2 validation
@@ -46,9 +46,9 @@ Feature ID: FEAT-023
 
 ### T-023-08 Spec granularity review skill
 状态: todo
-描述: 新增 `09.review.spec-granularity`，跨 PRD、requirements、HLD、UI Spec 和 Feature Spec 审计颗粒度，输出 `result.specGranularity` 和 review gap 分类。
+描述: 新增 `review-delivery-evidence`，跨 PRD、requirements、HLD、UI Spec 和 Feature Spec 审计颗粒度，输出 `result.specGranularity` 和 review gap 分类。
 关联需求: REQ-092, US-023-04
-范围: `.agents/skills/09.review.spec-granularity/SKILL.md`, `docs/zh-CN/agentic-spec-standard.md`
+范围: `.agents/skills/review-delivery-evidence/SKILL.md`, `docs/zh-CN/agentic-spec-standard.md`
 验证: `npm run skills:validate`
 完成标准: 粗颗粒度文档输出 `review_needed`，并列出 required refinements。
 
@@ -56,7 +56,7 @@ Feature ID: FEAT-023
 状态: in-progress
 描述: 更新 PRD、requirements、HLD、UI、Feature 生成 Skill 和 spec-consistency，使每层产物在进入下游前检查颗粒度、interaction matrix、state/data contract、Journey Checkpoint、evidence plan 和文档质量修复循环。
 关联需求: REQ-092, REQ-094
-范围: `.agents/skills/01.prd.generate`, `.agents/skills/02.requirements.*`, `.agents/skills/03.hld.generate`, `.agents/skills/04.ui.*`, `.agents/skills/05.feature.*`, `.agents/skills/09.review.spec-consistency`
+范围: `.agents/skills/refine-product-intent`, `.agents/skills/convert-ears-requirements and .agents/skills/validate-requirements`, `.agents/skills/design-architecture`, `.agents/skills/design-ui-spec`, `.agents/skills/decompose-feature-specs`, `.agents/skills/review-code-spec`
 验证: `npm run skills:validate`; `git diff --check`
 完成标准: Skill 文档不再允许“文档存在即可”的 ready 判定。
 
@@ -64,7 +64,7 @@ Feature ID: FEAT-023
 状态: in-progress
 描述: 新增共享 Spec 文档质量检测/修复循环协议，并同步所有核心文档生成 Skill，要求调用方 Skill 选择 Quality Review Skill / Repair Owner，再由 Quality Review Subagent 和 Repair Subagent 在预先声明的 `qualityLoopPlan` 内最多执行 10 轮。
 关联需求: REQ-094, US-023-07
-范围: `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`, `.agents/skills/SKILL_OUTPUT_CONTRACT.md`, `.agents/skills/00.intake.generate-project-intake`, `.agents/skills/01.prd.*`, `.agents/skills/02.requirements.*`, `.agents/skills/03.hld.generate`, `.agents/skills/04.ui.generate-spec`, `.agents/skills/05.feature.*`, `.agents/skills/09.review.spec-granularity`, `docs/zh-CN/*`, `docs/features/feat-023-full-lifecycle-delivery-fidelity/*`
+范围: `skill-local references/quality-loop.md`, `caller-provided output schema and skill-local references/specdrive-output.md`, `.agents/skills/collect-project-context`, `.agents/skills/refine-product-intent`, `.agents/skills/convert-ears-requirements and .agents/skills/validate-requirements`, `.agents/skills/design-architecture`, `.agents/skills/design-ui-spec`, `.agents/skills/decompose-feature-specs`, `.agents/skills/review-delivery-evidence`, `docs/zh-CN/*`, `docs/features/feat-023-full-lifecycle-delivery-fidelity/*`
 验证: `npm run skills:validate`; `git diff --check`
 完成标准: 文档生成 Skill 的结果包含 `qualityRepairLoop` 和调用方选择的 `qualityLoopPlan`；共享 loop 不维护中央路由表；最新质量检测失败时不能返回 completed，也不能继续推进下游。
 

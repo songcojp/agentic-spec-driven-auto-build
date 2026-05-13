@@ -303,7 +303,7 @@ export function isFeatureExecutionInvocation(invocation: ExecutionAdapterInvocat
   return invocation.operation === "feature_execution"
     || invocation.skillInstruction.requestedAction === "feature_execution"
     || output.requestedAction === "feature_execution"
-    || output.skillSlug === "07.execution.dispatch-adapter";
+    || output.skillName === "implement-feature";
 }
 
 export function isAppTouchingFile(file: string, extraPatterns: string[] = []): boolean {

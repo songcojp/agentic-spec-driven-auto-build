@@ -433,7 +433,7 @@ type FeatureSelectionDecision = {
   dependencyFindings: string[];
   resumeRequiredFeatures: string[];
   skippedFeatures: string[];
-  source: "06.planning.replan" | "deterministic-fallback";
+  source: "plan-feature-execution" | "deterministic-fallback";
 };
 
 function listFeatureSpecsFromDocs(
@@ -822,7 +822,7 @@ function featureSelectionDecisionFromPayload(payload: Record<string, unknown>): 
     dependencyFindings: optionalStringArray(result.dependencyFindings),
     resumeRequiredFeatures: optionalStringArray(result.resumeRequiredFeatures).map((id) => id.toUpperCase()),
     skippedFeatures: optionalStringArray(result.skippedFeatures).map((id) => id.toUpperCase()),
-    source: "06.planning.replan",
+    source: "plan-feature-execution",
   };
 }
 
@@ -859,7 +859,7 @@ function validateFeatureSelectionDecision(input: FeaturePoolSelectionInput, deci
       dependencies: entry.dependencies,
       blockedReasons,
       nextAction: "Feature selection skill chose this Feature, but code safety checks blocked execution.",
-    }, { now: input.now, source: "06.planning.replan", summary: blockedReasons.join(" ") }));
+    }, { now: input.now, source: "plan-feature-execution", summary: blockedReasons.join(" ") }));
     return { blockedReasons, decision };
   }
   return { selected: entry, blockedReasons: [], decision };
@@ -973,7 +973,7 @@ export type RunnerConsoleViewModel = {
     runId: string;
     schedulerJobId?: string;
     workspaceRoot?: string;
-    skillSlug?: string;
+    skillName?: string;
     skillPhase?: string;
     blockedReason?: string;
     status: string;
@@ -3026,7 +3026,7 @@ function executeScheduleCommand(
     };
   }
   const executionId = randomUUID();
-  const skillSlug = optionalString(payload.skillSlug) ?? (operation === "feature_execution" ? "07.execution.dispatch-adapter" : undefined);
+  const skillName = optionalString(payload.skillName) ?? (operation === "feature_execution" ? "implement-feature" : undefined);
   const projectId = trigger.projectId ?? optionalString(payload.projectId);
   const project = projectId ? getProject(dbPath, projectId) : undefined;
   const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, projectId, project?.targetRepoPath);
@@ -3035,7 +3035,7 @@ function executeScheduleCommand(
   const specState = workspaceRoot && featureFolder && featureId
     ? readFileSpecState(workspaceRoot, featureFolder, featureId, new Date(acceptedAt))
     : undefined;
-  if (operation === "feature_execution" && skillSlug === "07.execution.dispatch-adapter") {
+  if (operation === "feature_execution" && skillName === "implement-feature") {
     const conflict = activeManualScheduleConflict(dbPath, {
       projectId,
       featureId,
@@ -3075,7 +3075,7 @@ function executeScheduleCommand(
     sourcePaths: scheduleRunSourcePaths(payload, featureSpecPath, project.targetRepoPath),
     expectedArtifacts: scheduleRunExpectedArtifacts(payload, executionId),
     workspaceRoot,
-    skillSlug,
+    skillName,
     skillPhase: optionalString(payload.skillPhase) ?? operation,
   };
   const preferenceResolution = resolveExecutionPreference(dbPath, projectId, payload);
@@ -3968,10 +3968,10 @@ function enqueueNextFeatureExecutionFromQueue(
     ],
     expectedArtifacts: [runReportArtifactPath(executionId)],
     workspaceRoot: project.targetRepoPath,
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     skillPhase: "feature_execution",
     selection: selection.decision ? {
-      skillSlug: "06.planning.replan",
+      skillName: "plan-feature-execution",
       requestedAction: "select_next_feature",
       source: selection.decision.source,
       reason: selection.decision.reason,
@@ -4044,7 +4044,7 @@ function executeSpecSkillCommand(
   acceptedAt: string,
   scheduler: SchedulerClient,
   specIntakeResult?: ({ blockedReasons: string[] } & Record<string, unknown>),
-): { executionId: string; schedulerJobId: string; skillSlug: string; workspaceRoot?: string } | undefined {
+): { executionId: string; schedulerJobId: string; skillName: string; workspaceRoot?: string } | undefined {
   if (!["intake_requirement", "evolve_spec", "resolve_clarification", "generate_ears", "generate_hld", "generate_ui_spec", "split_feature_specs"].includes(input.action)) {
     return undefined;
   }
@@ -4065,7 +4065,7 @@ function executeSpecSkillCommand(
       ?? optionalString(payload.featureId)
       ?? (input.entityType === "feature" ? input.entityId : undefined);
   const executionId = randomUUID();
-  const skillSlug = skillSlugForSpecAction(input.action);
+  const skillName = skillNameForSpecAction(input.action);
   const sourcePaths = sourcePathsForSpecAction(input.action, payload, featureId, project.targetRepoPath);
   const imagePaths = imagePathsForSpecAction(input.action, payload);
   const expectedArtifacts = expectedArtifactsForSpecAction(input.action, featureId, sourcePaths, project.targetRepoPath);
@@ -4078,7 +4078,7 @@ function executeSpecSkillCommand(
     imagePaths,
     expectedArtifacts,
     workspaceRoot: project.targetRepoPath,
-    skillSlug,
+    skillName,
     skillPhase: input.action,
     clarificationText: optionalString(payload.clarificationText),
     requirementText: optionalString(payload.requirementText),
@@ -4113,7 +4113,7 @@ function executeSpecSkillCommand(
       commandAction: input.action,
       scheduler: "bullmq",
       workspaceRoot: project.targetRepoPath,
-      skillSlug,
+      skillName,
       skillPhase: input.action,
     },
   });
@@ -4135,17 +4135,17 @@ function executeSpecSkillCommand(
       },
     },
   });
-  return { executionId, schedulerJobId: job.schedulerJobId, skillSlug, workspaceRoot: project.targetRepoPath };
+  return { executionId, schedulerJobId: job.schedulerJobId, skillName, workspaceRoot: project.targetRepoPath };
 }
 
-function skillSlugForSpecAction(action: ConsoleCommandAction): string {
-  if (action === "intake_requirement") return "10.change.create-request";
-  if (action === "evolve_spec") return "10.change.update-mainline-spec";
-  if (action === "resolve_clarification") return "10.change.impact-analysis";
-  if (action === "generate_ears") return "02.requirements.convert-ears";
-  if (action === "generate_hld") return "03.hld.generate";
-  if (action === "generate_ui_spec") return "04.ui.generate-spec";
-  return "05.feature.decompose";
+function skillNameForSpecAction(action: ConsoleCommandAction): string {
+  if (action === "intake_requirement") return "manage-spec-change";
+  if (action === "evolve_spec") return "manage-spec-change";
+  if (action === "resolve_clarification") return "manage-spec-change";
+  if (action === "generate_ears") return "convert-ears-requirements";
+  if (action === "generate_hld") return "design-architecture";
+  if (action === "generate_ui_spec") return "design-ui-spec";
+  return "decompose-feature-specs";
 }
 
 function sourcePathsForSpecAction(
@@ -4690,7 +4690,7 @@ function executeBoardCommand(
               featureId: task.featureId,
               taskId,
               taskName: task.name,
-              skillSlug: "07.execution.dispatch-adapter",
+              skillName: "implement-feature",
               skillPhase: "task_execution",
             }),
             "queued",
@@ -4707,7 +4707,7 @@ function executeBoardCommand(
           featureId: task.featureId,
           taskId,
           taskName: task.name,
-          skillSlug: "07.execution.dispatch-adapter",
+          skillName: "implement-feature",
           skillPhase: "task_execution",
         },
         requestedAction: "task_execution",
@@ -5743,9 +5743,9 @@ function buildSkillInvocationFeedback(
       const context = parseJsonObject(execution.context_json);
       const executionInvocation = parseJsonObject(metadata.executionInvocation);
       const skillInstruction = parseJsonObject(executionInvocation.skillInstruction);
-      const skillSlug = optionalString(skillInstruction.skillSlug) ?? optionalString(metadata.skillSlug);
+      const skillName = optionalString(skillInstruction.skillName) ?? optionalString(metadata.skillName);
       const skillPhase = optionalString(skillInstruction.requestedAction) ?? optionalString(metadata.skillPhase) ?? optionalString(context.skillPhase) ?? optionalString(execution.operation);
-      if (!skillSlug && !skillPhase) {
+      if (!skillName && !skillPhase) {
         return undefined;
       }
       const executionId = String(execution.id);
@@ -5762,7 +5762,7 @@ function buildSkillInvocationFeedback(
         runId: executionId,
         schedulerJobId: optionalString(schedulerJob?.id),
         workspaceRoot,
-        skillSlug: skillSlug ?? optionalString(context.skillSlug),
+        skillName: skillName ?? optionalString(context.skillName),
         skillPhase,
         blockedReason: optionalString(metadata.blockedReason) ?? (String(execution.status) === "blocked" ? optionalString(execution.summary) : undefined),
         status: String(execution.status),
@@ -5886,20 +5886,20 @@ function schedulerJobName(
   }
   return optionalString(context.featureTitle)
     ?? optionalString(context.name)
-    ?? schedulerOperationName(optionalString(payload.operation), optionalString(context.skillSlug), optionalString(context.skillPhase))
+    ?? schedulerOperationName(optionalString(payload.operation), optionalString(context.skillName), optionalString(context.skillPhase))
     ?? String(row.job_type);
 }
 
-function schedulerOperationName(operation?: string, skillSlug?: string, skillPhase?: string): string | undefined {
-  if (skillSlug === "07.execution.dispatch-adapter" || skillPhase === "task_execution") return "Execute task";
-  if (skillSlug === "03.hld.generate" || operation === "generate_hld") return "Generate project HLD";
-  if (skillSlug === "10.change.create-request" || operation === "intake_requirement") return "Intake requirement";
-  if (skillSlug === "10.change.update-mainline-spec" || operation === "evolve_spec") return "Update Spec and Feature Specs";
-  if (skillSlug === "10.change.impact-analysis" || operation === "resolve_clarification") return "Resolve clarification";
-  if (skillSlug === "02.requirements.convert-ears" || operation === "generate_ears") return "Generate EARS requirements";
-  if (skillSlug === "05.feature.decompose" || operation === "split_feature_specs") return "Split Feature Specs";
-  if (skillSlug === "04.ui.generate-spec" || operation === "generate_ui_spec") return "Generate UI Spec";
-  if (skillSlug === "07.execution.prepare-context") return "Collect technical context";
+function schedulerOperationName(operation?: string, skillName?: string, skillPhase?: string): string | undefined {
+  if (skillName === "implement-feature" || skillPhase === "task_execution") return "Execute task";
+  if (skillName === "design-architecture" || operation === "generate_hld") return "Generate project HLD";
+  if (skillName === "manage-spec-change" || operation === "intake_requirement") return "Intake requirement";
+  if (skillName === "manage-spec-change" || operation === "evolve_spec") return "Update Spec and Feature Specs";
+  if (skillName === "manage-spec-change" || operation === "resolve_clarification") return "Resolve clarification";
+  if (skillName === "convert-ears-requirements" || operation === "generate_ears") return "Generate EARS requirements";
+  if (skillName === "decompose-feature-specs" || operation === "split_feature_specs") return "Split Feature Specs";
+  if (skillName === "design-ui-spec" || operation === "generate_ui_spec") return "Generate UI Spec";
+  if (skillName === "implement-feature") return "Collect technical context";
   if (operation === "feature_execution") return "Execute feature work";
   return undefined;
 }

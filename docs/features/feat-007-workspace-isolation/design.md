@@ -2,7 +2,7 @@
 
 ## Design Summary
 
-Workspace Manager 是写入型任务和共享测试资源的隔离记录边界。Feature 实现的 Git worktree、分支、commit、PR、merge 和 cleanup 由 `07.execution.dispatch-adapter` 执行；Workspace Manager 通过 worktree / branch / PR 证据记录、冲突检测、测试环境隔离记录、合并前检查和清理状态，保证并行写入可追踪、可恢复、可审计。
+Workspace Manager 是写入型任务和共享测试资源的隔离记录边界。Feature 实现的 Git worktree、分支、commit、PR、merge 和 cleanup 由 `implement-feature` 执行；Workspace Manager 通过 worktree / branch / PR 证据记录、冲突检测、测试环境隔离记录、合并前检查和清理状态，保证并行写入可追踪、可恢复、可审计。
 
 ## Components
 

@@ -60,7 +60,7 @@ function invocation(workspaceRoot: string): ExecutionAdapterInvocationV1 {
     },
     outputSchema: {},
     skillInstruction: {
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       requestedAction: "feature_execution",
       sourcePaths: ["docs/features/feat-023-full-lifecycle-delivery-fidelity/tasks.md"],
       expectedArtifacts: [],
