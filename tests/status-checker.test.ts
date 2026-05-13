@@ -174,6 +174,44 @@ test("missing command results prevent Done", () => {
   assert.equal(result.reasons.includes("Command check results are missing."), true);
 });
 
+test("completion evidence gaps route done candidates to readable ReviewItem", () => {
+  const root = mkdtempSync(join(tmpdir(), "feat-009-completion-evidence-"));
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+
+  const result = runStatusCheck({
+    ...baseInput(root, dbPath),
+    completionEvidence: {
+      requirementCoverage: [{ requirementId: "REQ-093", status: "passed" }],
+      acceptanceEvidence: [{ scenarioId: "AC-093", status: "passed" }],
+      journeyEvidence: [{ userStoryId: "US-093", status: "passed" }],
+      runtimeEvidence: null,
+      deliveryFidelity: {
+        completionDecision: { status: "passed" },
+        losses: [],
+      },
+      gitDelivery: {
+        prUrl: "https://github.com/example/repo/pull/93",
+        commitHash: "abc1234",
+        checks: "passed",
+        merge: "merged",
+        remoteBranchCleanup: "completed",
+        localBranchCleanup: "completed",
+        worktreeCleanup: "cleaned",
+      },
+      requireRuntimeEvidence: true,
+    },
+  });
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(result.reasons.some((reason) => reason.includes("runtimeEvidence is required")), true);
+  const items = listReviewCenterItems(dbPath, { status: "review_needed" });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].reviewNeededReason, "risk_review_needed");
+  assert.equal(items[0].triggerReasons.includes("evidence_missing"), true);
+  assert.equal(items[0].body.testResults.completionEvidence.requireRuntimeEvidence, true);
+});
+
 test("persistence failure returns blocked diagnostic result instead of throwing", () => {
   const root = mkdtempSync(join(tmpdir(), "feat-009-persist-fail-"));
   const result = runStatusCheck({

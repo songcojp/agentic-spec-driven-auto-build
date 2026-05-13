@@ -123,6 +123,8 @@ function featureExecutionResult(): Record<string, unknown> {
     journeyEvidence: [{ userStoryId: "US-001", scenario: "primary flow", status: "passed", evidence: ["browser evidence"] }],
     deliveryFidelity: validDeliveryFidelity(),
     foundationExemption: null,
+    runtimeEvidence: null,
+    runtimeExemption: null,
     verification: [{ command: "npm test", status: "passed", summary: "Tests passed." }],
     tasks: { done: ["TASK-001"], blocked: [] },
     gates: { requirements: "passed", design: "passed", codeReview: "passed" },
@@ -175,6 +177,32 @@ function validGitDelivery(): Record<string, unknown> {
     localBranchCleanup: "completed",
     worktreeCleanup: "cleaned",
     deliveryExemption: null,
+  };
+}
+
+function validRuntimeEvidence(): Record<string, unknown> {
+  return {
+    appLaunch: {
+      command: "npm run dev",
+      status: "passed",
+      url: "http://127.0.0.1:5173/features/FEAT-008",
+      evidence: ["test-results/feature-panel-launch.log"],
+    },
+    journeys: [{
+      scenario: "primary feature panel interaction",
+      status: "passed",
+      evidence: ["test-results/feature-panel-trace.zip"],
+    }],
+    stateAssertions: [{
+      assertion: "selection persisted after reload",
+      status: "passed",
+      evidence: ["test-results/feature-panel-state.png"],
+    }],
+    negativePaths: [{
+      scenario: "missing feature displays reviewable empty state",
+      status: "passed",
+      evidence: ["test-results/feature-panel-negative.png"],
+    }],
   };
 }
 
@@ -662,6 +690,30 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   assert.match(unmergedDelivery.reasons.join("\n"), /Git Delivery Gate failed: delivery_not_closed/);
   assert.match(unmergedDelivery.reasons.join("\n"), /merge must be passed, completed, cleaned, or merged/);
 
+  const uiWithoutRuntime = validateSkillOutputContract(invocation, {
+    ...valid,
+    producedArtifacts: [{ path: "src/components/FeaturePanel.tsx", kind: "typescript", status: "updated" }],
+    result: {
+      ...featureExecutionResult(),
+      changedFiles: ["src/components/FeaturePanel.tsx"],
+      runtimeEvidence: null,
+    },
+  });
+  assert.equal(uiWithoutRuntime.valid, false);
+  assert.match(uiWithoutRuntime.reasons.join("\n"), /Runtime Evidence Gate failed: evidence_missing/);
+  assert.match(uiWithoutRuntime.reasons.join("\n"), /runtimeEvidence is required for UI\/app changes/);
+
+  const uiWithRuntime = validateSkillOutputContract(invocation, {
+    ...valid,
+    producedArtifacts: [{ path: "src/components/FeaturePanel.tsx", kind: "typescript", status: "updated" }],
+    result: {
+      ...featureExecutionResult(),
+      changedFiles: ["src/components/FeaturePanel.tsx"],
+      runtimeEvidence: validRuntimeEvidence(),
+    },
+  });
+  assert.equal(uiWithRuntime.valid, true);
+
   const textOnlyEvidence = validateSkillOutputContract(invocation, {
     ...valid,
     result: {
@@ -760,6 +812,8 @@ test("feature execution runs receive a strict closure-evidence result output sch
     "requirementCoverage",
     "acceptanceEvidence",
     "journeyEvidence",
+    "runtimeEvidence",
+    "runtimeExemption",
     "deliveryFidelity",
     "foundationExemption",
     "verification",
@@ -1392,6 +1446,8 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
     stdout: join(workspaceRoot, ".autobuild", "runs", "RUN-004", "stdout.log"),
     stderr: join(workspaceRoot, ".autobuild", "runs", "RUN-004", "stderr.log"),
     report: join(workspaceRoot, ".autobuild", "runs", "RUN-004", "report.json"),
+    workpadMarkdown: ".autobuild/runs/RUN-004/WORKPAD.md",
+    workpadJson: ".autobuild/runs/RUN-004/workpad.json",
   };
   assert.deepEqual(result.rawLog.files, expectedLogFiles);
   assert.equal(existsSync(expectedLogFiles.input), true);

@@ -135,6 +135,12 @@ combined diff, and delivers one explainable PR for the Feature.
 - Do not return `completed` unless `contractVersion` is `skill-contract/v2` and
   `result.deliveryFidelity` proves Define -> Plan -> Build -> Verify -> Review
   -> Ship preserved the Feature's behavior obligations.
+- Do not return `completed` for UI/App behavior changes unless
+  `result.runtimeEvidence` proves app launch, route access, user interaction,
+  state change, reload persistence or an equivalent state assertion,
+  negative/boundary behavior, and screenshot/trace/log evidence. Use
+  `result.runtimeExemption` only for explicit foundation/stateless work with
+  evidence.
 - Do not return `completed` with any open P0/P1 loss. P2 losses must be closed,
   accepted, or explicitly deferred with a responsible owner and evidence.
 - Do not let the implementation agent self-close delivery. Record independent
@@ -269,6 +275,10 @@ Required compact fields:
 - `acceptanceEvidence`: array of `{ scenarioId, status, evidence }`.
 - `journeyEvidence`: array of `{ userStoryId, scenario, status, evidence }`.
 - `foundationExemption`: `null` or `{ exempt, reason, downstreamFeatures, integrationEvidence }`.
+- `runtimeEvidence`: `null` or an object with `appLaunch`, `journeys`,
+  `stateAssertions`, and `negativePaths` evidence for UI/App behavior changes.
+- `runtimeExemption`: `null` or `{ exempt, reason, evidence }` for explicit
+  foundation/stateless work.
 - `verification`: array of `{ command, status, summary }`, where `status` is
   `passed`, `failed`, or `skipped`.
 - `tasks`: object with `done` and `blocked` arrays of normalized task IDs. When

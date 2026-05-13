@@ -8,6 +8,12 @@ export type CommandCheckKind =
   | "build"
   | "unit_test"
   | "integration_test"
+  | "browser_e2e"
+  | "app_launch"
+  | "journey_runtime"
+  | "state_assertion"
+  | "reload_persistence"
+  | "negative_path"
   | "typecheck"
   | "lint"
   | "security_scan"
@@ -83,6 +89,16 @@ export type ExecutionArtifactRef = {
   description?: string;
 };
 
+export type CompletionEvidenceInput = {
+  requirementCoverage?: unknown[];
+  acceptanceEvidence?: unknown[];
+  journeyEvidence?: unknown[];
+  runtimeEvidence?: unknown;
+  deliveryFidelity?: unknown;
+  gitDelivery?: unknown;
+  requireRuntimeEvidence?: boolean;
+};
+
 export type ExecutionResult = {
   id: string;
   runId: string;
@@ -130,6 +146,7 @@ export type StatusCheckerInput = {
   diff?: DiffSummary;
   commandChecks?: CommandCheckResult[];
   requiredCommandChecks?: CommandCheckKind[];
+  completionEvidence?: CompletionEvidenceInput;
   specAlignment?: SpecAlignmentInput;
   allowedFiles?: string[];
   forbiddenFiles?: string[];
@@ -194,6 +211,7 @@ export function runStatusCheck(input: StatusCheckerInput): StatusCheckResult {
     runner: input.runner,
     commands: input.commandChecks ?? [],
     requiredCommands: input.requiredCommandChecks ?? [],
+    completionEvidence: input.completionEvidence,
     diff,
     specAlignment,
     failureHistory: input.failureHistory ?? [],
@@ -370,6 +388,7 @@ function decideStatus(input: {
   runner?: RunnerStatusInput;
   commands: CommandCheckResult[];
   requiredCommands: CommandCheckKind[];
+  completionEvidence?: CompletionEvidenceInput;
   diff: DiffInspectionResult;
   specAlignment: SpecAlignmentResult;
   failureHistory: Array<StatusDecision | RunnerTerminalStatus | CommandCheckStatus>;
@@ -461,6 +480,12 @@ function decideStatus(input: {
     recommendedActions.push("Resolve spec alignment gaps before Done can be selected.");
     return { status: "review_needed", summary: "Spec alignment failed; Done is blocked.", reasons, recommendedActions };
   }
+  const completionEvidence = evaluateCompletionEvidence(input.completionEvidence);
+  if (!completionEvidence.passed) {
+    reasons.push(...completionEvidence.reasons);
+    recommendedActions.push("Attach structured completion evidence or route the run to Review Center before Done can be selected.");
+    return { status: "review_needed", summary: "Status check needs product completion evidence review.", reasons, recommendedActions };
+  }
   if (incompleteCommands.length > 0 || missingCommands.length > 0 || missingCommandResults || input.runner?.status === "review_needed") {
     reasons.push(
       ...incompleteCommands.map((command) => `${command.kind} was ${command.status === "skipped" ? "skipped" : "not run"}.`),
@@ -478,6 +503,74 @@ function decideStatus(input: {
     reasons: ["Runner, command checks, file checks, and spec alignment passed."],
     recommendedActions: ["Use status checks, logs, and artifacts for review, recovery, and delivery reporting."],
   };
+}
+
+function evaluateCompletionEvidence(input: CompletionEvidenceInput | undefined): { passed: boolean; reasons: string[] } {
+  if (!input) return { passed: true, reasons: [] };
+  const reasons: string[] = [];
+  if (!hasPassedEvidence(input.requirementCoverage)) reasons.push("requirementCoverage evidence is missing or not passed.");
+  if (!hasPassedEvidence(input.acceptanceEvidence)) reasons.push("acceptanceEvidence evidence is missing or not passed.");
+  if (!hasPassedEvidence(input.journeyEvidence)) reasons.push("journeyEvidence evidence is missing or not passed.");
+  if (input.requireRuntimeEvidence && !hasRuntimeEvidence(input.runtimeEvidence)) {
+    reasons.push("runtimeEvidence is required for app/UI completion but is missing or incomplete.");
+  }
+  if (input.deliveryFidelity && !deliveryFidelityLooksClosed(input.deliveryFidelity)) {
+    reasons.push("deliveryFidelity has unresolved losses or an unpassed completion decision.");
+  }
+  if (input.gitDelivery && !gitDeliveryLooksClosed(input.gitDelivery)) {
+    reasons.push("gitDelivery is missing PR/check/merge/cleanup closure evidence.");
+  }
+  return { passed: reasons.length === 0, reasons };
+}
+
+function hasPassedEvidence(value: unknown[] | undefined): boolean {
+  return Array.isArray(value) && value.length > 0 && value.every((entry) => statusLooksPassed(entry));
+}
+
+function hasRuntimeEvidence(value: unknown): boolean {
+  const record = asRecord(value);
+  if (!record) return false;
+  const appLaunch = asRecord(record.appLaunch);
+  return Boolean(appLaunch && statusLooksPassed(appLaunch) && nonEmptyArray(appLaunch.evidence))
+    && hasRuntimeEvidenceRows(record.journeys)
+    && hasRuntimeEvidenceRows(record.stateAssertions)
+    && hasRuntimeEvidenceRows(record.negativePaths);
+}
+
+function hasRuntimeEvidenceRows(value: unknown): boolean {
+  return Array.isArray(value) && value.some((entry) => {
+    const record = asRecord(entry);
+    return Boolean(record && statusLooksPassed(record) && nonEmptyArray(record.evidence));
+  });
+}
+
+function deliveryFidelityLooksClosed(value: unknown): boolean {
+  const record = asRecord(value);
+  if (!record) return false;
+  const decision = asRecord(record.completionDecision);
+  if (!decision || !statusLooksPassed(decision)) return false;
+  const losses = Array.isArray(record.losses) ? record.losses : [];
+  return losses.every((loss) => {
+    const item = asRecord(loss);
+    if (!item) return false;
+    const severity = String(item.severity ?? "").toLowerCase();
+    const status = String(item.status ?? "").toLowerCase();
+    if (severity === "p0" || severity === "p1") return ["closed", "accepted", "deferred"].includes(status);
+    if (severity === "p2") return status !== "open";
+    return true;
+  });
+}
+
+function gitDeliveryLooksClosed(value: unknown): boolean {
+  const record = asRecord(value);
+  if (!record) return false;
+  return ["checks", "merge", "remoteBranchCleanup", "localBranchCleanup", "worktreeCleanup"].every((field) => statusLooksPassed(record[field]));
+}
+
+function statusLooksPassed(value: unknown): boolean {
+  const record = asRecord(value);
+  const status = record ? String(record.status ?? "").toLowerCase() : String(value ?? "").toLowerCase();
+  return ["passed", "complete", "completed", "covered", "verified", "cleaned", "merged", "success", "succeeded"].includes(status);
 }
 
 function buildExecutionResult(input: {
@@ -577,6 +670,7 @@ function persistStatusCheck(dbPath: string, result: StatusCheckResult, input: St
         testResults: {
           commands: result.executionResult.commands,
           specAlignment: result.specAlignment,
+          completionEvidence: input.completionEvidence,
         },
         diff: result.executionResult.diff,
         riskExplanation: result.reasons.join(" "),
@@ -681,6 +775,9 @@ function findOpenStatusReview(dbPath: string, result: StatusCheckResult): { id: 
 }
 
 function reviewReasonForStatusCheck(result: StatusCheckResult): "approval_needed" | "clarification_needed" | "risk_review_needed" {
+  if (result.reasons.some((reason) => /requirementCoverage|acceptanceEvidence|journeyEvidence|runtimeEvidence|deliveryFidelity|gitDelivery/.test(reason))) {
+    return "risk_review_needed";
+  }
   if (isRepeatedFailureEscalation(result)) {
     return "risk_review_needed";
   }
@@ -715,6 +812,13 @@ function reviewTriggersForStatusCheck(result: StatusCheckResult): ReviewTrigger[
     triggers.add("forbidden_file");
   }
   if (result.executionResult.commands.some((command) => command.status === "failed")) triggers.add("failed_tests_continue");
+  const reasonText = result.reasons.join("\n");
+  if (/requirementCoverage/.test(reasonText)) triggers.add("acceptance_gap");
+  if (/acceptanceEvidence/.test(reasonText)) triggers.add("acceptance_gap");
+  if (/journeyEvidence/.test(reasonText)) triggers.add("journey_not_closed");
+  if (/runtimeEvidence/.test(reasonText)) triggers.add("evidence_missing");
+  if (/deliveryFidelity/.test(reasonText)) triggers.add("quality_evidence_gap");
+  if (/gitDelivery/.test(reasonText)) triggers.add("delivery_evidence_missing");
   return triggers.size > 0 ? [...triggers] : ["high_risk_file"];
 }
 
@@ -795,6 +899,14 @@ function unique(values: string[]): string[] {
 
 function normalizePath(value: string): string {
   return value.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function nonEmptyArray(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0;
 }
 
 function getSpecAlignmentResultById(dbPath: string, id?: string): SpecAlignmentResult {

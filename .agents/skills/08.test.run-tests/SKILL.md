@@ -32,6 +32,10 @@ obligations, not just command success.
 - Failure classification.
 - Behavior obligations covered and not covered.
 - Evidence rows suitable for `result.deliveryFidelity.evidence`.
+- Runtime evidence rows suitable for `result.runtimeEvidence` when the change
+  touches UI/App behavior, including app launch, route access, journey
+  interaction, state assertion, reload persistence or equivalent, negative path,
+  and screenshot/trace/log refs.
 - Status Checker summary.
 - Recommended next action.
 
@@ -50,6 +54,9 @@ obligations, not just command success.
 - `failureClassification`: failure category or `null`.
 - `statusChecker`: status checker decision and reasons.
 - `artifacts`: logs, screenshots, reports, or evidence paths.
+- `runtimeEvidence`: app launch, journey runtime, state assertion, reload
+  persistence or equivalent, negative path, and screenshot/trace/log refs when
+  applicable.
 - `fidelityLosses`: any discovered `test_bypass`, `journey_loss`, `interaction_loss`, `state_loss`, or `data_loss`.
 - `recommendedNextAction`: recovery, review, rerun, broaden tests, or no action.
 

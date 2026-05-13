@@ -25,6 +25,7 @@ import {
   type CommandCheckKind,
   type CommandCheckResult,
   type CommandCheckStatus,
+  type CompletionEvidenceInput,
   type DiffSummary,
   type ExecutionArtifactRef,
   type RunnerTerminalStatus,
@@ -50,6 +51,9 @@ import {
 } from "./codex-cli-adapter.ts";
 import { CLAUDE_CLI_ADAPTER_CONFIG, claudeAllowedTools, claudePermissionMode } from "./claude-cli-adapter.ts";
 import { GEMINI_CLI_ADAPTER_CONFIG, geminiApprovalMode } from "./gemini-cli-adapter.ts";
+import { isAppTouchingFile, isFeatureExecutionInvocation, validateFeatureCompletion } from "./quality-gates.ts";
+import { buildInvocationContextManifest, ensureInvocationContextPrompt, renderInvocationContextManifest } from "./invocation-context.ts";
+import { createRunWorkpad } from "./workpad.ts";
 
 export { CODEX_CLI_ADAPTER_CONFIG, DEFAULT_CLI_ADAPTER_CONFIG } from "./codex-cli-adapter.ts";
 export { CLAUDE_CLI_ADAPTER_CONFIG } from "./claude-cli-adapter.ts";
@@ -223,6 +227,8 @@ export type CliInvocationLogFiles = {
   stdout: string;
   stderr: string;
   report: string;
+  workpadMarkdown?: string;
+  workpadJson?: string;
 };
 
 export type RunnerPolicyInput = {
@@ -738,6 +744,8 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
     "requirementCoverage",
     "acceptanceEvidence",
     "journeyEvidence",
+    "runtimeEvidence",
+    "runtimeExemption",
     "deliveryFidelity",
     "foundationExemption",
     "verification",
@@ -793,6 +801,74 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
           status: { type: "string" },
           evidence: { type: "array", items: { type: "string" } },
         },
+      },
+    },
+    runtimeEvidence: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      properties: {
+        appLaunch: {
+          type: "object",
+          additionalProperties: false,
+          required: ["command", "status", "url", "evidence"],
+          properties: {
+            command: { type: "string" },
+            status: { type: "string" },
+            url: { type: ["string", "null"] },
+            evidence: { type: "array", items: { type: "string" } },
+          },
+        },
+        journeys: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["journeyId", "status", "mode", "steps", "evidence"],
+            properties: {
+              journeyId: { type: "string" },
+              status: { type: "string" },
+              mode: { type: "string" },
+              steps: { type: "array", items: { type: "string" } },
+              evidence: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        stateAssertions: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["assertion", "status", "evidence"],
+            properties: {
+              assertion: { type: "string" },
+              status: { type: "string" },
+              evidence: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        negativePaths: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["scenario", "status", "evidence"],
+            properties: {
+              scenario: { type: "string" },
+              status: { type: "string" },
+              evidence: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+      },
+    },
+    runtimeExemption: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      required: ["exempt", "reason", "evidence"],
+      properties: {
+        exempt: { type: "boolean" },
+        reason: { type: "string" },
+        evidence: { type: "array", items: { type: "string" } },
       },
     },
     deliveryFidelity: {
@@ -1431,6 +1507,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- API fixtures may only prepare preconditions; they cannot satisfy the behavior under test. Entry/text/page-presence checks alone are insufficient acceptance evidence.",
         "- The implementation agent cannot self-close delivery. Include independent Test/QA/Review/Release agent review evidence or return review_needed.",
         "- For completed feature_execution, result must include requirementCoverage, acceptanceEvidence, and journeyEvidence, unless result.foundationExemption explicitly names downstream closure Features and integration evidence.",
+        "- For completed feature_execution that changes UI/app files, result.runtimeEvidence must prove app launch, route access, user interaction, state assertion, reload persistence or equivalent, a negative/boundary path, and screenshot/trace/log evidence. Use result.runtimeExemption only for explicit foundation or stateless cases with evidence.",
         "- For completed feature_execution, result.gitDelivery must include ownerWorkspace, implementationWorkspace, worktree, branch, commitHash, prUrl, checks, merge, remoteBranchCleanup, localBranchCleanup, and worktreeCleanup evidence. If PR, merge, or cleanup cannot complete, return review_needed, approval_needed, or blocked instead of completed.",
         "- Do not hide requirementCoverage, acceptanceEvidence, or journeyEvidence inside details, items, or other prose-only fields; they must be direct structured arrays on result.",
         "- Passing tests or a commit alone is not sufficient for completed; close the Journey Checkpoint and Git delivery lifecycle or return review_needed with journey_not_closed, acceptance_gap, evidence_missing, or delivery_evidence_missing.",
@@ -1453,6 +1530,8 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
       ]
     : [];
   return [
+    renderInvocationContextManifest(buildInvocationContextManifest(invocation)),
+    "",
     "Execute this SpecDrive task inside the current workspace.",
     "",
     `Execution ID: ${invocation.executionId}`,
@@ -1491,9 +1570,10 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
 export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterResult> {
   const now = input.now ?? new Date();
   const adapterConfig = input.adapterConfig ?? DEFAULT_CLI_ADAPTER_CONFIG;
+  const promptWithInvocation = ensureInvocationContextPrompt(input.prompt, input.executionInvocation);
   const prompt = adapterConfig.id === CODEX_CLI_ADAPTER_CONFIG.id
-    ? applyCodexCliAdapterPromptRules(input.prompt, input.executionInvocation)
-    : input.prompt;
+    ? applyCodexCliAdapterPromptRules(promptWithInvocation, input.executionInvocation)
+    : promptWithInvocation;
   const shouldCleanupOutputSchema = !input.outputSchemaPath;
   const outputSchema = outputSchemaForExecutionInvocation(input.policy.outputSchema, input.executionInvocation);
   const outputSchemaPath = input.outputSchemaPath ?? writeOutputSchema(input.policy, outputSchema);
@@ -1505,18 +1585,29 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
     imagePaths: input.imagePaths,
   });
   const commandEnv = buildCliAdapterEnvironment(adapterConfig);
-  const logFiles = writeCliInputLog({
-    policy: input.policy,
-    prompt,
-    taskId: input.taskId,
+  const workpad = createRunWorkpad({
+    workspaceRoot: input.policy.workspaceRoot,
+    executionId: input.policy.runId,
     featureId: input.featureId,
-    command: rendered.command,
-    args: rendered.args,
-    outputSchemaPath,
-    imagePaths: input.imagePaths,
-    executionInvocation: input.executionInvocation,
-    createdAt: now.toISOString(),
+    taskId: input.taskId,
+    invocation: input.executionInvocation,
   });
+  const logFiles = {
+    ...writeCliInputLog({
+      policy: input.policy,
+      prompt,
+      taskId: input.taskId,
+      featureId: input.featureId,
+      command: rendered.command,
+      args: rendered.args,
+      outputSchemaPath,
+      imagePaths: input.imagePaths,
+      executionInvocation: input.executionInvocation,
+      createdAt: now.toISOString(),
+    }),
+    workpadMarkdown: workpad.markdownPath,
+    workpadJson: workpad.jsonPath,
+  };
   try {
     let result: CliCommandResult;
     try {
@@ -1668,7 +1759,7 @@ export async function runCliAdapter(input: CliAdapterInput): Promise<CliAdapterR
       producedArtifacts: skillOutput?.producedArtifacts ?? [],
       traceability: skillOutput?.traceability ?? input.executionInvocation?.traceability ?? { requirementIds: [], changeIds: [] },
       nextAction: skillOutput?.nextAction,
-      rawLogRefs: [logFiles.input, logFiles.output, logFiles.stdout, logFiles.stderr, logFiles.report],
+      rawLogRefs: [logFiles.input, logFiles.output, logFiles.stdout, logFiles.stderr, logFiles.report, logFiles.workpadMarkdown, logFiles.workpadJson].filter(Boolean) as string[],
       error: rawLog.stderr || undefined,
     };
 
@@ -1851,17 +1942,14 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
   if (output.skillSlug !== instruction.skillSlug) reasons.push(`Skill output skillSlug mismatch: ${output.skillSlug}.`);
   if (output.requestedAction !== instruction.requestedAction) reasons.push(`Skill output requestedAction mismatch: ${output.requestedAction}.`);
   if (!sameOptionalString(output.traceability.featureId, invocation.featureId ?? invocation.traceability.featureId)) reasons.push("Skill output traceability.featureId mismatch.");
-  const journeyClosure = assessJourneyClosureGate(invocation, output);
-  if (!journeyClosure.passed) {
-    reasons.push(`Journey Closure Gate failed: ${journeyClosure.reason ?? "journey_not_closed"}${journeyClosure.details.length ? ` (${journeyClosure.details.join("; ")})` : ""}.`);
-  }
-  const deliveryFidelity = assessDeliveryFidelityGate(invocation, output);
-  if (!deliveryFidelity.passed) {
-    reasons.push(`Delivery Fidelity Gate failed: ${deliveryFidelity.reason ?? "quality_evidence_gap"}${deliveryFidelity.details.length ? ` (${deliveryFidelity.details.join("; ")})` : ""}.`);
-  }
-  const gitDelivery = assessGitDeliveryGate(invocation, output);
-  if (!gitDelivery.passed) {
-    reasons.push(`Git Delivery Gate failed: ${gitDelivery.reason ?? "delivery_evidence_missing"}${gitDelivery.details.length ? ` (${gitDelivery.details.join("; ")})` : ""}.`);
+  const completionGate = validateFeatureCompletion({
+    invocation,
+    skillOutput: output,
+    changedFiles: [...instruction.sourcePaths, ...output.producedArtifacts.map((artifact) => artifact.path)],
+    expectedArtifacts: instruction.expectedArtifacts,
+  });
+  if (completionGate.status !== "completed") {
+    reasons.push(...completionGate.details);
   }
   for (const artifact of instruction.expectedArtifacts.filter((entry) => entry.required && isMaterializedSpecArtifact(entry.path))) {
     const produced = output.producedArtifacts.find((entry) => entry.path === artifact.path && entry.status !== "missing" && entry.status !== "skipped");
@@ -1873,243 +1961,25 @@ export function validateSkillOutputContract(invocation: ExecutionAdapterInvocati
   return { valid: reasons.length === 0, reasons };
 }
 
-export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV1 | undefined, output: SkillOutputContract | undefined): JourneyClosureGate {
-  if (!invocation || !output || output.status !== "completed" || !isFeatureExecutionInvocation(invocation, output)) {
-    return { passed: true, details: [] };
-  }
-  const result = output.result;
-  const foundationExemption = isValidFoundationExemption(result.foundationExemption);
-  const journeyEvidence = Array.isArray(result.journeyEvidence) ? result.journeyEvidence : [];
-  const acceptanceEvidence = Array.isArray(result.acceptanceEvidence) ? result.acceptanceEvidence : [];
-  const requirementCoverage = Array.isArray(result.requirementCoverage) ? result.requirementCoverage : [];
-  if (foundationExemption) {
-    return { passed: true, details: ["foundationExemption accepted"] };
-  }
-  const missing: string[] = [];
-  if (journeyEvidence.length === 0) missing.push("journeyEvidence is required");
-  if (acceptanceEvidence.length === 0) missing.push("acceptanceEvidence is required");
-  if (requirementCoverage.length === 0) missing.push("requirementCoverage is required");
-  if (missing.length > 0 && resultItemsMentionStructuredEvidence(result)) {
-    missing.push("evidence was provided as text, but structured result arrays are required");
-  }
-  if (missing.length > 0) {
-    return { passed: false, reason: "evidence_missing", details: missing };
-  }
-  const failedJourneys = journeyEvidence.filter((entry) => !isPassedEvidence(entry));
-  const failedAcceptance = acceptanceEvidence.filter((entry) => !isPassedEvidence(entry));
-  const failedRequirements = requirementCoverage.filter((entry) => !isPassedEvidence(entry));
-  if (failedJourneys.length > 0) {
-    return { passed: false, reason: "journey_not_closed", details: failedJourneys.map(describeEvidence) };
-  }
-  if (failedAcceptance.length > 0 || failedRequirements.length > 0) {
-    return { passed: false, reason: "acceptance_gap", details: [...failedAcceptance, ...failedRequirements].map(describeEvidence) };
-  }
-  return { passed: true, details: ["journeyEvidence, acceptanceEvidence, and requirementCoverage passed"] };
-}
-
-export function assessDeliveryFidelityGate(invocation: ExecutionAdapterInvocationV1 | undefined, output: SkillOutputContract | undefined): DeliveryFidelityGate {
-  if (!invocation || !output || output.status !== "completed" || !isFeatureExecutionInvocation(invocation, output)) {
-    return { passed: true, details: [] };
-  }
-  const result = output.result;
-  const deliveryFidelity = result.deliveryFidelity;
-  if (typeof deliveryFidelity !== "object" || deliveryFidelity === null || Array.isArray(deliveryFidelity)) {
-    return { passed: false, reason: "quality_evidence_gap", details: ["deliveryFidelity is required"] };
-  }
-  const ledger = deliveryFidelity as Record<string, unknown>;
-  const missing: string[] = [];
-  const sourceIntent = arrayFromRecordField(ledger, "sourceIntent");
-  const behaviorObligations = arrayFromRecordField(ledger, "behaviorObligations");
-  const handoffs = arrayFromRecordField(ledger, "handoffs");
-  const evidence = arrayFromRecordField(ledger, "evidence");
-  const agentReviews = arrayFromRecordField(ledger, "agentReviews");
-  const losses = arrayFromRecordField(ledger, "losses");
-  if (sourceIntent.length === 0) missing.push("sourceIntent is required");
-  if (behaviorObligations.length === 0) missing.push("behaviorObligations is required");
-  if (handoffs.length === 0) missing.push("handoffs are required");
-  if (evidence.length === 0) missing.push("evidence is required");
-  if (agentReviews.length === 0) missing.push("agentReviews are required");
-  const completionDecision = ledger.completionDecision;
-  if (typeof completionDecision !== "object" || completionDecision === null || Array.isArray(completionDecision)) {
-    missing.push("completionDecision is required");
-  }
-  if (missing.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: missing };
-  }
-
-  const openCriticalLosses = losses
-    .filter(isRecord)
-    .filter((entry) => ["P0", "P1"].includes(String(entry.severity)) && !isClosedLossStatus(entry.status))
-    .map((entry) => `${entry.severity}:${entry.type}`);
-  if (openCriticalLosses.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: openCriticalLosses.map((entry) => `unclosed critical loss ${entry}`) };
-  }
-
-  const openP2Losses = losses
-    .filter(isRecord)
-    .filter((entry) => String(entry.severity) === "P2" && String(entry.status) === "open")
-    .map((entry) => `${entry.severity}:${entry.type}`);
-  if (openP2Losses.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: openP2Losses.map((entry) => `P2 loss must be closed or deferred ${entry}`) };
-  }
-
-  const unverifiedObligations = behaviorObligations
-    .filter(isRecord)
-    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.evidenceRefs))
-    .map((entry) => String(entry.id ?? "unnamed obligation"));
-  if (unverifiedObligations.length > 0) {
-    return { passed: false, reason: "test_semantics_gap", details: unverifiedObligations.map((entry) => `behavior obligation lacks verification evidence: ${entry}`) };
-  }
-
-  const brokenHandoffs = handoffs
-    .filter(isRecord)
-    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.preservedObligations))
-    .map((entry) => `${String(entry.from ?? "unknown")} -> ${String(entry.to ?? "unknown")}`);
-  if (brokenHandoffs.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: brokenHandoffs.map((entry) => `handoff did not preserve obligations: ${entry}`) };
-  }
-
-  const evidenceRecords = evidence.filter(isRecord);
-  const allFixtureOrSeeded = evidenceRecords.length > 0 && evidenceRecords.every((entry) => {
-    const mode = String(entry.mode ?? "").toLowerCase();
-    return mode === "fixture" || mode === "seed" || mode === "seeded" || mode === "seed_fixture";
-  });
-  if (allFixtureOrSeeded) {
-    return { passed: false, reason: "journey_bypassed_by_fixture", details: ["evidence cannot be only seed or fixture based"] };
-  }
-  const allEntryOnly = evidenceRecords.length > 0 && evidenceRecords.every((entry) => {
-    const assertion = String(entry.assertion ?? "").toLowerCase();
-    return assertion.includes("entry") || assertion.includes("text_presence") || assertion.includes("page_presence");
-  });
-  if (allEntryOnly) {
-    return { passed: false, reason: "test_semantics_gap", details: ["evidence cannot only assert entry or text presence"] };
-  }
-  const missingEvidenceArtifacts = evidenceRecords
-    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.covers) || !nonEmptyArray(entry.artifactRefs))
-    .map((entry) => String(entry.id ?? "unnamed evidence"));
-  if (missingEvidenceArtifacts.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: missingEvidenceArtifacts.map((entry) => `evidence row lacks covers/artifacts or did not pass: ${entry}`) };
-  }
-
-  const hasIndependentReview = agentReviews
-    .filter(isRecord)
-    .some((entry) => {
-      const role = String(entry.role ?? "").toLowerCase();
-      return isPassedEvidence(entry)
-        && (role.includes("test") || role.includes("qa") || role.includes("review") || role.includes("release"))
-        && !role.includes("implementation");
-    });
-  if (!hasIndependentReview) {
-    return { passed: false, reason: "quality_evidence_gap", details: ["independent Test/QA/Review/Release agent review is required"] };
-  }
-
-  const decision = completionDecision as Record<string, unknown>;
-  if (!isPassedEvidence(decision) || !nonEmptyString(decision.decidedBy)) {
-    return { passed: false, reason: "quality_evidence_gap", details: ["completionDecision must be passed and name the deciding role"] };
-  }
-  return { passed: true, details: ["deliveryFidelity ledger passed"] };
-}
-
-export function assessGitDeliveryGate(invocation: ExecutionAdapterInvocationV1 | undefined, output: SkillOutputContract | undefined): GitDeliveryGate {
-  if (!invocation || !output || output.status !== "completed" || !isFeatureExecutionInvocation(invocation, output)) {
-    return { passed: true, details: [] };
-  }
-  const result = output.result;
-  const gitDelivery = result.gitDelivery;
-  if (typeof gitDelivery !== "object" || gitDelivery === null || Array.isArray(gitDelivery)) {
-    return { passed: false, reason: "delivery_evidence_missing", details: ["gitDelivery is required"] };
-  }
-  const record = gitDelivery as Record<string, unknown>;
-  if (isValidDeliveryExemption(record.deliveryExemption)) {
-    return { passed: true, details: ["deliveryExemption accepted"] };
-  }
-
-  const missing: string[] = [];
-  for (const field of ["ownerWorkspace", "implementationWorkspace", "worktree", "branch", "commitHash", "prUrl"]) {
-    if (!nonEmptyString(record[field])) missing.push(`${field} is required`);
-  }
-  for (const field of ["checks", "merge", "remoteBranchCleanup", "localBranchCleanup", "worktreeCleanup"]) {
-    if (!isPassedDeliveryStatus(record[field])) missing.push(`${field} must be passed, completed, cleaned, or merged`);
-  }
-  if (missing.length > 0) {
-    const reason = missing.some((entry) => entry.includes("must be")) ? "delivery_not_closed" : "delivery_evidence_missing";
-    return { passed: false, reason, details: missing };
-  }
-  return { passed: true, details: ["worktree, PR, merge, and cleanup evidence passed"] };
-}
-
-function resultItemsMentionStructuredEvidence(result: Record<string, unknown>): boolean {
-  const items = Array.isArray(result.items) ? result.items : [];
-  return items.some((entry) => {
-    const text = String(entry).toLowerCase();
-    return text.includes("journeyevidence")
-      || text.includes("acceptanceevidence")
-      || text.includes("requirementcoverage");
-  });
-}
-
-function isFeatureExecutionInvocation(invocation: ExecutionAdapterInvocationV1, output: SkillOutputContract): boolean {
-  return invocation.operation === "feature_execution"
-    || invocation.skillInstruction.requestedAction === "feature_execution"
-    || output.requestedAction === "feature_execution"
-    || output.skillSlug === "07.execution.dispatch-adapter";
-}
-
-function arrayFromRecordField(record: Record<string, unknown>, field: string): unknown[] {
-  const value = record[field];
-  return Array.isArray(value) ? value : [];
-}
-
-function isValidFoundationExemption(value: unknown): boolean {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
-  if (record.exempt !== true) return false;
-  return nonEmptyString(record.reason)
-    && nonEmptyArray(record.downstreamFeatures)
-    && nonEmptyArray(record.integrationEvidence);
-}
-
-function isValidDeliveryExemption(value: unknown): boolean {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
-  if (record.approved !== true) return false;
-  return nonEmptyString(record.reason) && nonEmptyArray(record.evidence);
-}
-
-function isClosedLossStatus(value: unknown): boolean {
-  const status = String(value ?? "").toLowerCase();
-  return status === "closed" || status === "deferred" || status === "accepted";
-}
-
-function isPassedDeliveryStatus(value: unknown): boolean {
-  const status = typeof value === "object" && value !== null && !Array.isArray(value)
-    ? String((value as Record<string, unknown>).status ?? "").toLowerCase()
-    : String(value ?? "").toLowerCase();
-  return ["passed", "complete", "completed", "cleaned", "merged", "success", "succeeded"].includes(status);
-}
-
-function isPassedEvidence(value: unknown): boolean {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  const status = String((value as Record<string, unknown>).status ?? "").toLowerCase();
-  return ["passed", "complete", "completed", "covered", "verified"].includes(status);
-}
-
-function describeEvidence(value: unknown): string {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return "unknown evidence";
-  const record = value as Record<string, unknown>;
-  return String(record.userStoryId ?? record.requirementId ?? record.check ?? record.scenario ?? record.id ?? "unnamed evidence");
-}
-
-function nonEmptyString(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function nonEmptyArray(value: unknown): boolean {
-  return Array.isArray(value) && value.length > 0;
-}
-
 function sameOptionalString(left: string | undefined, right: string | undefined): boolean {
   return (left ?? null) === (right ?? null);
+}
+
+function completionEvidenceFromSkillOutput(output: SkillOutputContract | undefined, inputFiles: string[] | undefined): CompletionEvidenceInput | undefined {
+  if (!output || output.status !== "completed" || output.requestedAction !== "feature_execution") return undefined;
+  const result = output.result;
+  const changedFiles = Array.isArray(result.changedFiles)
+    ? result.changedFiles.map(String)
+    : [...(inputFiles ?? []), ...output.producedArtifacts.map((artifact) => artifact.path)];
+  return {
+    requirementCoverage: Array.isArray(result.requirementCoverage) ? result.requirementCoverage : undefined,
+    acceptanceEvidence: Array.isArray(result.acceptanceEvidence) ? result.acceptanceEvidence : undefined,
+    journeyEvidence: Array.isArray(result.journeyEvidence) ? result.journeyEvidence : undefined,
+    runtimeEvidence: result.runtimeEvidence,
+    deliveryFidelity: result.deliveryFidelity,
+    gitDelivery: result.gitDelivery,
+    requireRuntimeEvidence: changedFiles.some(isAppTouchingFile),
+  };
 }
 
 export async function processRunnerQueueItem(
@@ -2160,6 +2030,7 @@ export async function processRunnerQueueItem(
         diff: input.statusCheck.diff,
         commandChecks: input.statusCheck.commandChecks,
         requiredCommandChecks: input.statusCheck.requiredCommandChecks,
+        completionEvidence: completionEvidenceFromSkillOutput(adapterResult.result.skillOutput, input.files),
         specAlignment: input.statusCheck.specAlignment,
         allowedFiles: input.statusCheck.allowedFiles,
         forbiddenFiles: input.statusCheck.forbiddenFiles,

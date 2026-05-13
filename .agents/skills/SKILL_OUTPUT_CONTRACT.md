@@ -43,6 +43,12 @@ following closure evidence:
 - `journeyEvidence`: non-empty user story or Journey Checkpoint evidence.
 - `deliveryFidelity`: the Delivery Fidelity Ledger that proves the Feature kept
   product intent intact through Define, Plan, Build, Verify, Review, and Ship.
+- `runtimeEvidence`: required for UI/App behavior changes unless a valid
+  `runtimeExemption` is present. It proves app launch, route access, user
+  interaction, state change, reload persistence or an equivalent state
+  assertion, negative/boundary behavior, and screenshot/trace/log evidence.
+- `runtimeExemption`: `null` or a structured foundation/stateless exemption
+  with `exempt: true`, `reason`, and `evidence`.
 - `gitDelivery`: Feature Git lifecycle evidence, including owner workspace,
   implementation workspace or approved fallback, worktree, branch, commit hash,
   PR URL, checks, merge, remote branch cleanup, local branch cleanup, and
@@ -80,6 +86,13 @@ A foundation-only Feature may omit direct journey evidence only when
 - `downstreamFeatures`
 - `integrationEvidence`
 
+A foundation-only or stateless Feature may omit UI/App runtime evidence only
+when `result.runtimeExemption` is present and includes:
+
+- `exempt: true`
+- `reason`
+- `evidence`
+
 Passing tests, creating a commit, opening a PR, or marking tasks done is not by
 itself enough for a completed feature execution. Missing or failed journey
 closure evidence must produce `review_needed` with `journey_not_closed`,
@@ -88,12 +101,15 @@ produce `review_needed` with `quality_evidence_gap`, `test_semantics_gap`, or
 `journey_bypassed_by_fixture`. Missing or incomplete Git delivery evidence must
 produce `review_needed`, `approval_needed`, or `blocked` with
 `delivery_evidence_missing` or `delivery_not_closed`.
+Missing runtime evidence for UI/App behavior changes must produce
+`review_needed` with `evidence_missing`.
 
-Closure fields must be direct structured arrays on `result`, and `gitDelivery`
-must be a direct structured object on `result`. Do not provide them only as
-prose in `result.details`, `result.items`, report summaries, or produced
-artifact summaries; the Journey Closure Gate and Git Delivery Gate do not parse
-prose evidence.
+Closure fields must be direct structured arrays on `result`; `runtimeEvidence`,
+`deliveryFidelity`, and `gitDelivery` must be direct structured objects on
+`result`. Do not provide them only as prose in `result.details`,
+`result.items`, report summaries, or produced artifact summaries; the Journey
+Closure Gate, Runtime Evidence Gate, Delivery Fidelity Gate, and Git Delivery
+Gate do not parse prose evidence.
 
 Use `status = "queued"` before execution starts, `status = "running"` while reading, analyzing, writing, or verifying, `status = "waiting_input"` when user information is required, and `status = "approval_needed"` when command, permission, or risk approval is required. Final status must be `completed`, `review_needed`, `blocked`, `failed`, or `cancelled`. Use `status = "completed"` when the skill produced a valid decision or artifact, even if the decision is "none" or "no change". Use `status = "blocked"` for missing inputs or unresolved required decisions, `status = "review_needed"` only when a real human or risk review gate must resolve the next step, and include the review reason in `summary` or `result.reviewNeededReason`. Use `status = "failed"` for execution errors that prevented a valid skill result.
 
@@ -139,6 +155,36 @@ Do not return shorthand JSON such as `{"summary": "...", "status": "...", "evide
         "unresolvedLosses": []
       }
     },
+    "runtimeEvidence": {
+      "appLaunch": {
+        "command": "<dev server or launch command>",
+        "status": "passed",
+        "url": "<route or app url>",
+        "evidence": ["<screenshot/trace/log ref>"]
+      },
+      "journeys": [
+        {
+          "scenario": "<primary user journey>",
+          "status": "passed",
+          "evidence": ["<trace or assertion ref>"]
+        }
+      ],
+      "stateAssertions": [
+        {
+          "assertion": "<state mutation or reload persistence assertion>",
+          "status": "passed",
+          "evidence": ["<log or screenshot ref>"]
+        }
+      ],
+      "negativePaths": [
+        {
+          "scenario": "<negative or boundary path>",
+          "status": "passed",
+          "evidence": ["<trace or assertion ref>"]
+        }
+      ]
+    },
+    "runtimeExemption": null,
     "gitDelivery": {
       "ownerWorkspace": "<owner checkout>",
       "implementationWorkspace": "<feature worktree or explicit fallback workspace>",
