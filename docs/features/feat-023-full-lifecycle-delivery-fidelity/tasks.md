@@ -1,7 +1,7 @@
 # FEAT-023 Full Lifecycle Delivery Fidelity — 任务
 
 Feature ID: FEAT-023
-来源需求: REQ-087 至 REQ-091
+来源需求: REQ-087 至 REQ-093
 状态: in-progress
 
 ## 任务列表
@@ -67,3 +67,35 @@ Feature ID: FEAT-023
 范围: `/home/john/Projects/rapid-agentic-app-framework/docs/features/FEAT-016/*`, `/home/john/Projects/rapid-agentic-app-framework/docs/features/README.md`
 验证: Rapid `jq empty docs/features/FEAT-016/spec-state.json`; Rapid `git diff --check`
 完成标准: Rapid 不重开 FEAT-001 至 FEAT-015，FEAT-016 在行为义务未全部关闭前保持 review_needed/ready，而不是伪装 completed。
+
+### T-023-11 Quality gates and runtime evidence
+状态: in-progress
+描述: 新增集中 `quality-gates`，把 Feature Completion、Journey Closure、Delivery Fidelity、Git Delivery 和 Runtime Evidence 从分散 adapter 逻辑升级为代码门禁。
+关联需求: REQ-090, REQ-091, REQ-093, US-023-06
+范围: `src/quality-gates.ts`, `src/cli-adapter.ts`, `tests/quality-gates.test.ts`, `tests/cli-adapter.test.ts`
+验证: `node --test tests/quality-gates.test.ts tests/cli-adapter.test.ts`
+完成标准: UI/App 变更缺 runtime evidence 时不得 completed；foundation/stateless 豁免必须有结构化原因和证据。
+
+### T-023-12 Completion evidence status checking
+状态: in-progress
+描述: 扩展 Status Checker，加入 completion evidence 输入、runtime check kind 和 ReviewItem trigger 映射。
+关联需求: REQ-091, REQ-093
+范围: `src/status-checker.ts`, `tests/status-checker.test.ts`
+验证: `node --test tests/status-checker.test.ts`
+完成标准: requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity 或 Git delivery 不足时投影 `review_needed`，并创建可读 ReviewItem。
+
+### T-023-13 Invocation manifest and run workpad
+状态: in-progress
+描述: 新增 `InvocationContextManifest` 与 Run Workpad，Adapter Prompt 只注入控制面 manifest，运行过程记录到 `.autobuild/runs/<executionId>/`。
+关联需求: REQ-090, REQ-093
+范围: `src/invocation-context.ts`, `src/workpad.ts`, `src/cli-adapter.ts`, `tests/invocation-context.test.ts`, `tests/workpad.test.ts`
+验证: `node --test tests/invocation-context.test.ts tests/workpad.test.ts`
+完成标准: 每次 CLI Run 生成 Workpad refs，并在 prompt 中包含 execution/project/task/boundary/output refs 而非全文上下文。
+
+### T-023-14 VSCode quality evidence projection
+状态: in-progress
+描述: 扩展 IDE view model、Execution Workbench 和 Feature Spec Webview，使质量证据从 durable runtime fields 投影并在 VSCode 主界面展示。
+关联需求: REQ-084, REQ-093, US-023-06
+范围: `src/specdrive-ide.ts`, `apps/vscode-extension/src/types.ts`, `apps/vscode-extension/src/webviews/execution.ts`, `apps/vscode-extension/src/webviews/feature-spec.ts`, `tests/specdrive-ide-webview-boundary.test.ts`, `tests/specdrive-ide.test.ts`
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts tests/specdrive-ide.test.ts`; `npm run ide:build`
+完成标准: Execution Workbench / Feature Spec 详情展示 requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity、Git delivery、Workpad 和 ReviewItem 状态；Product Console 不承载新增主质量 UI。

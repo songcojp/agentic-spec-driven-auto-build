@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-SpecDrive AutoBuild 是一个面向软件团队的长时间自主编程系统。系统以 Spec Protocol 管理目标、需求、验收和交付证据，以 Scheduler 选择 Feature、排期任务和记录触发，以 Project Memory 为编码 CLI 提供跨会话恢复能力，以 Execution Adapter Layer 适配本地 CLI 与远程/RPC 执行通道，采集外部执行队列、心跳、日志、证据和状态检测，以内部任务状态机维护任务、审批、恢复和交付流转，并通过 Product Console / Dashboard 呈现状态。
+SpecDrive AutoBuild 是一个面向软件团队的长时间自主编程系统。系统以 Spec Protocol 管理目标、需求、验收和交付证据，以 Scheduler 选择 Feature、排期任务和记录触发，以 Project Memory 为编码 CLI 提供跨会话恢复能力，以 Execution Adapter Layer 适配本地 CLI 与远程/RPC 执行通道，采集外部执行队列、心跳、日志、证据和状态检测，以内部任务状态机维护任务、审批、恢复和交付流转，并以 VSCode IDE Webview 作为日常执行与质量审查主界面，Product Console / Dashboard 保留为历史兼容和系统设置/调试入口。
 
 2026-04-29 边界更新：平台不再提供 Skill System、Subagent Runtime、Agent Run Contract、Context Broker、Planning Pipeline、Skill Center 或 Subagent Console。本文后续旧名称若仍出现在历史映射中，均由 Scheduler and State Maintenance、Runner observation、执行结果、Status Check、Review、Recovery 和 Audit 替代。
 
@@ -27,6 +27,8 @@ SpecDrive AutoBuild 是一个面向软件团队的长时间自主编程系统。
 2026-05-10 Skill-owned Git delivery：Feature implementation 的 Git 生命周期由 `07.execution.dispatch-adapter` 和必要时的 `14.release.prepare-pr` 承担。Control Plane / Scheduler / Adapter 只传递 owner workspace 与 Feature Spec source paths、记录 Execution Record、校验 `SkillOutputContractV1.result.gitDelivery`，不得直接创建 Feature worktree、提交、PR、merge 或 cleanup。项目级并发使用一个 Feature 一个 worktree / branch / PR；Feature 内 worker worktree 先合回 Feature branch，再由 owner Feature PR 交付。
 
 2026-05-11 Delivery Fidelity：Feature execution completed 不再只由最终质量门判断。Execution Adapter 校验 `skill-contract/v2` 的 `result.deliveryFidelity`，Review Center 展示 quality loss，Orchestration 在 Done 聚合中要求 Delivery Fidelity Gate 通过。Lifecycle-first workflow 保留 00-14 Skill 编号作为内部兼容层，但用户、Skill 和调度视图优先使用 Define / Plan / Build / Verify / Review / Ship。
+
+2026-05-12 VSCode 质量闭环：新增质量证据展示、Runtime Evidence Gate、Invocation Context Manifest 和 Run Workpad 时，主 UI 必须优先落到 VSCode Execution Workbench 与 Feature Spec Webview。Product Console 定位为历史遗留兼容面，不新增主要质量 UI，也不得作为 VSCode Webview 的 ViewModel 或组件事实源。
 
 2026-05-03 Execution Adapter Layer 重构：平台不再使用 Runner 作为核心架构概念。执行层统一称为 Execution Adapter Layer，下分 CLI Adapter 与 RPC Adapter。CLI Adapter 适配 `codex exec`、Gemini headless CLI 或其他本机编码 CLI；RPC Adapter 适配 `codex app-server`、app-server HTTP/JSON-RPC、WebSocket、stdio 或后续远程执行服务。Scheduler 只创建 `cli.run`、`rpc.run` 等 executor job；Execution Adapter Layer 负责把统一的 `ExecutionAdapterInvocationV1` 转换为具体 provider 调用，并把 provider events 投影为 `ExecutionAdapterResultV1`、Execution Record、raw logs、approval request 和 Feature `spec-state.json`。
 
@@ -101,8 +103,8 @@ MVP 采用本地优先的控制面架构：
 | REQ-058 | 8, 12, 13 | MVP 核心实体必须持久化并支持恢复。 |
 | REQ-069, REQ-070, REQ-071, REQ-072, REQ-073 | 7.14, 8, 9 | Chat Interface 提供悬浮面板、意图分类、受控命令派发、高风险二次确认和会话/消息持久化。 |
 | REQ-074, REQ-075, REQ-076, REQ-077, REQ-078, REQ-079 | 7.15, 8, 9, 10, 15 | VSCode Extension 提供工作区识别、Spec Explorer、文档交互、SpecChangeRequest、IDE command receipt 和 Task Queue 管理。 |
-| REQ-080, REQ-081, REQ-082, REQ-083, REQ-084, REQ-085 | 7.8, 7.15, 8, 9, 10, 11, 13, 15 | RPC Adapter、Execution Projection、Codex RPC approval、VSCode Diagnostics、独立 Execution Workbench Webview 和 IDE System Settings 属于 Execution Adapter + IDE 联合边界。 |
-| REQ-087, REQ-088, REQ-089, REQ-090, REQ-091, REQ-092 | 7.8, 7.9, 7.12, 10, 14, 15 | Delivery Lifecycle OS、Delivery Fidelity Ledger、skill-contract/v2、agent persona routing、Review Center loss 投影和 Spec Artifact Granularity Gate。 |
+| REQ-080, REQ-081, REQ-082, REQ-083, REQ-084, REQ-085, REQ-093 | 7.8, 7.15, 8, 9, 10, 11, 13, 15 | RPC Adapter、Execution Projection、Codex RPC approval、VSCode Diagnostics、独立 Execution Workbench Webview、质量证据投影和 IDE System Settings 属于 Execution Adapter + IDE 联合边界。 |
+| REQ-087, REQ-088, REQ-089, REQ-090, REQ-091, REQ-092, REQ-093 | 7.8, 7.9, 7.12, 10, 14, 15 | Delivery Lifecycle OS、Delivery Fidelity Ledger、skill-contract/v2、Runtime Evidence、agent persona routing、Review Center loss 投影、Spec Artifact Granularity Gate 和 VSCode 质量闭环。 |
 | NFR-001, NFR-002, NFR-003, NFR-004 | 5, 10, 11, 12, 13, 14 | 默认沙箱、回滚、幂等和崩溃恢复是平台级质量属性。 |
 | NFR-005, NFR-006, NFR-010, NFR-012 | 11, 12, 14 | 审计时间线、成本、成功率、心跳和成功指标进入可观测性体系。 |
 | NFR-007, NFR-008, NFR-009, NFR-011 | 11, 12, 13, 14 | 性能指标作为基线记录，只读 Subagent 并发作为受控并行能力。 |
@@ -343,7 +345,9 @@ Responsibilities:
 - 按任务风险解析 sandbox、approval policy、model、reasoning effort、profile、provider-specific speed / service tier、workspace root、session/thread resume 和 output schema。
 - 采集命令输出、RPC event stream、provider session/thread、心跳和原始日志。
 - 生成或转交 Execution Result。
-- 对 `feature_execution` completed 输出校验 `skill-contract/v2`、Delivery Fidelity Ledger、Journey Closure、Git delivery 和 evidence artifact refs；失败时投影为 `review_needed`。
+- 对 `feature_execution` completed 输出校验 `skill-contract/v2`、Delivery Fidelity Ledger、Journey Closure、Runtime Evidence、Git delivery 和 evidence artifact refs；失败时投影为 `review_needed`。
+- 生成 `InvocationContextManifest`，只向 Adapter Prompt 注入执行 ID、项目/Feature/Task、边界、阻塞、审批、验证要求、输出契约和 AGENTS / memory / constitution 引用，不注入全文上下文。
+- 为每次运行创建 `.autobuild/runs/<executionId>/WORKPAD.md` 与 `workpad.json`，记录执行过程、覆盖关系、验收、旅程、runtime 验证和证据索引。
 - 对 PRD、requirements、HLD、UI Spec 和 Feature Spec 的规格颗粒度执行 `09.review.spec-granularity` 语义审查；粗颗粒度文档只能进入 `review_needed`，不得推进到 `ready` 或 `feature_execution`。
 
 Owns:
@@ -413,6 +417,7 @@ RPC Adapter 的远程 provider 不得直接写入 SpecDrive SQLite、Feature `sp
 Responsibilities:
 
 - 在每次 Run 后检查 Git diff、构建、单元测试、集成测试、类型检查、lint、安全扫描、敏感信息扫描、Spec Alignment、任务完成度、风险文件和未授权文件。
+- 在每次 Feature 完成判断中检查 requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity 和 Git delivery，证据不足时投影为 `review_needed` 并创建可读 ReviewItem trigger。
 - 输出 Done、Ready、Scheduled、Review Needed、Blocked 或 Failed 的状态判断。
 - 捕获 Execution Result 并供审批、恢复、状态聚合和交付报告复用。
 
@@ -445,6 +450,7 @@ Collaborates With:
 Responsibilities:
 
 - Dashboard 展示项目健康度、活跃 Feature、看板数量、运行中 Subagent、失败任务、待审批任务、成本、最近 PR 和风险提醒。
+- Product Console 是历史兼容面，不承载新增主质量 UI；新增质量证据展示优先进入 VSCode Execution Workbench 与 Feature Spec Webview。
 - 提供项目创建入口、项目列表和当前项目切换控件，并将所有页面查询限定在当前项目。
 - Dashboard Board 支持受状态机约束的拖拽、批量排期、批量运行，以及依赖、diff、测试结果、审批状态和失败恢复历史入口。
 - Spec Workspace 展示 Feature、Spec、澄清、Checklist、计划、数据模型、契约、Feature Spec `tasks.md` 覆盖情况和版本 diff。
@@ -520,6 +526,7 @@ Responsibilities:
 - 识别 VSCode workspace 中的 SpecDrive 文档结构、Feature 队列、`spec-state.json` 和 `.autobuild` 运行状态。
 - 提供 Spec Explorer，展示 PRD、requirements、HLD、Feature Specs、Task Queue、Execution Record 和最近 Codex 会话。
 - 提供独立 Execution Workbench Webview，默认聚焦 Job 队列、自动执行控制、当前运行、阻塞/审批、Execution Record 和运行结果投影。
+- 提供质量证据面板，在 Execution Workbench 与 Feature Spec 详情中展示 requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity losses、Git delivery、Workpad、raw logs、截图/trace、PR/check 和 ReviewItem 状态。
 - 提供独立 System Settings Webview，展示并管理 CLI Adapter 与 RPC Adapter active/draft/preset、校验结果、dry-run/probe 和 JSON 配置。
 - 在独立 Webview 共享壳提供左侧导航栏，覆盖 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings；导航点击由 VSCode extension host 打开对应 Webview，折叠状态只保存在工作台级 localStorage，不在各页面 Webview state 中保存副本。
 - 提供项目级执行偏好设置，保存默认 run mode (`cli` / `rpc`) 与对应 Execution Adapter provider；Execution Workbench 在新建 Job 前可提交 Job 级执行偏好覆盖项目默认。
@@ -527,7 +534,7 @@ Responsibilities:
 - Feature Spec Webview 对 need review / review_needed Feature 提供与 Product Console 一致的 ReviewItem 审批入口，审批通过后由 Review Center 恢复继续执行；`Pass` 仅作为隐藏的临时状态重置命令保留，由 Control Plane 同步 Feature `spec-state.json`、Execution Record 和 Scheduler Job 完成状态；Webview 不直接写运行事实源。
 - 在 Spec 文档中提供 Hover、CodeLens、Comments 和 Diagnostics，支持行级/段落级澄清、需求新增、需求变更、EARS 生成、设计更新和 Feature 拆分意图。
 - 将所有有副作用的 IDE action 转换为 Control Plane command API 请求，接收 `IdeCommandReceiptV1` 并刷新 UI。
-- 展示 app-server 事件流、diff 摘要、raw logs、approval pending 和 `SkillOutputContractV1` 校验结果。
+- 展示 app-server 事件流、diff 摘要、raw logs、approval pending 和 `SkillOutputContractV1/V2` 校验结果。
 - 展示结构化 Skill 输出的摘要视图：状态、summary、nextAction、traceability、产物表格、常见 result 分组和完整 JSON 审计视图。
 - 从 Control Plane 投影的 Execution Record 时间字段展示 Job 开始时间、完成时间和单次执行耗时；耗时由 `started_at` / `completed_at` 派生，Webview 不直接读取 SQLite。
 - 在独立 Webview 共享层提供语言切换入口，支持中文、英语和日语，并用 Webview state / localStorage 保持选择；只翻译 UI chrome、按钮、字段标签、空态和提示，不翻译执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入或 Feature 文档内容。
@@ -547,6 +554,7 @@ Boundary:
 - 插件不得直接调用 `thread/start`、`thread/resume`、`turn/start` 或 `turn/interrupt`。
 - 查询类动作可以读取 workspace 文件或调用 query API；落盘、调度、取消、重试、审批和配置修改必须走受控命令。
 - Execution Workbench 不复用 Product Console 页面、路由、导航、App Shell、组件实现或 ViewModel；只允许复用 shared contract/type 和 Control Plane query/command API。
+- VSCode 质量证据 view model 只从 durable runtime fields 投影，不读取 Product Console 状态，也不把 Product Console 页面作为事实源。
 - VSCode System Settings 与 Product Console System Settings 是两个 UI 入口，不得创建第二套配置状态；CLI/RPC Adapter 配置事实源仍为 Control Plane 持久层。
 - 执行偏好事实源为项目级 SQLite 配置与新建 Job payload；`cli` provider 必须解析到 `cli_adapter_configs`，`rpc` provider 必须解析到 `rpc_adapter_configs`。
 
@@ -558,7 +566,7 @@ Boundary:
 | Spec Protocol | Spec Protocol Engine | Feature、Requirement、ClarificationLog、Checklist、SpecVersion、SpecSlice | SQLite + Markdown/JSON artifact。 |
 | Skill Governance | Skill System | Skill、SkillVersion、SkillRun、SchemaValidationResult | SQLite + skill artifact。 |
 | Orchestration State | Orchestration and State Machine | Feature、StateTransition、ScheduleTrigger、SchedulerJobRecord、ExecutionRecord | SQLite source of truth；BullMQ/Redis 只负责调度和 Worker 投递。 |
-| Runtime Execution | Execution Adapter Layer | ExecutionRecord、ExecutionAdapterConfig、ExecutionHeartbeat、ExecutionSessionRecord、RawExecutionLog、TokenConsumptionRecord | SQLite + JSON adapter config + execution logs；`cli.run` / `rpc.run` 由 BullMQ Worker 触发；token/cost 只从 adapter event/raw log 提取消费事实。 |
+| Runtime Execution | Execution Adapter Layer | ExecutionRecord、ExecutionAdapterConfig、ExecutionHeartbeat、ExecutionSessionRecord、RawExecutionLog、TokenConsumptionRecord、InvocationContextManifest、RunWorkpad、RuntimeEvidence | SQLite + JSON adapter config + execution logs + `.autobuild/runs/<executionId>/` Workpad；`cli.run` / `rpc.run` 由 BullMQ Worker 触发；token/cost 只从 adapter event/raw log 提取消费事实。 |
 | IDE Integration | VSCode SpecDrive Extension / Control Plane | SpecDriveWorkspaceContextV1、SpecTreeNodeV1、SpecChangeRequestV1、IdeCommandReceiptV1、AppServerExecutionProjectionV1、IdeSystemSettingsProjectionV1 | Workspace 文件 + Control Plane query/command API；IDE 本地只缓存 UI 状态。 |
 | Workspace Isolation | Workspace Manager | WorktreeRecord、ConflictCheckResult、MergeReadinessResult | SQLite + Git/worktree facts。 |
 | Project Memory | Project Memory Service | ProjectMemory、MemoryVersionRecord | `.autobuild/memory/project.md` for CLI injection + SQLite version index。 |

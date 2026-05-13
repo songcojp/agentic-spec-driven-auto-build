@@ -28,9 +28,20 @@ export type SpecDriveIdeFeatureNode = {
   latestReviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
   latestReview?: SpecDriveIdeReviewProjection;
   tokenConsumption?: SpecDriveIdeTokenConsumption;
+  qualityEvidence?: SpecDriveIdeQualityEvidenceProjection;
   indexStatus?: "indexed" | "missing_from_index" | "missing_folder";
   tasks?: SpecDriveIdeTaskProjection[];
   taskParseBlockedReasons?: string[];
+};
+
+export type SpecDriveIdeQualityEvidenceProjection = {
+  requirementCoverage?: unknown;
+  acceptanceEvidence?: unknown;
+  journeyEvidence?: unknown;
+  runtimeEvidence?: unknown;
+  deliveryFidelity?: unknown;
+  gitDelivery?: unknown;
+  workpadRefs: string[];
 };
 
 export type SpecDriveIdeResumeTarget = {

@@ -58,6 +58,7 @@ export type SpecDriveIdeFeatureNode = {
   latestReviewNeededReason?: "approval_needed" | "clarification_needed" | "risk_review_needed";
   latestReview?: SpecDriveIdeReviewProjection;
   tokenConsumption?: SpecDriveIdeTokenConsumption;
+  qualityEvidence?: SpecDriveIdeQualityEvidenceProjection;
   indexStatus: "indexed" | "missing_from_index" | "missing_folder";
   tasks: SpecDriveIdeTaskProjection[];
   taskParseBlockedReasons: string[];
@@ -158,6 +159,16 @@ export type SpecDriveIdeTokenConsumption = {
   pricing: Record<string, unknown>;
   sourcePath: string;
   recordedAt: string;
+};
+
+export type SpecDriveIdeQualityEvidenceProjection = {
+  requirementCoverage?: unknown;
+  acceptanceEvidence?: unknown;
+  journeyEvidence?: unknown;
+  runtimeEvidence?: unknown;
+  deliveryFidelity?: unknown;
+  gitDelivery?: unknown;
+  workpadRefs: string[];
 };
 
 export type SpecDriveIdeProjectCostSummary = {
@@ -684,6 +695,23 @@ function tokenConsumptionFromRow(row: Record<string, unknown> | undefined): Spec
     pricing: parseJsonObject(optionalString(row.pricing_json)),
     sourcePath: optionalString(row.source_path) ?? "",
     recordedAt: optionalString(row.recorded_at) ?? "",
+  };
+}
+
+function qualityEvidenceFromExecutionMetadata(metadata: Record<string, unknown>): SpecDriveIdeQualityEvidenceProjection | undefined {
+  const skillOutput = isRecord(metadata.skillOutputContract) ? metadata.skillOutputContract : undefined;
+  const result = isRecord(skillOutput?.result) ? skillOutput.result : undefined;
+  if (!result) return undefined;
+  const rawLogRefs = Array.isArray(metadata.rawLogRefs) ? metadata.rawLogRefs.map(String) : [];
+  const workpadRefs = rawLogRefs.filter((ref) => /(^|\/)WORKPAD\.md$|(^|\/)workpad\.json$/.test(ref));
+  return {
+    requirementCoverage: result.requirementCoverage,
+    acceptanceEvidence: result.acceptanceEvidence,
+    journeyEvidence: result.journeyEvidence,
+    runtimeEvidence: result.runtimeEvidence,
+    deliveryFidelity: result.deliveryFidelity,
+    gitDelivery: result.gitDelivery,
+    workpadRefs,
   };
 }
 
@@ -1543,6 +1571,7 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         latestReviewNeededReason: latestReview?.reviewNeededReason,
         latestReview,
         tokenConsumption,
+        qualityEvidence: latestExecutionForProjection?.qualityEvidence,
         indexStatus: indexed ? folderExists ? "indexed" : "missing_folder" : "missing_from_index",
         tasks: taskProjection.tasks,
         taskParseBlockedReasons: taskProjection.blockedReasons,
@@ -1814,6 +1843,7 @@ function readLatestExecutionsByFeature(
           er.created_at,
           er.updated_at,
           er.context_json,
+          er.metadata_json,
           tcr.run_id,
           tcr.scheduler_job_id,
           tcr.project_id,
@@ -1842,8 +1872,9 @@ function readLatestExecutionsByFeature(
   ]);
   const latest = new Map<string, { latest?: FeatureExecutionProjection; latestCompleted?: FeatureExecutionProjection }>();
   for (const row of result.queries.executions) {
-    const context = parseJsonObject(optionalString(row.context_json));
-    const featureId = optionalString(context.featureId);
+      const context = parseJsonObject(optionalString(row.context_json));
+      const metadata = parseJsonObject(optionalString(row.metadata_json));
+      const featureId = optionalString(context.featureId);
     if (!featureId) continue;
     const existing = latest.get(featureId) ?? {};
     const execution = {
@@ -1854,6 +1885,7 @@ function readLatestExecutionsByFeature(
       createdAt: optionalString(row.created_at),
       updatedAt: optionalString(row.updated_at),
       tokenConsumption: tokenConsumptionFromRow(row),
+      qualityEvidence: qualityEvidenceFromExecutionMetadata(metadata),
     };
     if (!existing.latest) {
       existing.latest = execution;
@@ -1874,6 +1906,7 @@ type FeatureExecutionProjection = {
   createdAt?: string;
   updatedAt?: string;
   tokenConsumption?: SpecDriveIdeTokenConsumption;
+  qualityEvidence?: SpecDriveIdeQualityEvidenceProjection;
 };
 
 type QueueExecutionRow = {

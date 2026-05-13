@@ -195,6 +195,14 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /<h2>Summary<\/h2>/);
   assert.match(webviewSource, /<h2>Raw Log Refs<\/h2>/);
   assert.match(webviewSource, /<h2>Token Consumption<\/h2>/);
+  assert.match(webviewSource, /<h2>Quality Evidence<\/h2>/);
+  assert.match(webviewSource, /Requirement Coverage/);
+  assert.match(webviewSource, /Acceptance Evidence/);
+  assert.match(webviewSource, /Journey Evidence/);
+  assert.match(webviewSource, /Runtime Evidence/);
+  assert.match(webviewSource, /Delivery Fidelity/);
+  assert.match(webviewSource, /renderRuntimeEvidenceEntry/);
+  assert.match(webviewSource, /renderDeliveryFidelityEntry/);
   assert.match(webviewSource, /Feature Spec Description/);
   assert.match(webviewSource, /featureSpecLabel\(item\)/);
   assert.match(webviewSource, /item\.featureDescription/);
@@ -261,7 +269,7 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /firstSafeUrl\(record\.prUrl, record\.pullRequestUrl, record\.url\)/);
   assert.match(webviewSource, /<div class="result-entry result-entry-wide"><span>PR<\/span><div class="result-content" data-i18n-skip>\$\{prLink\}<\/div><\/div>/);
   assert.doesNotMatch(webviewSource, /\["gitDelivery", "commands", "verification", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"\]\.includes\(key\)/);
-  assert.match(webviewSource, /\["commands", "verification", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"\]\.includes\(key\)/);
+  assert.match(webviewSource, /\["commands", "verification", "requirementCoverage", "acceptanceEvidence", "journeyEvidence", "runtimeExemption", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"\]\.includes\(key\)/);
   assert.match(webviewSource, /result-entry-wide/);
   assert.doesNotMatch(executionWebviewSource, /<h3>Token Cost<\/h3>/);
   assert.doesNotMatch(executionWebviewSource, /renderTokenCostSummary\(executionDetail\)/);
@@ -787,4 +795,7 @@ test("VSCode IDE Webviews do not import Product Console UI surfaces", () => {
   for (const pattern of forbiddenPatterns) {
     assert.equal(pattern.test(extensionSource), false, `Forbidden Product Console UI dependency matched ${pattern}`);
   }
+
+  assert.match(readFileSync("apps/vscode-extension/src/webviews/feature-spec.ts", "utf8"), /Quality Evidence/);
+  assert.doesNotMatch(executionWebviewSource, /Product Console/);
 });

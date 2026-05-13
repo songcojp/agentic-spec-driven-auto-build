@@ -4,6 +4,8 @@
 > 适用项目：`agentic-spec-driven-auto-build`
 > 核心目标：通过完善 Agentic Spec、质量门禁、证据链和 Adapter 执行边界，提高 AI 自动开发交付质量，避免“文字描述完成但应用不可用”的问题。
 
+> 2026-05-12 实施边界更新：VSCode IDE Webview 是质量闭环主界面。Execution Workbench 与 Feature Spec 详情优先展示质量证据、ReviewItem、Workpad、日志、截图/trace 和 PR/check 状态；Product Console 定位为历史遗留兼容面，除现有接口/测试依赖外不新增主要质量 UI。
+
 ---
 
 ## 1. 背景
@@ -878,7 +880,7 @@ tests/workpad.test.ts
 
 ### P2：中期实施
 
-#### P2-1. Product Console 显示质量门禁
+#### P2-1. VSCode Webview 显示质量门禁
 
 展示：
 
@@ -888,7 +890,12 @@ tests/workpad.test.ts
 - Runtime Evidence
 - Delivery Fidelity Losses
 - Git Delivery
+- Workpad
+- 日志 / screenshots / traces
+- PR / checks
 - Review Center 状态
+
+Product Console 只保留历史兼容与系统设置/调试入口，不作为新增质量闭环主 UI，也不得作为 VSCode Webview 的 ViewModel 或组件来源。
 
 #### P2-2. Evidence Pack Browser
 
