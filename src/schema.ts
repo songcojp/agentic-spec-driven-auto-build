@@ -977,7 +977,7 @@ export const MIGRATIONS: Migration[] = [
           'featureId', feature_id,
           'taskId', task_id,
           'workspaceRoot', json_extract(metadata_json, '$.workspaceRoot'),
-          'skillSlug', json_extract(metadata_json, '$.skillSlug'),
+          'skillName', json_extract(metadata_json, '$.skillName'),
           'skillPhase', json_extract(metadata_json, '$.skillPhase')
         ),
         status,

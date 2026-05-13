@@ -29,13 +29,13 @@ const projects = {
 const cliAdapterConfig = {
   id: "codex-cli",
   displayName: "Codex CLI",
-  schemaVersion: 4,
+  schemaVersion: 5,
   executable: "codex",
   argumentTemplate: ["-a", "{{approval}}", "-c", "model_reasoning_effort=\"{{reasoning_effort}}\"", "-c", "service_tier=\"{{service_tier}}\"", "-c", "features.fast_mode={{fast_mode}}", "exec", "--json", "--sandbox", "{{sandbox}}", "--model", "{{model}}", "--output-schema", "{{output_schema}}", "{{prompt}}"],
   resumeArgumentTemplate: ["-a", "{{approval}}", "--sandbox", "{{sandbox}}", "-c", "model_reasoning_effort=\"{{reasoning_effort}}\"", "-c", "service_tier=\"{{service_tier}}\"", "-c", "features.fast_mode={{fast_mode}}", "{{profile_flag}}", "{{profile}}", "exec", "resume", "--json", "-m", "{{model}}", "{{resume_session_id}}", "{{resume_prompt}}"],
   configSchema: { type: "object" },
   formSchema: { fields: ["executable", "defaults.model", "defaults.reasoningEffort", "defaults.serviceTier", "defaults.fastMode", "defaults.sandbox", "defaults.approval"] },
-  defaults: { model: "gpt-5.5", reasoningEffort: "medium", serviceTier: "fast", fastMode: true, sandbox: "workspace-write", approval: "never" },
+  defaults: { model: "gpt-5.5", reasoningEffort: "high", serviceTier: "fast", fastMode: true, sandbox: "workspace-write", approval: "never" },
   environmentAllowlist: [],
   outputMapping: { sessionIdJsonPath: "session_id" },
   status: "active",
@@ -493,7 +493,7 @@ const returnsPortalData: ConsoleProjectData = {
         summary: "Carrier label quote fixture wired and acceptance evidence recorded.",
         tokenUsage: { inputTokens: 18420, outputTokens: 2310, totalTokens: 20730 },
         inputContract: {
-          skillSlug: "feat-implement-skill",
+          skillName: "implement-feature",
           skillPhase: "task_execution",
           required: ["featureId", "featureSpecPath", "workspaceRoot"],
           context: { featureId: "FEAT-204", featureSpecPath: "docs/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
@@ -514,14 +514,14 @@ const returnsPortalData: ConsoleProjectData = {
   runner: {
     summary: { onlineRunners: 1, runningTasks: 1, readyTasks: 1, blockedTasks: 2, successRate: 0.957, failureRate: 0.043 },
     schedulerJobs: [
-      { id: "JOB-709", bullmqJobId: "BULL-709", queueName: "specdrive:cli-runner", jobType: "cli.run", operation: "feature_execution", targetType: "execution", targetId: "RUN-709", status: "queued", attempts: 0, updatedAt: "2026-04-29T03:42:00.000Z", executionId: "RUN-709", runId: "RUN-709", taskId: "T-229", featureId: "FEAT-204", projectId: "project-1", workspaceRoot: "workspace/acme-returns-portal", context: { featureId: "FEAT-204", featureSpecPath: "docs/features/FEAT-204/tasks.md", taskId: "T-229", taskName: "Connect carrier label quote mock", workspaceRoot: "workspace/acme-returns-portal", skillSlug: "feat-implement-skill", skillPhase: "task_execution" }, skillOutput: {
+      { id: "JOB-709", bullmqJobId: "BULL-709", queueName: "specdrive:cli-runner", jobType: "cli.run", operation: "feature_execution", targetType: "execution", targetId: "RUN-709", status: "queued", attempts: 0, updatedAt: "2026-04-29T03:42:00.000Z", executionId: "RUN-709", runId: "RUN-709", taskId: "T-229", featureId: "FEAT-204", projectId: "project-1", workspaceRoot: "workspace/acme-returns-portal", context: { featureId: "FEAT-204", featureSpecPath: "docs/features/FEAT-204/tasks.md", taskId: "T-229", taskName: "Connect carrier label quote mock", workspaceRoot: "workspace/acme-returns-portal", skillName: "implement-feature", skillPhase: "task_execution" }, skillOutput: {
         parseStatus: "found",
         stdoutLogPath: "workspace/acme-returns-portal/.autobuild/runs/RUN-709/stdout.log",
         status: "completed",
         summary: "Carrier label quote fixture wired and acceptance evidence recorded.",
         tokenUsage: { inputTokens: 18420, outputTokens: 2310, totalTokens: 20730 },
         inputContract: {
-          skillSlug: "feat-implement-skill",
+          skillName: "implement-feature",
           skillPhase: "task_execution",
           required: ["featureId", "featureSpecPath", "workspaceRoot"],
           context: { featureId: "FEAT-204", featureSpecPath: "docs/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
@@ -532,7 +532,7 @@ const returnsPortalData: ConsoleProjectData = {
         result: { completedTasks: ["T-229"] },
         raw: { contractVersion: "skill-contract/v1", executionId: "RUN-709", status: "completed", summary: "Carrier label quote fixture wired and acceptance evidence recorded." },
       } },
-      { id: "JOB-711", bullmqJobId: "BULL-711", queueName: "specdrive:cli-runner", jobType: "cli.run", operation: "generate_hld", targetType: "execution", targetId: "RUN-711", status: "blocked", attempts: 1, error: "Project workspace is missing readable AGENTS.md", updatedAt: "2026-04-29T03:41:30.000Z", executionId: "RUN-711", runId: "RUN-711", projectId: "project-1", workspaceRoot: "workspace/acme-returns-portal", context: { workspaceRoot: "workspace/acme-returns-portal", skillSlug: "create-project-hld", skillPhase: "feature_execution" } },
+      { id: "JOB-711", bullmqJobId: "BULL-711", queueName: "specdrive:cli-runner", jobType: "cli.run", operation: "generate_hld", targetType: "execution", targetId: "RUN-711", status: "blocked", attempts: 1, error: "Project workspace is missing readable AGENTS.md", updatedAt: "2026-04-29T03:41:30.000Z", executionId: "RUN-711", runId: "RUN-711", projectId: "project-1", workspaceRoot: "workspace/acme-returns-portal", context: { workspaceRoot: "workspace/acme-returns-portal", skillName: "design-architecture", skillPhase: "feature_execution" } },
       ...Array.from({ length: 11 }, (_, index) => ({
         id: `JOB-PAGE-${index}`,
         bullmqJobId: `BULL-PAGE-${index}`,
@@ -550,7 +550,7 @@ const returnsPortalData: ConsoleProjectData = {
         featureId: "FEAT-204",
         projectId: "project-1",
         workspaceRoot: "workspace/acme-returns-portal",
-        context: { taskName: `Paginated task ${index}`, skillSlug: "feat-implement-skill", skillPhase: "task_execution" },
+        context: { taskName: `Paginated task ${index}`, skillName: "implement-feature", skillPhase: "task_execution" },
       })),
     ],
     lanes: {
@@ -578,7 +578,7 @@ const returnsPortalData: ConsoleProjectData = {
         runId: "RUN-709",
         schedulerJobId: "JOB-709",
         workspaceRoot: "workspace/acme-returns-portal",
-        skillSlug: "feat-implement-skill",
+        skillName: "implement-feature",
         skillPhase: "task_execution",
         status: "queued",
         resultSummary: "Codex skill invocation contract queued for workspace execution.",
@@ -589,7 +589,7 @@ const returnsPortalData: ConsoleProjectData = {
           summary: "Carrier label quote fixture wired and acceptance evidence recorded.",
           tokenUsage: { inputTokens: 18420, outputTokens: 2310, totalTokens: 20730 },
           inputContract: {
-            skillSlug: "feat-implement-skill",
+            skillName: "implement-feature",
             skillPhase: "task_execution",
             required: ["featureId", "featureSpecPath", "workspaceRoot"],
             context: { featureId: "FEAT-204", featureSpecPath: "docs/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
@@ -606,7 +606,7 @@ const returnsPortalData: ConsoleProjectData = {
         runId: "RUN-710",
         schedulerJobId: "JOB-710",
         workspaceRoot: "workspace/acme-returns-portal",
-        skillSlug: "technical-context-skill",
+        skillName: "collect-project-context",
         skillPhase: "feature_execution",
         blockedReason: "Project workspace is missing readable AGENTS.md",
         status: "blocked",

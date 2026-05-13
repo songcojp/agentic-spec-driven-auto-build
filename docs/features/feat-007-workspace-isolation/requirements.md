@@ -12,7 +12,7 @@
 
 - 为并行 Feature、任务或任务组提供独立 Git worktree 和隔离分支的记录、冲突判定和校验边界。
 - 记录 worktree 路径、分支名、base commit、目标分支、关联 Feature/Task、Runner 和清理状态。
-- 写入型 Feature 执行需要隔离时，`07.execution.dispatch-adapter` 负责创建、验证和清理实现 worktree；Workspace Manager / 调度入口只记录、分类、校验和投影 `result.gitDelivery`。
+- 写入型 Feature 执行需要隔离时，`implement-feature` 负责创建、验证和清理实现 worktree；Workspace Manager / 调度入口只记录、分类、校验和投影 `result.gitDelivery`。
 - 判断同文件、锁文件、数据库 schema、公共配置和共享运行时资源是否必须串行。
 - 合并前执行冲突检测、Spec Alignment Check 和必要测试。
 - 支持回滚自动修改和失败任务重放所需的 workspace 边界。
@@ -21,7 +21,7 @@
 
 - 不执行 Codex Run；执行归属 FEAT-008。
 - 不完成 Spec Alignment 算法；检测归属 FEAT-009。
-- 不由平台代码创建 PR；Feature 交付归属 `07.execution.dispatch-adapter`，补交付归属 FEAT-012 / `14.release.prepare-pr`。
+- 不由平台代码创建 PR；Feature 交付归属 `implement-feature`，补交付归属 FEAT-012 / `prepare-release`。
 
 ## User Value
 
@@ -30,7 +30,7 @@
 ## Requirements
 
 - 任意并行写入都必须追踪到独立 worktree、分支、任务标识和合并目标。
-- `07.execution.dispatch-adapter` 负责 Feature 实现 worktree、分支、commit、PR、merge 和 cleanup 生命周期；Workspace Manager / 调度入口负责记录、冲突分类、并发适配性和证据校验，不替 Skill 创建 sibling worktree 或 PR。
+- `implement-feature` 负责 Feature 实现 worktree、分支、commit、PR、merge 和 cleanup 生命周期；Workspace Manager / 调度入口负责记录、冲突分类、并发适配性和证据校验，不替 Skill 创建 sibling worktree 或 PR。
 - 只读 Subagent 可以并行；不同文件的 Coding Agent 可以并行；同一文件、同一分支写任务默认串行；高风险任务必须由单 Agent 执行。
 - 互相影响文件或依赖的 Feature 不得并行 implementing。
 - 合并前必须执行冲突检测、Spec Alignment Check 和必要测试。

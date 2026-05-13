@@ -35,7 +35,7 @@
 - `SpecTreeNodeV1`：nodeType、id、label、path、status、priority、dependencies、blockedReasons、latestExecutionId。
 - `SpecChangeRequestV1`：projectId、workspaceRoot、source file/range/textHash、intent、comment、targetRequirementId、traceability。
 - `IdeCommandReceiptV1`：commandId、action、status、schedulerJobId、executionId、blockedReasons、acceptedAt。
-- `CodexAppServerRunContextV1`：workspaceRoot、featureId、taskId、sourcePaths、expectedArtifacts、specState、skillSlug、requestedAction、outputSchema。
+- `CodexAppServerRunContextV1`：workspaceRoot、featureId、taskId、sourcePaths、expectedArtifacts、specState、skillName、requestedAction、outputSchema。
 - `AppServerExecutionProjectionV1`：executionId、threadId、turnId、eventRefs、approvalState、producedArtifacts、summary、error。
 
 ## Test Plan

@@ -35,10 +35,15 @@ test("Codex RPC request sequence initializes, starts a thread, and starts a sche
   assert.equal(sequence.turn.method, "turn/start");
   assert.equal(sequence.turn.params.cwd, "/repo");
   assert.deepEqual(sequence.turn.params.outputSchema, { type: "object", additionalProperties: false });
-  assert.deepEqual(sequence.turn.params.input, [
-    { type: "text", text: "Run the skill." },
-    { type: "skill", name: "07.execution.dispatch-adapter", path: ".agents/skills/07.execution.dispatch-adapter/SKILL.md" },
-  ]);
+  const turnInput = sequence.turn.params.input as Array<{ type: string; text?: string; name?: string; path?: string }>;
+  assert.match(turnInput[0].text ?? "", /\[AUTOBUILD INVOCATION\]/);
+  assert.match(turnInput[0].text ?? "", /\.autobuild\/memory\/constitution\.md/);
+  assert.match(turnInput[0].text ?? "", /Run the skill\./);
+  assert.deepEqual(turnInput[1], {
+    type: "skill",
+    name: "implement-feature",
+    path: ".agents/skills/implement-feature/SKILL.md",
+  });
 });
 
 test("Codex RPC request sequence resumes an existing thread", () => {
@@ -410,7 +415,7 @@ function executionInvocation(): ExecutionAdapterInvocationV1 {
     },
     outputSchema: {},
     skillInstruction: {
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       requestedAction: "feature_execution",
       sourcePaths: ["docs/features/feat-016/requirements.md"],
       expectedArtifacts: [],
@@ -422,7 +427,7 @@ function skillOutput(): SkillOutputContract {
   return {
     contractVersion: "skill-contract/v2",
     executionId: "RUN-APP",
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Implemented.",

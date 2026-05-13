@@ -1889,7 +1889,7 @@ function uniqueUris(uris: Array<vscode.Uri | undefined>): vscode.Uri[] {
 async function latestUiSpecExecutionDetail(view: SpecDriveIdeView | undefined): Promise<SpecDriveIdeExecutionDetail | SpecDriveIdeQueueItem | undefined> {
   const items = Object.values(view?.queue.groups ?? {}).flat();
   const uiSpecItem = items
-    .filter((item) => item.executionId && (item.operation === "generate_ui_spec" || item.adapter === "ui-spec-skill"))
+    .filter((item) => item.executionId && (item.operation === "generate_ui_spec" || item.adapter === "design-ui-spec"))
     .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))[0];
   return uiSpecItem ? await fetchExecutionDetail(uiSpecItem) : undefined;
 }
@@ -1911,7 +1911,7 @@ function uiConceptImageArtifact(artifact: unknown): [string, string] | undefined
   if (!path || !isUiConceptImagePath(path)) return undefined;
   const status = optionalString(artifact.status)?.toLowerCase();
   if (status === "missing" || status === "skipped") return undefined;
-  return [optionalString(artifact.summary) ?? conceptImageLabel(path), path];
+  return [conceptImageLabel(path), path];
 }
 
 function isUiConceptImagePath(path: string): boolean {

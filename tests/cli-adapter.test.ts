@@ -32,6 +32,7 @@ import {
   validateSkillOutputContract,
 } from "../src/cli-adapter.ts";
 import type { ExecutionAdapterInvocationV1 } from "../src/execution-adapter-contracts.ts";
+import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "../src/openai-pricing.ts";
 import { listStatusCheckResults } from "../src/status-checker.ts";
 import { handleRecoveryResult, persistRecoveryResultHandling } from "../src/recovery.ts";
 
@@ -42,7 +43,7 @@ function executionInvocation(overrides: Partial<{
   projectId: string;
   workspaceRoot: string;
   operation: string;
-  skillSlug: string;
+  skillName: string;
   sourcePaths: string[];
   expectedArtifacts: Array<{ path: string; kind: string; required: boolean }>;
   operatorInput: {
@@ -76,7 +77,7 @@ function executionInvocation(overrides: Partial<{
     },
     outputSchema: {},
     skillInstruction: {
-      skillSlug: overrides.skillSlug ?? "02.requirements.convert-ears",
+      skillName: overrides.skillName ?? "convert-ears-requirements",
       requestedAction: overrides.requestedAction ?? "generate_ears",
       sourcePaths: overrides.sourcePaths ?? ["docs/PRD.md"],
       expectedArtifacts: overrides.expectedArtifacts ?? [{ path: "docs/requirements.md", kind: "markdown", required: true }],
@@ -87,7 +88,7 @@ function executionInvocation(overrides: Partial<{
 
 function skillOutputEvent(overrides: Partial<{
   executionId: string;
-  skillSlug: string;
+  skillName: string;
   requestedAction: string;
   status: "queued" | "running" | "waiting_input" | "approval_needed" | "completed" | "review_needed" | "blocked" | "failed" | "cancelled";
   summary: string;
@@ -99,7 +100,7 @@ function skillOutputEvent(overrides: Partial<{
   const output = {
     contractVersion: "skill-contract/v2",
     executionId: overrides.executionId ?? "RUN-SKILL",
-    skillSlug: overrides.skillSlug ?? "02.requirements.convert-ears",
+    skillName: overrides.skillName ?? "convert-ears-requirements",
     requestedAction: overrides.requestedAction ?? "generate_ears",
     status: overrides.status ?? "completed",
     summary: overrides.summary ?? "Skill completed.",
@@ -123,6 +124,8 @@ function featureExecutionResult(): Record<string, unknown> {
     journeyEvidence: [{ userStoryId: "US-001", scenario: "primary flow", status: "passed", evidence: ["browser evidence"] }],
     deliveryFidelity: validDeliveryFidelity(),
     foundationExemption: null,
+    runtimeEvidence: null,
+    runtimeExemption: null,
     verification: [{ command: "npm test", status: "passed", summary: "Tests passed." }],
     tasks: { done: ["TASK-001"], blocked: [] },
     gates: { requirements: "passed", design: "passed", codeReview: "passed" },
@@ -175,6 +178,32 @@ function validGitDelivery(): Record<string, unknown> {
     localBranchCleanup: "completed",
     worktreeCleanup: "cleaned",
     deliveryExemption: null,
+  };
+}
+
+function validRuntimeEvidence(): Record<string, unknown> {
+  return {
+    appLaunch: {
+      command: "npm run dev",
+      status: "passed",
+      url: "http://127.0.0.1:5173/features/FEAT-008",
+      evidence: ["test-results/feature-panel-launch.log"],
+    },
+    journeys: [{
+      scenario: "primary feature panel interaction",
+      status: "passed",
+      evidence: ["test-results/feature-panel-trace.zip"],
+    }],
+    stateAssertions: [{
+      assertion: "selection persisted after reload",
+      status: "passed",
+      evidence: ["test-results/feature-panel-state.png"],
+    }],
+    negativePaths: [{
+      scenario: "missing feature displays reviewable empty state",
+      status: "passed",
+      evidence: ["test-results/feature-panel-negative.png"],
+    }],
   };
 }
 
@@ -306,6 +335,7 @@ test("CLI adapter exposes unified execution adapter config", () => {
   assert.equal(config.defaults.model, "gpt-5.5");
   assert.equal(config.defaults.serviceTier, "fast");
   assert.equal(config.defaults.fastMode, true);
+  assert.deepEqual(config.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
   assert.deepEqual(config.inputMapping.argumentTemplate, DEFAULT_CLI_ADAPTER_CONFIG.argumentTemplate);
   assert.deepEqual(config.inputMapping.imageGeneration, DEFAULT_CLI_ADAPTER_CONFIG.imageGeneration);
 });
@@ -491,7 +521,7 @@ test("SkillOutputContract validation requires common fields but allows skill-spe
   const valid = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-VALIDATE",
-    skillSlug: "02.requirements.convert-ears",
+    skillName: "convert-ears-requirements",
     requestedAction: "generate_ears",
     status: "completed",
     summary: "Generated requirements.",
@@ -547,7 +577,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   const invocation = executionInvocation({
     executionId: "RUN-FEATURE-CLOSURE",
     operation: "feature_execution",
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     featureId: "FEAT-008",
     taskId: "TASK-001",
@@ -556,7 +586,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   const valid = {
     contractVersion: "skill-contract/v2",
     executionId: "RUN-FEATURE-CLOSURE",
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Feature implemented.",
@@ -662,6 +692,30 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   assert.match(unmergedDelivery.reasons.join("\n"), /Git Delivery Gate failed: delivery_not_closed/);
   assert.match(unmergedDelivery.reasons.join("\n"), /merge must be passed, completed, cleaned, or merged/);
 
+  const uiWithoutRuntime = validateSkillOutputContract(invocation, {
+    ...valid,
+    producedArtifacts: [{ path: "src/components/FeaturePanel.tsx", kind: "typescript", status: "updated" }],
+    result: {
+      ...featureExecutionResult(),
+      changedFiles: ["src/components/FeaturePanel.tsx"],
+      runtimeEvidence: null,
+    },
+  });
+  assert.equal(uiWithoutRuntime.valid, false);
+  assert.match(uiWithoutRuntime.reasons.join("\n"), /Runtime Evidence Gate failed: evidence_missing/);
+  assert.match(uiWithoutRuntime.reasons.join("\n"), /runtimeEvidence is required for UI\/app changes/);
+
+  const uiWithRuntime = validateSkillOutputContract(invocation, {
+    ...valid,
+    producedArtifacts: [{ path: "src/components/FeaturePanel.tsx", kind: "typescript", status: "updated" }],
+    result: {
+      ...featureExecutionResult(),
+      changedFiles: ["src/components/FeaturePanel.tsx"],
+      runtimeEvidence: validRuntimeEvidence(),
+    },
+  });
+  assert.equal(uiWithRuntime.valid, true);
+
   const textOnlyEvidence = validateSkillOutputContract(invocation, {
     ...valid,
     result: {
@@ -719,7 +773,7 @@ test("feature execution runs receive a strict closure-evidence result output sch
   const output = {
     contractVersion: "skill-contract/v2",
     executionId: "RUN-FEATURE-SCHEMA",
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Feature execution completed.",
@@ -735,7 +789,7 @@ test("feature execution runs receive a strict closure-evidence result output sch
     executionInvocation: executionInvocation({
       executionId: "RUN-FEATURE-SCHEMA",
       operation: "feature_execution",
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       requestedAction: "feature_execution",
       featureId: "FEAT-001",
       expectedArtifacts: [],
@@ -760,6 +814,8 @@ test("feature execution runs receive a strict closure-evidence result output sch
     "requirementCoverage",
     "acceptanceEvidence",
     "journeyEvidence",
+    "runtimeEvidence",
+    "runtimeExemption",
     "deliveryFidelity",
     "foundationExemption",
     "verification",
@@ -893,8 +949,10 @@ test("CLI adapter upgrades stale built-in sandbox defaults", () => {
   assert.equal(normalized.schemaVersion, DEFAULT_CLI_ADAPTER_CONFIG.schemaVersion);
   assert.equal(normalized.defaults.sandbox, "danger-full-access");
   assert.equal(normalized.defaults.approval, "never");
+  assert.equal(normalized.defaults.reasoningEffort, "high");
   assert.equal(normalized.defaults.serviceTier, "fast");
   assert.equal(normalized.defaults.fastMode, true);
+  assert.deepEqual(normalized.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
 });
 
 test("runner policy resolves development defaults and clamps heartbeat cadence", () => {
@@ -909,7 +967,7 @@ test("runner policy resolves development defaults and clamps heartbeat cadence",
   assert.equal(lowRisk.sandboxMode, "danger-full-access");
   assert.equal(lowRisk.approvalPolicy, "never");
   assert.equal(lowRisk.model, "gpt-5.5");
-  assert.equal(lowRisk.reasoningEffort, "medium");
+  assert.equal(lowRisk.reasoningEffort, "high");
   assert.equal(lowRisk.heartbeatIntervalSeconds, 10);
 
   const highRisk = resolveRunnerPolicy({
@@ -1017,7 +1075,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     prompt: "Implement the bounded task.",
     files: ["src/index.ts", "tests/index.test.ts"],
     executionInvocation: executionInvocation({
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       operation: "task_execution",
       sourcePaths: ["docs/features/FEAT-001/tasks.md"],
       expectedArtifacts: [{ path: ".autobuild/reports/cli-adapter.json", kind: "json", required: true }],
@@ -1032,7 +1090,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     policy: docsDirectWritePolicy,
     prompt: "Implement the task without file scope.",
     executionInvocation: executionInvocation({
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       operation: "task_execution",
       sourcePaths: ["docs/features/FEAT-001/tasks.md"],
       expectedArtifacts: [{ path: ".autobuild/reports/cli-adapter.json", kind: "json", required: true }],
@@ -1047,7 +1105,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     policy: docsDirectWritePolicy,
     prompt: "Generate a risky artifact.",
     executionInvocation: executionInvocation({
-      skillSlug: "07.execution.prepare-context",
+      skillName: "implement-feature",
       expectedArtifacts: [{ path: "../outside.md", kind: "markdown", required: true }],
       requestedAction: "feature_planning",
     }),
@@ -1107,7 +1165,7 @@ test("feature-level coding prompt requires Feature Spec execution instead of rep
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "feature_execution",
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
       requestedAction: "feature_execution",
       sourcePaths: [
         "docs/features/FEAT-001/requirements.md",
@@ -1132,7 +1190,7 @@ test("task-slicing prompt requires the full SkillOutputContract result", () => {
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "split_feature_specs",
-      skillSlug: "05.feature.decompose",
+      skillName: "decompose-feature-specs",
       requestedAction: "split_feature_specs",
       sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
       expectedArtifacts: [
@@ -1154,7 +1212,7 @@ test("generic skill invocation prompt does not include Codex CLI image generatio
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "generate_ui_spec",
-      skillSlug: "04.ui.generate-spec",
+      skillName: "design-ui-spec",
       requestedAction: "generate_ui_spec",
       sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
       expectedArtifacts: [
@@ -1168,6 +1226,8 @@ test("generic skill invocation prompt does not include Codex CLI image generatio
   assert.doesNotMatch(prompt, /\$imagegen/);
   assert.doesNotMatch(prompt, /Codex CLI-specific image generation feature/);
   assert.doesNotMatch(prompt, /gpt-image-2/);
+  assert.match(prompt, /one distinct image for each concrete expected docs\/ui\/concepts\/<page-id>\.png artifact/);
+  assert.match(prompt, /Do not satisfy multiple expected UI concept image artifacts with one copied image/);
 });
 
 test("task-slicing runs receive a strict specialized result output schema", async () => {
@@ -1185,7 +1245,7 @@ test("task-slicing runs receive a strict specialized result output schema", asyn
     executionInvocation: executionInvocation({
       executionId: "RUN-TASK-SCHEMA",
       operation: "split_feature_specs",
-      skillSlug: "05.feature.decompose",
+      skillName: "decompose-feature-specs",
       requestedAction: "split_feature_specs",
       sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
       expectedArtifacts: [
@@ -1196,7 +1256,7 @@ test("task-slicing runs receive a strict specialized result output schema", asyn
     runner: (_command, args) => {
       const schemaFlagIndex = args.indexOf("--output-schema");
       schema = JSON.parse(readFileSync(args[schemaFlagIndex + 1], "utf8")) as Record<string, unknown>;
-      return { status: 0, stdout: skillOutputEvent({ executionId: "RUN-TASK-SCHEMA", skillSlug: "05.feature.decompose", requestedAction: "split_feature_specs" }), stderr: "" };
+      return { status: 0, stdout: skillOutputEvent({ executionId: "RUN-TASK-SCHEMA", skillName: "decompose-feature-specs", requestedAction: "split_feature_specs" }), stderr: "" };
     },
   });
 
@@ -1219,7 +1279,7 @@ test("Codex CLI adapter augments image artifact prompts with imagegen rules", as
     executionId: "RUN-CODEX-IMAGE",
     workspaceRoot,
     operation: "generate_ui_spec",
-    skillSlug: "04.ui.generate-spec",
+    skillName: "design-ui-spec",
     requestedAction: "generate_ui_spec",
     sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
     expectedArtifacts: [
@@ -1247,7 +1307,7 @@ test("Codex CLI adapter augments image artifact prompts with imagegen rules", as
           JSON.stringify({ type: "session.created", session_id: "SESSION-IMAGE" }),
           skillOutputEvent({
             executionId: "RUN-CODEX-IMAGE",
-            skillSlug: "04.ui.generate-spec",
+            skillName: "design-ui-spec",
             requestedAction: "generate_ui_spec",
             summary: "UI Spec image prompt rules applied.",
             producedArtifacts: [
@@ -1270,7 +1330,7 @@ test("clarification skill prompt treats operator input as an answer to apply", (
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "resolve_clarification",
-      skillSlug: "10.change.impact-analysis",
+      skillName: "manage-spec-change",
       requestedAction: "resolve_clarification",
       sourcePaths: ["docs/zh-CN/requirements.md"],
       expectedArtifacts: [{ path: "docs/zh-CN/requirements.md", kind: "markdown", required: true }],
@@ -1293,7 +1353,7 @@ test("spec change prompts require Feature Spec ready output for UI scheduling", 
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "evolve_spec",
-      skillSlug: "10.change.update-mainline-spec",
+      skillName: "manage-spec-change",
       requestedAction: "evolve_spec",
       sourcePaths: ["docs/requirements.md"],
       expectedArtifacts: [
@@ -1357,7 +1417,7 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
     "--sandbox",
     "danger-full-access",
     "-c",
-    'model_reasoning_effort="medium"',
+    'model_reasoning_effort="high"',
     "-c",
     'service_tier="fast"',
     "-c",
@@ -1392,6 +1452,8 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
     stdout: join(workspaceRoot, ".autobuild", "runs", "RUN-004", "stdout.log"),
     stderr: join(workspaceRoot, ".autobuild", "runs", "RUN-004", "stderr.log"),
     report: join(workspaceRoot, ".autobuild", "runs", "RUN-004", "report.json"),
+    workpadMarkdown: ".autobuild/runs/RUN-004/WORKPAD.md",
+    workpadJson: ".autobuild/runs/RUN-004/workpad.json",
   };
   assert.deepEqual(result.rawLog.files, expectedLogFiles);
   assert.equal(existsSync(expectedLogFiles.input), true);
@@ -1447,7 +1509,7 @@ test("Gemini CLI adapter extracts session, usage, and SkillOutputContract from s
   const output = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-GEMINI",
-    skillSlug: "02.requirements.convert-ears",
+    skillName: "convert-ears-requirements",
     requestedAction: "generate_ears",
     status: "completed",
     summary: "Gemini completed.",
@@ -1506,7 +1568,7 @@ test("Claude Code CLI adapter extracts session and SkillOutputContract from stru
   const output = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-CLAUDE",
-    skillSlug: "02.requirements.convert-ears",
+    skillName: "convert-ears-requirements",
     requestedAction: "generate_ears",
     status: "completed",
     summary: "Claude completed.",
@@ -1776,7 +1838,7 @@ test("Codex CLI adapter passes output schema for new exec runs", async () => {
     "-a",
     "never",
     "-c",
-    'model_reasoning_effort="medium"',
+    'model_reasoning_effort="high"',
     "-c",
     'service_tier="fast"',
     "-c",
@@ -3051,7 +3113,7 @@ test("runner artifacts persist for audit and console lookup", async () => {
   assert.equal(rows.queries.policy[0].sandbox_mode, "danger-full-access");
   assert.equal(rows.queries.policy[0].approval_policy, "never");
   assert.equal(rows.queries.policy[0].model, "gpt-5.5");
-  assert.equal(rows.queries.policy[0].reasoning_effort, "medium");
+  assert.equal(rows.queries.policy[0].reasoning_effort, "high");
   assert.equal(rows.queries.heartbeat[0].queue_status, "completed");
   assert.equal(rows.queries.session[0].session_id, "S-1");
   assert.equal(rows.queries.session[0].exit_code, 0);

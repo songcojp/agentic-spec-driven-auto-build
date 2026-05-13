@@ -19,6 +19,7 @@ import {
 } from "../src/product-console.ts";
 import { seedDemoProject } from "../src/demo-seed.ts";
 import { createMemoryScheduler } from "../src/scheduler.ts";
+import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "../src/openai-pricing.ts";
 
 const stableDate = new Date("2026-04-28T12:00:00.000Z");
 
@@ -30,6 +31,20 @@ test("project overview returns an empty model for a clean database", () => {
 
   assert.equal(overview.summary.totalProjects, 0);
   assert.deepEqual(overview.projects, []);
+});
+
+test("system settings fallback exposes Codex default model pricing for clean initialization", () => {
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+
+  const settings = buildSystemSettingsView(dbPath);
+
+  assert.equal(settings.cliAdapter.active.id, "codex-cli");
+  assert.equal(settings.cliAdapter.active.defaults.reasoningEffort, "high");
+  assert.deepEqual(settings.cliAdapter.active.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
+  assert.equal(settings.rpcAdapter.active.id, "codex-rpc-default");
+  assert.equal(settings.rpcAdapter.active.defaults?.reasoningEffort, "high");
+  assert.deepEqual(settings.rpcAdapter.active.defaults?.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
 });
 
 test("demo seed import creates visible project data and remains idempotent", () => {
@@ -724,13 +739,13 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   const skillOutput = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-SKILL",
-    skillSlug: "05.feature.decompose",
+    skillName: "decompose-feature-specs",
     requestedAction: "split_feature_specs",
     status: "completed",
     summary: "Feature specs split and queue plan created.",
     nextAction: "Push the Feature Spec pool.",
     tokenUsage: { inputTokens: 1200, cachedInputTokens: 200, outputTokens: 320, reasoningOutputTokens: 80, totalTokens: 1600 },
-    inputContract: { skillSlug: "05.feature.decompose", required: ["featureId", "workspaceRoot"] },
+    inputContract: { skillName: "decompose-feature-specs", required: ["featureId", "workspaceRoot"] },
     outputContract: { contractVersion: "skill-contract/v1", required: ["status"], resultShape: { featureCount: "number" } },
     producedArtifacts: [{ path: "docs/features/feature-pool-queue.json", kind: "json", status: "created" }],
     traceability: { featureId: "FEAT-013" },
@@ -804,7 +819,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
       params: [
         JSON.stringify({ featureId: "FEAT-013", skillPhase: "split_feature_specs" }),
         JSON.stringify({
-          skillSlug: "05.feature.decompose",
+          skillName: "decompose-feature-specs",
           skillOutputContract: progressOutput,
           producedArtifacts: progressOutput.producedArtifacts,
         }),
@@ -838,6 +853,79 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   ]).queries.records;
   assert.equal(afterRepeatedViews.length, 1);
 
+  writeFileSync(join(runDir, "cli-output.json"), JSON.stringify({
+    usage: { input_tokens: 11000000, cached_input_tokens: 1000000, output_tokens: 4000000, reasoning_output_tokens: 1000000 },
+  }));
+  runSqlite(dbPath, [
+    {
+      sql: "UPDATE cli_adapter_configs SET defaults_json = ? WHERE id = 'codex-cli'",
+      params: [JSON.stringify({
+        model: "gpt-5.5",
+        costRates: {
+          "gpt-5.5": {
+            inputUsdPer1M: 99,
+            cachedInputUsdPer1M: 99,
+            outputUsdPer1M: 99,
+            reasoningOutputUsdPer1M: 99,
+          },
+        },
+      })],
+    },
+  ]);
+  const updatedWorkspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
+  const refreshedTokens = runSqlite(dbPath, [], [
+    {
+      name: "records",
+      sql: "SELECT input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens, cost_usd, pricing_json FROM token_consumption_records WHERE run_id = 'RUN-SKILL'",
+    },
+  ]).queries.records;
+  assert.equal(refreshedTokens.length, 1);
+  assert.equal(refreshedTokens[0].input_tokens, 11000000);
+  assert.equal(refreshedTokens[0].cached_input_tokens, 1000000);
+  assert.equal(refreshedTokens[0].output_tokens, 4000000);
+  assert.equal(refreshedTokens[0].reasoning_output_tokens, 1000000);
+  assert.equal(refreshedTokens[0].total_tokens, 16000000);
+  assert.equal(refreshedTokens[0].cost_usd, 60.2);
+  assert.equal(JSON.parse(String(refreshedTokens[0].pricing_json)).rate.inputUsdPer1M, 2);
+  assert.equal(updatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 16000000);
+
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json, created_at)
+        VALUES ('LOG-UI-SPEC', 'RUN-SKILL', '', '', ?, '2026-04-28T12:04:01.000Z')`,
+      params: [JSON.stringify([
+        { type: "turn.completed", usage: { input_tokens: 1000, cached_input_tokens: 100, output_tokens: 40, reasoning_output_tokens: 10 } },
+      ])],
+    },
+    {
+      sql: `INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json, created_at)
+        VALUES ('LOG-IMAGE-GEN', 'RUN-SKILL', '', '', ?, '2026-04-28T12:04:02.000Z')`,
+      params: [JSON.stringify([
+        { type: "turn.completed", usage: { input_tokens: 2000, cached_input_tokens: 200, output_tokens: 60, reasoning_output_tokens: 20 } },
+      ])],
+    },
+  ]);
+  const aggregatedWorkspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
+  const aggregatedTokens = runSqlite(dbPath, [], [
+    {
+      name: "records",
+      sql: "SELECT input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens, cost_usd, source_path, usage_json, pricing_json FROM token_consumption_records WHERE run_id = 'RUN-SKILL'",
+    },
+  ]).queries.records;
+  const aggregatedUsage = JSON.parse(String(aggregatedTokens[0].usage_json));
+  assert.equal(aggregatedTokens.length, 1);
+  assert.equal(aggregatedTokens[0].input_tokens, 3000);
+  assert.equal(aggregatedTokens[0].cached_input_tokens, 300);
+  assert.equal(aggregatedTokens[0].output_tokens, 100);
+  assert.equal(aggregatedTokens[0].reasoning_output_tokens, 30);
+  assert.equal(aggregatedTokens[0].total_tokens, 3130);
+  assert.equal(aggregatedTokens[0].cost_usd, 0.0065);
+  assert.match(String(aggregatedTokens[0].source_path), /raw_execution_logs:LOG-UI-SPEC#usage-1/);
+  assert.match(String(aggregatedTokens[0].source_path), /raw_execution_logs:LOG-IMAGE-GEN#usage-1/);
+  assert.equal(aggregatedUsage.sources.length, 2);
+  assert.equal(JSON.parse(String(aggregatedTokens[0].pricing_json)).rate.inputUsdPer1M, 2);
+  assert.equal(aggregatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 3130);
+
   const otherProject = buildRunnerConsoleView(dbPath, stableDate, "project-2");
   assert.equal(otherProject.schedulerJobs.some((job) => job.id === "JOB-SKILL"), false);
 
@@ -853,7 +941,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
       params: [
         JSON.stringify({ featureId: "FEAT-013", skillPhase: "generate_ui_spec" }),
         JSON.stringify({
-          skillSlug: "04.ui.generate-spec",
+          skillName: "design-ui-spec",
           skillPhase: "generate_ui_spec",
           workspaceRoot: projectPath,
           executionInvocation: {
@@ -865,7 +953,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
             constraints: { allowedFiles: [], risk: "low" },
             outputSchema: {},
             skillInstruction: {
-              skillSlug: "04.ui.generate-spec",
+              skillName: "design-ui-spec",
               requestedAction: "generate_ui_spec",
               sourcePaths: ["docs/zh-CN/requirements.md"],
               expectedArtifacts: [],
@@ -874,7 +962,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
           skillOutputContract: {
             contractVersion: "skill-contract/v1",
             executionId: "RUN-METADATA-OUTPUT",
-            skillSlug: "04.ui.generate-spec",
+            skillName: "design-ui-spec",
             requestedAction: "generate_ui_spec",
             status: "completed",
             summary: "UI spec generated from persisted metadata.",
@@ -1054,6 +1142,7 @@ test("system settings exposes CLI adapter config and governed activation", () =>
   assert.deepEqual(initial.cliAdapter.presets.map((preset) => preset.id), ["codex-cli", "gemini-cli", "claude-cli"]);
   assert.equal(initial.cliAdapter.validation.valid, true);
   assert.equal(initial.rpcAdapter.active.id, "codex-rpc-default");
+  assert.equal(initial.rpcAdapter.active.defaults?.reasoningEffort, "high");
   assert.deepEqual(initial.rpcAdapter.presets.map((preset) => preset.id), ["codex-rpc-default", "gemini-acp-default"]);
   assert.equal(initial.rpcAdapter.validation.valid, true);
   assert.equal(initial.commands.some((command) => command.action === "activate_cli_adapter_config"), true);
@@ -1080,6 +1169,12 @@ test("system settings exposes CLI adapter config and governed activation", () =>
   assert.equal(receipt.status, "accepted");
   const settings = buildSystemSettingsView(dbPath);
   assert.equal(settings.cliAdapter.active.id, "gemini-cli");
+  assert.deepEqual(settings.cliAdapter.active.defaults.costRates?.["gemini-3-pro-preview"], {
+    inputUsdPer1M: 2,
+    cachedInputUsdPer1M: 0.2,
+    outputUsdPer1M: 12,
+    reasoningOutputUsdPer1M: 12,
+  });
   assert.equal(settings.cliAdapter.lastDryRun?.status, "passed");
   assert.equal(settings.cliAdapter.lastDryRun?.command, "gemini");
 
@@ -1309,8 +1404,8 @@ test("project initialization provisions AGENTS and .agents runtime for CLI runs"
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-agent-runtime-"));
   mkdirSync(join(projectPath, "docs"), { recursive: true });
-  mkdirSync(join(projectPath, ".agents", "skills", "05.feature.decompose"), { recursive: true });
-  writeFileSync(join(projectPath, ".agents", "skills", "05.feature.decompose", "SKILL.md"), "# Project custom task slicing skill\n", "utf8");
+  mkdirSync(join(projectPath, ".agents", "skills", "decompose-feature-specs"), { recursive: true });
+  writeFileSync(join(projectPath, ".agents", "skills", "decompose-feature-specs", "SKILL.md"), "# Project custom task slicing skill\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1329,10 +1424,10 @@ test("project initialization provisions AGENTS and .agents runtime for CLI runs"
   assert.equal(receipt.status, "accepted");
   assert.equal(existsSync(join(projectPath, "AGENTS.md")), true);
   assert.equal(existsSync(join(projectPath, ".agents")), true);
-  assert.equal(existsSync(join(projectPath, ".agents", "skills", "05.feature.decompose", "SKILL.md")), true);
-  assert.equal(existsSync(join(projectPath, ".agents", "skills", "10.change.create-request", "SKILL.md")), true);
+  assert.equal(existsSync(join(projectPath, ".agents", "skills", "decompose-feature-specs", "SKILL.md")), true);
+  assert.equal(existsSync(join(projectPath, ".agents", "skills", "manage-spec-change", "SKILL.md")), true);
   assert.equal(
-    readFileSync(join(projectPath, ".agents", "skills", "05.feature.decompose", "SKILL.md"), "utf8"),
+    readFileSync(join(projectPath, ".agents", "skills", "decompose-feature-specs", "SKILL.md"), "utf8"),
     "# Project custom task slicing skill\n",
   );
 });
@@ -1478,8 +1573,8 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
   assert.deepEqual(result.queries.reports.map((row) => row.kind), ["spec_source_scan", "spec_source_upload"]);
   assert.equal(generateReceipt.executionId, result.queries.executions[0].id);
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "02.requirements.convert-ears");
-  assert.equal(jobPayload.context.skillSlug, "02.requirements.convert-ears");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "convert-ears-requirements");
+  assert.equal(jobPayload.context.skillName, "convert-ears-requirements");
   assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/requirements.md"]);
 });
 
@@ -1609,7 +1704,7 @@ test("spec workspace records EARS generation as a CLI skill run instead of direc
   assert.equal(receipt.featureId, undefined);
   assert.equal(Object.prototype.hasOwnProperty.call(payload.traceability, "changeIds"), false);
   const skillInvocation = runner.skillInvocations.find((entry) => entry.runId === receipt.executionId);
-  assert.equal(skillInvocation?.skillSlug, "02.requirements.convert-ears");
+  assert.equal(skillInvocation?.skillName, "convert-ears-requirements");
   assert.equal(workspace.features.some((feature) => feature.id.startsWith("FEAT-INTAKE-")), false);
 });
 
@@ -1637,13 +1732,13 @@ test("generate HLD dispatches the project HLD skill and writes hld.md", () => {
   assert.equal(receipt.status, "accepted");
   assert.equal(receipt.featureId, undefined);
   assert.equal(payload.projectId, "project-1");
-  assert.equal(payload.context.skillSlug, "03.hld.generate");
+  assert.equal(payload.context.skillName, "design-architecture");
   assert.equal(payload.requestedAction, "generate_hld");
   assert.deepEqual(payload.context.expectedArtifacts, ["docs/hld.md"]);
   assert.equal(payload.context.expectedArtifacts.includes("docs/design.md"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(payload.traceability, "changeIds"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "03.hld.generate");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-architecture");
   assert.equal(runner.schedulerJobs.find((job) => job.executionId === receipt.executionId)?.name, "Generate project HLD");
 });
 
@@ -1744,7 +1839,7 @@ test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs
   assert.equal(receipt.status, "accepted");
   assert.equal(receipt.featureId, undefined);
   assert.equal(payload.projectId, "project-1");
-  assert.equal(payload.context.skillSlug, "05.feature.decompose");
+  assert.equal(payload.context.skillName, "decompose-feature-specs");
   assert.equal(payload.requestedAction, "split_feature_specs");
   assert.equal(payload.context.sourcePaths.includes("docs/PRD.md"), true);
   assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
@@ -1754,7 +1849,7 @@ test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs
   assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/tasks.md"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "05.feature.decompose");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "decompose-feature-specs");
 });
 
 test("split Feature Specs preserves uploaded PRD source for task-slicing context", () => {
@@ -1794,7 +1889,7 @@ test("split Feature Specs preserves uploaded PRD source for task-slicing context
   const payload = JSON.parse(String(result.queries.jobs[0].payload_json));
 
   assert.equal(receipt.status, "accepted");
-  assert.equal(payload.context.skillSlug, "05.feature.decompose");
+  assert.equal(payload.context.skillName, "decompose-feature-specs");
   assert.equal(payload.context.sourcePaths[0], uploadedSourcePath);
   assert.equal(payload.context.sourcePaths.includes(".autobuild/specs/uploads/requirements.md"), true);
   assert.equal(payload.context.sourcePaths.includes("docs/PRD.md"), true);
@@ -1914,7 +2009,7 @@ test("start Auto Run accepts a feature-selection skill decision before enqueuing
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Use 06.planning.replan output.",
+    reason: "Use plan-feature-execution output.",
     payload: {
       featureSelectionResult: {
         decision: "selected",
@@ -1935,8 +2030,8 @@ test("start Auto Run accepts a feature-selection skill decision before enqueuing
 
   assert.equal(receipt.status, "accepted");
   assert.equal(context.featureId, "FEAT-002");
-  assert.equal(context.selection.skillSlug, "06.planning.replan");
-  assert.equal(context.selection.source, "06.planning.replan");
+  assert.equal(context.selection.skillName, "plan-feature-execution");
+  assert.equal(context.selection.source, "plan-feature-execution");
   assert.match(context.selection.reason, /selected by reasoning/);
 });
 
@@ -1970,7 +2065,7 @@ test("start Auto Run enables automation while recording unsafe feature-selection
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Reject unsafe 06.planning.replan output.",
+    reason: "Reject unsafe plan-feature-execution output.",
     payload: {
       featureSelectionResult: {
         decision: "selected",
@@ -2055,7 +2150,7 @@ test("start Auto Run replays an existing queued project job before selecting new
         context: {
           featureId: "FEAT-001",
           workspaceRoot: "/tmp/specdrive-project",
-          skillSlug: "07.execution.dispatch-adapter",
+          skillName: "implement-feature",
           skillPhase: "feature_execution",
         },
       })],
@@ -2234,6 +2329,22 @@ test("start Auto Run accepts skill queue plan P-level priorities", () => {
 test("generate UI Spec dispatches the UI spec skill from project-level Spec Workspace actions", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "ui-spec-surfaces-"));
+  mkdirSync(join(projectPath, "docs"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "hld.md"), [
+    "# HLD",
+    "",
+    "### Primary Page / Surface Inventory",
+    "",
+    "| Surface | Purpose | Primary Requirements |",
+    "|---|---|---|",
+    "| Studio Home | Overview and quick actions. | `REQ-001` |",
+    "| App Workspace | App operations and state. | `REQ-002` |",
+    "| Run List / Detail | Run trace and recovery. | `REQ-003` |",
+  ].join("\n"));
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+  ]);
   const scheduler = createMemoryScheduler(dbPath);
 
   const receipt = submitConsoleCommand(dbPath, {
@@ -2254,14 +2365,17 @@ test("generate UI Spec dispatches the UI spec skill from project-level Spec Work
   assert.equal(receipt.status, "accepted");
   assert.equal(receipt.featureId, undefined);
   assert.equal(payload.projectId, "project-1");
-  assert.equal(payload.context.skillSlug, "04.ui.generate-spec");
+  assert.equal(payload.context.skillName, "design-ui-spec");
   assert.equal(payload.requestedAction, "generate_ui_spec");
   assert.deepEqual(payload.context.imagePaths ?? [], []);
   assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/ui/ui-spec.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/studio-home.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/app-workspace.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/run-list-detail.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillSlug, "04.ui.generate-spec");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-ui-spec");
 });
 
 test("spec intake workflow displays the actual discovered source instead of a default PRD path", () => {
@@ -2524,7 +2638,7 @@ test("console schedule command records scheduler triggers without bypassing boun
   assert.equal(cliRunPayload.projectId, "project-1");
   assert.equal(cliRunPayload.context.featureId, "FEAT-013");
   assert.equal(cliRunPayload.context.featureSpecPath, "docs/features/feat-013-product-console");
-  assert.equal(cliRunPayload.context.skillSlug, "07.execution.dispatch-adapter");
+  assert.equal(cliRunPayload.context.skillName, "implement-feature");
   assert.equal(cliRunPayload.context.skillPhase, "feature_execution");
   assert.equal(cliRunPayload.context.workspaceRoot, projectPath);
   assert.deepEqual(cliRunPayload.context.expectedArtifacts, [`.autobuild/runs/${cliRunPayload.executionId}/report.json`]);

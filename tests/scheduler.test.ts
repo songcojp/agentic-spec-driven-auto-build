@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeSchema, listTables } from "../src/schema.ts";
@@ -234,7 +234,9 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(resultWithSpy.status, "completed");
   assert.equal(calls[0].cwd, root);
   assert.match(calls[0].args.join("\n"), /Execute this SpecDrive task/);
-  assert.match(calls[0].args.join("\n"), /07.execution.dispatch-adapter/);
+  assert.match(calls[0].args.join("\n"), /\[AUTOBUILD INVOCATION\]/);
+  assert.match(calls[0].args.join("\n"), /\.autobuild\/memory\/constitution\.md/);
+  assert.match(calls[0].args.join("\n"), /implement-feature/);
   assert.match(calls[0].args.join("\n"), /Source paths to read:/);
   assert.doesNotMatch(calls[0].args.join("\n"), /Skill Invocation/);
   assert.doesNotMatch(calls[0].args.join("\n"), /Workspace Context/);
@@ -247,6 +249,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(rows.task[0].status, "scheduled");
   assert.deepEqual(rows.sessions.map((row) => [row.session_id, row.exit_code]), [["SESSION-CLI", 0]]);
   assert.match(String(rows.logs[0].stdout), /skill-contract\/v2/);
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-CLI", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -349,6 +352,7 @@ test("cli.run keeps large source documents out of the provider prompt", async ()
   const prompt = calls[0].args.join("\n");
   assert.equal(result.status, "completed");
   assert.match(prompt, /docs\/features\/FEAT-CLI\/requirements\.md/);
+  assert.match(prompt, /\[AUTOBUILD INVOCATION\]/);
   assert.match(prompt, /Source paths to read:/);
   assert.doesNotMatch(prompt, /Context:/);
   assert.doesNotMatch(prompt, /REQ: keep prompt compact\./);
@@ -358,9 +362,9 @@ test("cli.run keeps large source documents out of the provider prompt", async ()
 test("cli.run passes clarification operator input into the skill invocation prompt", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-clarification-run-"));
   prepareSkillWorkspace(root);
-  mkdirSync(join(root, ".agents", "skills", "10.change.impact-analysis"), { recursive: true });
+  mkdirSync(join(root, ".agents", "skills", "manage-spec-change"), { recursive: true });
   mkdirSync(join(root, "docs", "zh-CN"), { recursive: true });
-  writeFileSync(join(root, ".agents", "skills", "10.change.impact-analysis", "SKILL.md"), "# Ambiguity clarification skill\n");
+  writeFileSync(join(root, ".agents", "skills", "manage-spec-change", "SKILL.md"), "# Ambiguity clarification skill\n");
   writeFileSync(join(root, "docs", "zh-CN", "requirements.md"), "# Requirements\n\n## Open Questions\n\n1. 彩票类型未明确。\n");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
@@ -378,7 +382,7 @@ test("cli.run passes clarification operator input into the skill invocation prom
         sourcePaths: ["docs/zh-CN/requirements.md"],
         expectedArtifacts: ["docs/zh-CN/requirements.md"],
         workspaceRoot: root,
-        skillSlug: "10.change.impact-analysis",
+        skillName: "manage-spec-change",
         skillPhase: "resolve_clarification",
         clarificationText: "彩票类型支持大乐透和双色球",
         comment: "彩票类型支持大乐透和双色球",
@@ -389,7 +393,7 @@ test("cli.run passes clarification operator input into the skill invocation prom
       calls.push({ args });
       return {
         status: 0,
-        stdout: `{"type":"session","session_id":"SESSION-CLARIFICATION"}\n${skillOutputEvent("RUN-CLARIFICATION", { skillSlug: "10.change.impact-analysis", requestedAction: "resolve_clarification" })}`,
+        stdout: `{"type":"session","session_id":"SESSION-CLARIFICATION"}\n${skillOutputEvent("RUN-CLARIFICATION", { skillName: "manage-spec-change", requestedAction: "resolve_clarification" })}`,
         stderr: "",
       };
     },
@@ -405,8 +409,8 @@ test("cli.run passes clarification operator input into the skill invocation prom
 test("cli.run uses danger-full-access for trusted direct-write runs with bounded scope", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-"));
   prepareSkillWorkspace(root);
-  mkdirSync(join(root, ".agents", "skills", "02.requirements.convert-ears"), { recursive: true });
-  writeFileSync(join(root, ".agents", "skills", "02.requirements.convert-ears", "SKILL.md"), "# PR EARS skill\n");
+  mkdirSync(join(root, ".agents", "skills", "convert-ears-requirements"), { recursive: true });
+  writeFileSync(join(root, ".agents", "skills", "convert-ears-requirements", "SKILL.md"), "# PR EARS skill\n");
   mkdirSync(join(root, "docs"), { recursive: true });
   writeFileSync(join(root, "docs", "PRD.md"), "# PRD\n");
   const dbPath = makeDbPath();
@@ -422,7 +426,7 @@ test("cli.run uses danger-full-access for trusted direct-write runs with bounded
       requestedAction: "generate_ears",
       traceability: { requirementIds: [] },
       context: {
-        skillSlug: "02.requirements.convert-ears",
+        skillName: "convert-ears-requirements",
         skillPhase: "generate_ears",
         sourcePaths: ["docs/PRD.md"],
         expectedArtifacts: ["docs/requirements.md"],
@@ -434,7 +438,7 @@ test("cli.run uses danger-full-access for trusted direct-write runs with bounded
       return {
         status: 0,
         stdout: `{"type":"session","session_id":"SESSION-EARS"}\n${skillOutputEvent("RUN-EARS-DIRECT", {
-          skillSlug: "02.requirements.convert-ears",
+          skillName: "convert-ears-requirements",
           requestedAction: "generate_ears",
           producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
         })}`,
@@ -649,9 +653,14 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: string[] = [];
+  let turnStartPrompt = "";
   const transport: CodexAppServerTransport = {
-    async request(method) {
+    async request(method, params) {
       calls.push(method);
+      if (method === "turn/start") {
+        const input = (params.input ?? []) as Array<{ type: string; text?: string }>;
+        turnStartPrompt = input.find((item) => item.type === "text")?.text ?? "";
+      }
       if (method === "thread/start") return { threadId: "THREAD-APP" };
       if (method === "turn/start") return { turnId: "TURN-APP" };
       return {};
@@ -667,7 +676,7 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
         output: {
           contractVersion: "skill-contract/v2",
           executionId: "RUN-APP-SERVER",
-          skillSlug: "07.execution.dispatch-adapter",
+          skillName: "implement-feature",
           requestedAction: "feature_execution",
           status: "completed",
           summary: "App server completed.",
@@ -685,6 +694,7 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   const result = await runCodexAppServerRunJob(dbPath, cliRunPayload("RUN-APP-SERVER"), transport);
   const rows = runSqlite(dbPath, [], [
     { name: "run", sql: "SELECT status, metadata_json FROM execution_records WHERE id = 'RUN-APP-SERVER'" },
+    { name: "policy", sql: "SELECT model, reasoning_effort FROM runner_policies WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "session", sql: "SELECT session_id, command, args_json, exit_code FROM cli_session_records WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "log", sql: "SELECT stdout FROM raw_execution_logs WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "statusChecks", sql: "SELECT kind, summary FROM status_check_results WHERE run_id = 'RUN-APP-SERVER'" },
@@ -692,6 +702,8 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
 
   assert.equal(result.status, "completed");
   assert.deepEqual(calls, ["initialize", "initialized", "thread/start", "turn/start"]);
+  assert.match(turnStartPrompt, /\[AUTOBUILD INVOCATION\]/);
+  assert.match(turnStartPrompt, /\.autobuild\/memory\/project\.md/);
   assert.equal(rows.run[0].status, "completed");
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
   assert.equal(metadata.threadId, "THREAD-APP");
@@ -700,11 +712,14 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   assert.equal(metadata.model, "gpt-5.5");
   assert.equal(metadata.cwd, root);
   assert.equal(metadata.contractValidation.valid, true);
+  assert.equal(rows.policy[0].model, "gpt-5.5");
+  assert.equal(rows.policy[0].reasoning_effort, "high");
   assert.equal(rows.session[0].session_id, "THREAD-APP");
   assert.equal(rows.session[0].command, "codex");
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["app-server"]);
   assert.equal(rows.session[0].exit_code, 0);
   assert.equal(rows.log[0].stdout, "done");
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-APP-SERVER", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -723,11 +738,14 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
     },
   ]);
   const calls: string[] = [];
+  let sessionPrompt = "";
   const transport: GeminiAcpTransport = {
-    async request(method) {
+    async request(method, params) {
       calls.push(method);
       if (method === "session/new") return { sessionId: "GEMINI-ACP-THREAD" };
       if (method === "session/prompt") {
+        const prompt = (params.prompt ?? []) as Array<{ type: string; text?: string }>;
+        sessionPrompt = prompt.find((item) => item.type === "text")?.text ?? "";
         return new Promise((resolve) => setTimeout(() => resolve({ stopReason: "end_turn" }), 0));
       }
       return {};
@@ -753,6 +771,8 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
 
   assert.equal(result.status, "completed");
   assert.deepEqual(calls, ["initialize", "session/new", "session/prompt"]);
+  assert.match(sessionPrompt, /\[AUTOBUILD INVOCATION\]/);
+  assert.match(sessionPrompt, /\.autobuild\/memory\/project\.md/);
   assert.equal(rows.run[0].status, "completed");
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
   assert.equal(metadata.provider, "gemini-acp");
@@ -763,6 +783,7 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["--acp", "--skip-trust"]);
   assert.equal(rows.session[0].exit_code, 0);
   assert.match(String(rows.log[0].stdout), /RUN-GEMINI-ACP-RPC/);
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-GEMINI-ACP-RPC", "WORKPAD.md")), true);
 });
 
 test("codex.rpc.run projects approval pending to Feature spec-state", async () => {
@@ -798,7 +819,7 @@ test("codex.rpc.run projects approval pending to Feature spec-state", async () =
     context: {
       ...payload.context,
       featureSpecPath: "docs/features/feat-cli",
-      skillSlug: "07.execution.dispatch-adapter",
+      skillName: "implement-feature",
     },
   }, transport);
   const rows = runSqlite(dbPath, [], [
@@ -939,7 +960,7 @@ test("codex.rpc.run routes invalid completed SkillOutputContractV1 to review_nee
         output: {
           contractVersion: "skill-contract/v1",
           executionId: "WRONG-RUN",
-          skillSlug: "07.execution.dispatch-adapter",
+          skillName: "implement-feature",
           requestedAction: "feature_execution",
           status: "completed",
           summary: "Bad contract.",
@@ -1158,7 +1179,7 @@ function cliRunPayload(executionId: string) {
 }
 
 function skillOutputEvent(executionId: string, overrides: {
-  skillSlug?: string;
+  skillName?: string;
   requestedAction?: string;
   producedArtifacts?: Array<{ path: string; kind: string; status: string }>;
   changeIds?: string[];
@@ -1167,17 +1188,17 @@ function skillOutputEvent(executionId: string, overrides: {
   result?: Record<string, unknown>;
 } = {}): string {
   const output = {
-    contractVersion: overrides.skillSlug ? "skill-contract/v1" : "skill-contract/v2",
+    contractVersion: overrides.skillName ? "skill-contract/v1" : "skill-contract/v2",
     executionId,
-    skillSlug: overrides.skillSlug ?? "07.execution.dispatch-adapter",
+    skillName: overrides.skillName ?? "implement-feature",
     requestedAction: overrides.requestedAction ?? "feature_execution",
     status: overrides.status ?? "completed",
     summary: overrides.summary ?? "Skill completed.",
     nextAction: "Continue scheduler flow.",
     producedArtifacts: overrides.producedArtifacts ?? [],
     traceability: {
-      featureId: overrides.skillSlug ? undefined : "FEAT-CLI",
-      taskId: overrides.skillSlug ? undefined : "TASK-CLI",
+      featureId: overrides.skillName ? undefined : "FEAT-CLI",
+      taskId: overrides.skillName ? undefined : "TASK-CLI",
       requirementIds: [],
       changeIds: overrides.changeIds ?? ["CHG-016"],
     },
@@ -1190,7 +1211,7 @@ function skillOutputObject(executionId: string): Record<string, unknown> {
   return {
     contractVersion: "skill-contract/v2",
     executionId,
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Skill completed.",
@@ -1258,10 +1279,10 @@ function validGitDelivery(): Record<string, unknown> {
 }
 
 function prepareSkillWorkspace(root: string): void {
-  mkdirSync(join(root, ".agents", "skills", "07.execution.dispatch-adapter"), { recursive: true });
+  mkdirSync(join(root, ".agents", "skills", "implement-feature"), { recursive: true });
   mkdirSync(join(root, "docs", "features", "FEAT-CLI"), { recursive: true });
   writeFileSync(join(root, "AGENTS.md"), "# Test workspace\n");
-  writeFileSync(join(root, ".agents", "skills", "07.execution.dispatch-adapter", "SKILL.md"), "# Feat implement skill\n");
+  writeFileSync(join(root, ".agents", "skills", "implement-feature", "SKILL.md"), "# Feat implement skill\n");
   writeFileSync(join(root, "docs", "features", "FEAT-CLI", "requirements.md"), "# Requirements\n");
   writeFileSync(join(root, "docs", "features", "FEAT-CLI", "design.md"), "# Design\n");
   writeFileSync(join(root, "docs", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");

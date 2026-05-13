@@ -422,13 +422,13 @@ function AdapterSettingsEditor({
                   value={String(parsed.config?.executable ?? "")}
                   onChange={(value) => updateConfig((config) => ({ ...config, executable: value }))}
                 />
+                <SettingsInput
+                  label={text.defaultReasoningEffort}
+                  value={String(defaults.reasoningEffort ?? "")}
+                  onChange={(value) => updateDefaults("reasoningEffort", value)}
+                />
                 {kind === "cli" ? (
                   <>
-                    <SettingsInput
-                      label={text.defaultReasoningEffort}
-                      value={String(defaults.reasoningEffort ?? "")}
-                      onChange={(value) => updateDefaults("reasoningEffort", value)}
-                    />
                     <SettingsInput
                       label={text.defaultServiceTier}
                       value={String(defaults.serviceTier ?? "")}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Delivery Evidence Review"
+  short_description: "Review delivery evidence and release readiness. Use for jour"
+  default_prompt: "Use $review-delivery-evidence to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

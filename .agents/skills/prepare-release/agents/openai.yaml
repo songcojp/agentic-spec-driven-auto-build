@@ -1,0 +1,6 @@
+interface:
+  display_name: "Release Preparation"
+  short_description: "Prepare release and PR delivery. Use for commit/PR preparati"
+  default_prompt: "Use $prepare-release to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

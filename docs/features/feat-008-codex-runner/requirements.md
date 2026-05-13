@@ -16,7 +16,7 @@
 - 编码 CLI 必须在目标项目 workspace 中启动，workspace root 来自当前项目 repository `local_path` 或 `target_repo_path`。
 - 通过 JSON + JSON Schema 管理 CLI Adapter 配置，隔离 executable、argument template、输出映射和 session resume 逻辑，并符合 HLD 7.8 的 `ExecutionAdapterConfigV1`。
 - 支持 CLI skill invocation contract，将 Spec/UI 操作转换为项目 workspace 内部 Skill prompt。
-- Feature 级 `feature_execution` 通过 `07.execution.dispatch-adapter` 直接读取 Feature Spec 目录执行；CLI Adapter 不要求 `task_graph_tasks` / `tasks` 表存在，也不替 Skill 执行 worktree/PR/merge/cleanup。
+- Feature 级 `feature_execution` 通过 `implement-feature` 直接读取 Feature Spec 目录执行；CLI Adapter 不要求 `task_graph_tasks` / `tasks` 表存在，也不替 Skill 执行 worktree/PR/merge/cleanup。
 - 根据开发阶段策略和任务上下文设置 sandbox mode、approval policy、model、profile、provider-specific speed / service tier、output schema、JSON event stream、workspace root 和 session resume。
 - 开发阶段默认使用 `danger-full-access` 和 `approval=never`，不触发编码 CLI 人工确认。
 - 默认不得使用 bypass approvals；敏感文件、危险命令和 forbidden files 仍由 Safety Gate 阻断。
@@ -26,7 +26,7 @@
 ## Non-Scope
 
 - 不决定任务是否完成；状态判断归属 FEAT-009。
-- CLI Adapter 不创建 worktree 或 PR；Feature Git 生命周期由 `07.execution.dispatch-adapter` 管理，workspace 证据记录归属 FEAT-007。
+- CLI Adapter 不创建 worktree 或 PR；Feature Git 生命周期由 `implement-feature` 管理，workspace 证据记录归属 FEAT-007。
 - 不展示 UI；Execution Console 归属 FEAT-013。
 
 ## User Value
@@ -41,11 +41,11 @@
 - CLI Adapter 不得绕过受控命令和 Scheduler 直接响应 UI 写操作；所有执行类入口必须有 Execution Record、job、audit 和 raw log 追踪。
 - CLI Adapter 必须在启动前校验 workspace root；项目路径缺失、不可读或缺少必要 `.agents/skills` / `AGENTS.md` 时进入 blocked。
 - `feature_execution` 的 `ExecutionAdapterInvocationV1.skillInstruction` 必须包含 Feature Spec `requirements.md`、`design.md` 和 `tasks.md` 作为 `sourcePaths`；缺失完整 Feature Spec 目录时，新执行必须 blocked。
-- Feature 级 `07.execution.dispatch-adapter` 不得只生成报告 JSON 或总结计划来满足执行；输出 contract 的 `producedArtifacts` 必须列出实际创建或更新的代码、测试、配置或文档文件。
-- CLI Adapter 必须使用 `ExecutionAdapterInvocationV1` 作为唯一输入协议，并通过内嵌 `skillInstruction` 携带 `skillSlug`、`requestedAction`、`sourcePaths`、`expectedArtifacts`、`imagePaths` 和可选 `operatorInput`。
+- Feature 级 `implement-feature` 不得只生成报告 JSON 或总结计划来满足执行；输出 contract 的 `producedArtifacts` 必须列出实际创建或更新的代码、测试、配置或文档文件。
+- CLI Adapter 必须使用 `ExecutionAdapterInvocationV1` 作为唯一输入协议，并通过内嵌 `skillInstruction` 携带 `skillName`、`requestedAction`、`sourcePaths`、`expectedArtifacts`、`imagePaths` 和可选 `operatorInput`。
 - `ExecutionAdapterInvocationV1` 必须携带当前 `specState`，供 Skill 明确读取 Feature 文件状态而不是查询数据库。
 - CLI provider prompt 只说明本次要执行的 Feature 级任务、workspace 路径和输出要求，不得内联源文件内容或序列化完整 invocation。
-- CLI skill output contract 必须使用 `SkillOutputContractV1`，包含 `contractVersion`、`executionId`、`skillSlug`、`requestedAction`、`status`、`summary`、`nextAction`、`producedArtifacts`、Feature 级 `traceability` 和 `result`；`status` 必须覆盖 `queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled` 和 `completed`，其中 `review_needed` 只表示真实人工或风险审查门。
+- CLI skill output contract 必须使用 `SkillOutputContractV1`，包含 `contractVersion`、`executionId`、`skillName`、`requestedAction`、`status`、`summary`、`nextAction`、`producedArtifacts`、Feature 级 `traceability` 和 `result`；`status` 必须覆盖 `queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled` 和 `completed`，其中 `review_needed` 只表示真实人工或风险审查门。
 - 完成状态的 Feature execution 必须校验 `result.gitDelivery`；缺少 worktree、branch、commit、PR、merge 或 cleanup 证据时，CLI Adapter 将结果投影为 `review_needed`，而不是 `completed`。
 - Execution Adapter 校验有效输出后必须把状态、结果摘要、产物和下一步动作投影回 `docs/features/<feature-id>/spec-state.json`。
 - Execution Adapter 必须校验输出 contract 与输入 contract 的 execution、skill、action 和 Feature 级 traceability 是否一致；输出缺失、JSON 不合法、字段不匹配、必需 artifact 缺失，或进程结束后最后一条 contract 仍为非终态时，Execution Record 必须进入 `review_needed` 并保留原因。
@@ -80,7 +80,7 @@
 - [ ] 有效 `SkillOutputContractV1` 会写入 Execution Record metadata；无效输出会进入 `review_needed` 而不是被当成成功。
 - [ ] 终态 `SkillOutputContractV1` 输出后仍等待 stdin 的 provider 进程会被 CLI Adapter 自动终止，Execution Record / Scheduler Job / ReviewItem / `spec-state.json` 按终态 contract 收敛，并记录 `stdin_wait_after_terminal_contract`。
 - [ ] 每次 run 都有独立 `.autobuild/runs/<executionId>/report.json`，Feature execution 调度默认把该 report 作为 expected artifact。
-- [ ] `result` 可以包含 Skill 专用字段，CLI/RPC Adapter 不按 `skillSlug` 做专用字段校验。
+- [ ] `result` 可以包含 Skill 专用字段，CLI/RPC Adapter 不按 `skillName` 做专用字段校验。
 - [ ] Feature 级 coding prompt 明确要求读取 Feature Spec 三件套并执行 `tasks.md`，不能将 report-only completion 当成成功。
 - [ ] Execution Policy 能根据开发阶段策略解析 sandbox、approval、model、profile、provider-specific speed / service tier 和输出 schema。
 - [ ] CLI Adapter JSON 配置可以校验、保存草稿、启用，并在无效时阻塞新 Execution Record。

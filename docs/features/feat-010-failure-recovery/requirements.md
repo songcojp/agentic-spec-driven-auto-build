@@ -10,7 +10,7 @@
 
 ## Scope
 
-- 当任务失败且可尝试自动恢复时，生成恢复任务并调用 `12.recovery.classify-failure`。
+- 当任务失败且可尝试自动恢复时，生成恢复任务并调用 `recover-execution`。
 - Recovery Agent 支持自动修复、回滚当前任务修改、拆分任务、降级为只读分析、请求人工审批、更新 Spec 或更新任务依赖。
 - 记录失败原因、修复方案、禁止重复策略、失败次数和失败模式指纹。
 - 对同一失败模式最多自动重试 3 次，退避时间为 2 分钟、4 分钟和 8 分钟。
@@ -35,7 +35,7 @@
 
 ## Acceptance Criteria
 
-- [ ] 可恢复失败会生成 RecoveryTask 并调用 12.recovery.classify-failure。
+- [ ] 可恢复失败会生成 RecoveryTask 并调用 recover-execution。
 - [ ] 自动恢复动作能写入 Evidence Pack。
 - [ ] 同一失败模式第 4 次不会自动重试。
 - [ ] 重试退避按 2、4、8 分钟记录。

@@ -238,6 +238,9 @@ function renderFeatureDetail(feature: SpecDriveIdeFeatureNode, projectId?: strin
     <details class="compact-section" open><summary><h3>Latest Execution Cost</h3><span>${feature.tokenConsumption ? "recorded" : "none"}</span></summary><div class="compact-section-body">
       ${renderTokenCost(feature.tokenConsumption)}
     </div></details>
+    <details class="compact-section" open><summary><h3>Quality Evidence</h3><span>${feature.qualityEvidence ? "recorded" : "none"}</span></summary><div class="compact-section-body">
+      ${renderQualityEvidence(feature)}
+    </div></details>
     <details class="compact-section" open><summary><h3>Artifacts</h3><span>${feature.documents.length}</span></summary><div class="compact-section-body">
       ${renderFeatureArtifacts(feature.documents)}
     </div></details>
@@ -347,6 +350,32 @@ function renderFeatureReviewDetails(feature: SpecDriveIdeFeatureNode): string {
     ["References", review.referenceRefs.join(", ") || "none"],
   ];
   return `<div class="result-group review-details">${rows.map(renderFeatureStateRow).join("")}</div>`;
+}
+
+function renderQualityEvidence(feature: SpecDriveIdeFeatureNode): string {
+  const evidence = feature.qualityEvidence;
+  if (!evidence) return emptyState("No quality evidence recorded for the latest run.");
+  const rows: Array<[string, unknown]> = [
+    ["Requirement Coverage", evidence.requirementCoverage],
+    ["Acceptance Evidence", evidence.acceptanceEvidence],
+    ["Journey Evidence", evidence.journeyEvidence],
+    ["Runtime Evidence", evidence.runtimeEvidence],
+    ["Delivery Fidelity", evidence.deliveryFidelity],
+    ["Git Delivery", evidence.gitDelivery],
+    ["Workpad", evidence.workpadRefs],
+  ];
+  return `<div class="result-group quality-evidence">${rows.map(renderQualityEvidenceRow).join("")}</div>`;
+}
+
+function renderQualityEvidenceRow([label, value]: [string, unknown]): string {
+  const display = renderQualityEvidenceValue(value);
+  return `<div class="result-entry result-entry-wide"><span>${escapeHtml(label)}</span><div class="result-content" data-i18n-skip>${display}</div></div>`;
+}
+
+function renderQualityEvidenceValue(value: unknown): string {
+  if (value === undefined || value === null || (Array.isArray(value) && value.length === 0)) return `<span class="muted">not recorded</span>`;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return `<code>${escapeHtml(String(value))}</code>`;
+  return `<pre data-i18n-skip>${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
 }
 
 function firstFeatureStateReason(feature: SpecDriveIdeFeatureNode): string {

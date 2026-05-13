@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Context Collection"
+  short_description: "Collect source-backed project context for SpecDrive work. Us"
+  default_prompt: "Use $collect-project-context to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

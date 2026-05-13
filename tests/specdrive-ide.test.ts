@@ -779,7 +779,7 @@ test("SpecDrive IDE view scopes queue and latest executions to the current works
           executionId: "RUN-CURRENT-ONLY",
           operation: "feature_execution",
           projectId: "project-ide",
-          context: { featureId: "FEAT-016", taskId: "TASK-CURRENT", skillSlug: "07.execution.dispatch-adapter" },
+          context: { featureId: "FEAT-016", taskId: "TASK-CURRENT", skillName: "implement-feature" },
         }),
         "2026-05-02T12:02:00.000Z",
       ],
@@ -796,7 +796,7 @@ test("SpecDrive IDE view scopes queue and latest executions to the current works
   assert.equal(view.queue.groups.queued[0].schedulerJobId, "JOB-CURRENT-ONLY");
   assert.equal(view.queue.groups.queued[0].featureId, "FEAT-016");
   assert.equal(view.queue.groups.queued[0].taskId, "TASK-CURRENT");
-  assert.equal(view.queue.groups.queued[0].adapter, "07.execution.dispatch-adapter");
+  assert.equal(view.queue.groups.queued[0].adapter, "implement-feature");
   assert.equal(JSON.stringify(view.queue.groups).includes("RUN-OTHER"), false);
   assert.equal(JSON.stringify(view.queue.groups).includes("JOB-OTHER-ONLY"), false);
 });
@@ -861,7 +861,7 @@ test("SpecDrive IDE queue actions operate on schedule-only jobs", async () => {
           projectId: "project-ide",
           operation: "feature_execution",
           requestedAction: "feature_execution",
-          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-SCHEDULE-ONLY", skillSlug: "07.execution.dispatch-adapter" },
+          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-SCHEDULE-ONLY", skillName: "implement-feature" },
         }),
         "2026-05-02T12:07:00.000Z",
       ],
@@ -931,7 +931,7 @@ test("SpecDrive IDE queue actions can pause and cancel another job while a run i
           projectId: "project-ide",
           operation: "feature_execution",
           requestedAction: "feature_execution",
-          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-WAITING", skillSlug: "07.execution.dispatch-adapter" },
+          context: { projectId: "project-ide", featureId: "FEAT-016", taskId: "TASK-WAITING", skillName: "implement-feature" },
         }),
         "2026-05-02T12:10:00.000Z",
       ],
@@ -1297,7 +1297,7 @@ test("SpecDrive IDE SpecChangeRequest routes existing requirement changes to spe
     { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [scheduler.jobs[0].schedulerJobId] },
   ]).queries.jobs[0].payload_json));
   assert.equal(payload.operation, "evolve_spec");
-  assert.equal(payload.context.skillSlug, "10.change.update-mainline-spec");
+  assert.equal(payload.context.skillName, "manage-spec-change");
   assert.equal(payload.context.targetRequirementId, "REQ-076");
   assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
   assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-017/spec-state.json"), true);
@@ -1333,7 +1333,7 @@ test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown a
     { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [scheduler.jobs[0].schedulerJobId] },
   ]).queries.jobs[0].payload_json));
   assert.equal(payload.operation, "intake_requirement");
-  assert.equal(payload.context.skillSlug, "10.change.create-request");
+  assert.equal(payload.context.skillName, "manage-spec-change");
   assert.equal(payload.context.requirementText, "Top New Feature request that may add or change existing scope.");
   assert.equal(payload.context.targetFeatureStatus, "ready");
   assert.equal(payload.context.nextUserAction, "schedule_feature_execution_from_ui");
@@ -1374,7 +1374,7 @@ test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill
     { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [scheduler.jobs[0].schedulerJobId] },
   ]).queries.jobs[0].payload_json));
   assert.equal(payload.operation, "resolve_clarification");
-  assert.equal(payload.context.skillSlug, "10.change.impact-analysis");
+  assert.equal(payload.context.skillName, "manage-spec-change");
   assert.equal(payload.context.skillPhase, "resolve_clarification");
   assert.equal(payload.context.clarificationText, "Clarify whether the review gate should block scheduling.");
   assert.equal(payload.context.featureId, "FEAT-016");
@@ -1887,7 +1887,7 @@ test("SpecDrive IDE execution detail includes projection logs, artifacts, contra
   assert.deepEqual(detail?.skillOutputContract, {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-APPROVAL",
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     requestedAction: "feature_execution",
     status: "completed",
     summary: "Approval requested.",
@@ -1913,6 +1913,69 @@ test("SpecDrive IDE Feature Spec nodes expose latest run token cost", () => {
   assert.equal(feature?.tokenConsumption?.totalTokens, 1600);
   assert.equal(feature?.tokenConsumption?.costUsd, 0.00524);
   assert.equal(feature?.tokenConsumption?.pricingStatus, "priced");
+});
+
+test("SpecDrive IDE Feature Spec nodes project latest quality evidence from execution metadata", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json)
+        VALUES ('FEAT-016', 'project-ide', 'SpecDrive IDE Foundation', 'ready', 10, 'feat-016-specdrive-ide-foundation', '["REQ-093"]')`,
+    },
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json)
+        VALUES ('JOB-QUALITY', 'bull-quality', 'specdrive:execution-adapter', 'cli.run', 'completed', ?)`,
+      params: [JSON.stringify({ operation: "feature_execution", projectId: "project-ide", context: { featureId: "FEAT-016" } })],
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, started_at, completed_at, summary, metadata_json
+      ) VALUES ('RUN-QUALITY', 'JOB-QUALITY', 'codex-cli', 'feature_execution', 'project-ide', ?, 'completed',
+        '2026-05-02T12:00:00.000Z', '2026-05-02T12:01:00.000Z', 'Quality evidence recorded.', ?)`,
+      params: [
+        JSON.stringify({ featureId: "FEAT-016" }),
+        JSON.stringify({
+          rawLogRefs: [
+            join(workspaceRoot, ".autobuild", "runs", "RUN-QUALITY", "WORKPAD.md"),
+            join(workspaceRoot, ".autobuild", "runs", "RUN-QUALITY", "workpad.json"),
+            join(workspaceRoot, ".autobuild", "runs", "RUN-QUALITY", "stdout.log"),
+          ],
+          skillOutputContract: {
+            contractVersion: "skill-contract/v2",
+            executionId: "RUN-QUALITY",
+            skillName: "implement-feature",
+            requestedAction: "feature_execution",
+            status: "completed",
+            summary: "Quality evidence recorded.",
+            nextAction: null,
+            producedArtifacts: [],
+            traceability: { featureId: "FEAT-016" },
+            result: {
+              requirementCoverage: [{ requirementId: "REQ-093", status: "passed" }],
+              acceptanceEvidence: [{ scenarioId: "AC-093", status: "passed" }],
+              journeyEvidence: [{ userStoryId: "US-093", status: "passed" }],
+              runtimeEvidence: { appLaunch: { status: "passed", evidence: ["launch.log"] } },
+              deliveryFidelity: { completionDecision: { status: "passed" }, losses: [] },
+              gitDelivery: { prUrl: "https://github.com/example/repo/pull/93", checks: "passed" },
+            },
+          },
+        }),
+      ],
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+
+  assert.deepEqual(feature?.qualityEvidence?.requirementCoverage, [{ requirementId: "REQ-093", status: "passed" }]);
+  assert.deepEqual(feature?.qualityEvidence?.workpadRefs, [
+    join(workspaceRoot, ".autobuild", "runs", "RUN-QUALITY", "WORKPAD.md"),
+    join(workspaceRoot, ".autobuild", "runs", "RUN-QUALITY", "workpad.json"),
+  ]);
 });
 
 test("SpecDrive IDE Feature Spec nodes persist token usage from cli-output.json", () => {
@@ -2084,7 +2147,7 @@ function makeConfig(workspaceRoot: string, dbPath: string): AppConfig {
 function makeWorkspace(): string {
   const root = mkdtempSync(join(tmpdir(), "specdrive-ide-workspace-"));
   mkdirSync(join(root, ".autobuild"), { recursive: true });
-  mkdirSync(join(root, ".agents/skills/10.change.create-request"), { recursive: true });
+  mkdirSync(join(root, ".agents/skills/manage-spec-change"), { recursive: true });
   mkdirSync(join(root, "docs"), { recursive: true });
   mkdirSync(join(root, "docs/ui"), { recursive: true });
   mkdirSync(join(root, "docs/features/feat-016-specdrive-ide-foundation"), { recursive: true });
@@ -2092,7 +2155,7 @@ function makeWorkspace(): string {
   writeFileSync(join(root, "docs/requirements.md"), "# Requirements\n");
   writeFileSync(join(root, "docs/hld.md"), "# HLD\n");
   writeFileSync(join(root, "docs/ui/ui-spec.md"), "# UI Spec\n");
-  writeFileSync(join(root, ".agents/skills/10.change.create-request/SKILL.md"), "# Requirement intake\n");
+  writeFileSync(join(root, ".agents/skills/manage-spec-change/SKILL.md"), "# Requirement intake\n");
   writeFileSync(join(root, "docs/features/README.md"), [
     "# Feature Spec Index",
     "",
@@ -2337,7 +2400,7 @@ function seedRuntimeState(dbPath: string): void {
         "running",
         "2026-05-02T12:00:00.000Z",
         "Running IDE foundation.",
-        JSON.stringify({ threadId: "thread-1", turnId: "turn-1", skillSlug: "07.execution.dispatch-adapter" }),
+        JSON.stringify({ threadId: "thread-1", turnId: "turn-1", skillName: "implement-feature" }),
       ],
     },
   ]);
@@ -2395,7 +2458,7 @@ function seedApprovalRuntimeState(dbPath: string, workspaceRoot: string): void {
         JSON.stringify({
           threadId: "thread-approval",
           turnId: "turn-approval",
-          skillSlug: "07.execution.dispatch-adapter",
+          skillName: "implement-feature",
           rawLogRefs: [
             join(workspaceRoot, ".autobuild", "runs", "RUN-APPROVAL", "cli-input.json"),
             join(workspaceRoot, ".autobuild", "runs", "RUN-APPROVAL", "stdout.log"),
@@ -2403,7 +2466,7 @@ function seedApprovalRuntimeState(dbPath: string, workspaceRoot: string): void {
           skillOutputContract: {
             contractVersion: "skill-contract/v1",
             executionId: "RUN-APPROVAL",
-            skillSlug: "07.execution.dispatch-adapter",
+            skillName: "implement-feature",
             requestedAction: "feature_execution",
             status: "completed",
             summary: "Approval requested.",

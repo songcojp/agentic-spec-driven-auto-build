@@ -39,6 +39,7 @@ import {
   type CliAdapterValidationResult,
   type RunnerApprovalPolicy,
   type RunnerQueueStatus,
+  type RunnerReasoningEffort,
   type RunnerSandboxMode,
 } from "./cli-adapter.ts";
 import {
@@ -433,7 +434,7 @@ type FeatureSelectionDecision = {
   dependencyFindings: string[];
   resumeRequiredFeatures: string[];
   skippedFeatures: string[];
-  source: "06.planning.replan" | "deterministic-fallback";
+  source: "plan-feature-execution" | "deterministic-fallback";
 };
 
 function listFeatureSpecsFromDocs(
@@ -822,7 +823,7 @@ function featureSelectionDecisionFromPayload(payload: Record<string, unknown>): 
     dependencyFindings: optionalStringArray(result.dependencyFindings),
     resumeRequiredFeatures: optionalStringArray(result.resumeRequiredFeatures).map((id) => id.toUpperCase()),
     skippedFeatures: optionalStringArray(result.skippedFeatures).map((id) => id.toUpperCase()),
-    source: "06.planning.replan",
+    source: "plan-feature-execution",
   };
 }
 
@@ -859,7 +860,7 @@ function validateFeatureSelectionDecision(input: FeaturePoolSelectionInput, deci
       dependencies: entry.dependencies,
       blockedReasons,
       nextAction: "Feature selection skill chose this Feature, but code safety checks blocked execution.",
-    }, { now: input.now, source: "06.planning.replan", summary: blockedReasons.join(" ") }));
+    }, { now: input.now, source: "plan-feature-execution", summary: blockedReasons.join(" ") }));
     return { blockedReasons, decision };
   }
   return { selected: entry, blockedReasons: [], decision };
@@ -973,7 +974,7 @@ export type RunnerConsoleViewModel = {
     runId: string;
     schedulerJobId?: string;
     workspaceRoot?: string;
-    skillSlug?: string;
+    skillName?: string;
     skillPhase?: string;
     blockedReason?: string;
     status: string;
@@ -3026,7 +3027,7 @@ function executeScheduleCommand(
     };
   }
   const executionId = randomUUID();
-  const skillSlug = optionalString(payload.skillSlug) ?? (operation === "feature_execution" ? "07.execution.dispatch-adapter" : undefined);
+  const skillName = optionalString(payload.skillName) ?? (operation === "feature_execution" ? "implement-feature" : undefined);
   const projectId = trigger.projectId ?? optionalString(payload.projectId);
   const project = projectId ? getProject(dbPath, projectId) : undefined;
   const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, projectId, project?.targetRepoPath);
@@ -3035,7 +3036,7 @@ function executeScheduleCommand(
   const specState = workspaceRoot && featureFolder && featureId
     ? readFileSpecState(workspaceRoot, featureFolder, featureId, new Date(acceptedAt))
     : undefined;
-  if (operation === "feature_execution" && skillSlug === "07.execution.dispatch-adapter") {
+  if (operation === "feature_execution" && skillName === "implement-feature") {
     const conflict = activeManualScheduleConflict(dbPath, {
       projectId,
       featureId,
@@ -3075,7 +3076,7 @@ function executeScheduleCommand(
     sourcePaths: scheduleRunSourcePaths(payload, featureSpecPath, project.targetRepoPath),
     expectedArtifacts: scheduleRunExpectedArtifacts(payload, executionId),
     workspaceRoot,
-    skillSlug,
+    skillName,
     skillPhase: optionalString(payload.skillPhase) ?? operation,
   };
   const preferenceResolution = resolveExecutionPreference(dbPath, projectId, payload);
@@ -3968,10 +3969,10 @@ function enqueueNextFeatureExecutionFromQueue(
     ],
     expectedArtifacts: [runReportArtifactPath(executionId)],
     workspaceRoot: project.targetRepoPath,
-    skillSlug: "07.execution.dispatch-adapter",
+    skillName: "implement-feature",
     skillPhase: "feature_execution",
     selection: selection.decision ? {
-      skillSlug: "06.planning.replan",
+      skillName: "plan-feature-execution",
       requestedAction: "select_next_feature",
       source: selection.decision.source,
       reason: selection.decision.reason,
@@ -4044,7 +4045,7 @@ function executeSpecSkillCommand(
   acceptedAt: string,
   scheduler: SchedulerClient,
   specIntakeResult?: ({ blockedReasons: string[] } & Record<string, unknown>),
-): { executionId: string; schedulerJobId: string; skillSlug: string; workspaceRoot?: string } | undefined {
+): { executionId: string; schedulerJobId: string; skillName: string; workspaceRoot?: string } | undefined {
   if (!["intake_requirement", "evolve_spec", "resolve_clarification", "generate_ears", "generate_hld", "generate_ui_spec", "split_feature_specs"].includes(input.action)) {
     return undefined;
   }
@@ -4065,7 +4066,7 @@ function executeSpecSkillCommand(
       ?? optionalString(payload.featureId)
       ?? (input.entityType === "feature" ? input.entityId : undefined);
   const executionId = randomUUID();
-  const skillSlug = skillSlugForSpecAction(input.action);
+  const skillName = skillNameForSpecAction(input.action);
   const sourcePaths = sourcePathsForSpecAction(input.action, payload, featureId, project.targetRepoPath);
   const imagePaths = imagePathsForSpecAction(input.action, payload);
   const expectedArtifacts = expectedArtifactsForSpecAction(input.action, featureId, sourcePaths, project.targetRepoPath);
@@ -4078,7 +4079,7 @@ function executeSpecSkillCommand(
     imagePaths,
     expectedArtifacts,
     workspaceRoot: project.targetRepoPath,
-    skillSlug,
+    skillName,
     skillPhase: input.action,
     clarificationText: optionalString(payload.clarificationText),
     requirementText: optionalString(payload.requirementText),
@@ -4113,7 +4114,7 @@ function executeSpecSkillCommand(
       commandAction: input.action,
       scheduler: "bullmq",
       workspaceRoot: project.targetRepoPath,
-      skillSlug,
+      skillName,
       skillPhase: input.action,
     },
   });
@@ -4135,17 +4136,17 @@ function executeSpecSkillCommand(
       },
     },
   });
-  return { executionId, schedulerJobId: job.schedulerJobId, skillSlug, workspaceRoot: project.targetRepoPath };
+  return { executionId, schedulerJobId: job.schedulerJobId, skillName, workspaceRoot: project.targetRepoPath };
 }
 
-function skillSlugForSpecAction(action: ConsoleCommandAction): string {
-  if (action === "intake_requirement") return "10.change.create-request";
-  if (action === "evolve_spec") return "10.change.update-mainline-spec";
-  if (action === "resolve_clarification") return "10.change.impact-analysis";
-  if (action === "generate_ears") return "02.requirements.convert-ears";
-  if (action === "generate_hld") return "03.hld.generate";
-  if (action === "generate_ui_spec") return "04.ui.generate-spec";
-  return "05.feature.decompose";
+function skillNameForSpecAction(action: ConsoleCommandAction): string {
+  if (action === "intake_requirement") return "manage-spec-change";
+  if (action === "evolve_spec") return "manage-spec-change";
+  if (action === "resolve_clarification") return "manage-spec-change";
+  if (action === "generate_ears") return "convert-ears-requirements";
+  if (action === "generate_hld") return "design-architecture";
+  if (action === "generate_ui_spec") return "design-ui-spec";
+  return "decompose-feature-specs";
 }
 
 function sourcePathsForSpecAction(
@@ -4333,10 +4334,77 @@ function expectedArtifactsForSpecAction(
   if (action === "generate_ui_spec") {
     return [
       ...(featureId ? [`docs/features/${featureId}/ui-spec.md`] : ["docs/ui/ui-spec.md"]),
-      "docs/ui/concepts/<page-id>.png",
+      ...uiConceptExpectedArtifacts(sourcePaths, workspaceRoot),
     ];
   }
   return featureId ? [`docs/features/${featureId}/tasks.md`] : ["docs/features/README.md"];
+}
+
+function uiConceptExpectedArtifacts(sourcePaths: string[], workspaceRoot?: string): string[] {
+  const sourceTexts = sourcePaths
+    .map((sourcePath) => readWorkspaceText(sourcePath, workspaceRoot))
+    .filter((content): content is string => Boolean(content));
+  const surfaces = uniqueSourcePaths(sourceTexts.flatMap(extractUiSurfaceInventory));
+  if (surfaces.length === 0) return ["docs/ui/concepts/<page-id>.png"];
+  return surfaces.map((surface) => `docs/ui/concepts/${uiConceptPageId(surface)}.png`);
+}
+
+function readWorkspaceText(sourcePath: string, workspaceRoot?: string): string | undefined {
+  const absolutePath = isAbsolute(sourcePath)
+    ? sourcePath
+    : workspaceRoot
+      ? join(workspaceRoot, sourcePath)
+      : undefined;
+  if (!absolutePath || !existsSync(absolutePath)) return undefined;
+  try {
+    return readFileSync(absolutePath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function extractUiSurfaceInventory(markdown: string): string[] {
+  const lines = markdown.split(/\r?\n/u);
+  const surfaces: string[] = [];
+  let inRelevantSection = false;
+  for (const line of lines) {
+    const heading = line.match(/^(#{1,6})\s+(.+)$/u);
+    if (heading) {
+      inRelevantSection = /primary\s+(page|surface)|page\s*\/\s*surface|surface\s+inventory|information\s+architecture/i.test(heading[2]);
+      continue;
+    }
+    if (!line.trim().startsWith("|")) continue;
+    const cells = markdownTableCells(line);
+    if (cells.length < 2 || cells.every((cell) => /^:?-{3,}:?$/u.test(cell))) continue;
+    const firstCell = cells[0].toLowerCase();
+    if (/^(surface|page|screen|view)$/u.test(firstCell)) continue;
+    const headerLike = /surface|page|screen|view/u.test(firstCell) && cells.some((cell) => /purpose|route|requirement/i.test(cell));
+    if (!inRelevantSection && !headerLike) continue;
+    surfaces.push(cleanUiSurfaceName(cells[0]));
+  }
+  return surfaces.filter((surface) => surface.length > 0);
+}
+
+function markdownTableCells(line: string): string[] {
+  return line.trim().replace(/^\|/u, "").replace(/\|$/u, "").split("|").map((cell) => cell.trim());
+}
+
+function cleanUiSurfaceName(value: string): string {
+  return value
+    .replace(/`([^`]+)`/gu, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/gu, "$1")
+    .replace(/<[^>]+>/gu, "")
+    .trim();
+}
+
+function uiConceptPageId(surface: string): string {
+  const slug = surface
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/&/gu, " and ")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+  return slug || "page";
 }
 
 function requirementsArtifactForSource(sourcePath?: string, workspaceRoot?: string): string {
@@ -4690,7 +4758,7 @@ function executeBoardCommand(
               featureId: task.featureId,
               taskId,
               taskName: task.name,
-              skillSlug: "07.execution.dispatch-adapter",
+              skillName: "implement-feature",
               skillPhase: "task_execution",
             }),
             "queued",
@@ -4707,7 +4775,7 @@ function executeBoardCommand(
           featureId: task.featureId,
           taskId,
           taskName: task.name,
-          skillSlug: "07.execution.dispatch-adapter",
+          skillName: "implement-feature",
           skillPhase: "task_execution",
         },
         requestedAction: "task_execution",
@@ -5743,9 +5811,9 @@ function buildSkillInvocationFeedback(
       const context = parseJsonObject(execution.context_json);
       const executionInvocation = parseJsonObject(metadata.executionInvocation);
       const skillInstruction = parseJsonObject(executionInvocation.skillInstruction);
-      const skillSlug = optionalString(skillInstruction.skillSlug) ?? optionalString(metadata.skillSlug);
+      const skillName = optionalString(skillInstruction.skillName) ?? optionalString(metadata.skillName);
       const skillPhase = optionalString(skillInstruction.requestedAction) ?? optionalString(metadata.skillPhase) ?? optionalString(context.skillPhase) ?? optionalString(execution.operation);
-      if (!skillSlug && !skillPhase) {
+      if (!skillName && !skillPhase) {
         return undefined;
       }
       const executionId = String(execution.id);
@@ -5762,7 +5830,7 @@ function buildSkillInvocationFeedback(
         runId: executionId,
         schedulerJobId: optionalString(schedulerJob?.id),
         workspaceRoot,
-        skillSlug: skillSlug ?? optionalString(context.skillSlug),
+        skillName: skillName ?? optionalString(context.skillName),
         skillPhase,
         blockedReason: optionalString(metadata.blockedReason) ?? (String(execution.status) === "blocked" ? optionalString(execution.summary) : undefined),
         status: String(execution.status),
@@ -5886,20 +5954,20 @@ function schedulerJobName(
   }
   return optionalString(context.featureTitle)
     ?? optionalString(context.name)
-    ?? schedulerOperationName(optionalString(payload.operation), optionalString(context.skillSlug), optionalString(context.skillPhase))
+    ?? schedulerOperationName(optionalString(payload.operation), optionalString(context.skillName), optionalString(context.skillPhase))
     ?? String(row.job_type);
 }
 
-function schedulerOperationName(operation?: string, skillSlug?: string, skillPhase?: string): string | undefined {
-  if (skillSlug === "07.execution.dispatch-adapter" || skillPhase === "task_execution") return "Execute task";
-  if (skillSlug === "03.hld.generate" || operation === "generate_hld") return "Generate project HLD";
-  if (skillSlug === "10.change.create-request" || operation === "intake_requirement") return "Intake requirement";
-  if (skillSlug === "10.change.update-mainline-spec" || operation === "evolve_spec") return "Update Spec and Feature Specs";
-  if (skillSlug === "10.change.impact-analysis" || operation === "resolve_clarification") return "Resolve clarification";
-  if (skillSlug === "02.requirements.convert-ears" || operation === "generate_ears") return "Generate EARS requirements";
-  if (skillSlug === "05.feature.decompose" || operation === "split_feature_specs") return "Split Feature Specs";
-  if (skillSlug === "04.ui.generate-spec" || operation === "generate_ui_spec") return "Generate UI Spec";
-  if (skillSlug === "07.execution.prepare-context") return "Collect technical context";
+function schedulerOperationName(operation?: string, skillName?: string, skillPhase?: string): string | undefined {
+  if (skillName === "implement-feature" || skillPhase === "task_execution") return "Execute task";
+  if (skillName === "design-architecture" || operation === "generate_hld") return "Generate project HLD";
+  if (skillName === "manage-spec-change" || operation === "intake_requirement") return "Intake requirement";
+  if (skillName === "manage-spec-change" || operation === "evolve_spec") return "Update Spec and Feature Specs";
+  if (skillName === "manage-spec-change" || operation === "resolve_clarification") return "Resolve clarification";
+  if (skillName === "convert-ears-requirements" || operation === "generate_ears") return "Generate EARS requirements";
+  if (skillName === "decompose-feature-specs" || operation === "split_feature_specs") return "Split Feature Specs";
+  if (skillName === "design-ui-spec" || operation === "generate_ui_spec") return "Generate UI Spec";
+  if (skillName === "implement-feature") return "Collect technical context";
   if (operation === "feature_execution") return "Execute feature work";
   return undefined;
 }
@@ -6141,7 +6209,15 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
     { name: "rpcAdapters", sql: "SELECT * FROM rpc_adapter_configs ORDER BY updated_at DESC" },
     {
       name: "existingTokenRecords",
-      sql: `SELECT run_id FROM token_consumption_records ${projectId ? "WHERE project_id = ?" : ""}`,
+      sql: `SELECT * FROM token_consumption_records ${projectId ? "WHERE project_id = ?" : ""}`,
+      params: projectParams,
+    },
+    {
+      name: "rawExecutionLogs",
+      sql: `SELECT id, run_id, events_json, created_at
+        FROM raw_execution_logs
+        ${projectId ? "WHERE run_id IN (SELECT id FROM execution_records WHERE project_id = ?)" : ""}
+        ORDER BY created_at, rowid`,
       params: projectParams,
     },
   ]);
@@ -6149,7 +6225,8 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
   const activeRpcAdapter = rpcAdapterFromRows(result.queries.rpcAdapters, "active", false);
   const adaptersById = new Map(result.queries.adapters.map((row) => [String(row.id), cliAdapterFromRow(row)] as const));
   const rpcAdaptersById = new Map(result.queries.rpcAdapters.map((row) => [String(row.id), rpcAdapterFromRow(row)] as const));
-  const existingTokenRunIds = new Set(result.queries.existingTokenRecords.map((row) => String(row.run_id)));
+  const existingTokenRowsByRunId = new Map(result.queries.existingTokenRecords.map((row) => [String(row.run_id), row] as const));
+  const rawLogsByRunId = groupRowsByString(result.queries.rawExecutionLogs, "run_id");
   const workspaceRootByProject = new Map(
     result.queries.projects
       .map((row) => [String(row.id), optionalString(row.local_path) ?? optionalString(row.target_repo_path)] as const)
@@ -6158,7 +6235,6 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
 
   for (const execution of result.queries.executions) {
     const runId = String(execution.id);
-    if (existingTokenRunIds.has(runId)) continue;
     const context = parseJsonObject(execution.context_json);
     const metadata = parseJsonObject(execution.metadata_json);
     const project = optionalString(execution.project_id);
@@ -6167,14 +6243,18 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
       ?? (project ? workspaceRootByProject.get(project) : undefined);
     if (!workspaceRoot) continue;
     const runDir = join(workspaceRoot, ".autobuild", "runs", sanitizeRunPathSegment(runId));
+    const rawLogUsage = aggregateRawExecutionLogTokenUsage(rawLogsByRunId.get(runId) ?? []);
     const cliOutputUsage = readCliOutputTokenUsage(join(runDir, "cli-output.json"));
     const stdoutLogPath = join(runDir, "stdout.log");
-    const stdoutLog = cliOutputUsage.usage ? undefined : readStdoutLogEvents(stdoutLogPath);
-    const usage = cliOutputUsage.usage ?? (stdoutLog && !stdoutLog.error ? tokenUsageFromValue(stdoutLog.events) : undefined);
-    const sourcePath = cliOutputUsage.usage ? cliOutputUsage.path : stdoutLogPath;
+    const stdoutLog = rawLogUsage?.usage || cliOutputUsage.usage ? undefined : readStdoutLogEvents(stdoutLogPath);
+    const fallbackStdoutUsage = stdoutLog && !stdoutLog.error ? tokenUsageFromValue(stdoutLog.events) : undefined;
+    const usage = rawLogUsage?.usage ?? cliOutputUsage.usage ?? fallbackStdoutUsage;
+    const sourcePath = rawLogUsage?.sourcePath ?? (cliOutputUsage.usage ? cliOutputUsage.path : stdoutLogPath);
     if (!usage) continue;
     const normalized = normalizeTokenUsage(usage);
     if (normalized.totalTokens <= 0) continue;
+    const existingTokenRow = existingTokenRowsByRunId.get(runId);
+    if (existingTokenRow && tokenUsageMatchesRow(normalized, existingTokenRow, sourcePath)) continue;
     const pricingAdapter = adapterForExecutionPricing(execution, {
       cliAdaptersById: adaptersById,
       rpcAdaptersById,
@@ -6185,18 +6265,53 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
       ?? optionalString(metadata.model)
       ?? optionalString(context.model)
       ?? pricingAdapter?.defaults?.model;
-    const pricing = calculateTokenCost({
-      usage: normalized,
-      model,
-      costRates: pricingAdapter?.defaults?.costRates ?? {},
-      pricingSource: {
-        adapterId: pricingAdapter?.adapterId,
-        adapterKind: pricingAdapter?.adapterKind,
-      },
-    });
+    const pricing = existingTokenRow
+      ? recalculateExistingTokenPricing(existingTokenRow, normalized, model)
+      : calculateTokenCost({
+          usage: normalized,
+          model,
+          costRates: pricingAdapter?.defaults?.costRates ?? {},
+          pricingSource: {
+            adapterId: pricingAdapter?.adapterId,
+            adapterKind: pricingAdapter?.adapterKind,
+          },
+        });
     runSqlite(dbPath, [
-      {
-        sql: `INSERT INTO token_consumption_records (
+      existingTokenRow
+        ? {
+            sql: `UPDATE token_consumption_records
+              SET model = ?,
+                input_tokens = ?,
+                cached_input_tokens = ?,
+                output_tokens = ?,
+                reasoning_output_tokens = ?,
+                total_tokens = ?,
+                cost_usd = ?,
+                currency = ?,
+                pricing_status = ?,
+                usage_json = ?,
+                pricing_json = ?,
+                source_path = ?,
+                recorded_at = CURRENT_TIMESTAMP
+              WHERE run_id = ?`,
+            params: [
+              pricing.model ?? null,
+              normalized.inputTokens,
+              normalized.cachedInputTokens,
+              normalized.outputTokens,
+              normalized.reasoningOutputTokens,
+              normalized.totalTokens,
+              pricing.costUsd,
+              "USD",
+              pricing.pricingStatus,
+              JSON.stringify(usage),
+              JSON.stringify(pricing.pricingSnapshot),
+              sourcePath,
+              runId,
+            ],
+          }
+        : {
+            sql: `INSERT INTO token_consumption_records (
             id, run_id, scheduler_job_id, project_id, feature_id, task_id, operation, model,
             input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens,
             cost_usd, currency, pricing_status, usage_json, pricing_json, source_path
@@ -6223,9 +6338,120 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
           JSON.stringify(pricing.pricingSnapshot),
           sourcePath,
         ],
-      },
+          },
     ]);
   }
+}
+
+function groupRowsByString(rows: Record<string, unknown>[], key: string): Map<string, Record<string, unknown>[]> {
+  const grouped = new Map<string, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const value = optionalString(row[key]);
+    if (!value) continue;
+    const group = grouped.get(value) ?? [];
+    group.push(row);
+    grouped.set(value, group);
+  }
+  return grouped;
+}
+
+function aggregateRawExecutionLogTokenUsage(rows: Record<string, unknown>[]): { usage: Record<string, unknown>; sourcePath: string } | undefined {
+  const sources = rows.flatMap((row) => {
+    const events = parseJsonArray(optionalString(row.events_json));
+    return tokenUsageSourcesFromEvents(events).map((usage, index) => ({
+      sourcePath: `raw_execution_logs:${String(row.id)}#usage-${index + 1}`,
+      usage,
+    }));
+  });
+  if (sources.length === 0) return undefined;
+  const aggregate = aggregateTokenUsage(sources.map((source) => source.usage));
+  if (aggregate.totalTokens <= 0) return undefined;
+  return {
+    usage: {
+      input_tokens: aggregate.inputTokens,
+      cached_input_tokens: aggregate.cachedInputTokens,
+      output_tokens: aggregate.outputTokens,
+      reasoning_output_tokens: aggregate.reasoningOutputTokens,
+      total_tokens: aggregate.totalTokens,
+      inputTokens: aggregate.inputTokens,
+      cachedInputTokens: aggregate.cachedInputTokens,
+      outputTokens: aggregate.outputTokens,
+      reasoningOutputTokens: aggregate.reasoningOutputTokens,
+      totalTokens: aggregate.totalTokens,
+      sources,
+    },
+    sourcePath: sources.map((source) => source.sourcePath).join(","),
+  };
+}
+
+function tokenUsageSourcesFromEvents(events: unknown[]): Record<string, unknown>[] {
+  return events.flatMap((event) => {
+    const record = isRecord(event) ? event : undefined;
+    if (!record) return [];
+    const usage = record.usage ?? record.stats ?? tokenUsageFromRecord(record);
+    return usage && isRecord(usage) ? [usage] : [];
+  });
+}
+
+function aggregateTokenUsage(usages: Record<string, unknown>[]): ReturnType<typeof normalizeTokenUsage> {
+  return usages
+    .map(normalizeTokenUsage)
+    .reduce(
+      (total, usage) => ({
+        inputTokens: total.inputTokens + usage.inputTokens,
+        cachedInputTokens: total.cachedInputTokens + usage.cachedInputTokens,
+        outputTokens: total.outputTokens + usage.outputTokens,
+        reasoningOutputTokens: total.reasoningOutputTokens + usage.reasoningOutputTokens,
+        totalTokens: total.totalTokens + usage.totalTokens,
+      }),
+      { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningOutputTokens: 0, totalTokens: 0 },
+    );
+}
+
+function tokenUsageMatchesRow(
+  usage: ReturnType<typeof normalizeTokenUsage>,
+  row: Record<string, unknown>,
+  sourcePath: string,
+): boolean {
+  return Number(row.input_tokens ?? 0) === usage.inputTokens
+    && Number(row.cached_input_tokens ?? 0) === usage.cachedInputTokens
+    && Number(row.output_tokens ?? 0) === usage.outputTokens
+    && Number(row.reasoning_output_tokens ?? 0) === usage.reasoningOutputTokens
+    && Number(row.total_tokens ?? 0) === usage.totalTokens
+    && String(row.source_path ?? "") === sourcePath;
+}
+
+function recalculateExistingTokenPricing(
+  row: Record<string, unknown>,
+  usage: ReturnType<typeof normalizeTokenUsage>,
+  fallbackModel?: string,
+): {
+  model?: string;
+  costUsd: number;
+  pricingStatus: "priced" | "missing_rate";
+  pricingSnapshot: Record<string, unknown>;
+} {
+  const pricingSnapshot = parseJsonObject(row.pricing_json);
+  const model = optionalString(row.model) ?? optionalString(pricingSnapshot.model) ?? fallbackModel;
+  const preservedRate = normalizeCostRates(model ? { [model]: pricingSnapshot.rate } : {})[model ?? ""];
+  if (preservedRate) {
+    const pricing = calculateTokenCost({
+      usage,
+      model,
+      costRates: { [model]: preservedRate },
+      pricingSource: {
+        adapterId: optionalString(pricingSnapshot.adapterId),
+        adapterKind: pricingSnapshot.adapterKind === "rpc" ? "rpc" : pricingSnapshot.adapterKind === "cli" ? "cli" : undefined,
+      },
+    });
+    return { model, ...pricing };
+  }
+  return {
+    model,
+    costUsd: Number(row.cost_usd ?? 0),
+    pricingStatus: row.pricing_status === "priced" ? "priced" : "missing_rate",
+    pricingSnapshot,
+  };
 }
 
 type ExecutionPricingAdapter = {
@@ -6506,11 +6732,29 @@ function normalizeRpcAdapterConfig(input: Record<string, unknown> | Partial<RpcA
     requestTimeoutMs: Number(input.requestTimeoutMs ?? input.request_timeout_ms ?? base.requestTimeoutMs),
     defaults: {
       model: optionalString(inputDefaults.model) ?? baseDefaults.model,
+      reasoningEffort: normalizeRpcReasoningEffort(inputDefaults.reasoningEffort ?? inputDefaults.reasoning_effort)
+        ?? baseDefaults.reasoningEffort
+        ?? baseDefaults.reasoning_effort,
+      profile: optionalString(inputDefaults.profile) ?? baseDefaults.profile,
+      sandbox: normalizeRpcSandbox(inputDefaults.sandbox) ?? baseDefaults.sandbox,
+      approval: normalizeRpcApproval(inputDefaults.approval) ?? baseDefaults.approval,
       costRates: normalizeCostRates(inputDefaults.costRates ?? inputDefaults.cost_rates ?? baseDefaults.costRates),
     },
     status,
     updatedAt: optionalString(input.updatedAt) ?? optionalString(input.updated_at) ?? new Date().toISOString(),
   };
+}
+
+function normalizeRpcReasoningEffort(value: unknown): RunnerReasoningEffort | undefined {
+  return value === "low" || value === "medium" || value === "high" || value === "xhigh" ? value : undefined;
+}
+
+function normalizeRpcSandbox(value: unknown): RunnerSandboxMode | undefined {
+  return value === "read-only" || value === "workspace-write" || value === "danger-full-access" ? value : undefined;
+}
+
+function normalizeRpcApproval(value: unknown): RunnerApprovalPolicy | undefined {
+  return value === "untrusted" || value === "on-failure" || value === "on-request" || value === "never" || value === "bypass" ? value : undefined;
 }
 
 function persistCliAdapterConfig(

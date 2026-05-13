@@ -15,6 +15,8 @@ import type {
   ExecutionAdapterProviderSessionV1,
   ExecutionAdapterResultV1,
 } from "./execution-adapter-contracts.ts";
+import { ensureInvocationContextPrompt } from "./invocation-context.ts";
+import { createRunWorkpad } from "./workpad.ts";
 import {
   rpcAdapterConfigToExecutionAdapterConfig,
   type JsonRpcNotification,
@@ -23,6 +25,7 @@ import {
   type RpcAdapterConfigV1,
   type RpcAdapterTransport,
 } from "./rpc-adapter.ts";
+import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "./openai-pricing.ts";
 
 export type CodexAppServerRequestSequenceInput = {
   executionId: string;
@@ -65,6 +68,7 @@ export type CodexAppServerAdapterResultInput = {
   startedAt: string;
   completedAt: string;
   executionInvocation?: ExecutionAdapterInvocationV1;
+  workpadRefs?: string[];
 };
 
 export type CodexAppServerTransport = RpcAdapterTransport;
@@ -102,7 +106,10 @@ export const DEFAULT_CODEX_APP_SERVER_ADAPTER_CONFIG: CodexAppServerAdapterConfi
   requestTimeoutMs: 120_000,
   defaults: {
     model: "gpt-5.5",
-    costRates: {},
+    reasoningEffort: "high",
+    costRates: {
+      "gpt-5.5": CODEX_GPT_5_5_STANDARD_COST_RATE,
+    },
   },
   status: "active",
 };
@@ -255,14 +262,15 @@ export function createCodexAppServerTransportFromConfig(
 
 export function buildCodexAppServerRequestSequence(input: CodexAppServerRequestSequenceInput): CodexAppServerRequestSequence {
   const threadMethod = input.threadId ? "thread/resume" : "thread/start";
+  const prompt = ensureInvocationContextPrompt(input.prompt, input.executionInvocation);
   const threadParams = input.threadId
     ? { threadId: input.threadId, cwd: input.workspaceRoot }
     : { cwd: input.workspaceRoot };
   const skillInput = input.executionInvocation
     ? [{
         type: "skill",
-        name: input.executionInvocation.skillInstruction.skillSlug,
-        path: `.agents/skills/${input.executionInvocation.skillInstruction.skillSlug}/SKILL.md`,
+        name: input.executionInvocation.skillInstruction.skillName,
+        path: `.agents/skills/${input.executionInvocation.skillInstruction.skillName}/SKILL.md`,
       }]
     : [];
 
@@ -297,7 +305,7 @@ export function buildCodexAppServerRequestSequence(input: CodexAppServerRequestS
         threadId: input.threadId,
         cwd: input.workspaceRoot,
         input: [
-          { type: "text", text: input.prompt },
+          { type: "text", text: prompt },
           ...skillInput,
         ],
         outputSchema: input.outputSchema,
@@ -308,6 +316,12 @@ export function buildCodexAppServerRequestSequence(input: CodexAppServerRequestS
 
 export async function runCodexAppServerSession(input: CodexAppServerSessionInput): Promise<CliAdapterResult> {
   const startedAt = input.startedAt ?? (input.now ?? new Date()).toISOString();
+  const prompt = ensureInvocationContextPrompt(input.prompt, input.executionInvocation);
+  const workpad = createRunWorkpad({
+    workspaceRoot: input.workspaceRoot,
+    executionId: input.runId,
+    invocation: input.executionInvocation,
+  });
   await input.transport.request("initialize", {
     clientInfo: { name: "SpecDrive AutoBuild", version: "0.1.0" },
     capabilities: {
@@ -337,11 +351,11 @@ export async function runCodexAppServerSession(input: CodexAppServerSessionInput
     threadId,
     cwd: input.workspaceRoot,
     input: [
-      { type: "text", text: input.prompt },
+      { type: "text", text: prompt },
       ...(input.executionInvocation ? [{
         type: "skill",
-        name: input.executionInvocation.skillInstruction.skillSlug,
-        path: `.agents/skills/${input.executionInvocation.skillInstruction.skillSlug}/SKILL.md`,
+        name: input.executionInvocation.skillInstruction.skillName,
+        path: `.agents/skills/${input.executionInvocation.skillInstruction.skillName}/SKILL.md`,
       }] : []),
     ],
     outputSchema: input.policy.outputSchema,
@@ -369,6 +383,7 @@ export async function runCodexAppServerSession(input: CodexAppServerSessionInput
     startedAt,
     completedAt,
     executionInvocation: input.executionInvocation,
+    workpadRefs: [workpad.markdownPath, workpad.jsonPath],
   });
 }
 
@@ -508,7 +523,7 @@ export function buildCodexAppServerAdapterResult(input: CodexAppServerAdapterRes
     producedArtifacts: projection.skillOutput?.producedArtifacts ?? [],
     traceability: projection.skillOutput?.traceability ?? input.executionInvocation?.traceability ?? { requirementIds: [], changeIds: [] },
     nextAction: projection.skillOutput?.nextAction,
-    rawLogRefs: [rawLog.id],
+    rawLogRefs: [rawLog.id, ...(input.workpadRefs ?? [])],
     error: stderr || undefined,
   };
   const reportPath = writeRunReport(input.workspaceRoot, input.runId, {
@@ -639,7 +654,7 @@ function isSkillOutput(value: unknown): value is SkillOutputContract {
   if (!isRecord(value)) return false;
   return (value.contractVersion === "skill-contract/v1" || value.contractVersion === "skill-contract/v2")
     && typeof value.executionId === "string"
-    && typeof value.skillSlug === "string"
+    && typeof value.skillName === "string"
     && typeof value.requestedAction === "string"
     && typeof value.status === "string"
     && typeof value.summary === "string"

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Lifecycle Routing"
+  short_description: "Route SpecDrive work across Define, Plan, Build, Verify, Rev"
+  default_prompt: "Use $use-specdrive-lifecycle to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

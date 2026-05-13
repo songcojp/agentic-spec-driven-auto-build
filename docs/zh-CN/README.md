@@ -14,3 +14,4 @@
 * [SpecDrive VSCode 插件与 Codex RPC Adapter PRD](vscode-codex-rpc-prd.md)
 * [需求新增与变更处理机制](change-management.md)
 * [需求新增与变更待处置清单](change-disposition-checklist.md)
+* [Agentic Spec 质量优化方案](agentic-spec-quality-optimization-plan.md)

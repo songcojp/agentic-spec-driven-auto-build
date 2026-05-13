@@ -296,7 +296,7 @@ export type RunnerModel = {
     runId: string;
     schedulerJobId?: string;
     workspaceRoot?: string;
-    skillSlug?: string;
+    skillName?: string;
     skillPhase?: string;
     blockedReason?: string;
     status: string;

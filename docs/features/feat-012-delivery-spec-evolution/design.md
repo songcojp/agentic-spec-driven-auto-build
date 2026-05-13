@@ -9,7 +9,7 @@ Delivery Manager 在 Feature 满足 done 和合并前检查后记录执行 Skill
 | Component | Responsibility |
 |---|---|
 | Delivery Gate | 判断 Feature 是否达到 PR 创建条件。 |
-| PR Generator | 由 `07.execution.dispatch-adapter` 或 `14.release.prepare-pr` 通过本机 `gh` CLI 创建 PR 或生成 PR 请求内容。 |
+| PR Generator | 由 `implement-feature` 或 `prepare-release` 通过本机 `gh` CLI 创建 PR 或生成 PR 请求内容。 |
 | Delivery Reporter | 汇总完成内容、文件、验收、测试、恢复、风险和下一步建议。 |
 | Spec Evolution Advisor | 从 Evidence、审批、测试和实现约束生成 Spec 更新建议。 |
 | Rollback Plan Builder | 汇总分支、worktree、base commit 和回滚说明。 |

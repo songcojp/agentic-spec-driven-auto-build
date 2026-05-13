@@ -434,6 +434,11 @@ function renderResultGroups(result: Record<string, unknown>): string {
     ["Decision", ["reason", "selectedFeature", "featureId"]],
     ["Commands", ["commands", "commandsChecked"]],
     ["Verification", ["verification", "statusChecker", "failureClassification"]],
+    ["Requirement Coverage", ["requirementCoverage"]],
+    ["Acceptance Evidence", ["acceptanceEvidence"]],
+    ["Journey Evidence", ["journeyEvidence"]],
+    ["Runtime Evidence", ["runtimeEvidence", "runtimeExemption"]],
+    ["Delivery Fidelity", ["deliveryFidelity"]],
     ["Blockers", ["blockers", "blockedReasons", "openQuestions", "residualQuestions"]],
     ["Findings", ["findings", "specDriftFindings", "requiredFixes"]],
     ["Risks", ["risks", "residualRisks", "residualRisk"]],
@@ -453,11 +458,42 @@ function renderResultGroup(title: string, keys: string[], result: Record<string,
 
 function renderResultEntry(groupTitle: string, key: string, value: unknown): string {
   if (key === "gitDelivery") return renderGitDeliveryEntry(value);
+  if (key === "deliveryFidelity") return renderDeliveryFidelityEntry(value);
+  if (key === "runtimeEvidence") return renderRuntimeEvidenceEntry(value);
   const wide = isWideResultValue(key, value);
   const entryLabel = labelize(key);
   const label = wide && entryLabel === groupTitle ? "" : `<span>${escapeHtml(entryLabel)}</span>`;
   const valueHtml = wide ? `<div class="result-content" data-i18n-skip>${renderResultValue(value)}</div>` : `<span data-i18n-skip>${renderResultValue(value)}</span>`;
   return `<div class="result-entry${wide ? " result-entry-wide" : ""}">${label}${valueHtml}</div>`;
+}
+
+function renderRuntimeEvidenceEntry(value: unknown): string {
+  const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+  if (!record) return `<div class="result-entry result-entry-wide"><span>Runtime Evidence</span><div class="result-content muted">No runtime evidence recorded.</div></div>`;
+  const rows: Array<[string, unknown]> = [
+    ["App Launch", record.appLaunch],
+    ["Journeys", record.journeys],
+    ["State Assertions", record.stateAssertions],
+    ["Negative Paths", record.negativePaths],
+  ];
+  return `<div class="result-entry result-entry-wide"><span>Runtime Evidence</span><div class="result-content" data-i18n-skip>${rows.map(([label, entry]) => `<strong>${escapeHtml(label)}</strong>${renderResultValue(entry)}`).join("")}</div></div>`;
+}
+
+function renderDeliveryFidelityEntry(value: unknown): string {
+  const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+  if (!record) return `<div class="result-entry result-entry-wide"><span>Delivery Fidelity</span><div class="result-content muted">No Delivery Fidelity ledger recorded.</div></div>`;
+  const losses = Array.isArray(record.losses) ? record.losses : [];
+  const openLosses = losses.filter((loss) => {
+    const item = loss && typeof loss === "object" && !Array.isArray(loss) ? loss as Record<string, unknown> : {};
+    return String(item.status ?? "").toLowerCase() === "open";
+  });
+  const rows: Array<[string, unknown]> = [
+    ["Completion Decision", record.completionDecision],
+    ["Open Losses", openLosses],
+    ["Evidence", record.evidence],
+    ["Agent Reviews", record.agentReviews],
+  ];
+  return `<div class="result-entry result-entry-wide"><span>Delivery Fidelity</span><div class="result-content" data-i18n-skip>${rows.map(([label, entry]) => `<strong>${escapeHtml(label)}</strong>${renderResultValue(entry)}`).join("")}</div></div>`;
 }
 
 function renderGitDeliveryEntry(value: unknown): string {
@@ -495,7 +531,7 @@ function firstSafeUrl(...values: unknown[]): string | undefined {
 }
 
 function isWideResultValue(key: string, value: unknown): boolean {
-  if (["commands", "verification", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"].includes(key)) return true;
+  if (["commands", "verification", "requirementCoverage", "acceptanceEvidence", "journeyEvidence", "runtimeExemption", "blockers", "findings", "risks", "coverage", "updatedDocuments", "updatedArtifacts", "affectedDocuments"].includes(key)) return true;
   return value !== null && typeof value === "object";
 }
 
@@ -680,8 +716,8 @@ export function renderExecutionWebview(item: SpecDriveIdeExecutionDetail | SpecD
     ${jsonBlock(detail?.approvalRequests ?? [])}
     <h2>Raw Logs</h2>
     ${(detail?.rawLogs ?? []).map((log, index) => `<h3>Log ${index + 1}</h3><p>Stdout</p>${textBlock(log.stdout)}<p>Stderr</p>${textBlock(log.stderr)}`).join("")}
-    <h2>Product Console</h2>
-    <p><a href="http://127.0.0.1:5173/#runner">Open Runner Console</a></p>
+    <h2>Quality Evidence</h2>
+    ${jsonBlock(resultRecord(skillOutputRecord(detail)))}
   </body></html>`;
 }
 

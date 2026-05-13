@@ -1,0 +1,6 @@
+interface:
+  display_name: "Code and Spec Review"
+  short_description: "Review code and specs. Use for code diff review, spec consis"
+  default_prompt: "Use $review-code-spec to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

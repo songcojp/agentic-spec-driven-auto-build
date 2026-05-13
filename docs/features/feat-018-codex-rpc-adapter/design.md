@@ -16,7 +16,7 @@ HLD 参考: 第 7.8 节 Execution Adapter Layer、第 9 节 RPC Adapter
 
 `RpcAdapterConfigV1` 扩展 `ExecutionAdapterConfigV1`，包含 `kind = "rpc"`、`provider`、`transport` (`stdio`/`http`/`jsonrpc`/`websocket`)、`endpoint`、`command`、`args`、`headersAllowlist`、`authRef`、`requestTimeoutMs`、`capabilityDetection`、`requestMapping`、`eventMapping`、`outputMapping`。
 
-`ExecutionAdapterInvocationV1` 包含 workspaceRoot、featureId、specState、traceability、constraints、outputSchema、resume 和 `skillInstruction`；`skillInstruction` 包含 skillSlug、requestedAction、sourcePaths、imagePaths、expectedArtifacts 和可选 operatorInput。RPC Adapter 不管理 Feature 内部 task，Feature 内 `tasks.md` 由 agent 自主读取和执行。
+`ExecutionAdapterInvocationV1` 包含 workspaceRoot、featureId、specState、traceability、constraints、outputSchema、resume 和 `skillInstruction`；`skillInstruction` 包含 skillName、requestedAction、sourcePaths、imagePaths、expectedArtifacts 和可选 operatorInput。RPC Adapter 不管理 Feature 内部 task，Feature 内 `tasks.md` 由 agent 自主读取和执行。
 
 `ExecutionAdapterResultV1.providerSession` 对 Codex RPC provider 至少包含 threadId、turnId、transport、model、cwd、capabilities、eventRefs 和 approvalState；对 Gemini ACP provider 至少包含 sessionId、transport、model、cwd、capabilities、eventRefs 和 approvalState。
 

@@ -1,0 +1,6 @@
+interface:
+  display_name: "EARS Requirement Conversion"
+  short_description: "Convert PRDs, product briefs, PR/RP text, or natural-languag"
+  default_prompt: "Use $convert-ears-requirements to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

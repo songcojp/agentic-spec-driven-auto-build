@@ -1,0 +1,6 @@
+interface:
+  display_name: "UI Specification Design"
+  short_description: "Design UI specifications and prototypes. Use for UI specs, p"
+  default_prompt: "Use $design-ui-spec to handle the relevant SpecDrive workflow."
+policy:
+  allow_implicit_invocation: true

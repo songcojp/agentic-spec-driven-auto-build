@@ -587,7 +587,7 @@ WHEN Runner 执行 `codex.rpc.run` Job
 THE SYSTEM SHALL 由 Runner 负责 app-server 生命周期、JSON-RPC 会话、事件订阅和结果回写。
 
 验收：
-- [ ] Runner 从 Job payload 读取 `workspaceRoot`、`requestedAction`、`skillSlug`、`sourcePaths`、`specState` 和 `outputSchema`。
+- [ ] Runner 从 Job payload 读取 `workspaceRoot`、`requestedAction`、`skillName`、`sourcePaths`、`specState` 和 `outputSchema`。
 - [ ] Runner 先解析 active adapter config；若未配置外部 app-server endpoint，则按配置启动 `codex app-server --listen stdio://` 或本地 socket。
 - [ ] Runner 完成 `initialize` request 和 `initialized` notification，并记录 app-server 版本、transport 和 client info。
 - [ ] Runner 为新执行创建或恢复 thread：有 `threadId` 时调用 `thread/resume`，否则调用 `thread/start` 并保存返回的 `thread.id`。
@@ -698,12 +698,12 @@ THE SYSTEM SHALL 展示独立于 Product Console 的 Execution Workbench Webview
     "input": [
       {
         "type": "text",
-        "text": "$10.change.update-mainline-spec 根据以下 ExecutionAdapterInvocationV1.skillInstruction 修改文档..."
+        "text": "$manage-spec-change 根据以下 ExecutionAdapterInvocationV1.skillInstruction 修改文档..."
       },
       {
         "type": "skill",
-        "name": "10.change.update-mainline-spec",
-        "path": "/path/to/.agents/skills/10.change.update-mainline-spec/SKILL.md"
+        "name": "manage-spec-change",
+        "path": "/path/to/.agents/skills/manage-spec-change/SKILL.md"
       }
     ],
     "outputSchema": {}

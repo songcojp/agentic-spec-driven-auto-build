@@ -13,7 +13,7 @@
 - 不再维护平台 TaskGraph / tasks 执行表；Feature 内部 task 规划、顺序和完成状态由执行 LLM 读取 Feature Spec 的 `requirements.md`、`design.md` 和 `tasks.md` 后管理。
 - 维护任务看板列和任务状态自动流转。
 - 维护 Feature 状态机，覆盖 `draft`、`ready`、`planning`、`tasked`、`implementing`、`done`、`delivered`、`review_needed`、`blocked` 和 `failed`。
-- 项目级 `schedule_run` 和 `start_auto_run` 从 `docs/features/feature-pool-queue.json` 读取已排好的 Feature 队列，调用 `06.planning.replan` 推理选择下一个 Feature，并只执行通过代码安全校验的选择；独立 `push_feature_spec_pool` public action 不再存在。
+- 项目级 `schedule_run` 和 `start_auto_run` 从 `docs/features/feature-pool-queue.json` 读取已排好的 Feature 队列，调用 `plan-feature-execution` 推理选择下一个 Feature，并只执行通过代码安全校验的选择；独立 `push_feature_spec_pool` public action 不再存在。
 - Feature 调度状态从 `docs/features/<feature-id>/spec-state.json` 读取；blocked / failed / review_needed Feature 必须显式 resume 后才允许再次执行。
 - Scheduler Trigger 只负责把受控命令转换为 executor job；Feature/Task/Project 是 payload context，不是 Job 顶层属性。Feature 执行必须以当前项目 workspace 中完整的 Feature Spec 目录作为输入。
 - 记录立即执行、指定时间、每日、每小时、夜间、工作日、依赖完成、CI 失败和审批通过等触发模式；事件类触发先记录为受控请求。
@@ -45,7 +45,7 @@
 - 操作者可以 skip 当前 blocked Feature，调度器必须继续选择下一个依赖满足且 ready 的 Feature。
 - Feature done 判定必须同时满足 Feature Spec `tasks.md` 覆盖、Feature 验收、Spec Alignment Check 和必要测试通过。
 - 依赖未完成的 Feature 不得进入 implementing。
-- `06.planning.replan` 返回的 `select_next_feature` 决策必须包含 decision、featureId、reason、blockedReasons、dependencyFindings、resumeRequiredFeatures 和 skippedFeatures。
+- `plan-feature-execution` 返回的 `select_next_feature` 决策必须包含 decision、featureId、reason、blockedReasons、dependencyFindings、resumeRequiredFeatures 和 skippedFeatures。
 - `approval_needed`、`blocked`、`review_needed`、`failed` 和 SkillOutput contract validation failure 必须投影到 Feature `spec-state.json`，并阻止自动执行继续选择该 Feature。
 - Scheduler Job 状态必须覆盖 `queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`paused`、`skipped` 和 `completed`；调度器不得把中断态、失败态或取消态折叠为 `completed`。
 - Feature `spec-state.json` 必须记录 `resumeTarget`，用于从 `approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 返回原阶段入口。
@@ -54,7 +54,7 @@
 
 - [ ] Job 列表不包含 Feature/Task/Project 顶层属性；这些信息只出现在 payload context。
 - [ ] 项目级 `schedule_run` / `start_auto_run` 不创建 `feature.select` / `feature.plan`，而是按队列规划直接入队 `cli.run` 或后续 `native.run`。
-- [ ] 项目级 `schedule_run` / `start_auto_run` 使用 `06.planning.replan` 的选择结果作为候选输入，并由代码安全闸拒绝非法或不可执行选择。
+- [ ] 项目级 `schedule_run` / `start_auto_run` 使用 `plan-feature-execution` 的选择结果作为候选输入，并由代码安全闸拒绝非法或不可执行选择。
 - [ ] Feature 级 `schedule_run` 在完整 Feature Spec 目录存在时可以直接入队 `feature_execution`，不依赖 `task_graph_tasks` / `tasks`。
 - [ ] 项目级调度能将缺失三件套、依赖未完成、未显式 resume 的 blocked Feature 写入 `spec-state.json` 并展示 blocked reason。
 - [ ] skip to next 不会删除队列项，但会把被跳过 Feature 的 `spec-state.json.status` 写为 `skipped`，并选择后续可执行 Feature。

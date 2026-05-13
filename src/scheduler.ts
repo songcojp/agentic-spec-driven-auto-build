@@ -91,7 +91,7 @@ export type ExecutorJobContext = {
   imagePaths?: string[];
   expectedArtifacts?: string[];
   workspaceRoot?: string;
-  skillSlug?: string;
+  skillName?: string;
   skillPhase?: string;
   [key: string]: unknown;
 };
@@ -482,7 +482,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
   const context = payload.context ?? {};
   const executionPreference = executionPreferenceFromPayload(payload);
   const featureId = optionalString(context.featureId);
-  const skillSlug = optionalString(context.skillSlug);
+  const skillName = optionalString(context.skillName);
   const skillPhase = optionalString(context.skillPhase) ?? payload.operation;
   let loaded: ReturnType<typeof loadRunnerTaskContext>;
   try {
@@ -508,7 +508,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
             scheduler: "bullmq",
             jobType: "cli.run",
             executionPreference,
-            skillSlug,
+            skillName,
             skillPhase,
             blockedReason: reason,
           }),
@@ -565,7 +565,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
           jobType: "cli.run",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
-          skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+          skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
           executionInvocation: loaded.executionInvocation,
         }),
@@ -615,7 +615,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
     adapterId: loaded.adapter.id,
-    skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+    skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
     executionInvocation: loaded.executionInvocation,
     skillOutputContract: result.adapterResult?.result.skillOutput,
@@ -786,7 +786,7 @@ export async function runCodexAppServerRunJob(
   const context = payload.context ?? {};
   const executionPreference = executionPreferenceFromPayload(payload);
   const featureId = optionalString(context.featureId);
-  const skillSlug = optionalString(context.skillSlug);
+  const skillName = optionalString(context.skillName);
   const skillPhase = optionalString(context.skillPhase) ?? payload.operation;
   let loaded: ReturnType<typeof loadRunnerTaskContext>;
   let adapterConfig: CodexAppServerAdapterConfig | undefined;
@@ -815,7 +815,7 @@ export async function runCodexAppServerRunJob(
             jobType: "rpc.run",
             provider: "codex-rpc",
             executionPreference,
-            skillSlug,
+            skillName,
             skillPhase,
             blockedReason: reason,
           }),
@@ -834,15 +834,16 @@ export async function runCodexAppServerRunJob(
   }
 
   const now = new Date();
+  const adapterDefaults = adapterConfig?.defaults ?? {};
   const policy = resolveRunnerPolicy({
     runId: payload.executionId,
     risk: loaded.risk,
     workspaceRoot: loaded.workspaceRoot,
-    model: loaded.adapter.defaults.model,
-    reasoningEffort: loaded.adapter.defaults.reasoningEffort,
-    profile: loaded.adapter.defaults.profile,
-    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : loaded.adapter.defaults.sandbox,
-    requestedApprovalPolicy: loaded.adapter.defaults.approval,
+    model: adapterDefaults.model ?? loaded.adapter.defaults.model,
+    reasoningEffort: adapterDefaults.reasoningEffort ?? adapterDefaults.reasoning_effort ?? loaded.adapter.defaults.reasoningEffort,
+    profile: adapterDefaults.profile ?? loaded.adapter.defaults.profile,
+    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : adapterDefaults.sandbox ?? loaded.adapter.defaults.sandbox,
+    requestedApprovalPolicy: adapterDefaults.approval ?? loaded.adapter.defaults.approval,
     now,
   });
   const safety = evaluateRunnerSafety({
@@ -860,7 +861,7 @@ export async function runCodexAppServerRunJob(
       executionPreference,
       workspaceRoot: loaded.workspaceRoot,
       safety,
-      skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+      skillName: loaded.executionInvocation.skillInstruction.skillName,
       skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
       executionInvocation: loaded.executionInvocation,
     };
@@ -923,7 +924,7 @@ export async function runCodexAppServerRunJob(
           provider: "codex-rpc",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
-          skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+          skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
           executionInvocation: loaded.executionInvocation,
           threadId: payload.threadId,
@@ -992,7 +993,7 @@ export async function runCodexAppServerRunJob(
             jobType: "rpc.run",
             executionPreference,
             workspaceRoot: loaded.workspaceRoot,
-            skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+            skillName: loaded.executionInvocation.skillInstruction.skillName,
             skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
             executionInvocation: loaded.executionInvocation,
             threadId: payload.threadId,
@@ -1050,7 +1051,7 @@ export async function runCodexAppServerRunJob(
     jobType: "rpc.run",
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
-    skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+    skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
     executionInvocation: loaded.executionInvocation,
     skillOutputContract: adapterResult.result.skillOutput,
@@ -1120,7 +1121,7 @@ export async function runGeminiAcpRunJob(
   const context = payload.context ?? {};
   const executionPreference = executionPreferenceFromPayload(payload);
   const featureId = optionalString(context.featureId);
-  const skillSlug = optionalString(context.skillSlug);
+  const skillName = optionalString(context.skillName);
   const skillPhase = optionalString(context.skillPhase) ?? payload.operation;
   let loaded: ReturnType<typeof loadRunnerTaskContext>;
   let adapterConfig: GeminiAcpAdapterConfig | undefined;
@@ -1144,7 +1145,7 @@ export async function runGeminiAcpRunJob(
           "blocked",
           new Date().toISOString(),
           reason,
-          JSON.stringify({ scheduler: "bullmq", jobType: "rpc.run", provider: "gemini-acp", executionPreference, skillSlug, skillPhase, blockedReason: reason }),
+          JSON.stringify({ scheduler: "bullmq", jobType: "rpc.run", provider: "gemini-acp", executionPreference, skillName, skillPhase, blockedReason: reason }),
         ],
       },
     ]);
@@ -1160,15 +1161,16 @@ export async function runGeminiAcpRunJob(
   }
 
   const now = new Date();
+  const adapterDefaults = adapterConfig?.defaults ?? {};
   const policy = resolveRunnerPolicy({
     runId: payload.executionId,
     risk: loaded.risk,
     workspaceRoot: loaded.workspaceRoot,
-    model: loaded.adapter.defaults.model,
-    reasoningEffort: loaded.adapter.defaults.reasoningEffort,
-    profile: loaded.adapter.defaults.profile,
-    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : loaded.adapter.defaults.sandbox,
-    requestedApprovalPolicy: loaded.adapter.defaults.approval,
+    model: adapterDefaults.model ?? loaded.adapter.defaults.model,
+    reasoningEffort: adapterDefaults.reasoningEffort ?? adapterDefaults.reasoning_effort ?? loaded.adapter.defaults.reasoningEffort,
+    profile: adapterDefaults.profile ?? loaded.adapter.defaults.profile,
+    requestedSandboxMode: isTrustedDirectWriteInvocation(loaded.executionInvocation, loaded.allowedFiles) ? "danger-full-access" : adapterDefaults.sandbox ?? loaded.adapter.defaults.sandbox,
+    requestedApprovalPolicy: adapterDefaults.approval ?? loaded.adapter.defaults.approval,
     now,
   });
   const safety = evaluateRunnerSafety({
@@ -1186,7 +1188,7 @@ export async function runGeminiAcpRunJob(
       executionPreference,
       workspaceRoot: loaded.workspaceRoot,
       safety,
-      skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+      skillName: loaded.executionInvocation.skillInstruction.skillName,
       skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
       executionInvocation: loaded.executionInvocation,
     };
@@ -1250,7 +1252,7 @@ export async function runGeminiAcpRunJob(
           provider: "gemini-acp",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
-          skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+          skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
           executionInvocation: loaded.executionInvocation,
           sessionId: payload.threadId,
@@ -1315,7 +1317,7 @@ export async function runGeminiAcpRunJob(
             provider: "gemini-acp",
             executionPreference,
             workspaceRoot: loaded.workspaceRoot,
-            skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+            skillName: loaded.executionInvocation.skillInstruction.skillName,
             skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
             executionInvocation: loaded.executionInvocation,
             sessionId: payload.threadId,
@@ -1369,7 +1371,7 @@ export async function runGeminiAcpRunJob(
     provider: "gemini-acp",
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
-    skillSlug: loaded.executionInvocation.skillInstruction.skillSlug,
+    skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
     executionInvocation: loaded.executionInvocation,
     skillOutputContract: adapterResult.result.skillOutput,
@@ -1449,12 +1451,12 @@ function updateFeatureSpecFileState(input: {
 }): void {
   const featureSpecPath = optionalString(input.context.featureSpecPath)
     ?? optionalString(input.context.specStatePath)?.replace(/\/spec-state\.json$/, "");
-  const effectiveSkillSlug = optionalString(input.context.skillSlug)
-    ?? input.skillOutput?.skillSlug
+  const effectiveSkillName = optionalString(input.context.skillName)
+    ?? input.skillOutput?.skillName
     ?? (featureSpecPath && (input.context.skillPhase === "feature_execution" || input.context.operation === "feature_execution")
-      ? "07.execution.dispatch-adapter"
+      ? "implement-feature"
       : undefined);
-  if (!input.workspaceRoot || !input.featureId || effectiveSkillSlug !== "07.execution.dispatch-adapter") return;
+  if (!input.workspaceRoot || !input.featureId || effectiveSkillName !== "implement-feature") return;
   if (!featureSpecPath?.startsWith("docs/features/")) return;
   const featureFolder = featureSpecPath.slice("docs/features/".length);
   try {
@@ -1816,6 +1818,7 @@ function loadAppServerAdapterConfig(dbPath: string, adapterId?: string): CodexAp
     transport: normalizeAppServerTransport(row.transport),
     endpoint: optionalString(row.endpoint),
     requestTimeoutMs: Number(row.request_timeout_ms ?? DEFAULT_CODEX_APP_SERVER_ADAPTER_CONFIG.requestTimeoutMs),
+    defaults: parseJsonObject(row.defaults_json),
     status: String(row.status) === "disabled" ? "disabled" : "active",
     updatedAt: optionalString(row.updated_at),
   };
@@ -1878,6 +1881,7 @@ function loadGeminiAcpAdapterConfig(dbPath: string, adapterId?: string): GeminiA
     transport: normalizeAppServerTransport(row.transport),
     endpoint: optionalString(row.endpoint),
     requestTimeoutMs: Number(row.request_timeout_ms ?? DEFAULT_GEMINI_ACP_ADAPTER_CONFIG.requestTimeoutMs),
+    defaults: parseJsonObject(row.defaults_json),
     status: String(row.status) === "disabled" ? "disabled" : "active",
     updatedAt: optionalString(row.updated_at),
   };
@@ -1937,7 +1941,7 @@ function buildExecutionInvocation(input: {
   approvalPolicy?: string;
 }): ExecutionAdapterInvocationV1 {
   const context = input.payload.context ?? {};
-  const skillSlug = optionalString(context.skillSlug) ?? (input.featureId ? "07.execution.dispatch-adapter" : "07.execution.prepare-context");
+  const skillName = optionalString(context.skillName) ?? (input.featureId ? "implement-feature" : "implement-feature");
   const requestedAction = input.payload.requestedAction ?? optionalString(context.skillPhase) ?? input.payload.operation;
   const contextSourcePaths = optionalStringArray(context.sourcePaths);
   const contextImagePaths = optionalStringArray(context.imagePaths);
@@ -1979,7 +1983,7 @@ function buildExecutionInvocation(input: {
     },
     outputSchema: DEFAULT_OUTPUT_SCHEMA,
     skillInstruction: {
-      skillSlug,
+      skillName,
       requestedAction,
       sourcePaths,
       imagePaths: contextImagePaths,
