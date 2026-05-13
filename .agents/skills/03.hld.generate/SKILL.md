@@ -3,6 +3,10 @@ name: 03.hld.generate
 description: "Create or regenerate the project-level HLD from PRD, EARS requirements, repository context, and existing HLD notes. Use when the Spec Workspace generate_hld action is triggered."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `03.hld.generate` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Create Project HLD Skill
 
 Use this skill to create or regenerate the project-level High Level Design. This is not a feature design skill and must not write `docs/features/<feature-id>/design.md`.
@@ -165,6 +169,14 @@ Use these patterns when the source documents support them. They are reusable HLD
 - Return a `SkillOutputContractV1` JSON object with `contractVersion`, `executionId`, `skillSlug`, `requestedAction`, `status`, `summary`, `producedArtifacts`, and Feature-level `traceability`.
 - The `summary` field must briefly state whether the HLD was created, regenerated, blocked, or routed for review, and must name the primary HLD artifact path.
 - The `summary` or `producedArtifacts[].summary` should mention input files, technology-stack decisions, required-structure coverage, requirement coverage, and unresolved architecture questions when relevant.
+
+## Subagent Delegation
+
+- **Use when**: Use Quality Review and Repair subagents only after this skill has produced or updated the scoped artifact and entered its governed review/repair loop.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: Repair subagents may edit only the caller-declared allowed artifacts and only for source-backed, in-scope gaps.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

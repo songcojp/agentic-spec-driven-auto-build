@@ -3,6 +3,10 @@ name: 04.ui.generate-spec
 description: "Generate a production-ready UI Spec, design-system guidance, UX flows, and major-page concept images from PRD, EARS requirements, and HLD. Use when the Spec Workspace generate_ui_spec action is triggered after HLD exists."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `04.ui.generate-spec` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # UI Spec Skill
 
 Use this skill to produce a structured, implementation-oriented UI Spec and major-page concept images from the product PRD, EARS requirements, HLD, and feature index.
@@ -100,6 +104,14 @@ When this skill is invoked inside an interactive Codex session rather than the s
 - `docs/ui/concepts/<page-id>.png` — raster PNG major-page concept images produced through image generation
 - Summary listing generated pages, generated concept image paths, and REQ coverage
 - Return a `SkillOutputContractV1` JSON object with `contractVersion`, `executionId`, `skillSlug`, `requestedAction`, `status`, `summary`, `nextAction`, `producedArtifacts`, Feature-level `traceability`, and `result`.
+
+## Subagent Delegation
+
+- **Use when**: Use Quality Review and Repair subagents only after this skill has produced or updated the scoped artifact and entered its governed review/repair loop.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: Repair subagents may edit only the caller-declared allowed artifacts and only for source-backed, in-scope gaps.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

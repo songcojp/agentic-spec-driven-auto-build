@@ -1,13 +1,17 @@
 ---
 name: 00.intake.identify-constraints
-description: "Execute the Agentic Spec 00 intake workflow for identify constraints with reusable input references, output contract, and acceptance checks."
+description: "Run the Agentic Spec intake identify constraints workflow. Use when the scheduler, operator, or another skill explicitly requests `00.intake.identify-constraints` and needs traceable normalized intake facts, constraints, or open questions inside the project-intake and source-normalization boundary."
 ---
 
 # Intake Identify Constraints
 
 ## Purpose
 
-Use this skill to perform the Agentic Spec `00` `intake` workflow step for `identify-constraints`. Keep the workflow reusable across Agentic Spec projects and avoid product-specific assumptions.
+Run the exact Agentic Spec intake `identify-constraints` step for `00.intake.identify-constraints`. This skill turns referenced inputs into normalized intake facts, constraints, or open questions while staying inside the project-intake and source-normalization boundary. It must preserve existing IDs, states, and evidence links unless the invocation explicitly authorizes a change.
+
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `00.intake.identify-constraints` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
 
 ## When to Use
 
@@ -23,11 +27,19 @@ Read only the artifacts needed for the request, preferring references over copie
 
 ## Workflow
 
-1. Confirm the requested action and identify the relevant Agentic Spec phase, object, and state.
-2. Read the minimum source references needed to make the result traceable.
-3. Produce the requested workflow result, preserving existing IDs, states, and evidence links unless the invocation explicitly asks for a change.
-4. Record assumptions, blockers, and follow-up actions in the output instead of inventing missing facts.
-5. Keep implementation-specific details out of the skill unless they are passed as constraints or evidence.
+1. Confirm the invocation requested `00.intake.identify-constraints`, identify the target artifact or object, and verify the current state allows this identify constraints step.
+2. Read the smallest set of referenced files needed for traceability, plus repository facts only when they materially affect the result.
+3. Produce the normalized intake facts, constraints, or open questions requested by the invocation, preserving stable IDs, states, source refs, and evidence links unless the invocation explicitly allows a change.
+4. Record assumptions, blockers, unresolved ambiguity, and follow-up routing in the structured result instead of inventing missing facts.
+5. Keep adjacent phase work out of scope; route requirement changes, architecture decisions, implementation, tests, review, approval, recovery, audit, or release work to the owning skill when this skill does not own it.
+
+## Subagent Delegation
+
+- **Use when**: Use read-only Review/Explorer subagents only when they can independently validate referenced artifacts; they must not edit files.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: No subagent may write files unless this skill explicitly enters a repair or update workflow with allowed artifacts.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

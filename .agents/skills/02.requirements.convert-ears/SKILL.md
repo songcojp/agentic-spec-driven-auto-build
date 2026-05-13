@@ -7,6 +7,16 @@ description: "Decompose PRD, PR/RP, product brief, or natural-language product i
 
 This is the design-named PRD-to-EARS conversion entry point.
 
+## Codex Skill Usage
+
+Use this skill as a reusable, reference-driven workflow: read source artifacts
+from disk, pass paths and section anchors between review passes, and keep the
+owner-thread output compact. When this skill reaches its mandatory quality
+review loop, that loop is the explicit scoped delegation request for Quality
+Review and Repair subagents. If the runtime cannot create real Codex subagents,
+use isolated owner-thread passes and record the fallback in
+`result.qualityRepairLoop.subagentFallback`.
+
 ## Workflow
 
 1. Locate the source PRD, product request, PR/RP, or feature brief. If no path is given, prefer root project docs first: `docs/PRD.md`, then `docs/requirements.md` when the PRD has already been decomposed. Only use localized lanes such as `docs/en/PRD.md`, `docs/zh-CN/PRD.md`, or `docs/ja/PRD.md` when the project explicitly declares multilingual documentation (for example `docs/README.md` lists languages/default language) or the invocation provides a localized source path.
@@ -39,14 +49,16 @@ This is the design-named PRD-to-EARS conversion entry point.
      Quality Review Skill (`02.requirements.validate-testability`), Repair
      Owner, and selection rationale.
    - Invoke `02.requirements.validate-testability` as the Quality Review
-     Subagent for each review pass. Pass file paths, source section anchors,
-     changed requirement IDs, `qualityLoopPlan`, and quality-bar instructions; do
-     not paste the full generated requirements document or verbose analysis into
-     the owner context.
-   - Invoke a separate Repair Subagent for only `in_scope_repairable` gaps. The
-     Repair Subagent may edit only the requirements artifact, must preserve
-     stable IDs where possible, and must update traceability references when IDs
-     change.
+     Subagent for each review pass when subagents are available; otherwise run
+     it as an isolated owner-thread review pass and record the fallback. Pass
+     file paths, source section anchors, changed requirement IDs,
+     `qualityLoopPlan`, and quality-bar instructions; do not paste the full
+     generated requirements document or verbose analysis into the owner context.
+   - Invoke a separate Repair Subagent for only `in_scope_repairable` gaps when
+     subagents are available; otherwise keep the repair as an isolated scoped
+     owner-thread pass. The Repair pass may edit only the requirements artifact,
+     must preserve stable IDs where possible, and must update traceability
+     references when IDs change.
    - Repeat until the quality review passes, no in-scope repairable gaps remain,
      a repair would exceed scope, a gap fingerprint repeats, or 10 iterations
      have been used.
@@ -114,13 +126,14 @@ THE SYSTEM SHALL [safe handling, error message, rollback, retry, or blocked acti
 
 ## Subagent Context Budget
 
-- Run each quality-review pass in a fresh subagent or isolated review context.
+- Run each quality-review pass in a fresh subagent or isolated review context
+  after this skill explicitly enters the governed quality loop.
 - The owner thread passes references, not bulk content: requirements path, PRD
   path, relevant section anchors, changed IDs, and the current quality bar.
 - The review subagent reads the referenced files directly and returns only the
   specialized result contract from `02.requirements.validate-testability`.
-- The owner thread applies repair instructions in the requirements artifact and
-  starts a new review subagent for the next pass.
+- The owner thread applies repair instructions in the requirements artifact, or
+  integrates a bounded Repair Subagent result, and then starts a new review pass.
 - Keep only the latest compact review result plus repair iteration count in the
   owner context; do not accumulate full review transcripts across iterations.
 

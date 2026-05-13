@@ -1,6 +1,6 @@
 ---
 name: 09.review.test-coverage
-description: "Execute the Agentic Spec 09 review workflow for test coverage with reusable input references, output contract, and acceptance checks."
+description: "Run the Agentic Spec review test coverage workflow. Use when the scheduler, operator, or another skill explicitly requests `09.review.test-coverage` and needs traceable review findings, quality decisions, risk routing, or coverage judgments inside the review and quality-gate boundary."
 ---
 
 # Review Test Coverage
@@ -10,6 +10,10 @@ description: "Execute the Agentic Spec 09 review workflow for test coverage with
 Use this skill to determine whether the executed tests prove the intended
 behavior obligations. It reviews test semantics, not only whether a command was
 green.
+
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `09.review.test-coverage` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
 
 ## When to Use
 
@@ -36,6 +40,14 @@ Read only the artifacts needed for the request, preferring references over copie
    `interaction_loss`, `state_loss`, or `data_loss` with owner and severity.
 6. Return pass only when required obligations have meaningful proof and open
    gaps have an explicit defer/accept decision.
+
+## Subagent Delegation
+
+- **Use when**: Use read-only Review or Verification subagents for independent checking, failure analysis, or evidence review.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: Review and Verification subagents do not edit files; any repair must route to the owning generation, change, recovery, or execution skill.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

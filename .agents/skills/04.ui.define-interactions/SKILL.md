@@ -1,6 +1,6 @@
 ---
 name: 04.ui.define-interactions
-description: "Execute the Agentic Spec 04 ui workflow for define interactions with reusable input references, output contract, and acceptance checks."
+description: "Run the Agentic Spec UI define interactions workflow. Use when the scheduler, operator, or another skill explicitly requests `04.ui.define-interactions` and needs traceable UI states, interactions, page lists, or UI specification artifacts inside the UI specification and interaction boundary."
 ---
 
 # UI Define Interactions
@@ -11,6 +11,10 @@ Define the interaction matrix for UI, configuration, approval, dashboard,
 settings, editor, or multi-step workflow surfaces. This skill owns the
 user-action-to-state/data/evidence contract that prevents UI work from passing
 with only text, screenshots, or happy-path navigation.
+
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `04.ui.define-interactions` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
 
 ## When to Use
 
@@ -49,6 +53,14 @@ Read only the artifacts needed for the request, preferring references over copie
 Each row must name the requirement or user story it closes. If a surface is
 intentionally read-only, say so explicitly and name the source requirement or
 non-goal that makes it read-only.
+
+## Subagent Delegation
+
+- **Use when**: Use Quality Review and Repair subagents only after this skill has produced or updated the scoped artifact and entered its governed review/repair loop.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: Repair subagents may edit only the caller-declared allowed artifacts and only for source-backed, in-scope gaps.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

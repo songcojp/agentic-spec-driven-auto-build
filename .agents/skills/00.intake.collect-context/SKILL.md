@@ -3,6 +3,10 @@ name: 00.intake.collect-context
 description: "Perform read-only repository exploration for SpecDrive planning, review, or recovery. Use when codebase facts, file ownership, commands, dependencies, or implementation patterns must be gathered without editing files."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `00.intake.collect-context` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Repo Probe Skill
 
 Use this skill for bounded read-only exploration.
@@ -21,6 +25,14 @@ Use this skill for bounded read-only exploration.
 - Relevant paths and commands.
 - Existing conventions to reuse.
 - Unknowns or risks.
+
+## Subagent Delegation
+
+- **Use when**: Use read-only Review/Explorer subagents only when they can independently validate referenced artifacts; they must not edit files.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: No subagent may write files unless this skill explicitly enters a repair or update workflow with allowed artifacts.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

@@ -12,6 +12,10 @@ delivery, requirement, acceptance, journey, and Delivery Fidelity evidence. This
 skill does not own the final product-completion verdict; independent test,
 journey, evidence, code, and release reviews must be recorded before completion.
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `07.execution.dispatch-adapter` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 ## Use When
 
 Use this skill when a scheduled Feature or task has approved requirements,

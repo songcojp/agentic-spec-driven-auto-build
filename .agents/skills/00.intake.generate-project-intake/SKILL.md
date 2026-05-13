@@ -3,6 +3,10 @@ name: 00.intake.generate-project-intake
 description: "Create or update the project constitution for SpecDrive projects. Use when a project charter, goal, boundary, default branch, trust level, repository policy, or governance baseline must be captured before planning or execution."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `00.intake.generate-project-intake` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Project Constitution Skill
 
 Use this skill to establish the project-level operating contract consumed by Project Memory, Scheduler, Review Center, and later Feature Specs.
@@ -31,6 +35,14 @@ Use this skill to establish the project-level operating contract consumed by Pro
 - Trust and approval rules.
 - Review routing rules for `approval_needed`, `clarification_needed`, and `risk_review_needed`.
 - Traceability to source references.
+
+## Subagent Delegation
+
+- **Use when**: Use Quality Review and Repair subagents only after this skill has produced or updated the scoped artifact and entered its governed review/repair loop.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: Repair subagents may edit only the caller-declared allowed artifacts and only for source-backed, in-scope gaps.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

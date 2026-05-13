@@ -8,6 +8,25 @@ other markdown/json Spec artifacts that feed downstream planning or execution.
 The loop is mandatory before a document-generation Skill may return
 `completed`.
 
+## Codex-Native Usage Boundary
+
+This protocol follows the Codex/ChatGPT Skill model: keep the Skill itself as a
+reusable, reference-driven workflow; pass file paths and compact instructions
+instead of copying full artifacts into prompts; and keep long review notes out
+of the owner thread.
+
+Subagents are an execution aid, not the source of truth. Use them only after the
+operator, scheduler, or calling Skill has explicitly entered this governed
+quality loop. That invocation is the scoped delegation request for the Quality
+Review and Repair roles below. For ordinary Codex conversations that have not
+asked for the project workflow or a specific Skill, do not start this loop just
+because a Spec document is mentioned.
+
+If the current runtime cannot create real Codex subagents, or if approvals make
+subagent execution unavailable, continue with isolated owner-thread review and
+repair passes using the same compact input/output rules. Record the fallback in
+`result.qualityRepairLoop.subagentFallback`.
+
 This protocol does not maintain a central artifact-type-to-review-skill routing
 table. The Skill that calls this loop owns that choice because it knows the
 requested action, generated artifacts, downstream phase, source language, and
@@ -25,10 +44,11 @@ allowed write scope.
   compact patch plan when direct edits are unavailable. It must not broaden
   scope, invent product intent, or touch files outside the repair scope.
 
-Both quality checking and repair must run in fresh subagents or isolated review
-contexts whenever the runtime supports subagents. If subagents are unavailable,
-the Skill must use the same compact input/output discipline in the owner context
-and record the fallback in `result.qualityRepairLoop.subagentFallback`.
+After the governed loop has been explicitly invoked, quality checking and repair
+should run in fresh subagents or isolated review contexts whenever the runtime
+supports subagents. If subagents are unavailable, the Skill must use the same
+compact input/output discipline in the owner context and record the fallback in
+`result.qualityRepairLoop.subagentFallback`.
 
 ## Required Loop Plan
 

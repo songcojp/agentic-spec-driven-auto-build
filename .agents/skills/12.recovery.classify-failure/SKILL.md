@@ -3,6 +3,10 @@ name: 12.recovery.classify-failure
 description: "Plan and execute bounded recovery for failed SpecDrive tasks. Use when a task failure, failed command, status check failure, or Codex Runner error produces a recovery task and retry policy."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `12.recovery.classify-failure` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Failure Recovery Skill
 
 Use this skill for recoverable failures only. Respect retry limits, failure fingerprints, and forbidden retry items.
@@ -22,6 +26,14 @@ Use this skill for recoverable failures only. Respect retry limits, failure fing
 - Files changed or command retried.
 - Verification summary.
 - Updated failure fingerprint notes.
+
+## Subagent Delegation
+
+- **Use when**: Use read-only Review/Explorer subagents only when they can independently validate referenced artifacts; they must not edit files.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: No subagent may write files unless this skill explicitly enters a repair or update workflow with allowed artifacts.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

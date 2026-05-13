@@ -37,15 +37,19 @@ Any Skill that generates or updates Spec documents must follow
 applies to project intake, PRD, requirements, HLD, UI Spec, Feature Spec
 `requirements.md`, `design.md`, `tasks.md`, Feature index, queue plan, ADR, and
 future markdown/json Spec artifacts that feed downstream planning or execution.
-The generating Skill must invoke isolated subagents for both quality review and
-repair whenever subagents are available, cap the loop at 10 iterations, define a
-caller-owned `qualityLoopPlan` before the first review, and exit when no
-remaining gap is in-scope repairable. The loop protocol does not choose the
-review Skill from a central artifact table; the calling generation Skill must
-record `qualityReviewSkill`, `qualityReviewRationale`, `repairSkill` or
-`repairOwner`, and `repairRationale` in the plan. Put the compact loop result
-under `result.qualityRepairLoop`; do not return `completed` when the latest
-quality review failed.
+The generating Skill must define a caller-owned `qualityLoopPlan` before the
+first review, cap the loop at 10 iterations, and exit when no remaining gap is
+in-scope repairable. After the operator, scheduler, or calling Skill has
+explicitly invoked the governed loop, use isolated subagents for quality review
+and repair whenever subagents are available. If real Codex subagents are not
+available or not authorized in the current runtime, use isolated owner-thread
+passes with the same reference-only input and compact-output discipline, and
+record the fallback under `result.qualityRepairLoop.subagentFallback`. The loop
+protocol does not choose the review Skill from a central artifact table; the
+calling generation Skill must record `qualityReviewSkill`,
+`qualityReviewRationale`, `repairSkill` or `repairOwner`, and `repairRationale`
+in the plan. Put the compact loop result under `result.qualityRepairLoop`; do
+not return `completed` when the latest quality review failed.
 
 For `07.execution.dispatch-adapter` with `requestedAction =
 "feature_execution"`, `status = "completed"` is valid only with

@@ -1,6 +1,6 @@
 ---
 name: 05.feature.generate-requirements
-description: "Execute the Agentic Spec 05 feature workflow for generate requirements with reusable input references, output contract, and acceptance checks."
+description: "Run the Agentic Spec Feature Spec generate requirements workflow. Use when the scheduler, operator, or another skill explicitly requests `05.feature.generate-requirements` and needs traceable Feature Spec artifacts, scope findings, status updates, or feature index changes inside the Feature Spec package boundary."
 ---
 
 # Feature Requirements Skill
@@ -12,6 +12,10 @@ must make true for users. This skill owns the Feature-level acceptance object:
 user stories, requirements, acceptance scenarios, journey coverage, non-scope,
 and foundation exemption when applicable. It does not produce project-level
 HLD, Feature design, tasks, or implementation code.
+
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `05.feature.generate-requirements` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
 
 ## Use When
 
@@ -88,6 +92,14 @@ HLD, Feature design, tasks, or implementation code.
 ```
 
 Omit `Foundation Exemption` only when the Feature directly closes user journeys.
+
+## Subagent Delegation
+
+- **Use when**: Use Quality Review and Repair subagents only after this skill has produced or updated the scoped artifact and entered its governed review/repair loop.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: Repair subagents may edit only the caller-declared allowed artifacts and only for source-backed, in-scope gaps.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

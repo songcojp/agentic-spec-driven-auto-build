@@ -3,6 +3,10 @@ name: 10.change.classify
 description: "Govern requirement additions and changes through the SpecDrive skill-owned change protocol before routing to requirement intake or spec evolution."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `10.change.classify` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Change Requirement Skill
 
 This skill is the protocol entry point for requirement additions, requirement changes, coverage gaps, clarifications, deprecations, and traceability fixes.
@@ -76,6 +80,14 @@ After mainline updates, apply the downstream checklist from the governing protoc
 - affected Feature Spec `tasks.md`;
 - active/done/delivered Feature stale or follow-up handling;
 - open questions and review routing.
+
+## Subagent Delegation
+
+- **Use when**: Use read-only Review or Impact subagents only after this skill has established the triage record and needs independent confirmation of affected IDs, downstream artifacts, or risk routing.
+- **Inputs**: pass source paths, requirement IDs, Feature IDs, section anchors, triage fields, and the suspected change type; do not paste full PRDs, requirements tables, or long analysis.
+- **Write scope**: classification subagents are read-only. Any file edits must route to `10.change.create-request`, `10.change.update-mainline-spec`, or the downstream owning skill after classification.
+- **Output**: merge only compact findings, affected IDs, recommended route, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same review as an isolated owner-thread pass and record the fallback in `result.subagentFallback` or the nearest skill-specific result field.
 
 ## Output
 

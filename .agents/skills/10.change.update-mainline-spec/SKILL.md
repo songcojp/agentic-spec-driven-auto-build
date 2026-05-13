@@ -3,6 +3,10 @@ name: 10.change.update-mainline-spec
 description: "Manage requirement changes and spec evolution caused by user decisions, implementation, tests, review, delivery results, or repository reality. Use when PRD, EARS requirements, HLD, Feature Specs, tasks, milestones, or acceptance criteria must be changed, revised, replaced, deprecated, clarified, or reconciled."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `10.change.update-mainline-spec` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Spec Evolution Skill
 
 Before editing, follow the governed requirement-change protocol in `.agents/skills/10.change.classify/SKILL.md`. That protocol is owned by the skill catalog; do not create target-project `change-management.md` or `change-disposition-checklist.md` documents to hold protocol rules or pending items. This skill is the design-named entry point for source-driven requirement and spec changes after the 10.change.classify triage classifies the item as `CHANGE`, `DEPRECATE`, `CLARIFY`, or `TRACEABILITY_FIX`.
@@ -63,6 +67,14 @@ Before editing, follow the governed requirement-change protocol in `.agents/skil
 - Keep change rationale short and source-backed.
 - Do not directly modify implementation code unless the user explicitly asks to implement the changed requirement.
 - Keep feature worktrees and unrelated docs out of scope unless they are part of the affected traceability chain.
+
+## Subagent Delegation
+
+- **Use when**: Use Quality Review and Repair subagents only after this skill has produced or updated the scoped artifact and entered its governed review/repair loop.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: Repair subagents may edit only the caller-declared allowed artifacts and only for source-backed, in-scope gaps.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 

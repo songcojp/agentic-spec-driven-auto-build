@@ -3,6 +3,10 @@ name: using-agent-skills
 description: "Route SpecDrive work through a lifecycle-first agent and skill workflow. Use when a request spans product intent, planning, implementation, verification, review, or delivery and needs the right skill/persona sequence instead of a single final quality gate."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `using-agent-skills` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Using Agent Skills
 
 Use this meta-skill to choose the workflow, specialist agents, and project
@@ -25,7 +29,7 @@ Prefer the lifecycle view over numbered phases:
 The numbered skills remain implementation details. Do not let the numbering
 hide missing lifecycle responsibilities.
 
-## Agent Registry
+## Subagent Role Registry
 
 Use these personas as responsibilities, whether implemented by native
 subagents, separate CLI runs, or owner-thread passes:
@@ -41,6 +45,14 @@ subagents, separate CLI runs, or owner-thread passes:
 | Browser QA | Browser or equivalent runtime interaction proof. | API fixtures as the tested behavior. |
 | Code Reviewer | Bugs, regressions, architecture, safety, spec drift. | Rewriting scope without change routing. |
 | Release Reviewer | Delivery decision, unresolved losses, PR/merge/cleanup readiness. | Rubber-stamping missing evidence. |
+
+## Subagent Delegation
+
+- **Use when**: Delegate only after this meta-skill has classified the lifecycle span and assigned clear responsibilities. Subagents are role executors, not owners of the final delivery decision.
+- **Inputs**: pass source paths, lifecycle stage, behavior obligations, evidence plan, allowed scope, and expected compact result; do not pass full workspace dumps or hidden conclusions.
+- **Write scope**: Product, Requirement, Interaction, Test, Browser QA, Code Reviewer, and Release Reviewer roles are read-only unless a downstream implementation or repair skill explicitly grants a bounded write scope. Implementation Agent writes only its declared owned files.
+- **Output**: merge role, decision, evidence refs, losses, blockers, changed paths when applicable, and fallback status into the Delivery Fidelity Ledger.
+- **Fallback**: if real Codex subagents are unavailable, run separate owner-thread passes under the same role names and record the fallback in `result.subagentFallback` or `result.deliveryFidelity.agentReviews`.
 
 ## Workflow
 

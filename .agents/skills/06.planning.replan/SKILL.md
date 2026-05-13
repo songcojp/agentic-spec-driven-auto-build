@@ -3,6 +3,10 @@ name: 06.planning.replan
 description: "Select the next executable Feature Spec for autonomous execution by reasoning over Feature Pool Queue order, dependencies, spec-state, recent execution results, operator resume/skip hints, and blocked or approval states. Use when the scheduler needs a decision for select_next_feature before creating a feature_execution job."
 ---
 
+## Codex Skill Usage
+
+Use this project-local skill only when the user, scheduler, or another skill explicitly names `06.planning.replan` or the current SpecDrive workflow step requires it. Keep context lean: read referenced files from disk, pass paths/IDs/section anchors instead of pasted documents, and return the project-local Skill output contract rather than free-form prose. Provider YAML files under `agents/` are UI/provider prompt metadata only; subagent roles and fallback rules belong in `SKILL.md`.
+
 # Feature Selection Skill
 
 Use this skill when the scheduler must choose the next Feature Spec to run from the Feature Spec Pool.
@@ -17,6 +21,14 @@ Use this skill when the scheduler must choose the next Feature Spec to run from 
 6. When project-level parallel execution is enabled, prefer Features whose dependencies, declared file scope, and recent worktree/branch evidence indicate they can run in independent sibling worktrees without overlapping writes.
 7. Prefer the highest-priority runnable Feature, but use reasoning to account for stale states, explicit skips, completed dependencies, recent terminal execution results, and worktree-concurrency fit.
 8. Return a single decision. Do not create jobs, edit files, write state, create worktrees, or mark Features done.
+
+## Subagent Delegation
+
+- **Use when**: Use read-only Review/Explorer subagents only when they can independently validate referenced artifacts; they must not edit files.
+- **Inputs**: pass file paths, source refs, IDs, section anchors, quality bars, and allowed scopes; do not paste full artifacts or long analysis into subagent prompts.
+- **Write scope**: No subagent may write files unless this skill explicitly enters a repair or update workflow with allowed artifacts.
+- **Output**: merge only compact structured findings, changed paths, evidence refs, blockers, and fallback status into the owner thread.
+- **Fallback**: if real Codex subagents are unavailable, run the same role as an isolated owner-thread pass and record the fallback in `result.subagentFallback`, `result.qualityRepairLoop.subagentFallback`, or the nearest skill-specific result field.
 
 ## Output Contract
 
