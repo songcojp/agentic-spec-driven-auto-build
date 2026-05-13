@@ -1,5 +1,6 @@
 import type { CliAdapterConfig, RunnerReasoningEffort } from "./cli-adapter.ts";
 import type { ExecutionAdapterInvocationV1 } from "./execution-adapter-contracts.ts";
+import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "./openai-pricing.ts";
 
 const CODEX_DEFAULT_MODEL = "gpt-5.5";
 const CODEX_DEFAULT_REASONING_EFFORT: RunnerReasoningEffort = "medium";
@@ -88,7 +89,9 @@ export const CODEX_CLI_ADAPTER_CONFIG: CliAdapterConfig = {
     fastMode: true,
     sandbox: "danger-full-access",
     approval: "never",
-    costRates: {},
+    costRates: {
+      [CODEX_DEFAULT_MODEL]: CODEX_GPT_5_5_STANDARD_COST_RATE,
+    },
   },
   imageGeneration: {
     provider: "codex-imagegen",

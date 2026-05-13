@@ -19,6 +19,7 @@ import {
 } from "../src/product-console.ts";
 import { seedDemoProject } from "../src/demo-seed.ts";
 import { createMemoryScheduler } from "../src/scheduler.ts";
+import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "../src/openai-pricing.ts";
 
 const stableDate = new Date("2026-04-28T12:00:00.000Z");
 
@@ -30,6 +31,18 @@ test("project overview returns an empty model for a clean database", () => {
 
   assert.equal(overview.summary.totalProjects, 0);
   assert.deepEqual(overview.projects, []);
+});
+
+test("system settings fallback exposes Codex default model pricing for clean initialization", () => {
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+
+  const settings = buildSystemSettingsView(dbPath);
+
+  assert.equal(settings.cliAdapter.active.id, "codex-cli");
+  assert.deepEqual(settings.cliAdapter.active.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
+  assert.equal(settings.rpcAdapter.active.id, "codex-rpc-default");
+  assert.deepEqual(settings.rpcAdapter.active.defaults?.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
 });
 
 test("demo seed import creates visible project data and remains idempotent", () => {
@@ -1080,6 +1093,12 @@ test("system settings exposes CLI adapter config and governed activation", () =>
   assert.equal(receipt.status, "accepted");
   const settings = buildSystemSettingsView(dbPath);
   assert.equal(settings.cliAdapter.active.id, "gemini-cli");
+  assert.deepEqual(settings.cliAdapter.active.defaults.costRates?.["gemini-3-pro-preview"], {
+    inputUsdPer1M: 2,
+    cachedInputUsdPer1M: 0.2,
+    outputUsdPer1M: 12,
+    reasoningOutputUsdPer1M: 12,
+  });
   assert.equal(settings.cliAdapter.lastDryRun?.status, "passed");
   assert.equal(settings.cliAdapter.lastDryRun?.command, "gemini");
 

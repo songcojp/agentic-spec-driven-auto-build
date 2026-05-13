@@ -25,6 +25,7 @@ import {
   type RpcAdapterConfigV1,
   type RpcAdapterTransport,
 } from "./rpc-adapter.ts";
+import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "./openai-pricing.ts";
 
 export type CodexAppServerRequestSequenceInput = {
   executionId: string;
@@ -105,7 +106,9 @@ export const DEFAULT_CODEX_APP_SERVER_ADAPTER_CONFIG: CodexAppServerAdapterConfi
   requestTimeoutMs: 120_000,
   defaults: {
     model: "gpt-5.5",
-    costRates: {},
+    costRates: {
+      "gpt-5.5": CODEX_GPT_5_5_STANDARD_COST_RATE,
+    },
   },
   status: "active",
 };

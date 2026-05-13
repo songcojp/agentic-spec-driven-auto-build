@@ -1263,6 +1263,9 @@ export function normalizeCliAdapterConfig(input: Partial<CliAdapterConfig> | Rec
   const inputRecord = input as Record<string, unknown>;
   const baseConfig = defaultCliAdapterConfigForId(inputRecord.id);
   const defaults = isRecord(input.defaults) ? input.defaults : {};
+  const costRatesSource = "costRates" in defaults || "cost_rates" in defaults
+    ? defaults.costRates ?? defaults.cost_rates
+    : baseConfig.defaults.costRates;
   const outputMapping = isRecord(input.outputMapping) ? input.outputMapping : {};
   const imageGeneration = normalizeImageGenerationInterface(inputRecord.imageGeneration ?? inputRecord.image_generation ?? baseConfig.imageGeneration);
   const normalized: CliAdapterConfig = {
@@ -1283,7 +1286,7 @@ export function normalizeCliAdapterConfig(input: Partial<CliAdapterConfig> | Rec
       profile: optionalConfigString(defaults.profile),
       sandbox: normalizeSandbox(defaults.sandbox) ?? baseConfig.defaults.sandbox,
       approval: normalizeApproval(defaults.approval) ?? baseConfig.defaults.approval,
-      costRates: normalizeCostRates(defaults.costRates ?? defaults.cost_rates),
+      costRates: normalizeCostRates(costRatesSource),
     },
     imageGeneration,
     environmentAllowlist: stringArray(input.environmentAllowlist ?? input.environment_allowlist, baseConfig.environmentAllowlist),

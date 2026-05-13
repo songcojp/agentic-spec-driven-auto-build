@@ -32,6 +32,7 @@ import {
   validateSkillOutputContract,
 } from "../src/cli-adapter.ts";
 import type { ExecutionAdapterInvocationV1 } from "../src/execution-adapter-contracts.ts";
+import { CODEX_GPT_5_5_STANDARD_COST_RATE } from "../src/openai-pricing.ts";
 import { listStatusCheckResults } from "../src/status-checker.ts";
 import { handleRecoveryResult, persistRecoveryResultHandling } from "../src/recovery.ts";
 
@@ -334,6 +335,7 @@ test("CLI adapter exposes unified execution adapter config", () => {
   assert.equal(config.defaults.model, "gpt-5.5");
   assert.equal(config.defaults.serviceTier, "fast");
   assert.equal(config.defaults.fastMode, true);
+  assert.deepEqual(config.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
   assert.deepEqual(config.inputMapping.argumentTemplate, DEFAULT_CLI_ADAPTER_CONFIG.argumentTemplate);
   assert.deepEqual(config.inputMapping.imageGeneration, DEFAULT_CLI_ADAPTER_CONFIG.imageGeneration);
 });
@@ -949,6 +951,7 @@ test("CLI adapter upgrades stale built-in sandbox defaults", () => {
   assert.equal(normalized.defaults.approval, "never");
   assert.equal(normalized.defaults.serviceTier, "fast");
   assert.equal(normalized.defaults.fastMode, true);
+  assert.deepEqual(normalized.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
 });
 
 test("runner policy resolves development defaults and clamps heartbeat cadence", () => {
