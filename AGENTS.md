@@ -10,6 +10,7 @@ This repository is a spec-driven autonomous coding system. Treat the spec artifa
 - Active planning source for the current MVP is primarily in `docs/zh-CN/PRD.md`, `docs/zh-CN/requirements.md`, `docs/zh-CN/hld.md`, `docs/zh-CN/design.md`, and `docs/features/README.md`.
 - Feature Specs live under `docs/features/<feature-id>/` and normally contain `requirements.md`, `design.md`, and `tasks.md`.
 - Project-local skills live under `.agents/skills/`. Do not use project-local skills by default; use them only when the user explicitly names a skill, explicitly asks for the project workflow, or the task cannot be handled safely without the governed skill workflow.
+- UI product direction: VSCode IDE Webview is the primary current UI. Product Console is historical legacy and should be treated as a compatibility/reference surface unless the user explicitly scopes work to it. When choosing UI behavior, docs, tests, or examples, prefer the IDE Webview model; future UI work should move toward sharing one UI layer with the IDE instead of taking Product Console as the main source of truth.
 
 ## Operating Rules
 
@@ -72,7 +73,7 @@ When a new requirement or capability is proposed, evaluate **before writing any 
 - For code changes, run the smallest meaningful targeted test first, then broader tests when the change affects shared behavior, state, persistence, contracts, or UI.
 - Do not run the full test suite only because a commit was requested. Use scoped checks such as `git diff --check`, `git diff --cached --check`, targeted tests, or affected build commands for commit-time validation unless the user explicitly requests full tests, the Feature Spec acceptance criteria require them, or the change's blast radius justifies them.
 - For docs-only changes, run at least `git diff --check` and inspect the affected links or referenced paths.
-- For Product Console UI changes, verify with browser evidence when practical and check both desktop and mobile layouts.
+- For UI changes, prefer VSCode IDE Webview evidence as the primary product signal. For Product Console changes, verify with browser evidence when practical and check both desktop and mobile layouts, but do not let Product Console behavior override the IDE Webview direction unless explicitly requested.
 - Report commands run, failures, skipped checks, and residual risks in the final response.
 
 ## Delivery Rules
