@@ -14,6 +14,15 @@ Use this skill to establish the project-level operating contract consumed by Pro
 3. Record delivery boundaries: what the automation may change, what requires approval, and what is out of scope.
 4. Map constitution decisions to source references such as PRD sections, user instruction, repository facts, or review decisions.
 5. Update the formal project artifact requested by the caller. If unspecified, prefer the existing project foundation or memory artifact instead of creating a new root file.
+6. Run the mandatory Spec document quality review and repair loop from
+   `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+   The calling Skill must define `qualityLoopPlan`, including the selected
+   Quality Review Skill / Repair Owner and rationale. Scope the plan to the
+   requested constitution/intake artifact, use source PRD/repository facts as
+   evidence, and use separate subagents for quality review and repair. Stop
+   after at most 10 iterations, and exit with `clarification_needed`,
+   `review_needed`, `risk_review_needed`, or `blocked` when no remaining gap is
+   in-scope repairable.
 
 ## Output
 
@@ -38,6 +47,8 @@ Use this skill to establish the project-level operating contract consumed by Pro
 - `trustRules`: approval, sandbox, and write-boundary rules.
 - `reviewRouting`: mapping for approval, clarification, and risk-review outcomes.
 - `sourceReferences`: source files or decisions used.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Failure Routing
 

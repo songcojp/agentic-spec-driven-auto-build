@@ -1,7 +1,7 @@
 # FEAT-023 Full Lifecycle Delivery Fidelity — 设计
 
 Feature ID: FEAT-023
-来源需求: REQ-087 至 REQ-093
+来源需求: REQ-087 至 REQ-094
 HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、Review Center、VSCode SpecDrive Extension、Skill Output Contract
 
 ## 1. 架构决策
@@ -13,6 +13,7 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 - Control Plane 不接管 prompt 推理，但必须校验结构性不变式：v2 契约、未关闭损失、独立审查、fixture 旁路、证据 artifact refs 和完成决策。
 - Review Center 将 Delivery Fidelity / Runtime Evidence 失败投影为可查询 ReviewItem trigger，使用户能看到损失发生阶段而不是只看到“证据不足”。
 - VSCode Execution Workbench 与 Feature Spec Webview 是新增质量证据主界面；Product Console 只保留历史兼容入口，不新增主质量 UI。
+- Spec 文档生成 Skill 的完成语义增加 `qualityRepairLoop`：调用方 Skill 选择本次 Quality Review Skill / Repair Owner，owner thread 定义 `qualityLoopPlan`，Quality Review Subagent 判断 gap，Repair Subagent 只修复范围内且来源可证明的 gap，最多 10 轮。
 
 ## 2. Delivery Fidelity Ledger
 
@@ -73,6 +74,23 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 
 `result.specGranularity` 必须包含 `decision`、`artifactLevelFindings`、`missingUserScenarios`、`missingBehaviorRequirements`、`missingStateDataContracts`、`missingInteractionMatrix`、`missingAcceptanceEvidence` 和 `requiredRefinements`。失败原因使用 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
 
+## 5.1 Spec Document Quality Repair Loop
+
+`.agents/skills/SPEC_DOC_QUALITY_LOOP.md` 是所有 Spec 文档生成/更新 Skill 的共享协议。它适用于项目章程、PRD、requirements、HLD、UI Spec、Feature Spec `requirements.md` / `design.md` / `tasks.md`、Feature index、Feature Pool Queue、ADR 和后续向规划或执行传递的 Markdown / JSON 规格产物。
+
+运行职责：
+
+- Owner thread：由调用方 Skill 选择 `qualityReviewSkill` / `repairOwner`，定义 `qualityLoopPlan`、调度 subagent、合并 compact result，并决定继续或退出。
+- Quality Review Subagent：读取引用文件，执行调用方选择的质量门，按 `in_scope_repairable`、`in_scope_not_repairable`、`out_of_scope` 分类 gap。
+- Repair Subagent：只修改 `qualityLoopPlan.allowedArtifacts`，只处理来源文件足以证明的 `in_scope_repairable` gap，不新增产品意图、架构决策或跨范围同步。
+
+退出规则：
+
+- 最新质量检测 `pass` 才能返回 `completed`。
+- 单次文档生成最多 10 轮 review/repair。
+- 没有范围内可修复 gap、修复会越过 scope、需要新产品/架构决策、同一 gap 指纹重复或达到 10 轮时，返回 `clarification_needed`、`review_needed`、`risk_review_needed` 或 `blocked`。
+- 最新质量检测失败时，不得继续推进到 HLD、UI Spec、Feature split、tasks、ready、planning 或 execution。
+
 ## 6. Rapid Review Repair Golden Sample
 
 Rapid 的 FEAT-016 是本门禁的下游样例。审计规则必须能判断：
@@ -90,3 +108,4 @@ Rapid 的 FEAT-016 是本门禁的下游样例。审计规则必须能判断：
 - VSCode Webview tests 覆盖质量证据分组、Workpad refs、ReviewItem 可读性和不复用 Product Console。
 - Skill validation 覆盖新增元技能和更新后的 Skill 文档。
 - Golden samples 覆盖模块名式 PRD、不可测试 requirement、只有组件列表的 HLD、无 interaction matrix UI Spec、只有任务标题的 Feature Spec，以及 Rapid FEAT-016 下游审查样例。
+- Spec 文档生成 Skill 覆盖 `qualityRepairLoop`：调用方选择质检/修复 owner、subagent 质检、subagent 修复、10 轮上限、无可修复项退出和 scope 越界退出。

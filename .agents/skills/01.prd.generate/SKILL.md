@@ -44,6 +44,13 @@ Read only the artifacts needed for the request, preferring references over copie
 6. Record assumptions, blockers, and follow-up actions. Return
    `clarification_needed` or `review_needed` instead of inventing missing
    product intent.
+7. Run the mandatory Spec document quality review and repair loop from
+   `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+   The calling Skill must define `qualityLoopPlan`, including the selected
+   PRD quality review Skill / Repair Owner and rationale, then use a Quality
+   Review Subagent and a Repair Subagent for up to 10 iterations. Repairs are
+   allowed only when they are source-backed, in scope for the PRD artifact, and
+   do not invent product intent.
 
 ## PRD Granularity Gate
 
@@ -68,4 +75,6 @@ Return the project-local `SkillOutputContractV1` when invoked by an adapter. Ech
 - Missing inputs, unresolved ambiguity, or blocked state is reported explicitly.
 - Every P1 module has user scenarios, sub-capabilities, success/failure
   examples, non-goals, priority, and downstream evidence direction.
+- `result.qualityRepairLoop` records `qualityLoopPlan`, subagent usage, iteration
+  count, final decision, remaining gaps, and exit reason.
 - No product-specific UI, database, scheduler, or adapter behavior is hardcoded into the skill.

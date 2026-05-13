@@ -47,6 +47,15 @@ Use localized project-level sources such as `docs/en/*`, `docs/zh-CN/*`, or `doc
 5. Reconcile stale `design.md` content only when it is consistent with PRD, requirements, and the current HLD direction.
 6. Write the output to `docs/hld.md` unless the invocation explicitly provides another HLD path or localized lane.
 7. When creating a new HLD, initialize the document header with a document version such as `版本：V1.0`; do not invent or copy a `CHG-*` change identifier as the initial document identity. Use `CHG-*` only when the invocation explicitly includes a real spec-evolution change ID for an existing change.
+8. Run the mandatory Spec document quality review and repair loop from
+   `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+   Define `qualityLoopPlan` with the HLD artifact, source PRD/requirements,
+   repository facts, selected HLD quality review Skill, Repair Owner, and
+   rationale. Use the caller-selected Quality Review Subagent and a separate
+   Repair Subagent for source-backed HLD-only repairs. Stop after at most 10
+   iterations, and route to clarification or risk review when remaining gaps
+   require new product intent, architecture decisions, or downstream Feature
+   changes outside the scope.
 
 ## Required HLD Structure
 
@@ -175,6 +184,8 @@ Use these patterns when the source documents support them. They are reusable HLD
 - `featureDesignGuidance`: Feature-level design areas that must be handled outside the HLD.
 - `lldPolicy`: `"no_mainline_lld"` plus a short note naming the Feature Spec or planning-result destination for low-level decisions.
 - `unresolvedQuestions`: architecture questions that remain open.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Example Skill Invocation Contract
 

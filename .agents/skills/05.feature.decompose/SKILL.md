@@ -52,6 +52,14 @@ mainline LLD. When a Feature needs low-level design, place it in that Feature's
 19. Write output to the requested location. If unspecified, create or update `docs/features/<feature-id>/requirements.md`, `design.md`, and `tasks.md`.
 20. Always create or update the feature index table at `docs/features/README.md`. The index table MUST strictly use the following format: `| Feature ID | Status | Name | Milestone | Dependencies |`. A tree-structured dependency graph (树状依赖关系图) MUST be included to visualize the feature dependencies. This file is required by the downstream coding, testing, review, and PR generation skills.
 21. Always create or update the machine-readable Feature Spec Pool queue plan at `docs/features/feature-pool-queue.json`. Code consumes this artifact to push Feature Specs into the Pool; do not rely on code parsing dependency prose from `README.md`.
+22. Run the mandatory Spec document quality review and repair loop from
+    `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+    Define `qualityLoopPlan` with the generated Feature Spec folders, Feature
+    index, queue plan, selected review Skill, Repair Owner, and rationale. Use
+    the caller-selected Quality Review Subagent and a separate Repair Subagent
+    for at most 10 iterations. Exit without repair when remaining gaps require
+    upstream PRD, requirements, HLD, UI Spec, architecture decisions, or feature
+    boundaries outside the invocation scope.
 
 ## Feature Slicing Rules
 
@@ -116,6 +124,8 @@ mainline LLD. When a Feature needs low-level design, place it in that Feature's
 - `journeyCheckpoints`: P1 scenario checkpoints, evidence expectations, and downstream closure references.
 - `verificationPlan`: commands or acceptance checks per feature/story phase.
 - `openQuestions`: unsliced or blocked scope questions.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Minimal Valid Final JSON Shape
 

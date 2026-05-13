@@ -104,7 +104,7 @@ MVP 采用本地优先的控制面架构：
 | REQ-069, REQ-070, REQ-071, REQ-072, REQ-073 | 7.14, 8, 9 | Chat Interface 提供悬浮面板、意图分类、受控命令派发、高风险二次确认和会话/消息持久化。 |
 | REQ-074, REQ-075, REQ-076, REQ-077, REQ-078, REQ-079 | 7.15, 8, 9, 10, 15 | VSCode Extension 提供工作区识别、Spec Explorer、文档交互、SpecChangeRequest、IDE command receipt 和 Task Queue 管理。 |
 | REQ-080, REQ-081, REQ-082, REQ-083, REQ-084, REQ-085, REQ-093 | 7.8, 7.15, 8, 9, 10, 11, 13, 15 | RPC Adapter、Execution Projection、Codex RPC approval、VSCode Diagnostics、独立 Execution Workbench Webview、质量证据投影和 IDE System Settings 属于 Execution Adapter + IDE 联合边界。 |
-| REQ-087, REQ-088, REQ-089, REQ-090, REQ-091, REQ-092, REQ-093 | 7.8, 7.9, 7.12, 10, 14, 15 | Delivery Lifecycle OS、Delivery Fidelity Ledger、skill-contract/v2、Runtime Evidence、agent persona routing、Review Center loss 投影、Spec Artifact Granularity Gate 和 VSCode 质量闭环。 |
+| REQ-087, REQ-088, REQ-089, REQ-090, REQ-091, REQ-092, REQ-093, REQ-094 | 7.8, 7.9, 7.12, 10, 14, 15 | Delivery Lifecycle OS、Delivery Fidelity Ledger、skill-contract/v2、Runtime Evidence、agent persona routing、Review Center loss 投影、Spec Artifact Granularity Gate、VSCode 质量闭环和 Spec 文档质量修复循环。 |
 | NFR-001, NFR-002, NFR-003, NFR-004 | 5, 10, 11, 12, 13, 14 | 默认沙箱、回滚、幂等和崩溃恢复是平台级质量属性。 |
 | NFR-005, NFR-006, NFR-010, NFR-012 | 11, 12, 14 | 审计时间线、成本、成功率、心跳和成功指标进入可观测性体系。 |
 | NFR-007, NFR-008, NFR-009, NFR-011 | 11, 12, 13, 14 | 性能指标作为基线记录，只读 Subagent 并发作为受控并行能力。 |
@@ -739,6 +739,7 @@ flowchart TD
 | HLD 生成 | EARS 完成后手动或受控命令触发 | **Skill**（内容）+ **Code**（artifact 落地） | PRD + EARS Requirements | HLD 文档（`docs/zh-CN/hld.md`）+ **一级页面清单** | `03.hld.generate` |
 | UI Spec + 主要页面概念图 | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + EARS Requirements + HLD + 一级页面清单 | UI Spec 文档（`docs/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ 主要页面概念图（`docs/ui/concepts/*.png`） | `04.ui.generate-spec` |
 | Spec Artifact Granularity Gate | 每个主线产物生成或变更后、进入下游前触发 | **Skill** | PRD + EARS Requirements + HLD + UI Spec + 目标 Feature Spec | `specGranularity` 决策；通过 → 允许生成 design/tasks 或 ready；失败 → `review_needed` 并列出 required refinements | `09.review.spec-granularity` |
+| Spec 文档质量修复循环 | 每个 Spec 文档生成或更新 Skill 返回 completed 前触发 | **调用方 Skill + Subagent** | 生成产物、source artifacts、调用方选择的 `qualityReviewSkill` / `repairOwner`、`qualityLoopPlan`、质量门结果 | `qualityRepairLoop`；通过 → completed；无可修复/超范围/10 轮上限 → clarification/review/risk/block 路由 | 调用方生成 Skill + `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` + 由调用方选择的 Quality Review Subagent / Repair Subagent |
 | Feature Spec 拆分 | UI Specs 完成（或 HLD 完成）后触发 | **Skill** | HLD + UI Specs | Feature Spec 候选集（`docs/features/<feat-id>/`） | `05.feature.decompose`（Feature 级） |
 | 启动项目级任务调度 | `schedule_run(project)` 或 `start_auto_run` 触发 | **Code + Skill** | 已生成的 `docs/features/*` + Skill 产出的 `docs/features/feature-pool-queue.json` + Feature `spec-state.json` | SQLite Feature 候选记录 + BullMQ `<executor>.run` Job + Execution Record；Job payload 指向 Feature Spec 目录 | `06.planning.replan` |
 | 需求质量检查 | Feature Spec 创建后 | **Skill** | Feature Spec requirements.md | 通过 → `ready`；歧义 → ClarificationLog + `draft` | `02.requirements.validate-testability`、`10.change.impact-analysis` |

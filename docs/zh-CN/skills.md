@@ -11,6 +11,11 @@
    - 如果能力需要持久状态、结构性约束、状态机、审计记录或可机器查询输出，才写成代码。
 4. Skill 产物必须保持可追踪：需求 ID、Feature Spec、任务、证据和交付记录之间要能互相定位。
 5. 当仓库事实与规格文档冲突时，先走规格演进或需求新增流程，不要绕过规格直接编码。
+6. 所有生成或更新 Spec 文档的 Skill 必须执行
+   `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`：调用方 Skill 先选择本次
+   Quality Review Skill / Repair Owner，并定义 `qualityLoopPlan`，再由
+   Quality Review Subagent 和 Repair Subagent 完成质量检测/修复循环；最多
+   10 轮，没有可修复项或超出范围时退出，不得把失败产物推进下游。
 
 ## 生命周期视图
 
@@ -35,6 +40,15 @@ Agentic Spec 的主模型是 Define、Plan、Build、Verify、Review、Ship 的 
 
 Skill 输出必须使用 `SkillOutputContractV1` 或 `SkillOutputContractV2`，包含 `status`、`summary`、`nextAction`、`producedArtifacts`、Feature 级 traceability 和 result。Runner 校验输出后将状态投影回 `docs/features/<feature-id>/spec-state.json`，同时把执行事实保存在 Execution Record、scheduler job、runner heartbeats 和 raw logs 中。`queued`、`running`、`waiting_input`、`approval_needed`、`review_needed`、`blocked`、`failed`、`cancelled`、`completed` 必须原样进入运行事实；`approval_needed`、`review_needed`、`blocked`、`failed`、`paused` 等中断态必须带可恢复的 `resumeTarget` 或 Review/Recovery 路由。通用输出 Contract 的机器真源在调用端 schema；项目级 Skill 文档只补充本技能 `result` 的专用字段语义，供 Execution Workbench 分组展示执行详情。
 
+Spec 文档生成类 Skill 的 `completed` 还要求 `result.qualityRepairLoop`
+证明已执行质量检测和修复循环。共享 loop 只定义循环、上限和退出条件，
+不维护“产物类型 -> 质检 Skill”的中央路由表；调用方 Skill 必须根据本次
+产物、下游阶段和允许范围选择 `qualityReviewSkill` 与 `repairOwner`，并写入
+`qualityLoopPlan`。单次生成最多 10 轮。没有 `in_scope_repairable` gap、
+修复会越过范围、需要新产品/架构决策、重复同一 gap 指纹或达到上限时，
+Skill 必须返回 `clarification_needed`、`review_needed`、
+`risk_review_needed` 或 `blocked`，不得继续推进下游。
+
 Feature execution 的完成语义使用 `skill-contract/v2`：`07.execution.dispatch-adapter` 返回 `completed` 时必须在 `result.deliveryFidelity` 中提供 sourceIntent、journeys、behaviorObligations、handoffs、losses、evidence、agentReviews 和 completionDecision，并在 `result.gitDelivery` 中提供 owner workspace、implementation worktree、branch、commit、PR、checks、merge、远程分支清理、本地分支清理和 worktree 清理证据。平台代码只调度、记录、校验和展示这些证据；缺少证据、存在未关闭 P0/P1 loss、fixture-only evidence、entry/text-only evidence 或 self-review-only closure 时投影为 `review_needed`、`approval_needed` 或 `blocked`。
 
 ## Skill 清单
@@ -53,26 +67,26 @@ Feature execution 的完成语义使用 `skill-contract/v2`：`07.execution.disp
 | `10.change.create-request` | 较完整 | 新增一个尚不存在的需求、用户故事、能力、约束或边界条件时。 | 用户输入、PRD、requirements、HLD、Feature Spec。 | 新需求 ID、受影响文档、验收标准、可直接调度的 Feature Spec / Feature Pool Queue / ready 状态，或明确阻塞原因。 |
 | `10.change.update-mainline-spec` | 较完整 | 已存在的 `REQ-*`、`NFR-*`、`EDGE-*` 需要修订、废弃、澄清或被证据推翻时。 | 现有需求、变更证据、实现/测试/评审结果。 | 变更分类、更新文档、影响范围、可直接调度的 Feature Spec / Feature Pool Queue / ready 状态，或评审/阻塞路由。 |
 | `10.change.impact-analysis` | 较完整 | 需求、验收、数据边界、API、UI、安全或交付责任存在阻塞性歧义时。 | PRD、requirements、Feature Spec、设计、任务、最新证据。 | 已应用的澄清决策、规格更新、可直接调度的 Feature Spec / Feature Pool Queue / ready 状态，或残余问题。 |
-| `02.requirements.validate-testability` | 基础骨架 | Feature Spec 进入 ready 或规划消费需求前。 | requirements、PRD 来源、验收标准、开放问题。 | 通过/失败结论、按 ID 列出的缺口、需澄清或风险评审项。 |
+| `02.requirements.validate-testability` | 基础骨架 | Feature Spec 进入 ready 或规划消费需求前；也可由 requirements 生成 Skill 选择为质量循环中的 Quality Review Subagent。 | requirements、PRD 来源、验收标准、开放问题、qualityLoopPlan。 | 通过/失败结论、按 ID 列出的缺口、qualityLoopPlan 范围分类、需澄清或风险评审项。 |
 
 ### 设计与规划类
 
 | Skill | 当前内容状态 | 何时使用 | 主要输入 | 主要输出 |
 | --- | --- | --- | --- | --- |
-| `03.hld.generate` | 较完整 | Spec Workspace 触发生成或重建项目级 HLD 时；只产出项目级架构地图，不生成主线 LLD。 | `docs/zh-CN/PRD.md`、`requirements.md`、现有 HLD、Feature 索引、仓库事实。 | `docs/zh-CN/hld.md`，包含固定章节、需求覆盖、架构边界、Feature 拆分指导和 no-mainline-LLD policy。 |
-| `04.ui.generate-spec` | 较完整 | HLD 已存在，需要生成 UI Spec 和主要页面概念图时。 | PRD、EARS requirements、HLD、Feature index、目标 featureId。 | `docs/ui/ui-spec.md` 或 `docs/features/<featureId>/ui-spec.md`，以及 `docs/ui/concepts/*.png`。 |
+| `03.hld.generate` | 较完整 | Spec Workspace 触发生成或重建项目级 HLD 时；只产出项目级架构地图，不生成主线 LLD。 | `docs/zh-CN/PRD.md`、`requirements.md`、现有 HLD、Feature 索引、仓库事实、qualityLoopPlan。 | `docs/zh-CN/hld.md`，包含固定章节、需求覆盖、架构边界、Feature 拆分指导、no-mainline-LLD policy 和 `qualityRepairLoop`。 |
+| `04.ui.generate-spec` | 较完整 | HLD 已存在，需要生成 UI Spec 和主要页面概念图时。 | PRD、EARS requirements、HLD、Feature index、目标 featureId、qualityLoopPlan。 | `docs/ui/ui-spec.md` 或 `docs/features/<featureId>/ui-spec.md`、`docs/ui/concepts/*.png` 和 `qualityRepairLoop`。 |
 | `07.execution.prepare-context` | 基础骨架 | Feature 进入规划后的第一步，需要收集仓库事实、命令、模块和约束。 | Feature requirements、design、tasks、HLD、Feature index、仓库文件。 | 技术上下文摘要、现有模式、候选实现面、风险与未知项。 |
 | `06.planning.estimate-risk` | 基础骨架 | 规划中需要对依赖、实现方式或技术方案做有界决策时。 | HLD、仓库约定、需求、技术上下文。 | 决策结论、选择理由、拒绝方案、影响文件和测试。 |
 | `03.hld.review-architecture` | 基础骨架 | Feature requirements 需要转成可实现的技术计划时。 | Feature requirements、design、HLD、技术上下文、研究决策。 | Feature 架构计划、组件边界、状态/错误/审计行为、实现约束。 |
 | `03.hld.define-data-flow` | 基础骨架 | Feature 涉及持久化、迁移、状态记录、视图模型、事件、证据或审计时。 | requirements、feature design、HLD 数据域、现有 schema/model。 | 实体字段、迁移计划、生命周期规则、测试和证据要求。 |
 | `03.hld.define-adapter-model` | 基础骨架 | 需要 API、CLI、事件、文件、ViewModel、Skill 输入或证据契约时。 | requirements、design、HLD 接口策略、技术上下文、现有接口模式。 | 契约摘要、字段形状、校验与错误行为、兼容性说明、契约测试。 |
 | `06.planning.prepare-execution-plan` | 基础骨架 | 任务拆分前确认实现路径可启动、可测试、符合项目宪法时。 | 架构计划、数据模型、契约计划、仓库命令、`memory/constitution.md` 或等价文件。 | go/blocked 决策、命令检查、测试可行性、宪法合规结论、阻塞项。 |
-| `05.feature.generate-requirements` | 中等完整 | 生成或修复 Feature `requirements.md`，明确用户故事、需求、验收和旅程覆盖时。 | PRD、EARS requirements、HLD、Feature index、变更请求、现有 Feature requirements。 | Feature Goal、Source Traceability、User Story Coverage、Requirements、User Journey Coverage、Acceptance Scenarios、Foundation Exemption。 |
-| `05.feature.generate-design` | 中等完整 | 生成或修复 Feature `design.md`，把旅程闭环落到 UI/API/数据/状态/错误/证据路径时。 | Feature requirements、HLD、UI spec、架构/数据/契约规划结果、仓库事实。 | HLD Alignment、User Journey Implementation Path、Feature-scoped low-level design、Evidence Design、Implementation Boundaries。 |
-| `05.feature.generate-tasks` | 中等完整 | 生成或修复 Feature `tasks.md`，需要 Webview 可解析任务块和 Journey Checkpoint 时。 | Feature requirements、design、HLD、quickstart validation、仓库命令。 | 按用户故事阶段组织的 task blocks、Journey Checkpoints、verification plan、parser compatibility。 |
-| `05.feature.decompose` | 较完整 | 将 PRD/EARS/HLD 拆成 Feature Specs，或维护 Feature Spec 内的 `tasks.md` 执行清单时。 | PRD、EARS、HLD、Feature planning 输出、现有 Feature Spec。 | `docs/features/<feature-id>/requirements.md`、`design.md`、`tasks.md`、Feature 索引和 `feature-pool-queue.json`。 |
+| `05.feature.generate-requirements` | 中等完整 | 生成或修复 Feature `requirements.md`，明确用户故事、需求、验收和旅程覆盖时。 | PRD、EARS requirements、HLD、Feature index、变更请求、现有 Feature requirements、qualityLoopPlan。 | Feature Goal、Source Traceability、User Story Coverage、Requirements、User Journey Coverage、Acceptance Scenarios、Foundation Exemption、`qualityRepairLoop`。 |
+| `05.feature.generate-design` | 中等完整 | 生成或修复 Feature `design.md`，把旅程闭环落到 UI/API/数据/状态/错误/证据路径时。 | Feature requirements、HLD、UI spec、架构/数据/契约规划结果、仓库事实、qualityLoopPlan。 | HLD Alignment、User Journey Implementation Path、Feature-scoped low-level design、Evidence Design、Implementation Boundaries、`qualityRepairLoop`。 |
+| `05.feature.generate-tasks` | 中等完整 | 生成或修复 Feature `tasks.md`，需要 Webview 可解析任务块和 Journey Checkpoint 时。 | Feature requirements、design、HLD、quickstart validation、仓库命令、qualityLoopPlan。 | 按用户故事阶段组织的 task blocks、Journey Checkpoints、verification plan、parser compatibility、`qualityRepairLoop`。 |
+| `05.feature.decompose` | 较完整 | 将 PRD/EARS/HLD 拆成 Feature Specs，或维护 Feature Spec 内的 `tasks.md` 执行清单时。 | PRD、EARS、HLD、Feature planning 输出、现有 Feature Spec、qualityLoopPlan。 | `docs/features/<feature-id>/requirements.md`、`design.md`、`tasks.md`、Feature 索引、`feature-pool-queue.json` 和 `qualityRepairLoop`。 |
 | `09.review.spec-consistency` | 中等完整 | 规划结束或实现前，检查 requirements、design、tasks、数据模型、契约、quickstart 和 HLD/Feature 边界是否一致。 | Feature requirements、design、tasks、HLD、全部规划输出。 | 一致性结论、需求到任务覆盖、Journey coverage、HLD/Feature boundary findings、修复项。 |
-| `09.review.spec-granularity` | 中等完整 | 主线文档或 Feature Spec 进入下游前，检查 PRD、requirements、HLD、UI Spec 和 Feature Spec 是否达到可传递颗粒度。 | PRD、requirements、HLD、UI Spec、Feature requirements/design/tasks、Feature index、review findings。 | `specGranularity` 决策、artifact-level findings、缺失用户场景、缺失行为需求、缺失状态/数据契约、缺失 interaction matrix、缺失验收证据和 required refinements。 |
+| `09.review.spec-granularity` | 中等完整 | 主线文档或 Feature Spec 进入下游前，检查 PRD、requirements、HLD、UI Spec 和 Feature Spec 是否达到可传递颗粒度；也可由生成 Skill 选择为质量循环中的 Quality Review Subagent。 | PRD、requirements、HLD、UI Spec、Feature requirements/design/tasks、Feature index、review findings、qualityLoopPlan。 | `specGranularity` 决策、artifact-level findings、缺失用户场景、缺失行为需求、缺失状态/数据契约、缺失 interaction matrix、缺失验收证据、required refinements 和 qualityLoopPlan 范围分类。 |
 
 ### 实现、测试与恢复类
 

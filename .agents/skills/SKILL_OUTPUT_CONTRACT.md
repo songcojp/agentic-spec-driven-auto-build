@@ -32,6 +32,21 @@ contracts, missing interaction matrix rows, missing acceptance evidence, and
 required refinements before downstream design, tasks, ready state, or execution
 can proceed.
 
+Any Skill that generates or updates Spec documents must follow
+`.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`. This
+applies to project intake, PRD, requirements, HLD, UI Spec, Feature Spec
+`requirements.md`, `design.md`, `tasks.md`, Feature index, queue plan, ADR, and
+future markdown/json Spec artifacts that feed downstream planning or execution.
+The generating Skill must invoke isolated subagents for both quality review and
+repair whenever subagents are available, cap the loop at 10 iterations, define a
+caller-owned `qualityLoopPlan` before the first review, and exit when no
+remaining gap is in-scope repairable. The loop protocol does not choose the
+review Skill from a central artifact table; the calling generation Skill must
+record `qualityReviewSkill`, `qualityReviewRationale`, `repairSkill` or
+`repairOwner`, and `repairRationale` in the plan. Put the compact loop result
+under `result.qualityRepairLoop`; do not return `completed` when the latest
+quality review failed.
+
 For `07.execution.dispatch-adapter` with `requestedAction =
 "feature_execution"`, `status = "completed"` is valid only with
 `contractVersion = "skill-contract/v2"` and when `result` contains all of the

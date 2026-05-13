@@ -1,7 +1,7 @@
 # FEAT-023 Full Lifecycle Delivery Fidelity — 任务
 
 Feature ID: FEAT-023
-来源需求: REQ-087 至 REQ-093
+来源需求: REQ-087 至 REQ-094
 状态: in-progress
 
 ## 任务列表
@@ -53,12 +53,20 @@ Feature ID: FEAT-023
 完成标准: 粗颗粒度文档输出 `review_needed`，并列出 required refinements。
 
 ### T-023-09 Generation and consistency skill upgrades
-状态: todo
-描述: 更新 PRD、requirements、HLD、UI、Feature 生成 Skill 和 spec-consistency，使每层产物在进入下游前检查颗粒度、interaction matrix、state/data contract、Journey Checkpoint 和 evidence plan。
-关联需求: REQ-092
+状态: in-progress
+描述: 更新 PRD、requirements、HLD、UI、Feature 生成 Skill 和 spec-consistency，使每层产物在进入下游前检查颗粒度、interaction matrix、state/data contract、Journey Checkpoint、evidence plan 和文档质量修复循环。
+关联需求: REQ-092, REQ-094
 范围: `.agents/skills/01.prd.generate`, `.agents/skills/02.requirements.*`, `.agents/skills/03.hld.generate`, `.agents/skills/04.ui.*`, `.agents/skills/05.feature.*`, `.agents/skills/09.review.spec-consistency`
 验证: `npm run skills:validate`; `git diff --check`
 完成标准: Skill 文档不再允许“文档存在即可”的 ready 判定。
+
+### T-023-15 Spec document quality repair loop
+状态: in-progress
+描述: 新增共享 Spec 文档质量检测/修复循环协议，并同步所有核心文档生成 Skill，要求调用方 Skill 选择 Quality Review Skill / Repair Owner，再由 Quality Review Subagent 和 Repair Subagent 在预先声明的 `qualityLoopPlan` 内最多执行 10 轮。
+关联需求: REQ-094, US-023-07
+范围: `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`, `.agents/skills/SKILL_OUTPUT_CONTRACT.md`, `.agents/skills/00.intake.generate-project-intake`, `.agents/skills/01.prd.*`, `.agents/skills/02.requirements.*`, `.agents/skills/03.hld.generate`, `.agents/skills/04.ui.generate-spec`, `.agents/skills/05.feature.*`, `.agents/skills/09.review.spec-granularity`, `docs/zh-CN/*`, `docs/features/feat-023-full-lifecycle-delivery-fidelity/*`
+验证: `npm run skills:validate`; `git diff --check`
+完成标准: 文档生成 Skill 的结果包含 `qualityRepairLoop` 和调用方选择的 `qualityLoopPlan`；共享 loop 不维护中央路由表；最新质量检测失败时不能返回 completed，也不能继续推进下游。
 
 ### T-023-10 Rapid FEAT-016 downstream review repair sample
 状态: todo

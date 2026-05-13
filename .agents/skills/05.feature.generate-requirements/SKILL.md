@@ -57,6 +57,13 @@ HLD, Feature design, tasks, or implementation code.
    section as a shortcut for user-facing scope.
 9. If source intent, priority, or acceptance is ambiguous, return
    `clarification_needed` instead of inventing completion criteria.
+10. Run the mandatory Spec document quality review and repair loop from
+    `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+    Define `qualityLoopPlan` with the Feature `requirements.md` artifact,
+    PRD/mainline requirements/HLD/UI Spec source evidence, selected Feature
+    requirements review Skill, Repair Owner, and rationale. Use separate
+    Quality Review and Repair subagents, cap the loop at 10 iterations, and
+    exit when remaining gaps are not in-scope repairable.
 
 ## Required Feature Requirements Template
 
@@ -101,6 +108,8 @@ concise result object specific to this workflow step.
 - `acceptanceScenarios`: acceptance scenarios that design and tasks must close.
 - `foundationExemption`: exemption object or `null`.
 - `openQuestions`: unresolved input or acceptance questions.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Acceptance Checks
 

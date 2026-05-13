@@ -32,6 +32,11 @@ requirement changes, and tasks must be synced after design changes.
 7. Return `review_needed` when any layer only names a module, page, component,
    happy path, entry text, screenshot, fixture, or task title without the
    behavior and evidence needed by the downstream layer.
+8. When invoked by a document-generation quality loop, classify every finding
+   against the caller-provided `qualityLoopPlan` as `in_scope_repairable`,
+   `in_scope_not_repairable`, or `out_of_scope`. The review subagent does not
+   edit files; bounded repair belongs to the separate Repair Subagent defined in
+   `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Required Gap Types
 
@@ -71,6 +76,11 @@ traceability from the invocation.
   runtime, reload/revisit, or negative sample checks.
 - `requiredRefinements`: exact upstream artifact edits required before the
   downstream layer can proceed.
+- `repairScopeFindings`: compact gap classifications against the provided
+  `qualityLoopPlan`, including gap ID, artifact, classification, reason, and
+  evidence refs.
+- `repairInstructions`: exact in-scope repairs suitable for a Repair Subagent;
+  leave empty when there is no in-scope source-backed repair.
 
 ## Acceptance Checks
 
@@ -82,6 +92,8 @@ traceability from the invocation.
   reload assertion, and verification mode.
 - `review_needed` is used for gaps that would make implementation likely to
   satisfy text while missing the intended behavior.
+- When used as a Quality Review Subagent, the result is compact and
+  action-oriented; do not include full artifact excerpts or long-form analysis.
 
 ## Failure Routing
 

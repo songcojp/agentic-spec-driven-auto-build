@@ -48,6 +48,13 @@ project architecture or create a mainline LLD.
    dependencies, forbidden changes, compatibility constraints, and assumptions.
 8. Record unresolved design decisions as `clarification_needed` or
    `risk_review_needed`; do not hide them in broad prose.
+9. Run the mandatory Spec document quality review and repair loop from
+   `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+   Define `qualityLoopPlan` with the Feature `design.md` artifact, Feature
+   requirements, HLD, UI Spec, planning-result source evidence, selected Feature
+   design review Skill, Repair Owner, and rationale. Use separate Quality Review
+   and Repair subagents, cap the loop at 10 iterations, and exit when remaining
+   gaps are not in-scope repairable.
 
 ## Required Feature Design Template
 
@@ -89,6 +96,8 @@ concise result object specific to this workflow step.
   short rationale.
 - `implementationBoundaries`: allowed modules/files and forbidden changes.
 - `openDecisions`: decisions requiring clarification or risk review.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Acceptance Checks
 

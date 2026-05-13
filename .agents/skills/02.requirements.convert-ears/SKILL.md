@@ -32,24 +32,28 @@ This is the design-named PRD-to-EARS conversion entry point.
 7. Add traceability back to PRD sections or source bullets when possible.
 8. Surface gaps as open questions instead of inventing product intent.
 9. Write only the EARS requirements output directly to the requested file using normal file-edit/write tools. If the user does not specify a target, create or update `docs/requirements.md`. Write to a localized `docs/<language>/requirements.md` only when the project explicitly declares multilingual documentation or the invocation explicitly requests that localized lane.
-10. Run the mandatory quality loop before reporting success:
-   - Invoke `02.requirements.validate-testability` in a fresh review subagent
-     against the generated requirements artifact and the source PRD/product
-     input. Pass file paths, source section anchors, changed requirement IDs,
-     and quality-bar instructions; do not paste the full generated requirements
-     document or the subagent's chain of analysis into the owner context.
-   - If the review decision is `pass`, keep the generated artifact and include
-     the review result summary in this skill's output.
-   - If the review decision is `fail` and every gap can be repaired from the
-     existing source, update the EARS artifact to fix those gaps, preserve stable
-     IDs where possible, update traceability references when IDs change, and run
-     a new `02.requirements.validate-testability` review subagent again.
-   - Repeat review and repair until the quality review passes or the remaining
-     gaps require human clarification, risk review, or new product intent.
-   - After each subagent review, merge only the compact structured result:
-     decision, gap IDs, repairable/non-repairable classification, repair
-     instructions, required routing, and evidence references. Discard verbose
-     review notes once their actionable content has been applied.
+10. Run the mandatory Spec document quality review and repair loop from
+    `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before reporting success:
+   - Define `qualityLoopPlan` with the generated EARS requirements artifact,
+     source PRD/product input, stable-ID policy, allowed gap types, selected
+     Quality Review Skill (`02.requirements.validate-testability`), Repair
+     Owner, and selection rationale.
+   - Invoke `02.requirements.validate-testability` as the Quality Review
+     Subagent for each review pass. Pass file paths, source section anchors,
+     changed requirement IDs, `qualityLoopPlan`, and quality-bar instructions; do
+     not paste the full generated requirements document or verbose analysis into
+     the owner context.
+   - Invoke a separate Repair Subagent for only `in_scope_repairable` gaps. The
+     Repair Subagent may edit only the requirements artifact, must preserve
+     stable IDs where possible, and must update traceability references when IDs
+     change.
+   - Repeat until the quality review passes, no in-scope repairable gaps remain,
+     a repair would exceed scope, a gap fingerprint repeats, or 10 iterations
+     have been used.
+   - After each subagent pass, merge only compact structured output: decision,
+     gap IDs, repairability classification, repair instructions or applied
+     repairs, required routing, and evidence references. Discard verbose review
+     notes once their actionable content has been applied.
    - Never advance to HLD, UI Spec, Feature Spec splitting, planning, or
      execution while the latest quality review is failing.
 11. Do not split product scope into Feature Specs, create `docs/features/<feature-id>/` packages, update `docs/features/README.md`, or push anything into the Feature Spec Pool. Feature splitting belongs to `05.feature.decompose`.
@@ -105,6 +109,8 @@ THE SYSTEM SHALL [safe handling, error message, rollback, retry, or blocked acti
 - `qualityReview`: object containing the final `02.requirements.validate-testability`
   subagent decision, repair iteration count, remaining gaps, required routing,
   and compact evidence references.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Subagent Context Budget
 

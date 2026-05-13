@@ -26,6 +26,11 @@ Use this skill as the readiness gate for requirements.
    return only the compact structured result. Do not return long-form analysis
    or copied requirement text unless a short excerpt is needed to identify the
    exact gap.
+8. When invoked as part of `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`, classify
+   every finding against the caller-provided `qualityLoopPlan` as
+   `in_scope_repairable`, `in_scope_not_repairable`, or `out_of_scope`. The
+   review subagent does not edit files; repair edits belong to the separate
+   Repair Subagent.
 
 ## Output
 
@@ -56,6 +61,9 @@ Use this skill as the readiness gate for requirements.
 - `repairableGaps`: gaps that can be fixed without inventing product intent.
 - `nonRepairableGaps`: gaps that require clarification, risk review, or source
   changes before the requirements can pass.
+- `repairScopeFindings`: gap classifications against the provided
+  `qualityLoopPlan`,
+  using `in_scope_repairable`, `in_scope_not_repairable`, or `out_of_scope`.
 - `repairInstructions`: exact edits or additions expected before the next
   quality-review iteration.
 - `evidenceRefs`: compact file, heading, section, or requirement-ID references

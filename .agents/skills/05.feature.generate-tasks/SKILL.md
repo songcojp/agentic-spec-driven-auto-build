@@ -52,6 +52,13 @@ vertical enough to close user journeys, not only technical layers.
    closure Features and integration evidence.
 8. Keep every task independently reviewable with scope, linked requirements,
    verification, and done criteria.
+9. Run the mandatory Spec document quality review and repair loop from
+   `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+   Define `qualityLoopPlan` with the Feature `tasks.md` artifact, Feature
+   requirements/design, HLD references, UI Spec, quickstart-validation source
+   evidence, selected task review Skill, Repair Owner, and rationale. Use
+   separate Quality Review and Repair subagents, cap the loop at 10 iterations,
+   and exit when remaining gaps are not in-scope repairable.
 
 ## Required Task Block Template
 
@@ -89,6 +96,8 @@ concise result object specific to this workflow step.
 - `parserCompatibility`: status of task heading/status-line compatibility.
 - `verificationPlan`: commands or acceptance checks per story phase.
 - `openQuestions`: missing inputs or blocked task-slicing decisions.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Acceptance Checks
 

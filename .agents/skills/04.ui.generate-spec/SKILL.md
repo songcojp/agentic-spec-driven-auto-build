@@ -59,6 +59,15 @@ This skill is a UI specification generator, not a frontend implementation skill.
 7. Generate one PNG concept image per major page under `docs/ui/concepts/<page-id>.png` using image generation, not text-only mockup generation. Each PNG must show layout structure, navigation, key panels, primary actions, realistic states, responsive intent, and the most important data regions. Keep PNGs legible, product-specific, and implementation-oriented; avoid decorative mockups that cannot guide code. If the run cannot access an image generation tool/model, stop with `blocked` and list the missing capability.
 8. Write the UI Spec to `docs/features/<featureId>/ui-spec.md` when `featureId` is present, otherwise `docs/ui/ui-spec.md`.
 9. Include traceability from each page, flow, component family, view model, and concept image to the requirement IDs or HLD sections that justify it.
+10. Run the mandatory Spec document quality review and repair loop from
+    `.agents/skills/SPEC_DOC_QUALITY_LOOP.md` before returning `completed`.
+    Define `qualityLoopPlan` with the UI Spec artifact, generated concept-image
+    inventory, PRD/requirements/HLD source evidence, selected UI quality review
+    Skill, Repair Owner, and rationale. Use the caller-selected Quality Review
+    Subagent and a separate Repair Subagent for at most 10 iterations.
+    Exit without repair when missing interactions, state/data ownership, or
+    page intent are not source-backed or would require upstream PRD,
+    requirements, or HLD changes.
 
 ## Design Quality Baseline
 
@@ -112,6 +121,8 @@ When this skill is invoked inside an interactive Codex session rather than the s
 - `viewModels`: required page data shapes.
 - `responsiveRules`: desktop, mobile, narrow layout, and fixed-format UI behavior.
 - `accessibilityNotes`: keyboard, focus, ARIA, and responsive notes.
+- `qualityRepairLoop`: compact result from
+  `.agents/skills/SPEC_DOC_QUALITY_LOOP.md`.
 
 ## Example Skill Invocation Contract
 

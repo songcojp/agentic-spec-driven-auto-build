@@ -1189,6 +1189,36 @@ sync。
 workflow 必须进入 `review_needed` / `clarification_needed` /
 `risk_review_needed`，不得进入 `ready` 或 `feature_execution`。
 
+### 7.4.2 Document Generation Quality Repair Loop
+
+所有生成或更新 Spec 文档的 Skill 都必须在返回完成前执行质量检测与修复
+循环。适用文档包括 Project Intake、PRD、requirements、HLD、UI Spec、
+Feature Spec `requirements.md` / `design.md` / `tasks.md`、Feature index、
+queue plan、ADR 和其他向下游规划或执行传递的 Markdown / JSON 规格产物。
+
+循环由 owner thread 编排，但质量检测和修复必须交给隔离 subagent。共享 loop
+只规定循环机制，不维护产物类型到质检 Skill 的中央路由表；调用 loop 的生成
+Skill 必须选择本次 Quality Review Skill 和 Repair Owner。
+
+1. owner thread 先定义 `qualityLoopPlan`：允许产物、来源事实、禁止文件、
+   允许 gap 类型、风险上限、ID 策略、是否允许下游同步、调用方选择的
+   `qualityReviewSkill` / `repairOwner` 及选择理由。
+2. 调用方选择的 Quality Review Subagent 读取引用文件并输出 compact gap 结果，按
+   `in_scope_repairable`、`in_scope_not_repairable`、`out_of_scope` 分类。
+3. 调用方选择的 Repair Subagent / Repair Owner 只处理
+   `in_scope_repairable` gap，只能修改允许产物，并必须给出证据引用。
+4. 再次调用 Quality Review Subagent 复查。
+5. 最多循环 10 轮。
+
+通过最新质量检测后才允许返回 `completed`。没有可修复项、剩余项超出
+`qualityLoopPlan`、需要新产品意图/架构决策、同一 gap 指纹重复或达到 10 轮时，
+必须退出到 `clarification_needed`、`review_needed`、`risk_review_needed`
+或 `blocked`。最新质量检测失败时，不得继续推进到 HLD、UI Spec、
+Feature 拆分、任务生成、ready、planning 或 execution。
+
+生成 Skill 的结果应包含 `result.qualityRepairLoop`，记录最大轮次、已用
+轮次、最终决策、`qualityLoopPlan`、subagent 使用情况、剩余 gap 和退出原因。
+
 ---
 
 ## 7.5 status.yaml

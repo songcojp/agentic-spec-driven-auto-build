@@ -949,6 +949,14 @@ Spec Artifact Granularity Gate 按文档层级检查：
 
 质量完成判断由代码门禁、Status Checker、ReviewItem 和 VSCode IDE Webview 共同承载。Execution Workbench 和 Feature Spec 详情必须从 durable runtime fields 读取并展示 requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity losses、Git delivery、Workpad、原始日志、截图/trace、PR/check 和 ReviewItem 状态。Product Console 仅作为历史兼容面，不新增主要质量 UI，也不得作为 VSCode Webview 的 ViewModel 或组件事实源。
 
+#### FR-127 Spec 文档生成质量修复循环
+
+所有 Spec 文档生成或更新操作都必须在返回完成前执行质量检测与修复循环。适用范围包括项目章程、PRD、requirements、HLD、UI Spec、Feature Spec `requirements.md` / `design.md` / `tasks.md`、Feature index、Feature Pool Queue、ADR，以及后续会向规划或执行传递的 Markdown / JSON 规格产物。
+
+循环由调用该 loop 的生成 Skill 选择本次 Quality Review Skill / Repair Owner，并由主生成线程定义完整 `qualityLoopPlan` 后分别委派 Quality Review Subagent 与 Repair Subagent 执行。共享 loop 不维护产物类型到质检技能的中央路由表；主生成线程不得自己把失败项静默修掉，只负责合并结构化结果、判断是否继续和选择退出状态。每次循环必须先确定允许修复的文件、来源事实、禁止文件、允许 gap 类型、风险上限、ID 策略、是否允许下游同步、所选质检技能及选择理由、修复 owner 及选择理由；只有在现有来源足够、修复位于范围内且不会新增产品/架构决策时，才允许 Repair Subagent 修改产物。
+
+每次文档生成最多执行 10 轮质量检测/修复。质量通过即返回完成；没有可修复项、剩余项不在修复范围、需要用户澄清、需要风险评审、重复同一 gap 指纹或达到 10 轮时，必须退出到 `clarification_needed`、`review_needed`、`risk_review_needed` 或 `blocked`，不得继续推进到 HLD、UI Spec、Feature 拆分、任务生成、ready、planning 或 execution。
+
 ---
 
 ## 7. 核心数据模型
