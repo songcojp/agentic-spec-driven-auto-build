@@ -12,10 +12,12 @@ import type { ExecutorRunJobPayload, SchedulerClient, SchedulerJobType } from ".
 import { runSqlite } from "./sqlite.ts";
 import {
   mergeFileSpecState,
+  parseFeatureTasksMarkdown as parseFeatureTasksFromSpecProtocol,
   readFileSpecState,
   writeFileSpecState,
   type FileSpecExecutionStatus,
   type FileSpecLifecycleStatus,
+  type ParsedFeatureTask,
 } from "./spec-protocol.ts";
 
 export type SpecDriveIdeDocument = {
@@ -1790,42 +1792,18 @@ function readFeatureTasks(workspaceRoot: string, folder: string): { tasks: SpecD
 }
 
 export function parseFeatureTasksMarkdown(content: string): SpecDriveIdeTaskProjection[] {
-  const lines = content.split(/\r?\n/);
-  const tasks: SpecDriveIdeTaskProjection[] = [];
-  let current: SpecDriveIdeTaskProjection | undefined;
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const headingMatch = line.match(/^#{2,4}\s+(?:\[(?<checkbox>[ xX])\]\s*)?(?<id>T(?:ASK)?-?[A-Z0-9-]+|TASK-\d+|T\d+)\s*:?\s*(?<title>.*)$/);
-    const listMatch = line.match(/^\s*[-*]\s+(?:\[(?<checkbox>[ xX])\]\s*)?(?<id>T(?:ASK)?-?[A-Z0-9-]+|TASK-\d+|T\d+)\s*:?\s*(?<title>.*)$/);
-    const plainMatch = line.match(/^(?<id>T(?:ASK)?-?[A-Z0-9-]+|TASK-\d+|T\d+)\s*:?\s*(?<title>.*)$/);
-    const match = headingMatch ?? listMatch ?? plainMatch;
-    if (match?.groups?.id) {
-      current = {
-        id: normalizeTaskId(match.groups.id),
-        title: cleanTaskTitle(match.groups.title),
-        status: statusFromTaskLine(line, match.groups.checkbox),
-        line: index,
-      };
-      tasks.push(current);
-      continue;
-    }
-    if (!current) continue;
-    const status = line.match(/^\s*状态\s*[:：]\s*(.+)$/)?.[1] ?? line.match(/^\s*Status\s*[:：]\s*(.+)$/i)?.[1];
-    if (status) {
-      current.status = normalizeTaskStatus(status);
-      continue;
-    }
-    const description = line.match(/^\s*描述\s*[:：]\s*(.+)$/)?.[1] ?? line.match(/^\s*Description\s*[:：]\s*(.+)$/i)?.[1];
-    if (description) {
-      current.description = description.trim();
-      continue;
-    }
-    const verification = line.match(/^\s*验证\s*[:：]\s*(.+)$/)?.[1] ?? line.match(/^\s*Verification\s*[:：]\s*(.+)$/i)?.[1];
-    if (verification) {
-      current.verification = verification.trim();
-    }
-  }
-  return tasks;
+  return parseFeatureTasksFromSpecProtocol(content).map(projectParsedFeatureTask);
+}
+
+function projectParsedFeatureTask(task: ParsedFeatureTask): SpecDriveIdeTaskProjection {
+  return {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    description: task.description,
+    verification: task.verification,
+    line: task.line,
+  };
 }
 
 function readLatestExecutionsByFeature(
@@ -2962,28 +2940,6 @@ function splitChineseList(value: string | undefined): string[] {
     .split(/[、,，]/)
     .map((entry) => entry.trim())
     .filter(Boolean);
-}
-
-function normalizeTaskId(value: string): string {
-  const upper = value.toUpperCase();
-  const compact = upper.match(/^T(?<feature>\d{3})-(?<task>\d{2,})$/);
-  return compact?.groups ? `T-${compact.groups.feature}-${compact.groups.task}` : upper;
-}
-
-function cleanTaskTitle(value: string | undefined): string {
-  return (value ?? "").replace(/^[-:：\s]+/, "").trim() || "Untitled task";
-}
-
-function statusFromTaskLine(line: string, checkbox?: string): string {
-  const explicit = line.match(/\b状态\s*[:：]\s*([^\s,，;；.。]+)/)?.[1]
-    ?? line.match(/\bStatus\s*[:：]\s*([^\s,，;；.。]+)/i)?.[1];
-  if (explicit) return normalizeTaskStatus(explicit);
-  if (checkbox) return checkbox.toLowerCase() === "x" ? "done" : "todo";
-  return "unknown";
-}
-
-function normalizeTaskStatus(value: string): string {
-  return value.trim().replace(/[.。]+$/, "");
 }
 
 function titleFromFolder(folder: string): string {

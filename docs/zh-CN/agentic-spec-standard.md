@@ -1114,6 +1114,15 @@ the system shall <response>.
 ## 7.3 tasks.md
 
 v1.2 中 Task 输入输出不再冗余复制完整上下文。
+Feature Spec 拆分必须使用 `decompose-feature-specs/templates/feature-spec-template.md`
+作为文件和任务结构契约：Feature 目录固定为
+`docs/features/feat-<nnn>-<kebab-title>/`，必需文件固定为
+`requirements.md`、`design.md`、`tasks.md` 和 `spec-state.json`。
+`tasks.md` 必须包含至少一个可解析任务块，任务标题固定使用
+`### TASK-<nnn>: <title>` 或 `### T-<feature-nnn>-<task-nn>: <title>`，
+并保留 `Status`、`Description`、`Requirements`、`Spec Refs`、
+`Allowed Paths`、`Forbidden Paths`、`Verification` 和 `Acceptance`
+字段；不得输出 `taskes`、`task.md`、`plan.md` 等替代文件名。
 
 ```markdown
 # FEAT-001: Feature Tasks
