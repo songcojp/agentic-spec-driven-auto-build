@@ -15,6 +15,8 @@ import type {
   ExecutionAdapterProviderSessionV1,
   ExecutionAdapterResultV1,
 } from "./execution-adapter-contracts.ts";
+import { ensureInvocationContextPrompt } from "./invocation-context.ts";
+import { createRunWorkpad } from "./workpad.ts";
 import {
   rpcAdapterConfigToExecutionAdapterConfig,
   type JsonRpcRequest,
@@ -66,6 +68,7 @@ export type GeminiAcpAdapterResultInput = {
   startedAt: string;
   completedAt: string;
   executionInvocation?: ExecutionAdapterInvocationV1;
+  workpadRefs?: string[];
 };
 
 export const DEFAULT_GEMINI_ACP_ADAPTER_CONFIG: GeminiAcpAdapterConfig = {
@@ -230,6 +233,12 @@ export function createGeminiAcpTransportFromConfig(config: GeminiAcpAdapterConfi
 
 export async function runGeminiAcpSession(input: GeminiAcpSessionInput): Promise<CliAdapterResult> {
   const startedAt = input.startedAt ?? (input.now ?? new Date()).toISOString();
+  const prompt = ensureInvocationContextPrompt(input.prompt, input.executionInvocation);
+  const workpad = createRunWorkpad({
+    workspaceRoot: input.workspaceRoot,
+    executionId: input.runId,
+    invocation: input.executionInvocation,
+  });
   const events: CliJsonEvent[] = [];
   const initializeResult = await input.transport.request("initialize", {
     protocolVersion: 1,
@@ -249,7 +258,7 @@ export async function runGeminiAcpSession(input: GeminiAcpSessionInput): Promise
 
   const promptPromise = input.transport.request("session/prompt", {
     sessionId,
-    prompt: [{ type: "text", text: input.prompt }],
+    prompt: [{ type: "text", text: prompt }],
   });
   const promptResult = await collectGeminiAcpPromptResult(input.transport, promptPromise, events);
   if (promptResult) events.push({ type: "prompt/result", sessionId, ...promptResult });
@@ -263,6 +272,7 @@ export async function runGeminiAcpSession(input: GeminiAcpSessionInput): Promise
     startedAt,
     completedAt,
     executionInvocation: input.executionInvocation,
+    workpadRefs: [workpad.markdownPath, workpad.jsonPath],
   });
 }
 
@@ -325,7 +335,7 @@ export function buildGeminiAcpAdapterResult(input: GeminiAcpAdapterResultInput):
     producedArtifacts: projection.skillOutput?.producedArtifacts ?? [],
     traceability: projection.skillOutput?.traceability ?? input.executionInvocation?.traceability ?? { requirementIds: [], changeIds: [] },
     nextAction: projection.skillOutput?.nextAction,
-    rawLogRefs: [rawLog.id],
+    rawLogRefs: [rawLog.id, ...(input.workpadRefs ?? [])],
     error: stderr || undefined,
   };
   const reportPath = writeRunReport(input.workspaceRoot, input.runId, {

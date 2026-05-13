@@ -242,6 +242,9 @@ test("initializeProjectPhase1 creates SpecDrive gitignore and AGENTS guidance", 
   assert.match(agents, /This file explains the SpecDrive spec standard and the workflow skills/);
   assert.match(agents, /## Spec Standard/);
   assert.match(agents, /## Spec Operations/);
+  assert.match(agents, /## Project Memory And Constitution/);
+  assert.match(agents, /Treat `\.autobuild\/memory\/project\.md` as a recovery projection/);
+  assert.match(agents, /Treat `\.autobuild\/memory\/constitution\.md` as the project governance constraint file/);
   assert.match(agents, /## Spec Workflow/);
   assert.match(agents, /## SpecDrive Workflow Skills/);
   assert.match(agents, /## Skill Reference/);

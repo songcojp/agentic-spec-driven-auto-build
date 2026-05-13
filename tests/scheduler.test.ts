@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeSchema, listTables } from "../src/schema.ts";
@@ -234,6 +234,8 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(resultWithSpy.status, "completed");
   assert.equal(calls[0].cwd, root);
   assert.match(calls[0].args.join("\n"), /Execute this SpecDrive task/);
+  assert.match(calls[0].args.join("\n"), /\[AUTOBUILD INVOCATION\]/);
+  assert.match(calls[0].args.join("\n"), /\.autobuild\/memory\/constitution\.md/);
   assert.match(calls[0].args.join("\n"), /07.execution.dispatch-adapter/);
   assert.match(calls[0].args.join("\n"), /Source paths to read:/);
   assert.doesNotMatch(calls[0].args.join("\n"), /Skill Invocation/);
@@ -247,6 +249,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(rows.task[0].status, "scheduled");
   assert.deepEqual(rows.sessions.map((row) => [row.session_id, row.exit_code]), [["SESSION-CLI", 0]]);
   assert.match(String(rows.logs[0].stdout), /skill-contract\/v2/);
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-CLI", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -349,6 +352,7 @@ test("cli.run keeps large source documents out of the provider prompt", async ()
   const prompt = calls[0].args.join("\n");
   assert.equal(result.status, "completed");
   assert.match(prompt, /docs\/features\/FEAT-CLI\/requirements\.md/);
+  assert.match(prompt, /\[AUTOBUILD INVOCATION\]/);
   assert.match(prompt, /Source paths to read:/);
   assert.doesNotMatch(prompt, /Context:/);
   assert.doesNotMatch(prompt, /REQ: keep prompt compact\./);
@@ -649,9 +653,14 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: string[] = [];
+  let turnStartPrompt = "";
   const transport: CodexAppServerTransport = {
-    async request(method) {
+    async request(method, params) {
       calls.push(method);
+      if (method === "turn/start") {
+        const input = (params.input ?? []) as Array<{ type: string; text?: string }>;
+        turnStartPrompt = input.find((item) => item.type === "text")?.text ?? "";
+      }
       if (method === "thread/start") return { threadId: "THREAD-APP" };
       if (method === "turn/start") return { turnId: "TURN-APP" };
       return {};
@@ -692,6 +701,8 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
 
   assert.equal(result.status, "completed");
   assert.deepEqual(calls, ["initialize", "initialized", "thread/start", "turn/start"]);
+  assert.match(turnStartPrompt, /\[AUTOBUILD INVOCATION\]/);
+  assert.match(turnStartPrompt, /\.autobuild\/memory\/project\.md/);
   assert.equal(rows.run[0].status, "completed");
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
   assert.equal(metadata.threadId, "THREAD-APP");
@@ -705,6 +716,7 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["app-server"]);
   assert.equal(rows.session[0].exit_code, 0);
   assert.equal(rows.log[0].stdout, "done");
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-APP-SERVER", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -723,11 +735,14 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
     },
   ]);
   const calls: string[] = [];
+  let sessionPrompt = "";
   const transport: GeminiAcpTransport = {
-    async request(method) {
+    async request(method, params) {
       calls.push(method);
       if (method === "session/new") return { sessionId: "GEMINI-ACP-THREAD" };
       if (method === "session/prompt") {
+        const prompt = (params.prompt ?? []) as Array<{ type: string; text?: string }>;
+        sessionPrompt = prompt.find((item) => item.type === "text")?.text ?? "";
         return new Promise((resolve) => setTimeout(() => resolve({ stopReason: "end_turn" }), 0));
       }
       return {};
@@ -753,6 +768,8 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
 
   assert.equal(result.status, "completed");
   assert.deepEqual(calls, ["initialize", "session/new", "session/prompt"]);
+  assert.match(sessionPrompt, /\[AUTOBUILD INVOCATION\]/);
+  assert.match(sessionPrompt, /\.autobuild\/memory\/project\.md/);
   assert.equal(rows.run[0].status, "completed");
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
   assert.equal(metadata.provider, "gemini-acp");
@@ -763,6 +780,7 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["--acp", "--skip-trust"]);
   assert.equal(rows.session[0].exit_code, 0);
   assert.match(String(rows.log[0].stdout), /RUN-GEMINI-ACP-RPC/);
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-GEMINI-ACP-RPC", "WORKPAD.md")), true);
 });
 
 test("codex.rpc.run projects approval pending to Feature spec-state", async () => {

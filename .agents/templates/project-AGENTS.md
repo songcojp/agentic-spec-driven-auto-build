@@ -53,6 +53,14 @@ State fact ownership:
 - Review and approval records own Review Needed and human decision facts.
 - Product Console, VSCode Webviews, dashboards, and other UIs are projections and controlled-command entrypoints only; they must not directly own or silently rewrite state facts.
 
+## Project Memory And Constitution
+
+- Treat `.autobuild/memory/project.md` as a recovery projection, not the authoritative source of truth.
+- Treat `.autobuild/memory/constitution.md` as the project governance constraint file.
+- Read both files before scheduled execution, recovery, review, or delivery.
+- If memory conflicts with DB, Git, Feature `spec-state.json`, Review records, or runtime evidence, prefer authoritative facts and record the correction.
+- Do not copy full memory or constitution content into generated specs. Reference paths and preserve evidence.
+
 ## Spec Operations
 
 - Requirement addition or change: follow the skill-owned protocol in `.agents/skills/10.change.classify/SKILL.md`, then route to `10.change.create-request` for new IDs or `10.change.update-mainline-spec` for existing IDs.

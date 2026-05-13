@@ -35,10 +35,15 @@ test("Codex RPC request sequence initializes, starts a thread, and starts a sche
   assert.equal(sequence.turn.method, "turn/start");
   assert.equal(sequence.turn.params.cwd, "/repo");
   assert.deepEqual(sequence.turn.params.outputSchema, { type: "object", additionalProperties: false });
-  assert.deepEqual(sequence.turn.params.input, [
-    { type: "text", text: "Run the skill." },
-    { type: "skill", name: "07.execution.dispatch-adapter", path: ".agents/skills/07.execution.dispatch-adapter/SKILL.md" },
-  ]);
+  const turnInput = sequence.turn.params.input as Array<{ type: string; text?: string; name?: string; path?: string }>;
+  assert.match(turnInput[0].text ?? "", /\[AUTOBUILD INVOCATION\]/);
+  assert.match(turnInput[0].text ?? "", /\.autobuild\/memory\/constitution\.md/);
+  assert.match(turnInput[0].text ?? "", /Run the skill\./);
+  assert.deepEqual(turnInput[1], {
+    type: "skill",
+    name: "07.execution.dispatch-adapter",
+    path: ".agents/skills/07.execution.dispatch-adapter/SKILL.md",
+  });
 });
 
 test("Codex RPC request sequence resumes an existing thread", () => {
