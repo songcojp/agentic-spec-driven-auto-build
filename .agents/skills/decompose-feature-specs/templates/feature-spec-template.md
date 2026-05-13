@@ -27,6 +27,24 @@ Rules:
 - Do not generate alternate file names such as `requirement.md`, `task.md`, `taskes.md`, `plan.md`, `implementation.md`, `feature.md`, or nested task files.
 - `requirements.md`, `design.md`, and `tasks.md` are mandatory before a Feature can be marked `ready`.
 - `tasks.md` must contain at least one parser-compatible task heading matching `### TASK-<nnn>: <title>` or `### T-<feature-nnn>-<task-nn>: <title>`.
+- `docs/features/README.md` must use a parser-compatible index table whose first column is `Feature ID`; do not put `Order`, `#`, or any other column before `Feature ID`.
+- The index table `Folder` column must contain only the folder basename, such as `feat-001-example`, not `docs/features/feat-001-example`.
+
+## docs/features/README.md
+
+```markdown
+# Feature Spec Index
+
+| Feature ID | Feature | Folder | Status | Primary Requirements | Suggested Milestone | Dependencies | Notes |
+|---|---|---|---|---|---|---|---|
+| FEAT-<NNN> | <Title> | `feat-<nnn>-<kebab-title>` | draft | REQ-<NNN> | M1 | none | <Short routing note> |
+```
+
+Rules:
+
+- Keep `Feature ID` as the first column so IDE and scheduler parsers can identify entries.
+- Keep `Folder` as a basename that exists directly under `docs/features/`.
+- Keep status values aligned with `spec-state.json`.
 
 ## requirements.md
 
