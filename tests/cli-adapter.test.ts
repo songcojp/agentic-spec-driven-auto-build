@@ -1226,6 +1226,8 @@ test("generic skill invocation prompt does not include Codex CLI image generatio
   assert.doesNotMatch(prompt, /\$imagegen/);
   assert.doesNotMatch(prompt, /Codex CLI-specific image generation feature/);
   assert.doesNotMatch(prompt, /gpt-image-2/);
+  assert.match(prompt, /one distinct image for each concrete expected docs\/ui\/concepts\/<page-id>\.png artifact/);
+  assert.match(prompt, /Do not satisfy multiple expected UI concept image artifacts with one copied image/);
 });
 
 test("task-slicing runs receive a strict specialized result output schema", async () => {

@@ -853,6 +853,79 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   ]).queries.records;
   assert.equal(afterRepeatedViews.length, 1);
 
+  writeFileSync(join(runDir, "cli-output.json"), JSON.stringify({
+    usage: { input_tokens: 11000000, cached_input_tokens: 1000000, output_tokens: 4000000, reasoning_output_tokens: 1000000 },
+  }));
+  runSqlite(dbPath, [
+    {
+      sql: "UPDATE cli_adapter_configs SET defaults_json = ? WHERE id = 'codex-cli'",
+      params: [JSON.stringify({
+        model: "gpt-5.5",
+        costRates: {
+          "gpt-5.5": {
+            inputUsdPer1M: 99,
+            cachedInputUsdPer1M: 99,
+            outputUsdPer1M: 99,
+            reasoningOutputUsdPer1M: 99,
+          },
+        },
+      })],
+    },
+  ]);
+  const updatedWorkspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
+  const refreshedTokens = runSqlite(dbPath, [], [
+    {
+      name: "records",
+      sql: "SELECT input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens, cost_usd, pricing_json FROM token_consumption_records WHERE run_id = 'RUN-SKILL'",
+    },
+  ]).queries.records;
+  assert.equal(refreshedTokens.length, 1);
+  assert.equal(refreshedTokens[0].input_tokens, 11000000);
+  assert.equal(refreshedTokens[0].cached_input_tokens, 1000000);
+  assert.equal(refreshedTokens[0].output_tokens, 4000000);
+  assert.equal(refreshedTokens[0].reasoning_output_tokens, 1000000);
+  assert.equal(refreshedTokens[0].total_tokens, 16000000);
+  assert.equal(refreshedTokens[0].cost_usd, 60.2);
+  assert.equal(JSON.parse(String(refreshedTokens[0].pricing_json)).rate.inputUsdPer1M, 2);
+  assert.equal(updatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 16000000);
+
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json, created_at)
+        VALUES ('LOG-UI-SPEC', 'RUN-SKILL', '', '', ?, '2026-04-28T12:04:01.000Z')`,
+      params: [JSON.stringify([
+        { type: "turn.completed", usage: { input_tokens: 1000, cached_input_tokens: 100, output_tokens: 40, reasoning_output_tokens: 10 } },
+      ])],
+    },
+    {
+      sql: `INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json, created_at)
+        VALUES ('LOG-IMAGE-GEN', 'RUN-SKILL', '', '', ?, '2026-04-28T12:04:02.000Z')`,
+      params: [JSON.stringify([
+        { type: "turn.completed", usage: { input_tokens: 2000, cached_input_tokens: 200, output_tokens: 60, reasoning_output_tokens: 20 } },
+      ])],
+    },
+  ]);
+  const aggregatedWorkspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
+  const aggregatedTokens = runSqlite(dbPath, [], [
+    {
+      name: "records",
+      sql: "SELECT input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens, cost_usd, source_path, usage_json, pricing_json FROM token_consumption_records WHERE run_id = 'RUN-SKILL'",
+    },
+  ]).queries.records;
+  const aggregatedUsage = JSON.parse(String(aggregatedTokens[0].usage_json));
+  assert.equal(aggregatedTokens.length, 1);
+  assert.equal(aggregatedTokens[0].input_tokens, 3000);
+  assert.equal(aggregatedTokens[0].cached_input_tokens, 300);
+  assert.equal(aggregatedTokens[0].output_tokens, 100);
+  assert.equal(aggregatedTokens[0].reasoning_output_tokens, 30);
+  assert.equal(aggregatedTokens[0].total_tokens, 3130);
+  assert.equal(aggregatedTokens[0].cost_usd, 0.0065);
+  assert.match(String(aggregatedTokens[0].source_path), /raw_execution_logs:LOG-UI-SPEC#usage-1/);
+  assert.match(String(aggregatedTokens[0].source_path), /raw_execution_logs:LOG-IMAGE-GEN#usage-1/);
+  assert.equal(aggregatedUsage.sources.length, 2);
+  assert.equal(JSON.parse(String(aggregatedTokens[0].pricing_json)).rate.inputUsdPer1M, 2);
+  assert.equal(aggregatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 3130);
+
   const otherProject = buildRunnerConsoleView(dbPath, stableDate, "project-2");
   assert.equal(otherProject.schedulerJobs.some((job) => job.id === "JOB-SKILL"), false);
 
@@ -2256,6 +2329,22 @@ test("start Auto Run accepts skill queue plan P-level priorities", () => {
 test("generate UI Spec dispatches the UI spec skill from project-level Spec Workspace actions", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "ui-spec-surfaces-"));
+  mkdirSync(join(projectPath, "docs"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "hld.md"), [
+    "# HLD",
+    "",
+    "### Primary Page / Surface Inventory",
+    "",
+    "| Surface | Purpose | Primary Requirements |",
+    "|---|---|---|",
+    "| Studio Home | Overview and quick actions. | `REQ-001` |",
+    "| App Workspace | App operations and state. | `REQ-002` |",
+    "| Run List / Detail | Run trace and recovery. | `REQ-003` |",
+  ].join("\n"));
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+  ]);
   const scheduler = createMemoryScheduler(dbPath);
 
   const receipt = submitConsoleCommand(dbPath, {
@@ -2281,7 +2370,10 @@ test("generate UI Spec dispatches the UI spec skill from project-level Spec Work
   assert.deepEqual(payload.context.imagePaths ?? [], []);
   assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/ui/ui-spec.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/studio-home.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/app-workspace.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/run-list-detail.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
   assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-ui-spec");
 });

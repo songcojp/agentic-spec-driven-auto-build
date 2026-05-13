@@ -4334,10 +4334,77 @@ function expectedArtifactsForSpecAction(
   if (action === "generate_ui_spec") {
     return [
       ...(featureId ? [`docs/features/${featureId}/ui-spec.md`] : ["docs/ui/ui-spec.md"]),
-      "docs/ui/concepts/<page-id>.png",
+      ...uiConceptExpectedArtifacts(sourcePaths, workspaceRoot),
     ];
   }
   return featureId ? [`docs/features/${featureId}/tasks.md`] : ["docs/features/README.md"];
+}
+
+function uiConceptExpectedArtifacts(sourcePaths: string[], workspaceRoot?: string): string[] {
+  const sourceTexts = sourcePaths
+    .map((sourcePath) => readWorkspaceText(sourcePath, workspaceRoot))
+    .filter((content): content is string => Boolean(content));
+  const surfaces = uniqueSourcePaths(sourceTexts.flatMap(extractUiSurfaceInventory));
+  if (surfaces.length === 0) return ["docs/ui/concepts/<page-id>.png"];
+  return surfaces.map((surface) => `docs/ui/concepts/${uiConceptPageId(surface)}.png`);
+}
+
+function readWorkspaceText(sourcePath: string, workspaceRoot?: string): string | undefined {
+  const absolutePath = isAbsolute(sourcePath)
+    ? sourcePath
+    : workspaceRoot
+      ? join(workspaceRoot, sourcePath)
+      : undefined;
+  if (!absolutePath || !existsSync(absolutePath)) return undefined;
+  try {
+    return readFileSync(absolutePath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function extractUiSurfaceInventory(markdown: string): string[] {
+  const lines = markdown.split(/\r?\n/u);
+  const surfaces: string[] = [];
+  let inRelevantSection = false;
+  for (const line of lines) {
+    const heading = line.match(/^(#{1,6})\s+(.+)$/u);
+    if (heading) {
+      inRelevantSection = /primary\s+(page|surface)|page\s*\/\s*surface|surface\s+inventory|information\s+architecture/i.test(heading[2]);
+      continue;
+    }
+    if (!line.trim().startsWith("|")) continue;
+    const cells = markdownTableCells(line);
+    if (cells.length < 2 || cells.every((cell) => /^:?-{3,}:?$/u.test(cell))) continue;
+    const firstCell = cells[0].toLowerCase();
+    if (/^(surface|page|screen|view)$/u.test(firstCell)) continue;
+    const headerLike = /surface|page|screen|view/u.test(firstCell) && cells.some((cell) => /purpose|route|requirement/i.test(cell));
+    if (!inRelevantSection && !headerLike) continue;
+    surfaces.push(cleanUiSurfaceName(cells[0]));
+  }
+  return surfaces.filter((surface) => surface.length > 0);
+}
+
+function markdownTableCells(line: string): string[] {
+  return line.trim().replace(/^\|/u, "").replace(/\|$/u, "").split("|").map((cell) => cell.trim());
+}
+
+function cleanUiSurfaceName(value: string): string {
+  return value
+    .replace(/`([^`]+)`/gu, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/gu, "$1")
+    .replace(/<[^>]+>/gu, "")
+    .trim();
+}
+
+function uiConceptPageId(surface: string): string {
+  const slug = surface
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/&/gu, " and ")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+  return slug || "page";
 }
 
 function requirementsArtifactForSource(sourcePath?: string, workspaceRoot?: string): string {
@@ -6142,7 +6209,15 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
     { name: "rpcAdapters", sql: "SELECT * FROM rpc_adapter_configs ORDER BY updated_at DESC" },
     {
       name: "existingTokenRecords",
-      sql: `SELECT run_id FROM token_consumption_records ${projectId ? "WHERE project_id = ?" : ""}`,
+      sql: `SELECT * FROM token_consumption_records ${projectId ? "WHERE project_id = ?" : ""}`,
+      params: projectParams,
+    },
+    {
+      name: "rawExecutionLogs",
+      sql: `SELECT id, run_id, events_json, created_at
+        FROM raw_execution_logs
+        ${projectId ? "WHERE run_id IN (SELECT id FROM execution_records WHERE project_id = ?)" : ""}
+        ORDER BY created_at, rowid`,
       params: projectParams,
     },
   ]);
@@ -6150,7 +6225,8 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
   const activeRpcAdapter = rpcAdapterFromRows(result.queries.rpcAdapters, "active", false);
   const adaptersById = new Map(result.queries.adapters.map((row) => [String(row.id), cliAdapterFromRow(row)] as const));
   const rpcAdaptersById = new Map(result.queries.rpcAdapters.map((row) => [String(row.id), rpcAdapterFromRow(row)] as const));
-  const existingTokenRunIds = new Set(result.queries.existingTokenRecords.map((row) => String(row.run_id)));
+  const existingTokenRowsByRunId = new Map(result.queries.existingTokenRecords.map((row) => [String(row.run_id), row] as const));
+  const rawLogsByRunId = groupRowsByString(result.queries.rawExecutionLogs, "run_id");
   const workspaceRootByProject = new Map(
     result.queries.projects
       .map((row) => [String(row.id), optionalString(row.local_path) ?? optionalString(row.target_repo_path)] as const)
@@ -6159,7 +6235,6 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
 
   for (const execution of result.queries.executions) {
     const runId = String(execution.id);
-    if (existingTokenRunIds.has(runId)) continue;
     const context = parseJsonObject(execution.context_json);
     const metadata = parseJsonObject(execution.metadata_json);
     const project = optionalString(execution.project_id);
@@ -6168,14 +6243,18 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
       ?? (project ? workspaceRootByProject.get(project) : undefined);
     if (!workspaceRoot) continue;
     const runDir = join(workspaceRoot, ".autobuild", "runs", sanitizeRunPathSegment(runId));
+    const rawLogUsage = aggregateRawExecutionLogTokenUsage(rawLogsByRunId.get(runId) ?? []);
     const cliOutputUsage = readCliOutputTokenUsage(join(runDir, "cli-output.json"));
     const stdoutLogPath = join(runDir, "stdout.log");
-    const stdoutLog = cliOutputUsage.usage ? undefined : readStdoutLogEvents(stdoutLogPath);
-    const usage = cliOutputUsage.usage ?? (stdoutLog && !stdoutLog.error ? tokenUsageFromValue(stdoutLog.events) : undefined);
-    const sourcePath = cliOutputUsage.usage ? cliOutputUsage.path : stdoutLogPath;
+    const stdoutLog = rawLogUsage?.usage || cliOutputUsage.usage ? undefined : readStdoutLogEvents(stdoutLogPath);
+    const fallbackStdoutUsage = stdoutLog && !stdoutLog.error ? tokenUsageFromValue(stdoutLog.events) : undefined;
+    const usage = rawLogUsage?.usage ?? cliOutputUsage.usage ?? fallbackStdoutUsage;
+    const sourcePath = rawLogUsage?.sourcePath ?? (cliOutputUsage.usage ? cliOutputUsage.path : stdoutLogPath);
     if (!usage) continue;
     const normalized = normalizeTokenUsage(usage);
     if (normalized.totalTokens <= 0) continue;
+    const existingTokenRow = existingTokenRowsByRunId.get(runId);
+    if (existingTokenRow && tokenUsageMatchesRow(normalized, existingTokenRow, sourcePath)) continue;
     const pricingAdapter = adapterForExecutionPricing(execution, {
       cliAdaptersById: adaptersById,
       rpcAdaptersById,
@@ -6186,18 +6265,53 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
       ?? optionalString(metadata.model)
       ?? optionalString(context.model)
       ?? pricingAdapter?.defaults?.model;
-    const pricing = calculateTokenCost({
-      usage: normalized,
-      model,
-      costRates: pricingAdapter?.defaults?.costRates ?? {},
-      pricingSource: {
-        adapterId: pricingAdapter?.adapterId,
-        adapterKind: pricingAdapter?.adapterKind,
-      },
-    });
+    const pricing = existingTokenRow
+      ? recalculateExistingTokenPricing(existingTokenRow, normalized, model)
+      : calculateTokenCost({
+          usage: normalized,
+          model,
+          costRates: pricingAdapter?.defaults?.costRates ?? {},
+          pricingSource: {
+            adapterId: pricingAdapter?.adapterId,
+            adapterKind: pricingAdapter?.adapterKind,
+          },
+        });
     runSqlite(dbPath, [
-      {
-        sql: `INSERT INTO token_consumption_records (
+      existingTokenRow
+        ? {
+            sql: `UPDATE token_consumption_records
+              SET model = ?,
+                input_tokens = ?,
+                cached_input_tokens = ?,
+                output_tokens = ?,
+                reasoning_output_tokens = ?,
+                total_tokens = ?,
+                cost_usd = ?,
+                currency = ?,
+                pricing_status = ?,
+                usage_json = ?,
+                pricing_json = ?,
+                source_path = ?,
+                recorded_at = CURRENT_TIMESTAMP
+              WHERE run_id = ?`,
+            params: [
+              pricing.model ?? null,
+              normalized.inputTokens,
+              normalized.cachedInputTokens,
+              normalized.outputTokens,
+              normalized.reasoningOutputTokens,
+              normalized.totalTokens,
+              pricing.costUsd,
+              "USD",
+              pricing.pricingStatus,
+              JSON.stringify(usage),
+              JSON.stringify(pricing.pricingSnapshot),
+              sourcePath,
+              runId,
+            ],
+          }
+        : {
+            sql: `INSERT INTO token_consumption_records (
             id, run_id, scheduler_job_id, project_id, feature_id, task_id, operation, model,
             input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens,
             cost_usd, currency, pricing_status, usage_json, pricing_json, source_path
@@ -6224,9 +6338,120 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
           JSON.stringify(pricing.pricingSnapshot),
           sourcePath,
         ],
-      },
+          },
     ]);
   }
+}
+
+function groupRowsByString(rows: Record<string, unknown>[], key: string): Map<string, Record<string, unknown>[]> {
+  const grouped = new Map<string, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const value = optionalString(row[key]);
+    if (!value) continue;
+    const group = grouped.get(value) ?? [];
+    group.push(row);
+    grouped.set(value, group);
+  }
+  return grouped;
+}
+
+function aggregateRawExecutionLogTokenUsage(rows: Record<string, unknown>[]): { usage: Record<string, unknown>; sourcePath: string } | undefined {
+  const sources = rows.flatMap((row) => {
+    const events = parseJsonArray(optionalString(row.events_json));
+    return tokenUsageSourcesFromEvents(events).map((usage, index) => ({
+      sourcePath: `raw_execution_logs:${String(row.id)}#usage-${index + 1}`,
+      usage,
+    }));
+  });
+  if (sources.length === 0) return undefined;
+  const aggregate = aggregateTokenUsage(sources.map((source) => source.usage));
+  if (aggregate.totalTokens <= 0) return undefined;
+  return {
+    usage: {
+      input_tokens: aggregate.inputTokens,
+      cached_input_tokens: aggregate.cachedInputTokens,
+      output_tokens: aggregate.outputTokens,
+      reasoning_output_tokens: aggregate.reasoningOutputTokens,
+      total_tokens: aggregate.totalTokens,
+      inputTokens: aggregate.inputTokens,
+      cachedInputTokens: aggregate.cachedInputTokens,
+      outputTokens: aggregate.outputTokens,
+      reasoningOutputTokens: aggregate.reasoningOutputTokens,
+      totalTokens: aggregate.totalTokens,
+      sources,
+    },
+    sourcePath: sources.map((source) => source.sourcePath).join(","),
+  };
+}
+
+function tokenUsageSourcesFromEvents(events: unknown[]): Record<string, unknown>[] {
+  return events.flatMap((event) => {
+    const record = isRecord(event) ? event : undefined;
+    if (!record) return [];
+    const usage = record.usage ?? record.stats ?? tokenUsageFromRecord(record);
+    return usage && isRecord(usage) ? [usage] : [];
+  });
+}
+
+function aggregateTokenUsage(usages: Record<string, unknown>[]): ReturnType<typeof normalizeTokenUsage> {
+  return usages
+    .map(normalizeTokenUsage)
+    .reduce(
+      (total, usage) => ({
+        inputTokens: total.inputTokens + usage.inputTokens,
+        cachedInputTokens: total.cachedInputTokens + usage.cachedInputTokens,
+        outputTokens: total.outputTokens + usage.outputTokens,
+        reasoningOutputTokens: total.reasoningOutputTokens + usage.reasoningOutputTokens,
+        totalTokens: total.totalTokens + usage.totalTokens,
+      }),
+      { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningOutputTokens: 0, totalTokens: 0 },
+    );
+}
+
+function tokenUsageMatchesRow(
+  usage: ReturnType<typeof normalizeTokenUsage>,
+  row: Record<string, unknown>,
+  sourcePath: string,
+): boolean {
+  return Number(row.input_tokens ?? 0) === usage.inputTokens
+    && Number(row.cached_input_tokens ?? 0) === usage.cachedInputTokens
+    && Number(row.output_tokens ?? 0) === usage.outputTokens
+    && Number(row.reasoning_output_tokens ?? 0) === usage.reasoningOutputTokens
+    && Number(row.total_tokens ?? 0) === usage.totalTokens
+    && String(row.source_path ?? "") === sourcePath;
+}
+
+function recalculateExistingTokenPricing(
+  row: Record<string, unknown>,
+  usage: ReturnType<typeof normalizeTokenUsage>,
+  fallbackModel?: string,
+): {
+  model?: string;
+  costUsd: number;
+  pricingStatus: "priced" | "missing_rate";
+  pricingSnapshot: Record<string, unknown>;
+} {
+  const pricingSnapshot = parseJsonObject(row.pricing_json);
+  const model = optionalString(row.model) ?? optionalString(pricingSnapshot.model) ?? fallbackModel;
+  const preservedRate = normalizeCostRates(model ? { [model]: pricingSnapshot.rate } : {})[model ?? ""];
+  if (preservedRate) {
+    const pricing = calculateTokenCost({
+      usage,
+      model,
+      costRates: { [model]: preservedRate },
+      pricingSource: {
+        adapterId: optionalString(pricingSnapshot.adapterId),
+        adapterKind: pricingSnapshot.adapterKind === "rpc" ? "rpc" : pricingSnapshot.adapterKind === "cli" ? "cli" : undefined,
+      },
+    });
+    return { model, ...pricing };
+  }
+  return {
+    model,
+    costUsd: Number(row.cost_usd ?? 0),
+    pricingStatus: row.pricing_status === "priced" ? "priced" : "missing_rate",
+    pricingSnapshot,
+  };
 }
 
 type ExecutionPricingAdapter = {

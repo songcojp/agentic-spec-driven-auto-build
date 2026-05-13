@@ -1911,7 +1911,7 @@ function uiConceptImageArtifact(artifact: unknown): [string, string] | undefined
   if (!path || !isUiConceptImagePath(path)) return undefined;
   const status = optionalString(artifact.status)?.toLowerCase();
   if (status === "missing" || status === "skipped") return undefined;
-  return [optionalString(artifact.summary) ?? conceptImageLabel(path), path];
+  return [conceptImageLabel(path), path];
 }
 
 function isUiConceptImagePath(path: string): boolean {

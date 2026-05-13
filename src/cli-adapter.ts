@@ -1533,6 +1533,14 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- If the change cannot produce a ready Feature Spec, return status blocked or review_needed with the exact missing decision instead of reporting a partial documentation-only success.",
       ]
     : [];
+  const uiSpecRules = invocation.operation === "generate_ui_spec" || instruction.requestedAction === "generate_ui_spec"
+    ? [
+        "- UI concept image artifacts are page-specific: generate or preserve one distinct image for each concrete expected docs/ui/concepts/<page-id>.png artifact.",
+        "- Do not satisfy multiple expected UI concept image artifacts with one copied image, one generic overview image, or repeated overwrites of the same path.",
+        "- If a required concept image already exists and no explicit repair is needed, keep it unchanged and list it as unchanged instead of regenerating that same path.",
+        "- If a concept image must be repaired or replaced, report the replaced path and reason in result.details or result.items.",
+      ]
+    : [];
   return [
     renderInvocationContextManifest(buildInvocationContextManifest(invocation)),
     "",
@@ -1564,6 +1572,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     "- Produce the expected artifacts and list every produced or intentionally unchanged artifact in producedArtifacts.",
     "- Prefer writing expected artifacts directly to the workspace paths named in this task instruction.",
     "- Do not assume a platform Skill Registry or Skill Center exists.",
+    ...uiSpecRules,
     ...taskSlicingRules,
     ...featureCodingRules,
     ...clarificationRules,
