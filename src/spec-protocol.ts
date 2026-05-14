@@ -611,6 +611,7 @@ export function scanSpecSources(projectPath: string, now = new Date()): SpecSour
     ["README.md", "README"],
     ["docs/agentic-spec/README.md", "README"],
     ["docs/agentic-spec/PRD.md", "PRD"],
+    ["docs/agentic-spec/user-stories.md", "user-stories"],
     ["docs/agentic-spec/requirements.md", "user-stories"],
     ["docs/agentic-spec/hld.md", "HLD"],
     ["docs/agentic-spec/design.md", "design"],
@@ -618,6 +619,7 @@ export function scanSpecSources(projectPath: string, now = new Date()): SpecSour
   const localizedCandidates: Array<[string, SpecSourceFileType]> = hasMultilingualSpecSupport(root)
     ? preferredSpecLanguages(root).flatMap((language): Array<[string, SpecSourceFileType]> => [
       [`docs/agentic-spec/${language}/PRD.md`, "PRD"],
+      [`docs/agentic-spec/${language}/user-stories.md`, "user-stories"],
       [`docs/agentic-spec/${language}/requirements.md`, "user-stories"],
       [`docs/agentic-spec/${language}/hld.md`, "HLD"],
       [`docs/agentic-spec/${language}/design.md`, "design"],
@@ -716,7 +718,10 @@ function preferredSpecLanguages(root: string): string[] {
 }
 
 function hasAnyProjectSpecFile(root: string): boolean {
-  return existsSync(join(root, "PRD.md")) || existsSync(join(root, "requirements.md")) || existsSync(join(root, "hld.md"));
+  return existsSync(join(root, "PRD.md"))
+    || existsSync(join(root, "user-stories.md"))
+    || existsSync(join(root, "requirements.md"))
+    || existsSync(join(root, "hld.md"));
 }
 
 function readFileSafe(path: string): string {

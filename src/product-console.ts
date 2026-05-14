@@ -4230,20 +4230,43 @@ type ProjectSpecPaths = {
 
 function projectSpecPaths(workspaceRoot?: string): ProjectSpecPaths {
   if (!workspaceRoot) return rootProjectSpecPaths();
-  if (hasAnyProjectSpecFile(workspaceRoot, "docs/agentic-spec")) return rootProjectSpecPaths();
+  if (hasAnyProjectSpecFile(workspaceRoot, "docs/agentic-spec")) {
+    return projectSpecPathsForRoot(workspaceRoot, "docs/agentic-spec");
+  }
   if (hasMultilingualSpecSupport(workspaceRoot)) {
     for (const language of preferredSpecLanguages(workspaceRoot)) {
       const root = `docs/agentic-spec/${language}`;
       if (hasAnyProjectSpecFile(workspaceRoot, root)) {
-        return {
-          prd: `${root}/PRD.md`,
-          requirements: `${root}/requirements.md`,
-          hld: `${root}/hld.md`,
-        };
+        return projectSpecPathsForRoot(workspaceRoot, root);
       }
     }
   }
   return rootProjectSpecPaths();
+}
+
+function projectSpecPathsForRoot(workspaceRoot: string, root: string): ProjectSpecPaths {
+  return {
+    prd: `${root}/PRD.md`,
+    requirements: userStoriesArtifactPathForRoot(workspaceRoot, root),
+    hld: `${root}/hld.md`,
+  };
+}
+
+function userStoriesArtifactPathForRoot(workspaceRoot: string, root: string): string {
+  const userStoriesPath = `${root}/user-stories.md`;
+  if (usesUserStoriesArtifact(workspaceRoot, root)) return userStoriesPath;
+  return `${root}/requirements.md`;
+}
+
+function usesUserStoriesArtifact(workspaceRoot: string, root: string): boolean {
+  if (existsSync(join(workspaceRoot, root, "user-stories.md"))) return true;
+  const expectedPath = `${root}/user-stories.md`;
+  const governanceSources = [
+    join(workspaceRoot, "AGENTS.md"),
+    join(workspaceRoot, root, "PRD.md"),
+    join(workspaceRoot, root, "README.md"),
+  ];
+  return governanceSources.some((sourcePath) => readFileSafe(sourcePath).includes(expectedPath));
 }
 
 function rootProjectSpecPaths(): ProjectSpecPaths {
@@ -4256,6 +4279,7 @@ function rootProjectSpecPaths(): ProjectSpecPaths {
 
 function hasAnyProjectSpecFile(workspaceRoot: string, root: string): boolean {
   return existsSync(join(workspaceRoot, root, "PRD.md"))
+    || existsSync(join(workspaceRoot, root, "user-stories.md"))
     || existsSync(join(workspaceRoot, root, "requirements.md"))
     || existsSync(join(workspaceRoot, root, "hld.md"));
 }
@@ -4442,11 +4466,17 @@ function requirementsArtifactForSource(sourcePath?: string, workspaceRoot?: stri
   if (normalizedSource === "docs/agentic-spec/features/README.md") {
     return fallback;
   }
+  if (basename(normalizedSource) === "user-stories.md") {
+    return normalizedSource;
+  }
   if (basename(normalizedSource) === "PRD.md") {
     if (workspaceRoot && isLocalizedProjectSpecPath(normalizedSource) && !hasMultilingualSpecSupport(workspaceRoot)) {
       return rootProjectSpecPaths().requirements;
     }
     const folder = dirname(normalizedSource);
+    if (workspaceRoot && folder !== ".") {
+      return userStoriesArtifactPathForRoot(workspaceRoot, folder).replaceAll("\\", "/");
+    }
     return (folder === "." ? "requirements.md" : join(folder, "requirements.md")).replaceAll("\\", "/");
   }
   const folder = dirname(normalizedSource);

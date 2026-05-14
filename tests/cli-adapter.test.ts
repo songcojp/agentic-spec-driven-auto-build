@@ -1162,6 +1162,19 @@ test("skill invocation prompt asks child CLI to write docs artifacts directly", 
   assert.doesNotMatch(prompt, /parent scheduler will materialize/);
 });
 
+test("User Stories prompt keeps user-stories artifact naming and title explicit", () => {
+  const prompt = buildExecutionInvocationPrompt(
+    executionInvocation({
+      expectedArtifacts: [{ path: "docs/agentic-spec/user-stories.md", kind: "markdown", required: true }],
+    }),
+    "Context",
+  );
+
+  assert.match(prompt, /Use the expected artifact path as the source of truth for the User Stories output path/);
+  assert.match(prompt, /title and H1 must say "User Stories"/);
+  assert.match(prompt, /Do not create or update docs\/agentic-spec\/requirements\.md/);
+});
+
 test("feature-level coding prompt requires Feature Spec execution instead of report-only completion", () => {
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({

@@ -1526,6 +1526,15 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- Return status blocked only when the provided answer is empty, conflicts with the source documents, or is insufficient to resolve the targeted clarification.",
       ]
     : [];
+  const userStoriesRules = instruction.skillName === "generate-user-stories" || instruction.requestedAction === "generate_user_stories"
+    ? [
+        "- Use the expected artifact path as the source of truth for the User Stories output path.",
+        "- For a mainline User Stories artifact, the document title and H1 must say \"User Stories\", not \"Requirements\".",
+        ...(instruction.expectedArtifacts.some((artifact) => artifact.path.endsWith("/user-stories.md")) ? [
+          "- Do not create or update docs/agentic-spec/requirements.md unless it is explicitly listed as an expected artifact or source path.",
+        ] : []),
+      ]
+    : [];
   const featureReadyRules = instruction.operatorInput?.desiredOutcome === "feature_spec_ready_for_execution"
     ? [
         "- For this change flow, do not stop after updating only PRD, requirements, or HLD.",
@@ -1580,6 +1589,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     "- Produce the expected artifacts and list every produced or intentionally unchanged artifact in producedArtifacts.",
     "- Prefer writing expected artifacts directly to the workspace paths named in this task instruction.",
     "- Do not assume a platform Skill Registry or Skill Center exists.",
+    ...userStoriesRules,
     ...uiSpecRules,
     ...taskSlicingRules,
     ...featureCodingRules,

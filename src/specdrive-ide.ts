@@ -1298,7 +1298,10 @@ function detectSpecRoot(workspaceRoot: string): string | undefined {
   if (!hasMultilingualSpecSupport(workspaceRoot)) return undefined;
   for (const language of preferredSpecLanguages(workspaceRoot)) {
     const root = join(workspaceRoot, "docs", "agentic-spec", language);
-    if (existsSync(join(root, "PRD.md")) || existsSync(join(root, "requirements.md")) || existsSync(join(root, "hld.md"))) {
+    if (existsSync(join(root, "PRD.md"))
+      || existsSync(join(root, "user-stories.md"))
+      || existsSync(join(root, "requirements.md"))
+      || existsSync(join(root, "hld.md"))) {
       return `docs/agentic-spec/${language}`;
     }
   }
@@ -1315,7 +1318,10 @@ function hasMultilingualSpecSupport(workspaceRoot: string): boolean {
   }
   return ["en", "zh-CN", "ja"].filter((language) => {
     const root = join(workspaceRoot, "docs", "agentic-spec", language);
-    return existsSync(join(root, "PRD.md")) || existsSync(join(root, "requirements.md")) || existsSync(join(root, "hld.md"));
+    return existsSync(join(root, "PRD.md"))
+      || existsSync(join(root, "user-stories.md"))
+      || existsSync(join(root, "requirements.md"))
+      || existsSync(join(root, "hld.md"));
   }).length > 1;
 }
 
@@ -1332,6 +1338,7 @@ function preferredSpecLanguages(workspaceRoot: string): string[] {
 
 function hasRootSpec(workspaceRoot: string): boolean {
   return existsSync(join(workspaceRoot, "docs", "agentic-spec", "PRD.md"))
+    || existsSync(join(workspaceRoot, "docs", "agentic-spec", "user-stories.md"))
     || existsSync(join(workspaceRoot, "docs", "agentic-spec", "requirements.md"))
     || existsSync(join(workspaceRoot, "docs", "agentic-spec", "hld.md"));
 }
@@ -1346,15 +1353,30 @@ function readFileSafe(path: string): string {
 
 function buildTopLevelDocuments(workspaceRoot: string, specRoot?: string): SpecDriveIdeDocument[] {
   const root = specRoot ?? "docs/agentic-spec";
+  const userStoriesPath = userStoriesArtifactPathForRoot(workspaceRoot, root);
   const docs = [
     document("prd", "PRD", `${root}/PRD.md`, workspaceRoot),
-    document("requirements", "User Stories", `${root}/requirements.md`, workspaceRoot),
+    document("requirements", "User Stories", userStoriesPath, workspaceRoot),
     document("hld", "HLD", `${root}/hld.md`, workspaceRoot),
     document("ui-spec", "UI Spec", "docs/agentic-spec/ui/ui-spec.md", workspaceRoot),
     document("feature-index", "Feature Spec Index", "docs/agentic-spec/features/README.md", workspaceRoot),
     document("queue", "Feature Pool Queue", "docs/agentic-spec/features/feature-pool-queue.json", workspaceRoot),
   ] satisfies SpecDriveIdeDocument[];
   return docs;
+}
+
+function userStoriesArtifactPathForRoot(workspaceRoot: string, root: string): string {
+  const userStoriesPath = `${root}/user-stories.md`;
+  if (existsSync(join(workspaceRoot, root, "user-stories.md"))) return userStoriesPath;
+  const governanceSources = [
+    join(workspaceRoot, "AGENTS.md"),
+    join(workspaceRoot, root, "PRD.md"),
+    join(workspaceRoot, root, "README.md"),
+  ];
+  if (governanceSources.some((sourcePath) => readFileSafe(sourcePath).includes(userStoriesPath))) {
+    return userStoriesPath;
+  }
+  return `${root}/requirements.md`;
 }
 
 function buildProjectInitialization(

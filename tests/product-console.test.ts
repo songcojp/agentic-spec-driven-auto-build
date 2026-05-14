@@ -1578,6 +1578,47 @@ test("spec intake commands scan, upload, and enqueue User Stories skill invocati
   assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/agentic-spec/requirements.md"]);
 });
 
+test("User Stories generation honors project user-stories artifact convention", () => {
+  const dbPath = makeDbPath();
+  seedConsoleData(dbPath);
+  const scheduler = createMemoryScheduler(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "spec-intake-user-stories-"));
+  mkdirSync(join(projectPath, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(projectPath, "AGENTS.md"), [
+    "# Agent Guidelines",
+    "",
+    "- Treat `docs/agentic-spec/user-stories.md` as the active mainline requirement artifact.",
+  ].join("\n"), "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "PRD.md"), [
+    "# App Studio PRD",
+    "",
+    "Downstream user stories path: `docs/agentic-spec/user-stories.md`.",
+  ].join("\n"), "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "user-stories.md"), "# App Studio User Stories\n", "utf8");
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+    { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
+  ]);
+
+  const receipt = submitConsoleCommand(dbPath, {
+    action: "generate_user_stories",
+    entityType: "project",
+    entityId: "project-1",
+    requestedBy: "operator",
+    reason: "Generate User Stories.",
+    payload: { sourcePath: "docs/agentic-spec/PRD.md" },
+    now: stableDate,
+  }, { scheduler });
+  const result = runSqlite(dbPath, [], [
+    { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE job_type = 'cli.run' ORDER BY rowid DESC LIMIT 1" },
+  ]);
+  const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
+
+  assert.equal(receipt.status, "accepted");
+  assert.deepEqual(jobPayload.context.sourcePaths, ["docs/agentic-spec/PRD.md"]);
+  assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/agentic-spec/user-stories.md"]);
+});
+
 test("intake requirement from feature index writes back to mainline requirements", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
