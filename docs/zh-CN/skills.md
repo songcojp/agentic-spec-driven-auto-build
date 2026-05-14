@@ -48,7 +48,7 @@ Skill 输出必须符合调用端传入的 `SkillOutputContractV1` 或 `SkillOut
 | `validate-requirements` | Feature Spec 进入 ready 或规划消费需求前。 | 质量结论、冲突、不可测试项、追踪缺口和修复建议。 |
 | `manage-spec-change` | 新增、修订、澄清、废弃或重规划需求和规格时。 | 变更分类、受影响文档、更新结果、阻塞项和恢复目标。 |
 | `design-architecture` | 需要项目 HLD、ADR、数据/状态/Adapter/API/事件/文件契约时。 | 架构计划、契约、决策记录、风险和需求映射。 |
-| `design-ui-spec` | 需要 UI Spec、页面清单、交互、状态、prototype 或概念图映射时。 | UI Spec、页面/状态/交互规则、artifact 映射和验证要求。 |
+| `design-ui-spec` | 需要 UI System Design、全页面清单、交互流程、状态矩阵或静态 HTML prototype 时。 | UI System Design、设计 token、页面/状态/交互矩阵、WYSIWYG 静态 HTML、artifact 映射和验证要求。 |
 | `decompose-feature-specs` | 需要拆分或维护 Feature `requirements.md`、`design.md`、`tasks.md`、index 或 status 时。 | Feature Specs、任务切片、Journey Checkpoints、索引和 ready 状态建议。 |
 | `plan-feature-execution` | 需要依赖解析、风险估计、任务 DAG、执行计划、replan 或自动选择下个 Feature 时。 | 执行计划、可启动性判断、阻塞项、依赖结论和选择理由。 |
 | `implement-feature` | 有批准的 Feature Spec、设计约束、允许范围和验证命令，需要执行实现时。 | 代码/测试/配置/文档变更、执行事件、Delivery Fidelity、验证结果和状态更新。 |

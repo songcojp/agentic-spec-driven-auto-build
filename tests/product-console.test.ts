@@ -2412,9 +2412,11 @@ test("generate UI Spec dispatches the UI spec skill from project-level Spec Work
   assert.deepEqual(payload.context.imagePaths ?? [], []);
   assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/ui/ui-spec.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/studio-home.png"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/app-workspace.png"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/run-list-detail.png"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/index.html"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/studio-home.html"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/app-workspace.html"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/run-list-detail.html"), true);
+  assert.equal(payload.context.expectedArtifacts.some((path: string) => path.startsWith("docs/ui/concepts/")), false);
   assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
   assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-ui-spec");
@@ -2451,7 +2453,9 @@ test("feature-scoped UI Spec uses existing docs Feature Spec folder paths", () =
 
   assert.equal(payload.context.sourcePaths.includes(`docs/features/${featureFolder}/requirements.md`), true);
   assert.equal(payload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/ui-spec.md`), true);
+  assert.equal(payload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/prototype/index.html`), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-016/ui-spec.md"), false);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-016/prototype/index.html"), false);
 });
 
 test("spec intake workflow displays the actual discovered source instead of a default PRD path", () => {

@@ -907,7 +907,7 @@ Version: V1.0
 
 ---
 
-## 6.5 UI Specification
+## 6.5 UI System Design
 
 文件：
 
@@ -918,7 +918,7 @@ specs/mainline/04-ui-specification.md
 必须包含：
 
 ```markdown
-# UI Specification
+# UI System Design
 
 Version: V1.0
 
@@ -926,40 +926,44 @@ Version: V1.0
 
 ## 2. Information Architecture
 
-## 3. Page List
+## 3. Page and Surface Inventory
 
 ## 4. Navigation Model
 
 ## 5. Layout Rules
 
-## 6. Component Rules
+## 6. Design Tokens
 
-## 7. Interaction Rules
+## 7. Component Rules
 
-## 8. State Rules
+## 8. Workflow and Interaction Matrix
 
-## 9. Empty State
+## 9. Data Binding and State Rules
 
-## 10. Loading State
+## 10. Empty State
 
-## 11. Error State
+## 11. Loading State
 
-## 12. Permission State
+## 12. Error State
 
-## 13. Approval Interaction
+## 13. Permission State
 
-## 14. Recovery Interaction
+## 14. Approval Interaction
 
-## 15. Audit Interaction
+## 15. Recovery Interaction
 
-## 16. Responsive Rules
+## 16. Audit Interaction
 
-## 17. Accessibility Rules
+## 17. Responsive Rules
+
+## 18. Accessibility Rules
+
+## 19. Static HTML Prototype Map
 ```
 
 ---
 
-## 6.6 High-fidelity Concept / Prototype
+## 6.6 High-fidelity Static HTML Prototype
 
 文件夹：
 
@@ -967,32 +971,28 @@ Version: V1.0
 specs/mainline/05-high-fidelity-prototype/
 ```
 
-### 6.6.1 必须包含 PNG 或 HTML
+### 6.6.1 必须包含静态 HTML
 
-每个核心页面必须至少提供：
-
-```text
-PNG 高保真原型图
-```
-
-或者：
+每个核心页面必须提供：
 
 ```text
 HTML 高保真交互原型
 ```
 
-推荐两者同时存在：
+如果调用方显式要求 legacy 概念图兼容，才额外提供 PNG。
+
+项目级结构：
 
 ```text
-screens/*.png
 html/index.html
+html/<page-id>.html
 ```
 
 ---
 
-### 6.6.2 PNG 原型要求
+### 6.6.2 可选 PNG 原型要求
 
-PNG 文件要求：
+仅在调用方显式要求 PNG、需要修复既有概念图、或 legacy 下游仍依赖图片时生成。PNG 文件要求：
 
 1. 页面尺寸明确。
 2. 页面名称明确。
@@ -1021,19 +1021,20 @@ screens/
 HTML 原型要求：
 
 1. 可以本地打开。
-2. 能表达核心交互。
-3. 不要求生产级代码。
-4. 不应混入业务后端逻辑。
-5. 不应替代正式前端实现。
-6. 必须在 README 中说明使用方式。
+2. 每个核心页面有独立 HTML 文件，并有 prototype index 串联。
+3. 能表达核心交互、状态变化、校验、错误、空态、加载态、权限态和审批/恢复路径。
+4. 使用静态本地 JavaScript 模拟交互，不要求生产级代码。
+5. 不应混入业务后端逻辑，不调用真实 API，不修改真实 workspace 状态。
+6. 不应替代正式前端实现。
+7. 必须可作为 WYSIWYG 设计评审和浏览器验收前置证据。
 
 结构：
 
 ```text
 html/
   index.html
+  <page-id>.html
   assets/
-  README.md
 ```
 
 ---
@@ -1256,7 +1257,7 @@ sync。
 | PRD | 用户、目标、业务流程、大模块子能力、成功样例、失败样例、非目标、优先级。 | 只写模块名、页面名、愿景句或没有失败样例。 |
 | requirements | `REQ-*` / `NFR-*` / `EDGE-*` 原子 EARS 行为、`US-*` 映射、验收、边界/错误路径、证据类型。 | 需求需要解释才能测试。 |
 | HLD | 系统级子系统、事实源数据、状态流、接口/事件策略、运行拓扑、恢复和测试策略。 | 只有组件名、页面名或技术名。 |
-| UI Spec | 页面、视图、弹窗、状态、用户动作、interaction matrix、数据绑定、保存/校验/reload 断言、浏览器验收。 | 只有概念图、截图、入口或 happy path。 |
+| UI System Design | 全部页面、视图、弹窗、工作台面板、状态、端到端交互流程、interaction matrix、设计 token、组件语义、数据绑定、保存/校验/reload 断言、静态 HTML prototype 和浏览器验收。 | 只有文字说明、概念图、截图、入口或 happy path。 |
 | Feature Spec | 垂直用户旅程、Feature-scoped design、parser-compatible tasks、Journey Checkpoints、验收证据计划。 | P1 journey 没有 requirement row、design path、task block 或 evidence plan。 |
 
 `review-delivery-evidence` 负责跨层审查。失败原因使用

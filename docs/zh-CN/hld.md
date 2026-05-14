@@ -706,7 +706,7 @@ flowchart TD
 flowchart TD
   PRD[PRD / 自然语言需求源] --> EARS["[Skill] convert-ears-requirements\nEARS 需求拆解"]
   EARS --> HLD["[Skill] design-architecture\nHLD：系统架构 + 一级页面清单"]
-  HLD --> UISpec["[Skill] design-ui-spec\nUI Spec + 主要页面概念图"]
+  HLD --> UISpec["[Skill] design-ui-spec\nUI System Design + HTML prototype"]
   UISpec --> Split["[Skill] decompose-feature-specs（Feature 级）\n+ [Code] Feature 记录写入 SQLite\nFeature Spec 拆分"]
   Split --> Pool[Feature Spec Pool\nN 个 Feature 候选]
   Pool --> Checklist["[Skill] validate-requirements\n+ manage-spec-change\n需求质量检查 / 澄清"]
@@ -735,10 +735,10 @@ flowchart TD
 |---|---|---|---|---|---|
 | EARS 需求拆解 | 用户上传 PRD / Spec Sources 扫描 | **Skill** | PRD / 自然语言需求 | EARS Requirements（`requirements.md`） | `convert-ears-requirements` |
 | HLD 生成 | EARS 完成后手动或受控命令触发 | **Skill**（内容）+ **Code**（artifact 落地） | PRD + EARS Requirements | HLD 文档（`docs/zh-CN/hld.md`）+ **一级页面清单** | `design-architecture` |
-| UI Spec + 主要页面概念图 | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + EARS Requirements + HLD + 一级页面清单 | UI Spec 文档（`docs/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ 主要页面概念图（`docs/ui/concepts/*.png`） | `design-ui-spec` |
-| Spec Artifact Granularity Gate | 每个主线产物生成或变更后、进入下游前触发 | **Skill** | PRD + EARS Requirements + HLD + UI Spec + 目标 Feature Spec | `specGranularity` 决策；通过 → 允许生成 design/tasks 或 ready；失败 → `review_needed` 并列出 required refinements | `review-delivery-evidence` |
+| UI System Design + 高保真静态 HTML | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + EARS Requirements + HLD + 一级页面清单 | UI System Design 文档（兼容路径 `docs/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ WYSIWYG 静态 HTML 原型（`docs/ui/prototype/index.html`、`docs/ui/prototype/<page-id>.html` 或 Feature 级 `prototype/*.html`）；概念图仅在显式请求或 legacy 兼容时生成 | `design-ui-spec` |
+| Spec Artifact Granularity Gate | 每个主线产物生成或变更后、进入下游前触发 | **Skill** | PRD + EARS Requirements + HLD + UI System Design + 目标 Feature Spec | `specGranularity` 决策；通过 → 允许生成 design/tasks 或 ready；失败 → `review_needed` 并列出 required refinements | `review-delivery-evidence` |
 | Spec 文档质量修复循环 | 每个 Spec 文档生成或更新 Skill 返回 completed 前触发 | **调用方 Skill + Subagent** | 生成产物、source artifacts、调用方选择的 `qualityReviewSkill` / `repairOwner`、`qualityLoopPlan`、质量门结果 | `qualityRepairLoop`；通过 → completed；无可修复/超范围/10 轮上限 → clarification/review/risk/block 路由 | 调用方生成 Skill + `skill-local references/quality-loop.md` + 由调用方选择的 Quality Review Subagent / Repair Subagent |
-| Feature Spec 拆分 | UI Specs 完成（或 HLD 完成）后触发 | **Skill** | HLD + UI Specs | Feature Spec 候选集（`docs/features/<feat-id>/`） | `decompose-feature-specs`（Feature 级） |
+| Feature Spec 拆分 | UI System Design 完成（或 HLD 完成）后触发 | **Skill** | HLD + UI System Design | Feature Spec 候选集（`docs/features/<feat-id>/`） | `decompose-feature-specs`（Feature 级） |
 | 启动项目级任务调度 | `schedule_run(project)` 或 `start_auto_run` 触发 | **Code + Skill** | 已生成的 `docs/features/*` + Skill 产出的 `docs/features/feature-pool-queue.json` + Feature `spec-state.json` | SQLite Feature 候选记录 + BullMQ `<executor>.run` Job + Execution Record；Job payload 指向 Feature Spec 目录 | `plan-feature-execution` |
 | 需求质量检查 | Feature Spec 创建后 | **Skill** | Feature Spec requirements.md | 通过 → `ready`；歧义 → ClarificationLog + `draft` | `validate-requirements`、`manage-spec-change` |
 | Feature 执行 | `<executor>.run` Job Worker 消费 | **Code**（Execution Adapter / Memory）+ **CLI/RPC** | Job payload + Project Memory + Feature Spec `requirements.md` / `design.md` / `tasks.md` | 代码/测试/配置/文档变更、Execution Record、心跳、RawLog、Execution Result、Delivery Fidelity Ledger | `implement-feature` |
@@ -903,7 +903,7 @@ Decomposition rules:
 - 涉及写代码、测试执行或 Git 修改的 Feature Spec 必须明确 Workspace Manager 与 Execution Policy。
 - UI Feature Spec 只消费控制面状态，不重新定义调度真实来源。
 - Project Memory 相关 Feature Spec 必须处理压缩、版本、冲突修复和投影与真实状态的边界。
-- 每个 Feature Spec 的上游 PRD、requirements、HLD 和 UI Spec 必须达到 `REQ-092` 的颗粒度要求；只包含模块名、页面名、组件名、happy path 或只读截图的规格不得进入 `ready`。
+- 每个 Feature Spec 的上游 PRD、requirements、HLD 和 UI System Design 必须达到 `REQ-092` 的颗粒度要求；只包含模块名、页面名、组件名、happy path、只读截图或缺少静态 HTML prototype 的规格不得进入 `ready`。
 - UI / 配置型 Feature 必须包含 interaction matrix，覆盖入口、字段/控件、用户动作、保存/取消/校验、状态反馈、reload 后断言和浏览器验收；缺失时由 `review-delivery-evidence` 标记 `interaction_gap` 或 `state_data_gap`。
 
 ## 16. Skill-vs-Code Implementation Boundaries

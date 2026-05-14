@@ -1218,7 +1218,8 @@ test("generic skill invocation prompt does not include Codex CLI image generatio
       sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
       expectedArtifacts: [
         { path: "docs/ui/ui-spec.md", kind: "markdown", required: true },
-        { path: "docs/ui/concepts/<page-id>.png", kind: "image", required: true },
+        { path: "docs/ui/prototype/index.html", kind: "html", required: true },
+        { path: "docs/ui/prototype/<page-id>.html", kind: "html", required: true },
       ],
     }),
     "Context",
@@ -1227,8 +1228,11 @@ test("generic skill invocation prompt does not include Codex CLI image generatio
   assert.doesNotMatch(prompt, /\$imagegen/);
   assert.doesNotMatch(prompt, /Codex CLI-specific image generation feature/);
   assert.doesNotMatch(prompt, /gpt-image-2/);
-  assert.match(prompt, /one distinct image for each concrete expected docs\/ui\/concepts\/<page-id>\.png artifact/);
-  assert.match(prompt, /Do not satisfy multiple expected UI concept image artifacts with one copied image/);
+  assert.match(prompt, /UI Spec now means UI System Design/);
+  assert.match(prompt, /High-fidelity static HTML artifacts are required/);
+  assert.match(prompt, /Do not generate concept images when high-fidelity static HTML artifacts are expected/);
+  assert.doesNotMatch(prompt, /one distinct image for each concrete expected docs\/ui\/concepts\/<page-id>\.png artifact/);
+  assert.doesNotMatch(prompt, /Do not satisfy multiple expected UI concept image artifacts with one copied image/);
 });
 
 test("task-slicing runs receive a strict specialized result output schema", async () => {
@@ -1285,6 +1289,7 @@ test("Codex CLI adapter augments image artifact prompts with imagegen rules", as
     sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
     expectedArtifacts: [
       { path: "docs/ui/ui-spec.md", kind: "markdown", required: true },
+      { path: "docs/ui/prototype/index.html", kind: "html", required: true },
       { path: "docs/ui/concepts/<page-id>.png", kind: "image", required: true },
     ],
   });

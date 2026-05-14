@@ -57,7 +57,7 @@ Expanded into engineering facts:
 PRD              defines product facts
 EARS             defines acceptance facts
 HLD              defines architecture facts
-UI Spec          defines experience facts
+UI System Design defines experience facts and WYSIWYG static prototypes
 Feature Spec     defines development facts
 Execution Spec   defines runtime facts
 State Ledger     defines recovery facts
@@ -166,7 +166,7 @@ Spec remains the source of truth.
 
 | Concept | Purpose |
 | --- | --- |
-| **Mainline Spec** | Product-level source of truth: PRD, EARS requirements, HLD, UI Spec, prototype notes, and change rules. |
+| **Mainline Spec** | Product-level source of truth: PRD, EARS requirements, HLD, UI System Design, prototype notes, and change rules. |
 | **Feature Spec** | Development-level source of truth for one independently deliverable capability. Usually includes `requirements.md`, `design.md`, `tasks.md`, and `spec-state.json`. |
 | **Execution Spec** | Runtime-level source of truth for a concrete run: invocation, checkpoint, result, evidence, logs, and recovery plan. |
 | **State Ledger** | Append-only state history used for audit, recovery, replay, and dashboard reconstruction. |

@@ -1,30 +1,51 @@
 ---
 name: design-ui-spec
-description: "Design UI specifications and prototypes. Use for UI specs, page lists, interaction/state models, concept image plans, prototype HTML/PNG/index artifacts, and UI-to-feature mapping validation."
+description: "Design UI system specifications and high-fidelity prototypes. Use for UI system design from PRD/requirements/HLD, complete page and interaction-flow coverage, design tokens, page/state/interaction matrices, WYSIWYG static HTML prototypes, and UI-to-feature mapping validation."
 ---
 
-# UI Specification Design
+# UI System Design
 
 ## Workflow
 
 1. Confirm the requested outcome, source artifacts, workspace root, and allowed scope.
 2. Read referenced files from disk and pass paths, IDs, and section anchors instead of pasted document bodies.
 3. Apply this skill's workflow only to its declared responsibility; route adjacent lifecycle work to another project skill.
-4. Produce or review the requested artifacts with traceability to PRD, requirements, HLD, Feature Spec, execution records, tests, or evidence as applicable.
-5. Return the runtime-supplied structured output shape exactly. Echo `executionId`, `skillName`, `requestedAction`, produced artifacts, next action, and Feature-level traceability when the adapter provides them.
+4. Derive the UI system from PRD intent, EARS requirements, HLD architecture/data/state constraints, existing UI Spec, Feature Specs, and implementation reality when present.
+5. Produce or review the requested artifacts with traceability to PRD, requirements, HLD, Feature Spec, execution records, tests, or evidence as applicable.
+6. Return the runtime-supplied structured output shape exactly. Echo `executionId`, `skillName`, `requestedAction`, produced artifacts, next action, and Feature-level traceability when the adapter provides them.
 
 ## Guidance
 
-Describe real user workflows, page states, interactions, accessibility, evidence needs, and concept artifacts. Prefer source-backed UI behavior over decorative output.
+Produce UI system design, not a decorative page list. Describe real user workflows, page states, interactions, accessibility, evidence needs, design tokens, component semantics, and prototype artifacts. Prefer source-backed UI behavior over visual invention.
 
-When generating concept images:
+When generating or updating the UI system:
 
-- Derive the page/surface list from the PRD, requirements, HLD primary page/surface inventory, existing UI Spec, and Feature Specs when present.
+- Treat `docs/ui/ui-spec.md` as the compatibility path for the project-level UI System Design artifact unless the invocation supplies another path.
+- Cover every page, Webview, modal, drawer, panel, table/detail pair, settings surface, approval/review surface, empty/loading/error/permission state, and important responsive breakpoint implied by PRD, requirements, HLD, page/surface inventory, and Feature Specs.
+- Include an interaction matrix for each workflow: entry point, actors, controls/fields, user action, validation, save/cancel behavior, state feedback, persisted/reload/revisit assertion, error path, requirement IDs, and browser/evidence expectation.
+- Include UI system foundations: information architecture, navigation model, layout grid/density, typography, color tokens, semantic status tokens, spacing, component rules, accessibility rules, motion rules, data-binding rules, and verification obligations.
+- For operational SaaS, IDE, dashboard, review, settings, or scheduler surfaces, favor dense, readable, work-focused UI over marketing layout patterns.
+- If external UI/UX design-intelligence skills are available, they may inform style, palette, typography, accessibility, and stack-specific heuristics. Keep SpecDrive PRD/requirements/HLD as the authority; do not let external style recommendations override product workflows, state facts, controlled-command boundaries, or IDE Webview direction.
+
+When generating optional concept images:
+
+- Do not generate concept images when high-fidelity static HTML is the requested/default prototype output and no concrete image artifact is expected.
+- Only generate or repair concept images when the invocation explicitly lists concrete `docs/ui/concepts/<page-id>.png` artifacts, supplies image inputs to transform, or requests legacy concept-image compatibility.
+- When image artifacts are explicitly expected, derive the page/surface list from the PRD, requirements, HLD primary page/surface inventory, existing UI System Design, and Feature Specs when present.
 - Produce one distinct raster image for every concrete expected `docs/ui/concepts/<page-id>.png` artifact; do not collapse multiple pages into one overview image.
 - Use stable page IDs that match the artifact paths supplied by the invocation.
 - If an expected concept image already exists and does not need repair, keep it unchanged and list it as `unchanged`; do not regenerate or overwrite the same path just to refresh the run.
 - If replacing an existing concept image is necessary, record the path and replacement reason in `result.details` or `result.items`.
 - The image artifact `summary` should describe the page/surface represented, not the generation mechanism.
+
+When generating high-fidelity static HTML:
+
+- Produce a browsable prototype index at `docs/ui/prototype/index.html` for project-level work, or `<feature-spec>/prototype/index.html` for feature-scoped work, unless the invocation supplies different expected artifacts.
+- Produce one concrete page HTML artifact for every expected `docs/ui/prototype/<page-id>.html` artifact; feature-scoped output uses `<feature-spec>/prototype/<page-id>.html`.
+- Make the HTML WYSIWYG enough for design review: realistic layout, tokens, component states, representative data, visible validation/error/empty/loading states, responsive behavior, keyboard focus styling, and stateful interactions implemented with local static JavaScript where needed.
+- Keep prototypes backend-free and static. They may simulate interactions locally but must not call Control Plane APIs, mutate real workspace state, or claim to be production UI.
+- Preserve factual text such as paths, logs, evidence snippets, command names, requirement IDs, and status values exactly when they come from source artifacts.
+- Run or document practical visual checks for the generated HTML when possible, including desktop and mobile viewport review, nonblank rendering, interaction reachability, and no incoherent overlap.
 
 ## References
 

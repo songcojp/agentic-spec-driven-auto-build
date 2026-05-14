@@ -2060,6 +2060,7 @@ function normalizeArtifactContracts(value: unknown): SkillArtifactContract[] {
 function artifactKind(path: string): string {
   if (path.endsWith(".md")) return "markdown";
   if (path.endsWith(".json")) return "json";
+  if (path.endsWith(".html")) return "html";
   if (path.endsWith(".svg") || path.endsWith(".png")) return "image";
   return "artifact";
 }

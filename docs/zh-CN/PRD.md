@@ -937,7 +937,7 @@ Spec Artifact Granularity Gate 按文档层级检查：
 * PRD 必须把大模块拆到用户、目标、业务流程、子能力、成功样例、失败样例、非目标和优先级。
 * requirements 必须把每个 `REQ-*` / `NFR-*` / `EDGE-*` 写成原子、可观察、可测试的行为单元，并映射 `US-*`、验收、边界路径和证据类型。
 * HLD 必须说明系统级子系统、数据事实源、状态流、接口/事件策略、运行拓扑、质量策略和 Feature 拆分指导；不能只列组件名或页面名。
-* UI Spec 必须说明页面、视图、弹窗、状态、用户动作、交互矩阵、数据绑定、保存/校验/reload 断言和浏览器验收。
+* UI Spec 升级为 UI System Design：必须基于 PRD、requirements 和 HLD 覆盖全部页面、视图、弹窗、状态、用户动作、端到端交互流程、交互矩阵、设计 token、组件语义、数据绑定、保存/校验/reload 断言、浏览器验收，并输出可本地打开的高保真静态 HTML 原型作为 WYSIWYG 评审证据。
 * Feature Spec 必须把上游义务承接为垂直用户旅程、Feature-scoped design、parser-compatible tasks、Journey Checkpoints 和验收证据计划。
 
 任何层级只包含模块名、页面名、概念名、happy path、只读截图或入口文字时，`review-delivery-evidence` 必须返回 `review_needed`，并列出 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap` 或 `evidence_gap`。

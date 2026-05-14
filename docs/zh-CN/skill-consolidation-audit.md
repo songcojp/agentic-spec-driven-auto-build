@@ -21,7 +21,7 @@
 | `validate-requirements` | 需求可测试性、冲突、质量、可追踪性和下游消费检查。 |
 | `manage-spec-change` | 需求新增、修订、澄清、废弃、影响分析、证据失效和重规划触发。 |
 | `design-architecture` | HLD、ADR、模块、数据流、状态流、Adapter/API/事件/文件契约和架构评审。 |
-| `design-ui-spec` | UI Spec、页面清单、交互、状态、prototype、HTML/PNG artifact 和映射校验。 |
+| `design-ui-spec` | UI System Design、全页面清单、交互流程、状态矩阵、静态 HTML prototype 和映射校验。 |
 | `decompose-feature-specs` | Feature 拆分、requirements/design/tasks 生成、index/status 更新和 scope 校验。 |
 | `plan-feature-execution` | 任务 DAG、依赖、风险、执行计划、adapter 选择、replan 和自动选择下个 Feature。 |
 | `implement-feature` | 执行实现、规格引用绑定、事件捕获、运行监控、结果收集和状态更新。 |

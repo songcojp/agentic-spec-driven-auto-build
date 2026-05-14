@@ -18,13 +18,13 @@ Use this file as the target project's SpecDrive operating contract.
 - PRD captures product intent, scope, non-goals, milestones, risks, page surfaces, and source decisions.
 - `requirements.md` captures stable `REQ-*`, `NFR-*`, and `EDGE-*` IDs with source trace, priority, EARS-style behavior, and testable acceptance.
 - `hld.md` captures architecture, subsystem responsibility, data ownership, state machines, interfaces, security, scheduling, and technology constraints.
-- `docs/ui/ui-spec.md` and `docs/ui/concepts/*.png` guide page layout, visual hierarchy, state messaging, and browser verification when UI exists.
+- `docs/ui/ui-spec.md` and `docs/ui/prototype/*.html` guide UI system design, page layout, visual hierarchy, state messaging, interaction flow, and browser verification when UI exists.
 - Each `docs/features/<feature-id>/` folder should contain feature-local `requirements.md`, `design.md`, `tasks.md`, and optional `spec-state.json`.
 - Treat artifact granularity as part of source truth: PRD must carry users,
   workflows, sub-capabilities, success/failure examples, non-goals and
   priority; requirements must be atomic EARS behaviors with evidence
   expectations; HLD must name source-of-truth data, state flow, interfaces,
-  runtime and test strategy; UI Spec must include interaction matrices; Feature
+  runtime and test strategy; UI Spec must include interaction matrices and static HTML prototypes; Feature
   Specs must close vertical journeys with design paths, task blocks, Journey
   Checkpoints, and evidence plans.
 - Do not create project-level scratch requirement files under `docs/features/`. Project-level additions and changes belong in the active mainline `requirements.md`.
@@ -124,7 +124,7 @@ old dotted phase names are not valid for new routing.
 - `validate-requirements`: Check requirement quality, readiness, conflicts, testability, and traceability.
 - `manage-spec-change`: Triage and apply requirement additions, changes, deprecations, clarifications, traceability fixes, coverage gaps, and replan triggers.
 - `design-architecture`: Produce HLD, ADR, feature architecture plans, data/state flow, and adapter/API/event/file contracts.
-- `design-ui-spec`: Produce UI Spec, page list, interaction/state rules, prototype artifacts, and artifact mapping checks.
+- `design-ui-spec`: Produce UI System Design, page list, interaction/state matrices, WYSIWYG static HTML prototype artifacts, and artifact mapping checks.
 - `decompose-feature-specs`: Split product scope into Feature Specs or executable tasks, and maintain Feature requirements/design/tasks/index/status.
 - `plan-feature-execution`: Resolve dependencies, estimate risk, build task DAGs, prepare execution plans, select adapters, and replan/select executable work.
 - `implement-feature`: Implement bounded tasks while preserving scope, Delivery Fidelity, Journey Closure, state updates, and Git delivery evidence.

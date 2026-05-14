@@ -1231,7 +1231,9 @@ THE SYSTEM SHALL 在进入 design、tasks、ready 或 execution 前执行 Spec A
 - [ ] PRD Gate 必须确认每个大模块包含用户、目标、业务流程、子能力、成功样例、失败样例、非目标和优先级；缺少这些内容时返回 `review_needed`，原因包含 `intent_gap`。
 - [ ] Requirements Gate 必须确认每个 `REQ-*` / `NFR-*` / `EDGE-*` 是原子、可观察、可测试的 EARS 行为单元，并包含 `US-*` 映射、验收、边界/错误路径和证据类型；不可直接转成测试的需求返回 `behavior_gap` 或 `evidence_gap`。
 - [ ] HLD Gate 必须确认系统级子系统、数据事实源、状态流、接口/事件策略、运行拓扑、失败恢复和测试策略完整；只有组件名、页面名或技术名时返回 `architecture_gap`。
-- [ ] UI Gate 必须确认可交互页面包含 interaction matrix，覆盖入口、字段/控件、用户动作、保存/取消/校验、状态反馈、reload 后断言和验收方式；缺失时返回 `interaction_gap` 或 `state_data_gap`。
+- [ ] UI Gate 必须把 UI Spec 作为 UI System Design 审查，确认它基于 PRD、requirements 和 HLD 覆盖全部页面、视图、弹窗、工作台面板、状态和端到端交互流程。
+- [ ] UI Gate 必须确认每个可交互页面包含 interaction matrix，覆盖入口、字段/控件、用户动作、保存/取消/校验、状态反馈、reload 或 revisit 后断言、负向路径和验收方式；缺失时返回 `interaction_gap` 或 `state_data_gap`。
+- [ ] UI Gate 必须确认 UI System Design 包含设计 token、布局密度、组件语义、可访问性、响应式规则、数据绑定和证据义务，并输出可本地打开的高保真静态 HTML prototype index 与页面级 HTML；只有文字说明、概念图、截图或 happy path 时返回 `interaction_gap` 或 `evidence_gap`。
 - [ ] Feature Gate 必须确认每个 P1 journey 有 requirement row、design path、task block、Journey Checkpoint 和 evidence plan；缺任一项不得进入 `ready`。
 - [ ] 新增或变更 requirements 后必须先 refine design，再 sync tasks；不得以 Quick Plan 方式绕过 requirements analysis、design review 或 task sync。
 - [ ] `review-delivery-evidence` 必须输出 `result.specGranularity`，包含 `decision`、`artifactLevelFindings`、`missingUserScenarios`、`missingBehaviorRequirements`、`missingStateDataContracts`、`missingInteractionMatrix`、`missingAcceptanceEvidence` 和 `requiredRefinements`。

@@ -2015,7 +2015,7 @@ function buildPrdWorkflow(input: {
           { label: "Feature", value: input.selectedFeatureId ?? "Not selected" },
           { label: "Status", value: input.selectedFeatureStatus ?? "unknown" },
           { label: "Command", value: "schedule_run" },
-          { label: "UI outputs", value: "docs/ui/ui-spec.md + docs/ui/concepts/*.png" },
+          { label: "UI outputs", value: "docs/ui/ui-spec.md + docs/ui/prototype/*.html" },
         ],
         stages: planningActionStages,
       },
@@ -4342,9 +4342,10 @@ function expectedArtifactsForSpecAction(
     return [projectSpecPaths(workspaceRoot).hld];
   }
   if (action === "generate_ui_spec") {
+    const uiSpecPath = featureId ? `${featureSpecArtifactPath(featureId, workspaceRoot)}/ui-spec.md` : "docs/ui/ui-spec.md";
     return [
-      ...(featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/ui-spec.md`] : ["docs/ui/ui-spec.md"]),
-      ...uiConceptExpectedArtifacts(sourcePaths, workspaceRoot),
+      uiSpecPath,
+      ...uiPrototypeExpectedArtifacts(sourcePaths, workspaceRoot, featureId),
     ];
   }
   return featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/tasks.md`] : ["docs/features/README.md"];
@@ -4358,13 +4359,16 @@ function featureSpecArtifactPath(featureId?: string, workspaceRoot?: string): st
   return `docs/features/${docsFeature?.folder ?? featureId.toLowerCase()}`;
 }
 
-function uiConceptExpectedArtifacts(sourcePaths: string[], workspaceRoot?: string): string[] {
+function uiPrototypeExpectedArtifacts(sourcePaths: string[], workspaceRoot?: string, featureId?: string): string[] {
   const sourceTexts = sourcePaths
     .map((sourcePath) => readWorkspaceText(sourcePath, workspaceRoot))
     .filter((content): content is string => Boolean(content));
   const surfaces = uniqueSourcePaths(sourceTexts.flatMap(extractUiSurfaceInventory));
-  if (surfaces.length === 0) return ["docs/ui/concepts/<page-id>.png"];
-  return surfaces.map((surface) => `docs/ui/concepts/${uiConceptPageId(surface)}.png`);
+  const basePath = featureId ? `${featureSpecArtifactPath(featureId, workspaceRoot)}/prototype` : "docs/ui/prototype";
+  const pageArtifacts = surfaces.length === 0
+    ? [`${basePath}/<page-id>.html`]
+    : surfaces.map((surface) => `${basePath}/${uiConceptPageId(surface)}.html`);
+  return [`${basePath}/index.html`, ...pageArtifacts];
 }
 
 function readWorkspaceText(sourcePath: string, workspaceRoot?: string): string | undefined {
