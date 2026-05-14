@@ -6,10 +6,10 @@ Use this file as the target project's SpecDrive operating contract.
 
 ## Source Of Truth
 
-- Treat `docs/PRD.md`, `docs/requirements.md`, `docs/hld.md`, `docs/ui/ui-spec.md`, and `docs/features/<feature-id>/` as the governed product and delivery source of truth.
-- Use localized docs such as `docs/zh-CN/*`, `docs/en/*`, or `docs/ja/*` only when the project declares a localized or multilingual spec lane.
-- Treat `docs/features/feature-pool-queue.json` as the Feature dependency, priority, and queue fact source.
-- Treat `docs/features/<feature-id>/spec-state.json` as the file-backed lifecycle fact source for one Feature, including `status`, `executionStatus`, `currentJob`, `lastResult`, `blockedReasons`, `resumeTarget`, `nextAction`, and `history` when present.
+- Treat `docs/agentic-spec/PRD.md`, `docs/agentic-spec/requirements.md`, `docs/agentic-spec/hld.md`, `docs/agentic-spec/ui/ui-spec.md`, and `docs/agentic-spec/features/<feature-id>/` as the governed product and delivery source of truth.
+- Use localized docs such as `docs/agentic-spec/zh-CN/*`, `docs/agentic-spec/en/*`, or `docs/agentic-spec/ja/*` only when the project declares a localized or multilingual spec lane.
+- Treat `docs/agentic-spec/features/feature-pool-queue.json` as the Feature dependency, priority, and queue fact source.
+- Treat `docs/agentic-spec/features/<feature-id>/spec-state.json` as the file-backed lifecycle fact source for one Feature, including `status`, `executionStatus`, `currentJob`, `lastResult`, `blockedReasons`, `resumeTarget`, `nextAction`, and `history` when present.
 - Treat `.autobuild/` as local runtime state. Runtime databases and run artifacts are evidence sources, not mainline specs. Keep `.autobuild/runs/` ignored by Git unless the user explicitly asks to inspect or preserve run evidence.
 - Preserve user edits. Inspect the worktree before changing files and do not revert unrelated changes.
 
@@ -18,8 +18,8 @@ Use this file as the target project's SpecDrive operating contract.
 - PRD captures product intent, scope, non-goals, milestones, risks, page surfaces, and source decisions.
 - `requirements.md` captures stable `REQ-*`, `NFR-*`, and `EDGE-*` IDs with source trace, priority, EARS-style behavior, and testable acceptance.
 - `hld.md` captures architecture, subsystem responsibility, data ownership, state machines, interfaces, security, scheduling, and technology constraints.
-- `docs/ui/ui-spec.md` and `docs/ui/prototype/*.html` guide UI system design, page layout, visual hierarchy, state messaging, interaction flow, and browser verification when UI exists.
-- Each `docs/features/<feature-id>/` folder should contain feature-local `requirements.md`, `design.md`, `tasks.md`, and optional `spec-state.json`.
+- `docs/agentic-spec/ui/ui-spec.md` and `docs/agentic-spec/ui/prototype/*.html` guide UI system design, page layout, visual hierarchy, state messaging, interaction flow, and browser verification when UI exists.
+- Each `docs/agentic-spec/features/<feature-id>/` folder should contain feature-local `requirements.md`, `design.md`, `tasks.md`, and optional `spec-state.json`.
 - Treat artifact granularity as part of source truth: PRD must carry users,
   workflows, sub-capabilities, success/failure examples, non-goals and
   priority; requirements must be atomic EARS behaviors with evidence
@@ -27,7 +27,7 @@ Use this file as the target project's SpecDrive operating contract.
   runtime and test strategy; UI Spec must include interaction matrices and static HTML prototypes; Feature
   Specs must close vertical journeys with design paths, task blocks, Journey
   Checkpoints, and evidence plans.
-- Do not create project-level scratch requirement files under `docs/features/`. Project-level additions and changes belong in the active mainline `requirements.md`.
+- Do not create project-level scratch requirement files under `docs/agentic-spec/features/`. Project-level additions and changes belong in the active mainline `requirements.md`.
 - Feature-local `tasks.md` is an execution-agent work plan and UI projection source. Do not introduce a platform task table or make parsed tasks a scheduling prerequisite unless the active project spec explicitly requires it.
 
 ## State Protocol
@@ -79,7 +79,7 @@ State fact ownership:
 ## Change And Drift Protocol
 
 - Any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix must go through the skill-owned change protocol before implementation.
-- Do not create target-project `docs/change-management.md`, `docs/zh-CN/change-management.md`, or `docs/*/change-disposition-checklist.md`; those protocol/checklist documents are legacy SpecDrive repository artifacts. Store change facts in PRD, `requirements.md`, `hld.md`, affected Feature Specs, `spec-state.json`, and runtime/review evidence.
+- Do not create target-project `docs/agentic-spec/change-management.md`, `docs/agentic-spec/zh-CN/change-management.md`, or `docs/agentic-spec/*/change-disposition-checklist.md`; those protocol/checklist documents are legacy SpecDrive repository artifacts. Store change facts in PRD, `requirements.md`, `hld.md`, affected Feature Specs, `spec-state.json`, and runtime/review evidence.
 - If a repository fact conflicts with the approved spec, do not silently code around it. Classify the conflict as either a code fix or spec evolution, then update the governing spec lane first when the spec changes.
 - If implementation, tests, review, or delivery evidence invalidates an active or completed Feature, record the affected evidence, update traceability, and reopen, follow up, or re-plan the affected Feature.
 - If a Feature is `blocked`, `failed`, `review_needed`, or `approval_needed`, do not repeatedly auto-select it unless there is an explicit resume or skip instruction.

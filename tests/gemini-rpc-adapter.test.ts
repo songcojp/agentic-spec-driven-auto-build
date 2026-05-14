@@ -114,7 +114,7 @@ function executionInvocation(): ExecutionAdapterInvocationV1 {
     skillInstruction: {
       skillName: "implement-feature",
       requestedAction: "feature_execution",
-      sourcePaths: ["docs/features/feat-016/requirements.md"],
+      sourcePaths: ["docs/agentic-spec/features/feat-016/requirements.md"],
       expectedArtifacts: [],
     },
   };
@@ -150,7 +150,7 @@ function validJourneyResult(): Record<string, unknown> {
 
 function validDeliveryFidelity(): Record<string, unknown> {
   return {
-    sourceIntent: [{ id: "INTENT-GEMINI", summary: "Run a Feature through the Gemini ACP adapter.", sourceRef: "docs/features/feat-016/requirements.md", status: "preserved" }],
+    sourceIntent: [{ id: "INTENT-GEMINI", summary: "Run a Feature through the Gemini ACP adapter.", sourceRef: "docs/agentic-spec/features/feat-016/requirements.md", status: "preserved" }],
     journeys: [{ id: "US-GEMINI", summary: "Gemini ACP feature execution", status: "verified", obligations: ["BO-GEMINI"] }],
     behaviorObligations: [{ id: "BO-GEMINI", sourceRef: "AC-GEMINI", description: "Project Skill output through Gemini ACP into execution result.", status: "verified", evidenceRefs: ["EV-GEMINI"] }],
     handoffs: [

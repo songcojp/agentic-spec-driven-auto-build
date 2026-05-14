@@ -560,7 +560,7 @@ test("console view models expose specs, scheduler state, runner, and reviews", (
   assert.equal(scopedReviews.items.some((item) => item.id === "REV-OTHER"), false);
   assert.equal(reviews.items.find((item) => item.id === "REV-GLOBAL")?.evidence.length, 0);
   assert.equal(reviews.items[0].goal, "Approve console review controls.");
-  assert.equal(reviews.items[0].specRef, "docs/features/feat-013-product-console/design.md");
+  assert.equal(reviews.items[0].specRef, "docs/agentic-spec/features/feat-013-product-console/design.md");
   assert.deepEqual(reviews.items[0].runContract, { command: "npm test" });
   assert.deepEqual(reviews.items[0].diff, { files: ["src/product-console.ts"] });
   assert.deepEqual(reviews.riskFilters, ["high", "medium"]);
@@ -578,7 +578,7 @@ test("spec workspace parses selected Feature Spec documents for detail tabs", ()
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "specdrive-feature-docs-"));
-  const featureDir = join(projectPath, "docs", "features", "feat-013-product-console");
+  const featureDir = join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(
     join(featureDir, "requirements.md"),
@@ -747,7 +747,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
     tokenUsage: { inputTokens: 1200, cachedInputTokens: 200, outputTokens: 320, reasoningOutputTokens: 80, totalTokens: 1600 },
     inputContract: { skillName: "decompose-feature-specs", required: ["featureId", "workspaceRoot"] },
     outputContract: { contractVersion: "skill-contract/v1", required: ["status"], resultShape: { featureCount: "number" } },
-    producedArtifacts: [{ path: "docs/features/feature-pool-queue.json", kind: "json", status: "created" }],
+    producedArtifacts: [{ path: "docs/agentic-spec/features/feature-pool-queue.json", kind: "json", status: "created" }],
     traceability: { featureId: "FEAT-013" },
     result: { featureCount: 3 },
   };
@@ -955,7 +955,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
             skillInstruction: {
               skillName: "design-ui-spec",
               requestedAction: "generate_ui_spec",
-              sourcePaths: ["docs/zh-CN/requirements.md"],
+              sourcePaths: ["docs/agentic-spec/zh-CN/requirements.md"],
               expectedArtifacts: [],
             },
           },
@@ -967,7 +967,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
             status: "completed",
             summary: "UI spec generated from persisted metadata.",
             nextAction: "Review generated UI spec.",
-            producedArtifacts: [{ path: "docs/zh-CN/ui-spec.md", kind: "markdown", status: "created" }],
+            producedArtifacts: [{ path: "docs/agentic-spec/zh-CN/ui-spec.md", kind: "markdown", status: "created" }],
             traceability: { featureId: "FEAT-013" },
             result: { pageCount: 4 },
           },
@@ -978,7 +978,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   const metadataOutput = buildRunnerConsoleView(dbPath, stableDate, "project-1").schedulerJobs.find((job) => job.id === "JOB-METADATA-OUTPUT")?.skillOutput;
   assert.equal(metadataOutput?.parseStatus, "found");
   assert.equal(metadataOutput?.summary, "UI spec generated from persisted metadata.");
-  assert.deepEqual(metadataOutput?.producedArtifacts, [{ path: "docs/zh-CN/ui-spec.md", kind: "markdown", status: "created" }]);
+  assert.deepEqual(metadataOutput?.producedArtifacts, [{ path: "docs/agentic-spec/zh-CN/ui-spec.md", kind: "markdown", status: "created" }]);
   assert.equal(metadataOutput?.tokenUsage, undefined);
 
   runSqlite(dbPath, [
@@ -1253,10 +1253,10 @@ test("schedule_run chooses run mode and provider from job override before projec
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-exec-preference-"));
-  mkdirSync(join(projectPath, "docs", "features", "feat-001-provider"), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "requirements.md"), "# Feature Spec: FEAT-001 Provider\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-provider"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-provider", "requirements.md"), "# Feature Spec: FEAT-001 Provider\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-provider", "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-provider", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "DELETE FROM execution_records" },
     { sql: "DELETE FROM scheduler_job_records" },
@@ -1294,7 +1294,7 @@ test("schedule_run chooses run mode and provider from job override before projec
     { sql: "UPDATE execution_records SET status = 'completed', completed_at = ? WHERE id = ?", params: [stableDate.toISOString(), projectDefaultReceipt.executionId] },
     { sql: "UPDATE scheduler_job_records SET status = 'completed' WHERE id = ?", params: [projectDefaultReceipt.schedulerJobId] },
   ]);
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-provider", "spec-state.json"), JSON.stringify({
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-provider", "spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-013",
     status: "ready",
@@ -1376,8 +1376,8 @@ test("console command gateway audits controlled writes without mutating worktree
     reason: "Scan project PRD.",
     payload: {
       targetRepoPath: "workspace/acme-returns-portal",
-      sourcePath: "docs/zh-CN/PRD.md",
-      resolvedSourcePath: "workspace/acme-returns-portal/docs/zh-CN/PRD.md",
+      sourcePath: "docs/agentic-spec/zh-CN/PRD.md",
+      resolvedSourcePath: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md",
       scanMode: "smart",
     },
     now: stableDate,
@@ -1396,14 +1396,14 @@ test("console command gateway audits controlled writes without mutating worktree
   assert.equal(after.queries.audit[0].source, "product_console");
   assert.match(String(after.queries.audit[0].payload_json), /operator/);
   assert.equal(after.queries.workflowAudit[0].event_type, "console_command_scan_prd_source");
-  assert.equal(String(after.queries.workflowAudit[0].payload_json).includes("workspace/acme-returns-portal/docs/zh-CN/PRD.md"), true);
+  assert.equal(String(after.queries.workflowAudit[0].payload_json).includes("workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md"), true);
 });
 
 test("project initialization provisions AGENTS and .agents runtime for CLI runs", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-agent-runtime-"));
-  mkdirSync(join(projectPath, "docs"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec"), { recursive: true });
   mkdirSync(join(projectPath, ".agents", "skills", "decompose-feature-specs"), { recursive: true });
   writeFileSync(join(projectPath, ".agents", "skills", "decompose-feature-specs", "SKILL.md"), "# Project custom task slicing skill\n", "utf8");
   runSqlite(dbPath, [
@@ -1513,10 +1513,10 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-intake-"));
-  mkdirSync(join(projectPath, "docs", "zh-CN"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "zh-CN"), { recursive: true });
   mkdirSync(join(projectPath, ".autobuild", "reports"), { recursive: true });
   writeFileSync(
-    join(projectPath, "docs", "zh-CN", "PRD.md"),
+    join(projectPath, "docs", "agentic-spec", "zh-CN", "PRD.md"),
     "Feature: Intake Portal\nGoal: Capture requirements.\nPRD: The system shall scan spec sources. The system shall generate EARS requirements.",
     "utf8",
   );
@@ -1531,7 +1531,7 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
     entityId: "project-1",
     requestedBy: "operator",
     reason: "Scan project specs.",
-    payload: { sourcePath: "docs/zh-CN/PRD.md" },
+    payload: { sourcePath: "docs/agentic-spec/zh-CN/PRD.md" },
     now: stableDate,
   });
   const uploadReceipt = submitConsoleCommand(dbPath, {
@@ -1554,7 +1554,7 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
     entityId: "project-1",
     requestedBy: "operator",
     reason: "Generate EARS.",
-    payload: { sourcePath: "docs/zh-CN/PRD.md" },
+    payload: { sourcePath: "docs/agentic-spec/zh-CN/PRD.md" },
     now: stableDate,
   }, { scheduler });
   const result = runSqlite(dbPath, [], [
@@ -1575,17 +1575,17 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
   assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "convert-ears-requirements");
   assert.equal(jobPayload.context.skillName, "convert-ears-requirements");
-  assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/requirements.md"]);
+  assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/agentic-spec/requirements.md"]);
 });
 
 test("intake requirement from feature index writes back to mainline requirements", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "intake-feature-index-"));
-  mkdirSync(join(projectPath, "docs", "features"), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "PRD.md"), "# PRD\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "requirements.md"), "# Requirements\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "README.md"), "# Feature Specs\n", "utf8");
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "PRD.md"), "# PRD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "requirements.md"), "# Requirements\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "README.md"), "# Feature Specs\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1599,7 +1599,7 @@ test("intake requirement from feature index writes back to mainline requirements
     reason: "New Feature from feature index.",
     payload: {
       projectId: "project-1",
-      sourcePath: "docs/features/README.md",
+      sourcePath: "docs/agentic-spec/features/README.md",
       requirementText: "Add UI concept alignment.",
     },
     now: stableDate,
@@ -1608,11 +1608,11 @@ test("intake requirement from feature index writes back to mainline requirements
     { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [receipt.schedulerJobId] },
   ]);
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
-  assert.deepEqual(jobPayload.context.sourcePaths, ["docs/features/README.md"]);
-  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/requirements.md"), true);
-  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/<feature-id>/requirements.md"), true);
-  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/<feature-id>/spec-state.json"), true);
-  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
+  assert.deepEqual(jobPayload.context.sourcePaths, ["docs/agentic-spec/features/README.md"]);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/agentic-spec/requirements.md"), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/requirements.md"), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/spec-state.json"), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/agentic-spec/features/feature-pool-queue.json"), true);
   assert.equal(jobPayload.context.desiredOutcome, "feature_spec_ready_for_execution");
   assert.equal(jobPayload.context.targetFeatureStatus, "ready");
 });
@@ -1622,13 +1622,13 @@ test("requirement changes target existing docs Feature Spec folder artifacts", (
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "evolve-feature-folder-"));
   const featureFolder = "feat-016-app-studio-navigation";
-  mkdirSync(join(projectPath, "docs", "features", featureFolder), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "PRD.md"), "# PRD\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "requirements.md"), "# Requirements\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "README.md"), "# Feature Specs\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", featureFolder, "requirements.md"), "# Feature Spec: FEAT-016 App Studio Navigation\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", featureFolder, "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", featureFolder, "tasks.md"), "# Tasks\n", "utf8");
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", featureFolder), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "PRD.md"), "# PRD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "requirements.md"), "# Requirements\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "README.md"), "# Feature Specs\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", featureFolder, "requirements.md"), "# Feature Spec: FEAT-016 App Studio Navigation\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", featureFolder, "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", featureFolder, "tasks.md"), "# Tasks\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1643,7 +1643,7 @@ test("requirement changes target existing docs Feature Spec folder artifacts", (
     payload: {
       projectId: "project-1",
       featureId: "FEAT-016",
-      sourcePath: "docs/requirements.md",
+      sourcePath: "docs/agentic-spec/requirements.md",
       targetRequirementId: "REQ-016",
       requirementText: "Update App Studio navigation behavior.",
     },
@@ -1654,18 +1654,18 @@ test("requirement changes target existing docs Feature Spec folder artifacts", (
   ]);
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
 
-  assert.equal(jobPayload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/requirements.md`), true);
-  assert.equal(jobPayload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/spec-state.json`), true);
-  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/FEAT-016/spec-state.json"), false);
+  assert.equal(jobPayload.context.expectedArtifacts.includes(`docs/agentic-spec/features/${featureFolder}/requirements.md`), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes(`docs/agentic-spec/features/${featureFolder}/spec-state.json`), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/agentic-spec/features/FEAT-016/spec-state.json"), false);
 });
 
 test("IDE lifecycle commands scan spec sources and run project health through Console gateway", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "ide-lifecycle-"));
-  mkdirSync(join(projectPath, "docs", "zh-CN"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "zh-CN"), { recursive: true });
   mkdirSync(join(projectPath, ".autobuild", "reports"), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "zh-CN", "PRD.md"), "# PRD\n\nThe system shall keep IDE buttons executable.", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "zh-CN", "PRD.md"), "# PRD\n\nThe system shall keep IDE buttons executable.", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1677,7 +1677,7 @@ test("IDE lifecycle commands scan spec sources and run project health through Co
     entityId: "project-1",
     requestedBy: "vscode-extension",
     reason: "Scan Spec sources from VSCode Spec Workspace.",
-    payload: { sourcePath: "docs/zh-CN/PRD.md" },
+    payload: { sourcePath: "docs/agentic-spec/zh-CN/PRD.md" },
     now: stableDate,
   });
   const healthReceipt = submitConsoleCommand(dbPath, {
@@ -1710,9 +1710,9 @@ test("spec workspace records EARS generation as a CLI skill run instead of direc
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-intake-selected-"));
-  mkdirSync(join(projectPath, "docs", "zh-CN"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "zh-CN"), { recursive: true });
   writeFileSync(
-    join(projectPath, "docs", "zh-CN", "PRD.md"),
+    join(projectPath, "docs", "agentic-spec", "zh-CN", "PRD.md"),
     [
       "Feature: Real Intake Flow",
       "Goal: Generate real requirements from a project PRD.",
@@ -1732,7 +1732,7 @@ test("spec workspace records EARS generation as a CLI skill run instead of direc
     entityId: "project-1",
     requestedBy: "operator",
     reason: "Generate EARS from real PRD.",
-    payload: { sourcePath: "docs/zh-CN/PRD.md" },
+    payload: { sourcePath: "docs/agentic-spec/zh-CN/PRD.md" },
     now: new Date("2026-04-28T12:03:00.000Z"),
   }, { scheduler });
   const result = runSqlite(dbPath, [], [
@@ -1776,8 +1776,8 @@ test("generate HLD dispatches the project HLD skill and writes hld.md", () => {
   assert.equal(payload.projectId, "project-1");
   assert.equal(payload.context.skillName, "design-architecture");
   assert.equal(payload.requestedAction, "generate_hld");
-  assert.deepEqual(payload.context.expectedArtifacts, ["docs/hld.md"]);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/design.md"), false);
+  assert.deepEqual(payload.context.expectedArtifacts, ["docs/agentic-spec/hld.md"]);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/design.md"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(payload.traceability, "changeIds"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
   assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-architecture");
@@ -1788,9 +1788,9 @@ test("spec workspace does not treat intake artifacts as Feature Specs", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-intake-artifact-only-"));
-  mkdirSync(join(projectPath, "docs"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec"), { recursive: true });
   mkdirSync(join(projectPath, ".autobuild", "specs"), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "PRD.md"), "# Lottery PRD\n\nThe system shall capture lottery tickets.", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "PRD.md"), "# Lottery PRD\n\nThe system shall capture lottery tickets.", "utf8");
   writeFileSync(join(projectPath, ".autobuild", "specs", "FEAT-INTAKE-001.json"), '{"id":"FEAT-INTAKE-001"}\n', "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
@@ -1813,16 +1813,16 @@ test("spec workspace builds Feature Spec List from docs features packages", () =
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-docs-features-"));
-  mkdirSync(join(projectPath, "docs", "features", "feat-001-ticket-capture"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture"), { recursive: true });
   mkdirSync(join(projectPath, ".autobuild", "specs"), { recursive: true });
   writeFileSync(join(projectPath, ".autobuild", "specs", "FEAT-INTAKE-001.json"), '{"id":"FEAT-INTAKE-001"}\n', "utf8");
   writeFileSync(
-    join(projectPath, "docs", "features", "feat-001-ticket-capture", "requirements.md"),
+    join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "requirements.md"),
     "# Feature Spec: FEAT-001 Ticket Capture\n\n- REQ-001: The system shall save lottery ticket records.\n- REQ-LOT-002: The system shall scan ticket images.",
     "utf8",
   );
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1852,10 +1852,10 @@ test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-split-feature-packages-"));
-  mkdirSync(join(projectPath, "docs"), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "PRD.md"), "# Lottery PRD\n\nThe system shall manage lottery tickets.", "utf8");
-  writeFileSync(join(projectPath, "docs", "requirements.md"), "# Requirements\n\nREQ-001: The system shall save tickets.", "utf8");
-  writeFileSync(join(projectPath, "docs", "hld.md"), "# HLD\n\nUse local-first storage.", "utf8");
+  mkdirSync(join(projectPath, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "PRD.md"), "# Lottery PRD\n\nThe system shall manage lottery tickets.", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "requirements.md"), "# Requirements\n\nREQ-001: The system shall save tickets.", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "hld.md"), "# HLD\n\nUse local-first storage.", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -1883,13 +1883,13 @@ test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs
   assert.equal(payload.projectId, "project-1");
   assert.equal(payload.context.skillName, "decompose-feature-specs");
   assert.equal(payload.requestedAction, "split_feature_specs");
-  assert.equal(payload.context.sourcePaths.includes("docs/PRD.md"), true);
-  assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
-  assert.equal(payload.context.sourcePaths.includes("docs/hld.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/requirements.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/design.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/tasks.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
+  assert.equal(payload.context.sourcePaths.includes("docs/agentic-spec/PRD.md"), true);
+  assert.equal(payload.context.sourcePaths.includes("docs/agentic-spec/requirements.md"), true);
+  assert.equal(payload.context.sourcePaths.includes("docs/agentic-spec/hld.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/requirements.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/design.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/tasks.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/feature-pool-queue.json"), true);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
   assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "decompose-feature-specs");
 });
@@ -1934,7 +1934,7 @@ test("split Feature Specs preserves uploaded PRD source for task-slicing context
   assert.equal(payload.context.skillName, "decompose-feature-specs");
   assert.equal(payload.context.sourcePaths[0], uploadedSourcePath);
   assert.equal(payload.context.sourcePaths.includes(".autobuild/specs/uploads/requirements.md"), true);
-  assert.equal(payload.context.sourcePaths.includes("docs/PRD.md"), true);
+  assert.equal(payload.context.sourcePaths.includes("docs/agentic-spec/PRD.md"), true);
 });
 
 test("project schedule_run executes the skill-planned queue artifact", () => {
@@ -1942,10 +1942,10 @@ test("project schedule_run executes the skill-planned queue artifact", () => {
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-start-auto-run-"));
-  mkdirSync(join(projectPath, "docs", "features", "feat-001-ticket-capture"), { recursive: true });
-  mkdirSync(join(projectPath, "docs", "features", "feat-002-ticket-scan"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-002-ticket-scan"), { recursive: true });
   writeFileSync(
-    join(projectPath, "docs", "features", "README.md"),
+    join(projectPath, "docs", "agentic-spec", "features", "README.md"),
     [
       "| Feature ID | Status | Name | Milestone | Dependencies |",
       "| --- | --- | --- | --- | --- |",
@@ -1956,7 +1956,7 @@ test("project schedule_run executes the skill-planned queue artifact", () => {
     "utf8",
   );
   writeFileSync(
-    join(projectPath, "docs", "features", "feature-pool-queue.json"),
+    join(projectPath, "docs", "agentic-spec", "features", "feature-pool-queue.json"),
     JSON.stringify({
       features: [
         { id: "FEAT-001", priority: 20, dependencies: [] },
@@ -1966,19 +1966,19 @@ test("project schedule_run executes the skill-planned queue artifact", () => {
     "utf8",
   );
   writeFileSync(
-    join(projectPath, "docs", "features", "feat-001-ticket-capture", "requirements.md"),
+    join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "requirements.md"),
     "# Feature Spec: FEAT-001 Ticket Capture\n\n- REQ-LOT-001: The system shall save lottery ticket records.",
     "utf8",
   );
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   writeFileSync(
-    join(projectPath, "docs", "features", "feat-002-ticket-scan", "requirements.md"),
+    join(projectPath, "docs", "agentic-spec", "features", "feat-002-ticket-scan", "requirements.md"),
     "# Feature Spec: FEAT-002 Ticket Scan\n\n- REQ-LOT-002: The system shall scan lottery ticket images.",
     "utf8",
   );
-  writeFileSync(join(projectPath, "docs", "features", "feat-002-ticket-scan", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-002-ticket-scan", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-002-ticket-scan", "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-002-ticket-scan", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -2027,13 +2027,13 @@ test("start Auto Run accepts a feature-selection skill decision before enqueuing
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-start-auto-run-selector-"));
   for (const folder of ["feat-001-ticket-capture", "feat-002-ticket-scan"]) {
-    mkdirSync(join(projectPath, "docs", "features", folder), { recursive: true });
+    mkdirSync(join(projectPath, "docs", "agentic-spec", "features", folder), { recursive: true });
     const id = folder.startsWith("feat-001") ? "FEAT-001" : "FEAT-002";
-    writeFileSync(join(projectPath, "docs", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n`, "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n`, "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "design.md"), "# Design\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
-  writeFileSync(join(projectPath, "docs", "features", "feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feature-pool-queue.json"), JSON.stringify({
     features: [
       { id: "FEAT-001", priority: 20, dependencies: [] },
       { id: "FEAT-002", priority: 10, dependencies: [] },
@@ -2083,13 +2083,13 @@ test("start Auto Run enables automation while recording unsafe feature-selection
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-start-auto-run-selector-block-"));
   for (const folder of ["feat-001-foundation", "feat-002-dependent"]) {
-    mkdirSync(join(projectPath, "docs", "features", folder), { recursive: true });
+    mkdirSync(join(projectPath, "docs", "agentic-spec", "features", folder), { recursive: true });
     const id = folder.startsWith("feat-001") ? "FEAT-001" : "FEAT-002";
-    writeFileSync(join(projectPath, "docs", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n`, "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n`, "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "design.md"), "# Design\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
-  writeFileSync(join(projectPath, "docs", "features", "feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feature-pool-queue.json"), JSON.stringify({
     features: [
       { id: "FEAT-001", priority: 20, dependencies: [] },
       { id: "FEAT-002", priority: 10, dependencies: ["FEAT-001"] },
@@ -2125,7 +2125,7 @@ test("start Auto Run enables automation while recording unsafe feature-selection
     { name: "executions", sql: "SELECT id FROM execution_records" },
     { name: "project", sql: "SELECT automation_enabled FROM projects WHERE id = 'project-1'" },
   ]);
-  const state = JSON.parse(readFileSync(join(projectPath, "docs", "features", "feat-002-dependent", "spec-state.json"), "utf8"));
+  const state = JSON.parse(readFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-002-dependent", "spec-state.json"), "utf8"));
 
   assert.equal(receipt.status, "accepted");
   assert.equal(Number(result.queries.project[0].automation_enabled), 1);
@@ -2138,14 +2138,14 @@ test("start Auto Run enables automation when the skill queue plan is missing", (
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-start-auto-run-missing-plan-"));
-  mkdirSync(join(projectPath, "docs", "features", "feat-001-ticket-capture"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture"), { recursive: true });
   writeFileSync(
-    join(projectPath, "docs", "features", "feat-001-ticket-capture", "requirements.md"),
+    join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "requirements.md"),
     "# Feature Spec: FEAT-001 Ticket Capture\n\n- REQ-LOT-001: The system shall save lottery ticket records.",
     "utf8",
   );
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
     { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
@@ -2237,13 +2237,13 @@ test("start Auto Run writes file-backed state and can skip to the next Feature",
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-start-auto-run-skip-"));
   for (const folder of ["feat-001-ticket-capture", "feat-002-ticket-scan"]) {
-    mkdirSync(join(projectPath, "docs", "features", folder), { recursive: true });
+    mkdirSync(join(projectPath, "docs", "agentic-spec", "features", folder), { recursive: true });
     const id = folder.startsWith("feat-001") ? "FEAT-001" : "FEAT-002";
-    writeFileSync(join(projectPath, "docs", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n\n- REQ-${id.slice(-3)}: The system shall run this Feature.`, "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "requirements.md"), `# Feature Spec: ${id} Demo\n\n- REQ-${id.slice(-3)}: The system shall run this Feature.`, "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "design.md"), "# Design\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", folder, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
-  writeFileSync(join(projectPath, "docs", "features", "feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feature-pool-queue.json"), JSON.stringify({
     features: [
       { id: "FEAT-001", priority: 20, dependencies: [] },
       { id: "FEAT-002", priority: 10, dependencies: [] },
@@ -2265,8 +2265,8 @@ test("start Auto Run writes file-backed state and can skip to the next Feature",
     payload: { skipFeatureId: "FEAT-001" },
     now: stableDate,
   }, { scheduler });
-  const skipped = JSON.parse(readFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "spec-state.json"), "utf8"));
-  const queued = JSON.parse(readFileSync(join(projectPath, "docs", "features", "feat-002-ticket-scan", "spec-state.json"), "utf8"));
+  const skipped = JSON.parse(readFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "spec-state.json"), "utf8"));
+  const queued = JSON.parse(readFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-002-ticket-scan", "spec-state.json"), "utf8"));
   const result = runSqlite(dbPath, [], [
     { name: "execution", sql: "SELECT context_json FROM execution_records WHERE id = ?", params: [receipt.executionId] },
   ]);
@@ -2276,7 +2276,7 @@ test("start Auto Run writes file-backed state and can skip to the next Feature",
   assert.equal(skipped.status, "skipped");
   assert.equal(queued.status, "queued");
   assert.equal(context.featureId, "FEAT-002");
-  assert.equal(context.specStatePath, "docs/features/feat-002-ticket-scan/spec-state.json");
+  assert.equal(context.specStatePath, "docs/agentic-spec/features/feat-002-ticket-scan/spec-state.json");
 });
 
 test("start Auto Run enables automation and marks incomplete Feature Spec state as blocked", () => {
@@ -2284,9 +2284,9 @@ test("start Auto Run enables automation and marks incomplete Feature Spec state 
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-start-auto-run-blocked-state-"));
-  mkdirSync(join(projectPath, "docs", "features", "feat-001-ticket-capture"), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "requirements.md"), "# Feature Spec: FEAT-001 Ticket Capture\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "feature-pool-queue.json"), JSON.stringify({
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "requirements.md"), "# Feature Spec: FEAT-001 Ticket Capture\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "feature-pool-queue.json"), JSON.stringify({
     features: [{ id: "FEAT-001", priority: 20, dependencies: [] }],
   }, null, 2), "utf8");
   runSqlite(dbPath, [
@@ -2305,7 +2305,7 @@ test("start Auto Run enables automation and marks incomplete Feature Spec state 
     payload: {},
     now: stableDate,
   }, { scheduler });
-  const state = JSON.parse(readFileSync(join(projectPath, "docs", "features", "feat-001-ticket-capture", "spec-state.json"), "utf8"));
+  const state = JSON.parse(readFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "spec-state.json"), "utf8"));
   const result = runSqlite(dbPath, [], [
     { name: "project", sql: "SELECT automation_enabled FROM projects WHERE id = 'project-1'" },
   ]);
@@ -2322,10 +2322,10 @@ test("start Auto Run accepts skill queue plan P-level priorities", () => {
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-start-auto-run-priority-label-"));
-  mkdirSync(join(projectPath, "docs", "features", "FEAT-001"), { recursive: true });
-  mkdirSync(join(projectPath, "docs", "features", "FEAT-002"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "FEAT-001"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "FEAT-002"), { recursive: true });
   writeFileSync(
-    join(projectPath, "docs", "features", "feature-pool-queue.json"),
+    join(projectPath, "docs", "agentic-spec", "features", "feature-pool-queue.json"),
     JSON.stringify({
       features: [
         { id: "FEAT-001", priority: "P1", dependencies: [] },
@@ -2336,12 +2336,12 @@ test("start Auto Run accepts skill queue plan P-level priorities", () => {
   );
   for (const featureId of ["FEAT-001", "FEAT-002"]) {
     writeFileSync(
-      join(projectPath, "docs", "features", featureId, "requirements.md"),
+      join(projectPath, "docs", "agentic-spec", "features", featureId, "requirements.md"),
       `# Feature Spec: ${featureId} Label Priority\n\n- REQ-LOT-${featureId.slice(-3)}: The system shall accept labeled queue priorities.`,
       "utf8",
     );
-    writeFileSync(join(projectPath, "docs", "features", featureId, "design.md"), "# Design\n", "utf8");
-    writeFileSync(join(projectPath, "docs", "features", featureId, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", featureId, "design.md"), "# Design\n", "utf8");
+    writeFileSync(join(projectPath, "docs", "agentic-spec", "features", featureId, "tasks.md"), "# Tasks\n\n### TASK-001: Demo task\nStatus: todo\nDescription: Demo task.\nVerification: npm test\n", "utf8");
   }
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
@@ -2372,8 +2372,8 @@ test("generate UI Spec dispatches the UI spec skill from project-level Spec Work
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "ui-spec-surfaces-"));
-  mkdirSync(join(projectPath, "docs"), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "hld.md"), [
+  mkdirSync(join(projectPath, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "hld.md"), [
     "# HLD",
     "",
     "### Primary Page / Surface Inventory",
@@ -2410,14 +2410,14 @@ test("generate UI Spec dispatches the UI spec skill from project-level Spec Work
   assert.equal(payload.context.skillName, "design-ui-spec");
   assert.equal(payload.requestedAction, "generate_ui_spec");
   assert.deepEqual(payload.context.imagePaths ?? [], []);
-  assert.equal(payload.context.sourcePaths.includes("docs/requirements.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/ui-spec.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/index.html"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/studio-home.html"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/app-workspace.html"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/prototype/run-list-detail.html"), true);
-  assert.equal(payload.context.expectedArtifacts.some((path: string) => path.startsWith("docs/ui/concepts/")), false);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), false);
+  assert.equal(payload.context.sourcePaths.includes("docs/agentic-spec/requirements.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/ui/ui-spec.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/ui/prototype/index.html"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/ui/prototype/studio-home.html"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/ui/prototype/app-workspace.html"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/ui/prototype/run-list-detail.html"), true);
+  assert.equal(payload.context.expectedArtifacts.some((path: string) => path.startsWith("docs/agentic-spec/ui/concepts/")), false);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/ui/concepts/<page-id>.png"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
   assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-ui-spec");
 });
@@ -2427,12 +2427,12 @@ test("feature-scoped UI Spec uses existing docs Feature Spec folder paths", () =
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "ui-spec-feature-folder-"));
   const featureFolder = "feat-016-app-studio-navigation";
-  mkdirSync(join(projectPath, "docs", "features", featureFolder), { recursive: true });
-  writeFileSync(join(projectPath, "docs", "PRD.md"), "# PRD\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "requirements.md"), "# Requirements\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "hld.md"), "# HLD\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", "README.md"), "# Feature Specs\n", "utf8");
-  writeFileSync(join(projectPath, "docs", "features", featureFolder, "requirements.md"), "# Feature Spec: FEAT-016 App Studio Navigation\n", "utf8");
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", featureFolder), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "PRD.md"), "# PRD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "requirements.md"), "# Requirements\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "hld.md"), "# HLD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", "README.md"), "# Feature Specs\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "agentic-spec", "features", featureFolder, "requirements.md"), "# Feature Spec: FEAT-016 App Studio Navigation\n", "utf8");
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
   ]);
@@ -2451,11 +2451,11 @@ test("feature-scoped UI Spec uses existing docs Feature Spec folder paths", () =
   ]);
   const payload = JSON.parse(String(result.queries.jobs[0].payload_json));
 
-  assert.equal(payload.context.sourcePaths.includes(`docs/features/${featureFolder}/requirements.md`), true);
-  assert.equal(payload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/ui-spec.md`), true);
-  assert.equal(payload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/prototype/index.html`), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-016/ui-spec.md"), false);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-016/prototype/index.html"), false);
+  assert.equal(payload.context.sourcePaths.includes(`docs/agentic-spec/features/${featureFolder}/requirements.md`), true);
+  assert.equal(payload.context.expectedArtifacts.includes(`docs/agentic-spec/features/${featureFolder}/ui-spec.md`), true);
+  assert.equal(payload.context.expectedArtifacts.includes(`docs/agentic-spec/features/${featureFolder}/prototype/index.html`), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/FEAT-016/ui-spec.md"), false);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/FEAT-016/prototype/index.html"), false);
 });
 
 test("spec intake workflow displays the actual discovered source instead of a default PRD path", () => {
@@ -2478,7 +2478,7 @@ test("spec intake workflow displays the actual discovered source instead of a de
     entityId: "project-1",
     requestedBy: "operator",
     reason: "Scan project specs.",
-    payload: { sourcePath: "docs/zh-CN/PRD.md" },
+    payload: { sourcePath: "docs/agentic-spec/zh-CN/PRD.md" },
     now: stableDate,
   });
   runSqlite(dbPath, [
@@ -2488,8 +2488,8 @@ test("spec intake workflow displays the actual discovered source instead of a de
       params: [JSON.stringify({
         boardValidation: { blockedReasons: [] },
         payload: {
-          sourcePath: join(projectPath, "docs", "zh-CN", "PRD.md"),
-          resolvedSourcePath: join(projectPath, "docs", "zh-CN", "PRD.md"),
+          sourcePath: join(projectPath, "docs", "agentic-spec", "zh-CN", "PRD.md"),
+          resolvedSourcePath: join(projectPath, "docs", "agentic-spec", "zh-CN", "PRD.md"),
         },
       })],
     },
@@ -2507,10 +2507,10 @@ test("spec intake workflow discovers docs PRD at the project docs root", () => {
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "spec-intake-docs-prd-"));
-  mkdirSync(join(projectPath, "docs"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec"), { recursive: true });
   writeFileSync(
-    join(projectPath, "docs", "PRD.md"),
-    "Feature: Lottery Intake\nGoal: Capture requirements from docs/PRD.md.\nThe system shall scan root docs PRD files.",
+    join(projectPath, "docs", "agentic-spec", "PRD.md"),
+    "Feature: Lottery Intake\nGoal: Capture requirements from docs/agentic-spec/PRD.md.\nThe system shall scan root docs PRD files.",
     "utf8",
   );
   runSqlite(dbPath, [
@@ -2543,11 +2543,11 @@ test("spec intake workflow discovers docs PRD at the project docs root", () => {
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
 
   assert.equal(receipt.status, "accepted");
-  assert.equal(workspace.prdWorkflow.sourcePath, "docs/PRD.md");
-  assert.equal(workspace.prdWorkflow.resolvedSourcePath, join(projectPath, "docs", "PRD.md"));
+  assert.equal(workspace.prdWorkflow.sourcePath, "docs/agentic-spec/PRD.md");
+  assert.equal(workspace.prdWorkflow.resolvedSourcePath, join(projectPath, "docs", "agentic-spec", "PRD.md"));
   assert.equal(generateReceipt.status, "accepted");
-  assert.deepEqual(jobPayload.context.sourcePaths, ["docs/PRD.md"]);
-  assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/requirements.md"]);
+  assert.deepEqual(jobPayload.context.sourcePaths, ["docs/agentic-spec/PRD.md"]);
+  assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/agentic-spec/requirements.md"]);
 });
 
 test("console write commands persist rule and spec evolution evidence", () => {
@@ -2592,7 +2592,7 @@ test("update_spec writes only workspace spec documents through controlled comman
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "update-spec-"));
-  mkdirSync(join(projectPath, "docs", "features", "feat-013-product-console"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console"), { recursive: true });
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
   ]);
@@ -2605,14 +2605,14 @@ test("update_spec writes only workspace spec documents through controlled comman
     reason: "Update Feature Spec tasks.",
     payload: {
       projectId: "project-1",
-      path: "docs/features/feat-013-product-console/tasks.md",
+      path: "docs/agentic-spec/features/feat-013-product-console/tasks.md",
       content: "# Tasks\n\n- [x] TASK-001: Updated through controlled command.\n",
     },
     now: stableDate,
   });
 
   assert.equal(receipt.status, "accepted");
-  assert.equal(readFileSync(join(projectPath, "docs", "features", "feat-013-product-console", "tasks.md"), "utf8").includes("Updated through controlled command"), true);
+  assert.equal(readFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console", "tasks.md"), "utf8").includes("Updated through controlled command"), true);
   assert.throws(() => submitConsoleCommand(dbPath, {
     action: "update_spec",
     entityType: "spec",
@@ -2633,7 +2633,7 @@ test("console schedule command records scheduler triggers without bypassing boun
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "feature-execution-"));
-  const featureDir = join(projectPath, "docs", "features", "feat-013-product-console");
+  const featureDir = join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
@@ -2717,14 +2717,14 @@ test("console schedule command records scheduler triggers without bypassing boun
   assert.equal(cliRunPayload.requestedAction, "feature_execution");
   assert.equal(cliRunPayload.projectId, "project-1");
   assert.equal(cliRunPayload.context.featureId, "FEAT-013");
-  assert.equal(cliRunPayload.context.featureSpecPath, "docs/features/feat-013-product-console");
+  assert.equal(cliRunPayload.context.featureSpecPath, "docs/agentic-spec/features/feat-013-product-console");
   assert.equal(cliRunPayload.context.skillName, "implement-feature");
   assert.equal(cliRunPayload.context.skillPhase, "feature_execution");
   assert.equal(cliRunPayload.context.workspaceRoot, projectPath);
   assert.deepEqual(cliRunPayload.context.expectedArtifacts, [`.autobuild/runs/${cliRunPayload.executionId}/report.json`]);
-  assert.equal(cliRunPayload.context.sourcePaths.includes("docs/features/feat-013-product-console/requirements.md"), true);
-  assert.equal(cliRunPayload.context.sourcePaths.includes("docs/features/feat-013-product-console/design.md"), true);
-  assert.equal(cliRunPayload.context.sourcePaths.includes("docs/features/feat-013-product-console/tasks.md"), true);
+  assert.equal(cliRunPayload.context.sourcePaths.includes("docs/agentic-spec/features/feat-013-product-console/requirements.md"), true);
+  assert.equal(cliRunPayload.context.sourcePaths.includes("docs/agentic-spec/features/feat-013-product-console/design.md"), true);
+  assert.equal(cliRunPayload.context.sourcePaths.includes("docs/agentic-spec/features/feat-013-product-console/tasks.md"), true);
   assert.deepEqual(result.queries.jobs.map((row) => [row.job_type, row.queue_name, row.status, JSON.parse(String(row.payload_json)).operation]), [
     ["cli.run", "specdrive:execution-adapter", "queued", "feature_execution"],
   ]);
@@ -2742,7 +2742,7 @@ test("schedule_run dispatches queued jobs immediately when project automation is
     return originalRequeue!(input);
   };
   const projectPath = mkdtempSync(join(tmpdir(), "spec-schedule-auto-enabled-"));
-  const featureDir = join(projectPath, "docs", "features", "feat-001-ticket-capture");
+  const featureDir = join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-001 Ticket Capture\n\n- REQ-001: The system shall run this Feature.", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
@@ -2780,7 +2780,7 @@ test("console schedule command blocks feature execution when Feature Spec direct
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "feature-execution-missing-"));
-  mkdirSync(join(projectPath, "docs", "features", "feat-013-product-console"), { recursive: true });
+  mkdirSync(join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console"), { recursive: true });
   runSqlite(dbPath, [
     { sql: "DELETE FROM execution_records" },
     { sql: "DELETE FROM scheduler_job_records" },
@@ -2812,7 +2812,7 @@ test("console schedule command blocks feature execution when tasks.md has no par
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "feature-execution-unparseable-tasks-"));
-  const featureDir = join(projectPath, "docs", "features", "feat-013-product-console");
+  const featureDir = join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
@@ -2848,7 +2848,7 @@ test("console schedule command blocks duplicate active manual Feature execution"
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "feature-execution-active-"));
-  const featureDir = join(projectPath, "docs", "features", "feat-013-product-console");
+  const featureDir = join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
@@ -2895,7 +2895,7 @@ test("console schedule command queues another Feature while one is active", () =
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "feature-execution-serial-"));
   for (const folder of ["feat-013-product-console", "feat-012-delivery-spec-evolution"]) {
-    const featureDir = join(projectPath, "docs", "features", folder);
+    const featureDir = join(projectPath, "docs", "agentic-spec", "features", folder);
     mkdirSync(featureDir, { recursive: true });
     writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
     writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
@@ -2942,7 +2942,7 @@ test("console schedule command blocks completed Feature execution", () => {
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
   const projectPath = mkdtempSync(join(tmpdir(), "feature-execution-completed-"));
-  const featureDir = join(projectPath, "docs", "features", "feat-013-product-console");
+  const featureDir = join(projectPath, "docs", "agentic-spec", "features", "feat-013-product-console");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n", "utf8");
   writeFileSync(join(featureDir, "design.md"), "# Design\n", "utf8");
@@ -3087,7 +3087,7 @@ function seedConsoleData(dbPath: string): void {
     },
     {
       sql: `INSERT INTO requirements (id, feature_id, source_id, body, acceptance_criteria, priority, status)
-        VALUES ('REQ-052', 'FEAT-013', 'docs/zh-CN/requirements.md#REQ-052', 'Dashboard shows status.', 'Status is visible.', 'must', 'active')`,
+        VALUES ('REQ-052', 'FEAT-013', 'docs/agentic-spec/zh-CN/requirements.md#REQ-052', 'Dashboard shows status.', 'Status is visible.', 'must', 'active')`,
     },
     {
       sql: `INSERT INTO tasks (id, feature_id, title, status, recovery_state, allowed_files_json)
@@ -3170,7 +3170,7 @@ function seedConsoleData(dbPath: string): void {
       sql: `INSERT INTO review_items (id, feature_id, task_id, status, severity, body, reference_refs_json, created_at)
         VALUES (
           'REV-1', 'FEAT-013', 'TASK-RUNNING', 'review_needed', 'high',
-          '{"message":"Needs approval","goal":"Approve console review controls.","specRef":"docs/features/feat-013-product-console/design.md","runContract":{"command":"npm test"},"diff":{"files":["src/product-console.ts"]}}',
+          '{"message":"Needs approval","goal":"Approve console review controls.","specRef":"docs/agentic-spec/features/feat-013-product-console/design.md","runContract":{"command":"npm test"},"diff":{"files":["src/product-console.ts"]}}',
           '["EVID-1"]',
           '2026-04-28T12:00:00.000Z'
         )`,

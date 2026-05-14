@@ -30,7 +30,7 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
 
   assert.equal(view.recognized, true);
   assert.equal(view.workspaceRoot, workspaceRoot);
-  assert.equal(view.specRoot, "docs");
+  assert.equal(view.specRoot, "docs/agentic-spec");
   assert.equal(view.language, undefined);
   assert.equal(view.project?.id, "project-ide");
   assert.equal(view.activeAdapter?.id, "codex-rpc");
@@ -38,8 +38,8 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
   assert.equal(view.automation.source, "project");
   assert.equal(view.projectInitialization.ready, true);
   assert.equal(view.documents.find((document) => document.kind === "prd")?.exists, true);
-  assert.equal(view.documents.find((document) => document.kind === "hld")?.path, "docs/hld.md");
-  assert.equal(view.documents.find((document) => document.kind === "ui-spec")?.path, "docs/ui/ui-spec.md");
+  assert.equal(view.documents.find((document) => document.kind === "hld")?.path, "docs/agentic-spec/hld.md");
+  assert.equal(view.documents.find((document) => document.kind === "ui-spec")?.path, "docs/agentic-spec/ui/ui-spec.md");
   assert.equal(view.documents.find((document) => document.kind === "ui-spec")?.exists, true);
   assert.equal(view.projectInitialization.steps.find((step) => step.key === "copy_skill_runtime")?.status, "Ready");
   assert.equal(view.projectInitialization.steps.find((step) => step.key === "copy_skill_runtime")?.label, ".agents skill runtime initialized");
@@ -65,7 +65,7 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
 
 test("SpecDrive IDE queue and execution detail keep DB feature titles when docs index projection is unavailable", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/README.md"), [
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
     "# Feature Spec Index",
     "",
     "| Feature ID | Feature | Folder | Status |",
@@ -104,7 +104,7 @@ test("SpecDrive IDE queue and execution detail keep DB feature titles when docs 
 
 test("SpecDrive IDE feature dependencies come from feature-pool-queue.json", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/README.md"), [
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
     "# Feature Spec Index",
     "",
     "| Feature ID | Feature | Folder | Status | Primary Requirements | Suggested Milestone | Dependencies |",
@@ -112,7 +112,7 @@ test("SpecDrive IDE feature dependencies come from feature-pool-queue.json", () 
     "| FEAT-016 | SpecDrive IDE Foundation | `feat-016-specdrive-ide-foundation` | ready | REQ-074、REQ-075 | M8 | FEAT-999 |",
     "",
   ].join("\n"));
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "ready",
@@ -120,7 +120,7 @@ test("SpecDrive IDE feature dependencies come from feature-pool-queue.json", () 
     dependencies: ["FEAT-888"],
     nextAction: "Implement IDE foundation.",
   }));
-  writeFileSync(join(workspaceRoot, "docs/features/feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feature-pool-queue.json"), JSON.stringify({
     schemaVersion: 1,
     features: [
       { id: "FEAT-016", priority: "P1", dependencies: ["FEAT-013"] },
@@ -138,40 +138,40 @@ test("SpecDrive IDE feature dependencies come from feature-pool-queue.json", () 
 
 test("SpecDrive IDE prefers root docs over localized specs unless multilingual is explicit", () => {
   const workspaceRoot = makeWorkspace();
-  mkdirSync(join(workspaceRoot, "docs", "zh-CN"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs", "zh-CN", "PRD.md"), "# Localized PRD\n");
-  writeFileSync(join(workspaceRoot, "docs", "zh-CN", "requirements.md"), "# Localized Requirements\n");
-  writeFileSync(join(workspaceRoot, "docs", "zh-CN", "hld.md"), "# Localized HLD\n");
+  mkdirSync(join(workspaceRoot, "docs", "agentic-spec", "zh-CN"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "zh-CN", "PRD.md"), "# Localized PRD\n");
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "zh-CN", "requirements.md"), "# Localized Requirements\n");
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "zh-CN", "hld.md"), "# Localized HLD\n");
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
 
   const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
 
-  assert.equal(view.specRoot, "docs");
+  assert.equal(view.specRoot, "docs/agentic-spec");
   assert.equal(view.language, undefined);
-  assert.equal(view.documents.find((document) => document.kind === "prd")?.path, "docs/PRD.md");
+  assert.equal(view.documents.find((document) => document.kind === "prd")?.path, "docs/agentic-spec/PRD.md");
 });
 
 test("SpecDrive IDE uses localized docs only for explicit multilingual projects", () => {
   const workspaceRoot = makeWorkspace();
   rmRootProjectDocs(workspaceRoot);
-  mkdirSync(join(workspaceRoot, "docs", "en"), { recursive: true });
-  mkdirSync(join(workspaceRoot, "docs", "zh-CN"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs", "README.md"), "Default language: English\n\nLanguages: English | 中文\n");
-  writeFileSync(join(workspaceRoot, "docs", "en", "PRD.md"), "# English PRD\n");
-  writeFileSync(join(workspaceRoot, "docs", "en", "requirements.md"), "# English Requirements\n");
-  writeFileSync(join(workspaceRoot, "docs", "en", "hld.md"), "# English HLD\n");
-  writeFileSync(join(workspaceRoot, "docs", "zh-CN", "PRD.md"), "# Chinese PRD\n");
+  mkdirSync(join(workspaceRoot, "docs", "agentic-spec", "en"), { recursive: true });
+  mkdirSync(join(workspaceRoot, "docs", "agentic-spec", "zh-CN"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "README.md"), "Default language: English\n\nLanguages: English | 中文\n");
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "en", "PRD.md"), "# English PRD\n");
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "en", "requirements.md"), "# English Requirements\n");
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "en", "hld.md"), "# English HLD\n");
+  writeFileSync(join(workspaceRoot, "docs", "agentic-spec", "zh-CN", "PRD.md"), "# Chinese PRD\n");
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
 
   const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
 
-  assert.equal(view.specRoot, "docs/en");
+  assert.equal(view.specRoot, "docs/agentic-spec/en");
   assert.equal(view.language, "en");
-  assert.equal(view.documents.find((document) => document.kind === "prd")?.path, "docs/en/PRD.md");
+  assert.equal(view.documents.find((document) => document.kind === "prd")?.path, "docs/agentic-spec/en/PRD.md");
 });
 
 test("SpecDrive IDE automation state follows latest auto-run audit event", () => {
@@ -195,7 +195,7 @@ test("SpecDrive IDE automation state follows latest auto-run audit event", () =>
 
 test("SpecDrive IDE automation state changes after start and pause commands", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feature-pool-queue.json"), JSON.stringify({
     schemaVersion: 1,
     features: [
       { id: "FEAT-016", priority: "P1", dependencies: [] },
@@ -233,7 +233,7 @@ test("SpecDrive IDE automation state changes after start and pause commands", ()
 
 test("SpecDrive IDE automation state changes through HTTP workbench commands", async () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feature-pool-queue.json"), JSON.stringify({
     schemaVersion: 1,
     features: [
       { id: "FEAT-016", priority: "P1", dependencies: [] },
@@ -352,8 +352,8 @@ test("SpecDrive IDE automation state uses latest audit write when timestamps tie
 
 test("SpecDrive IDE keeps unregistered PRD-only workspace active for project initialization", () => {
   const workspaceRoot = mkdtempSync(join(tmpdir(), "specdrive-ide-prd-only-"));
-  mkdirSync(join(workspaceRoot, "docs"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs/PRD.md"), "# PRD\n");
+  mkdirSync(join(workspaceRoot, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/PRD.md"), "# PRD\n");
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
 
@@ -371,8 +371,8 @@ test("SpecDrive IDE keeps unregistered PRD-only workspace active for project ini
 
 test("SpecDrive IDE register project command imports an unregistered workspace before continuing initialization", async () => {
   const workspaceRoot = mkdtempSync(join(tmpdir(), "specdrive-ide-import-"));
-  mkdirSync(join(workspaceRoot, "docs"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs/PRD.md"), "# PRD\n");
+  mkdirSync(join(workspaceRoot, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/PRD.md"), "# PRD\n");
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   const config = makeConfig(workspaceRoot, dbPath);
@@ -412,8 +412,8 @@ test("SpecDrive IDE register project command imports an unregistered workspace b
 
 test("SpecDrive IDE connect Git command does not register an unknown workspace", async () => {
   const workspaceRoot = mkdtempSync(join(tmpdir(), "specdrive-ide-connect-no-register-"));
-  mkdirSync(join(workspaceRoot, "docs"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs/PRD.md"), "# PRD\n");
+  mkdirSync(join(workspaceRoot, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/PRD.md"), "# PRD\n");
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   const config = makeConfig(workspaceRoot, dbPath);
@@ -452,10 +452,10 @@ test("SpecDrive IDE connect Git command does not register an unknown workspace",
 
 test("SpecDrive IDE view uses Feature index as identity source and projects tasks.md status", () => {
   const workspaceRoot = makeWorkspace();
-  mkdirSync(join(workspaceRoot, "docs/features/feat-099-orphan-feature"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs/features/feat-099-orphan-feature/requirements.md"), "# FEAT-099\n\nREQ-099\n\n## Acceptance Criteria\n");
-  writeFileSync(join(workspaceRoot, "docs/features/feat-099-orphan-feature/design.md"), "# Design\n");
-  writeFileSync(join(workspaceRoot, "docs/features/feat-099-orphan-feature/tasks.md"), [
+  mkdirSync(join(workspaceRoot, "docs/agentic-spec/features/feat-099-orphan-feature"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-099-orphan-feature/requirements.md"), "# FEAT-099\n\nREQ-099\n\n## Acceptance Criteria\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-099-orphan-feature/design.md"), "# Design\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-099-orphan-feature/tasks.md"), [
     "# Tasks",
     "",
     "### TASK-099-01 Implement orphan sync",
@@ -481,7 +481,7 @@ test("SpecDrive IDE view uses Feature index as identity source and projects task
 
 test("SpecDrive IDE view promotes draft index status when task slices are complete", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/README.md"), [
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
     "# Feature Spec Index",
     "",
     "| Feature ID | Feature | Folder | Status | Primary Requirements | Suggested Milestone | Dependencies |",
@@ -489,7 +489,7 @@ test("SpecDrive IDE view promotes draft index status when task slices are comple
     "| FEAT-016 | SpecDrive IDE Foundation | `feat-016-specdrive-ide-foundation` | draft | REQ-074、REQ-075 | M8 | FEAT-013 |",
     "",
   ].join("\n"));
-  rmSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"));
+  rmSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"));
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
@@ -503,9 +503,9 @@ test("SpecDrive IDE view promotes draft index status when task slices are comple
 test("SpecDrive IDE view supports legacy feature index without Folder column", () => {
   const workspaceRoot = mkdtempSync(join(tmpdir(), "specdrive-ide-legacy-index-"));
   mkdirSync(join(workspaceRoot, ".autobuild"), { recursive: true });
-  mkdirSync(join(workspaceRoot, "docs/features/FEAT-001"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs/PRD.md"), "# PRD\n");
-  writeFileSync(join(workspaceRoot, "docs/features/README.md"), [
+  mkdirSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/PRD.md"), "# PRD\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
     "# Feature Specs",
     "",
     "| Feature ID | Status | Name | Milestone | Dependencies |",
@@ -513,15 +513,15 @@ test("SpecDrive IDE view supports legacy feature index without Folder column", (
     "| FEAT-001 | planned | Android Project Foundation | V1.0 Foundation | - |",
     "",
   ].join("\n"));
-  writeFileSync(join(workspaceRoot, "docs/features/feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feature-pool-queue.json"), JSON.stringify({
     version: 1,
     features: [
       { id: "FEAT-001", priority: "P1", status: "planned", dependencies: [] },
     ],
   }));
-  writeFileSync(join(workspaceRoot, "docs/features/FEAT-001/requirements.md"), "# FEAT-001 requirements\n");
-  writeFileSync(join(workspaceRoot, "docs/features/FEAT-001/design.md"), "# FEAT-001 design\n");
-  writeFileSync(join(workspaceRoot, "docs/features/FEAT-001/tasks.md"), [
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001/requirements.md"), "# FEAT-001 requirements\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001/design.md"), "# FEAT-001 design\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001/tasks.md"), [
     "# FEAT-001 tasks",
     "",
     "- [ ] T001 Create Android project foundation.",
@@ -538,15 +538,15 @@ test("SpecDrive IDE view supports legacy feature index without Folder column", (
   assert.equal(feature?.title, "Android Project Foundation");
   assert.equal(feature?.status, "ready");
   assert.deepEqual(feature?.blockedReasons, []);
-  assert.equal(feature?.documents.find((document) => document.kind === "feature-tasks")?.path, "docs/features/FEAT-001/tasks.md");
+  assert.equal(feature?.documents.find((document) => document.kind === "feature-tasks")?.path, "docs/agentic-spec/features/FEAT-001/tasks.md");
 });
 
 test("SpecDrive IDE keeps completed Feature projection after later cancelled scheduling noise", () => {
   const workspaceRoot = mkdtempSync(join(tmpdir(), "specdrive-ide-completed-feature-"));
   mkdirSync(join(workspaceRoot, ".autobuild"), { recursive: true });
-  mkdirSync(join(workspaceRoot, "docs/features/FEAT-001"), { recursive: true });
-  writeFileSync(join(workspaceRoot, "docs/PRD.md"), "# PRD\n");
-  writeFileSync(join(workspaceRoot, "docs/features/README.md"), [
+  mkdirSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001"), { recursive: true });
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/PRD.md"), "# PRD\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
     "# Feature Specs",
     "",
     "| Feature ID | Status | Name | Milestone | Dependencies |",
@@ -554,16 +554,16 @@ test("SpecDrive IDE keeps completed Feature projection after later cancelled sch
     "| FEAT-001 | done | Android Project Foundation | V1.0 Foundation | - |",
     "",
   ].join("\n"));
-  writeFileSync(join(workspaceRoot, "docs/features/feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feature-pool-queue.json"), JSON.stringify({
     version: 1,
     features: [
       { id: "FEAT-001", priority: "P1", status: "done", dependencies: [] },
     ],
   }));
-  writeFileSync(join(workspaceRoot, "docs/features/FEAT-001/requirements.md"), "# FEAT-001 requirements\n");
-  writeFileSync(join(workspaceRoot, "docs/features/FEAT-001/design.md"), "# FEAT-001 design\n");
-  writeFileSync(join(workspaceRoot, "docs/features/FEAT-001/tasks.md"), "- [x] T001 Create Android project foundation.\n");
-  writeFileSync(join(workspaceRoot, "docs/features/FEAT-001/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001/requirements.md"), "# FEAT-001 requirements\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001/design.md"), "# FEAT-001 design\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001/tasks.md"), "- [x] T001 Create Android project foundation.\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/FEAT-001/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-001",
     status: "completed",
@@ -606,7 +606,7 @@ test("SpecDrive IDE keeps completed Feature projection after later cancelled sch
 
 test("SpecDrive IDE completed Feature prefers completed execution across mixed timestamp formats", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "completed",
@@ -685,7 +685,7 @@ test("SpecDrive IDE queue orders jobs by completed time descending", () => {
 
 test("SpecDrive IDE ready Feature keeps latest completed token cost after current job is cleared", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "ready",
@@ -1013,7 +1013,7 @@ test("SpecDrive IDE queue actions can pause and cancel another job while a run i
 
 test("SpecDrive IDE view exposes diagnostics for blocked spec state and failed executions", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "blocked",
@@ -1032,7 +1032,7 @@ test("SpecDrive IDE view exposes diagnostics for blocked spec state and failed e
   assert.equal(view.diagnostics.length, 2);
   assert.equal(view.diagnostics.some((diagnostic) => diagnostic.source === "spec-state" && diagnostic.message.includes("Missing approval")), true);
   assert.equal(view.diagnostics.some((diagnostic) => diagnostic.source === "execution" && diagnostic.severity === "error"), true);
-  assert.equal(view.diagnostics.every((diagnostic) => diagnostic.path === "docs/features/feat-016-specdrive-ide-foundation/requirements.md"), true);
+  assert.equal(view.diagnostics.every((diagnostic) => diagnostic.path === "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/requirements.md"), true);
 });
 
 test("SpecDrive IDE diagnostics suppress stale failed executions after a newer success", () => {
@@ -1076,7 +1076,7 @@ test("SpecDrive IDE diagnostics suppress stale failed executions after a newer s
 
 test("SpecDrive IDE view warns when feature requirements miss traceability or acceptance criteria", () => {
   const workspaceRoot = makeWorkspace();
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/requirements.md"), "# Feature requirements\n\nNo stable ids yet.\n");
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/requirements.md"), "# Feature requirements\n\nNo stable ids yet.\n");
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
@@ -1098,7 +1098,7 @@ test("SpecDrive IDE view reports unrecognized workspace without mutating state",
 
   assert.equal(view.recognized, false);
   assert.deepEqual(view.features, []);
-  assert.equal(view.missing.includes("docs/features"), true);
+  assert.equal(view.missing.includes("docs/agentic-spec/features"), true);
 });
 
 test("SpecDrive IDE HTTP routes expose spec tree and controlled command receipts", async () => {
@@ -1130,7 +1130,7 @@ test("SpecDrive IDE HTTP routes expose spec tree and controlled command receipts
       entityId: "project-ide",
       requestedBy: "vscode-extension",
       reason: "Generate EARS from VSCode CodeLens.",
-      payload: { sourcePath: "docs/PRD.md" },
+      payload: { sourcePath: "docs/agentic-spec/PRD.md" },
     });
 
     assert.equal(receipt.status, "accepted");
@@ -1224,7 +1224,7 @@ test("SpecDrive IDE SpecChangeRequest validates textHash and routes requirement 
     projectId: "project-ide",
     workspaceRoot,
     source: {
-      file: "docs/PRD.md",
+      file: "docs/agentic-spec/PRD.md",
       range: { startLine: 0, endLine: 0 },
       textHash: hashSpecSourceText(sourceText),
     },
@@ -1244,15 +1244,15 @@ test("SpecDrive IDE SpecChangeRequest validates textHash and routes requirement 
   assert.equal(payload.operation, "intake_requirement");
   assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
   assert.equal(payload.context.targetFeatureStatus, "ready");
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/tasks.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/tasks.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/feature-pool-queue.json"), true);
 
   const staleReceipt = submitIdeSpecChangeRequest(dbPath, {
     schemaVersion: 1,
     projectId: "project-ide",
     workspaceRoot,
     source: {
-      file: "docs/PRD.md",
+      file: "docs/agentic-spec/PRD.md",
       range: { startLine: 0, endLine: 0 },
       textHash: hashSpecSourceText("old text"),
     },
@@ -1279,7 +1279,7 @@ test("SpecDrive IDE SpecChangeRequest routes existing requirement changes to spe
     projectId: "project-ide",
     workspaceRoot,
     source: {
-      file: "docs/requirements.md",
+      file: "docs/agentic-spec/requirements.md",
       range: { startLine: 0, endLine: 0 },
       textHash: hashSpecSourceText(sourceText),
     },
@@ -1300,7 +1300,7 @@ test("SpecDrive IDE SpecChangeRequest routes existing requirement changes to spe
   assert.equal(payload.context.skillName, "manage-spec-change");
   assert.equal(payload.context.targetRequirementId, "REQ-076");
   assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feat-017/spec-state.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/feat-017/spec-state.json"), true);
 });
 
 test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown add-or-change routing", () => {
@@ -1316,7 +1316,7 @@ test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown a
     projectId: "project-ide",
     workspaceRoot,
     source: {
-      file: "docs/features/README.md",
+      file: "docs/agentic-spec/features/README.md",
       range: { startLine: 0, endLine: 0 },
       textHash: hashSpecSourceText(sourceText),
     },
@@ -1337,10 +1337,10 @@ test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown a
   assert.equal(payload.context.requirementText, "Top New Feature request that may add or change existing scope.");
   assert.equal(payload.context.targetFeatureStatus, "ready");
   assert.equal(payload.context.nextUserAction, "schedule_feature_execution_from_ui");
-  assert.equal(payload.context.expectedArtifacts.includes("docs/requirements.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/requirements.md"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/<feature-id>/spec-state.json"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/requirements.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/requirements.md"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/<feature-id>/spec-state.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/feature-pool-queue.json"), true);
 });
 
 test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill", () => {
@@ -1356,7 +1356,7 @@ test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill
     projectId: "project-ide",
     workspaceRoot,
     source: {
-      file: "docs/features/feat-016-specdrive-ide-foundation/requirements.md",
+      file: "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/requirements.md",
       range: { startLine: 0, endLine: 0 },
       textHash: hashSpecSourceText(sourceText),
     },
@@ -1381,8 +1381,8 @@ test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill
   assert.equal(payload.context.targetRequirementId, "REQ-074");
   assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
   assert.equal(payload.context.targetFeatureStatus, "ready");
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), true);
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/agentic-spec/features/feature-pool-queue.json"), true);
 });
 
 test("SpecDrive IDE pass review command marks review-needed Feature completed", () => {
@@ -1390,7 +1390,7 @@ test("SpecDrive IDE pass review command marks review-needed Feature completed", 
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "review_needed",
@@ -1470,7 +1470,7 @@ test("SpecDrive IDE projects pending Feature review item for Webview approval", 
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "review_needed",
@@ -1636,7 +1636,7 @@ test("SpecDrive IDE pass command marks blocked Feature and latest execution comp
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "blocked",
@@ -1721,7 +1721,7 @@ test("SpecDrive IDE ready command marks selected Feature ready", () => {
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
   seedProject(dbPath, workspaceRoot);
-  writeFileSync(join(workspaceRoot, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "draft",
@@ -2148,15 +2148,15 @@ function makeWorkspace(): string {
   const root = mkdtempSync(join(tmpdir(), "specdrive-ide-workspace-"));
   mkdirSync(join(root, ".autobuild"), { recursive: true });
   mkdirSync(join(root, ".agents/skills/manage-spec-change"), { recursive: true });
-  mkdirSync(join(root, "docs"), { recursive: true });
-  mkdirSync(join(root, "docs/ui"), { recursive: true });
-  mkdirSync(join(root, "docs/features/feat-016-specdrive-ide-foundation"), { recursive: true });
-  writeFileSync(join(root, "docs/PRD.md"), "# PRD\n");
-  writeFileSync(join(root, "docs/requirements.md"), "# Requirements\n");
-  writeFileSync(join(root, "docs/hld.md"), "# HLD\n");
-  writeFileSync(join(root, "docs/ui/ui-spec.md"), "# UI Spec\n");
+  mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
+  mkdirSync(join(root, "docs/agentic-spec/ui"), { recursive: true });
+  mkdirSync(join(root, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation"), { recursive: true });
+  writeFileSync(join(root, "docs/agentic-spec/PRD.md"), "# PRD\n");
+  writeFileSync(join(root, "docs/agentic-spec/requirements.md"), "# Requirements\n");
+  writeFileSync(join(root, "docs/agentic-spec/hld.md"), "# HLD\n");
+  writeFileSync(join(root, "docs/agentic-spec/ui/ui-spec.md"), "# UI Spec\n");
   writeFileSync(join(root, ".agents/skills/manage-spec-change/SKILL.md"), "# Requirement intake\n");
-  writeFileSync(join(root, "docs/features/README.md"), [
+  writeFileSync(join(root, "docs/agentic-spec/features/README.md"), [
     "# Feature Spec Index",
     "",
     "| Feature ID | Feature | Folder | Status | Primary Requirements | Suggested Milestone | Dependencies |",
@@ -2164,21 +2164,21 @@ function makeWorkspace(): string {
     "| FEAT-016 | SpecDrive IDE Foundation | `feat-016-specdrive-ide-foundation` | ready | REQ-074、REQ-075 | M8 | FEAT-013 |",
     "",
   ].join("\n"));
-  writeFileSync(join(root, "docs/features/feature-pool-queue.json"), JSON.stringify({
+  writeFileSync(join(root, "docs/agentic-spec/features/feature-pool-queue.json"), JSON.stringify({
     schemaVersion: 1,
     features: [
       { id: "FEAT-016", priority: "P1", dependencies: ["FEAT-013"] },
     ],
   }));
-  writeFileSync(join(root, "docs/features/feat-016-specdrive-ide-foundation/design.md"), "# design.md\n");
-  writeFileSync(join(root, "docs/features/feat-016-specdrive-ide-foundation/tasks.md"), [
+  writeFileSync(join(root, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/design.md"), "# design.md\n");
+  writeFileSync(join(root, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/tasks.md"), [
     "# FEAT-016 tasks",
     "",
     "- [x] TASK-016-01: Build IDE foundation",
     "- [ ] TASK-016-02: Verify IDE foundation",
     "",
   ].join("\n"));
-  writeFileSync(join(root, "docs/features/feat-016-specdrive-ide-foundation/requirements.md"), [
+  writeFileSync(join(root, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/requirements.md"), [
     "# FEAT-016 requirements",
     "",
     "## Goal",
@@ -2192,7 +2192,7 @@ function makeWorkspace(): string {
     "- Spec Explorer renders workspace facts.",
     "",
   ].join("\n"));
-  writeFileSync(join(root, "docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+  writeFileSync(join(root, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
     schemaVersion: 1,
     featureId: "FEAT-016",
     status: "ready",
@@ -2207,7 +2207,7 @@ function makeWorkspace(): string {
 
 function rmRootProjectDocs(root: string): void {
   for (const fileName of ["PRD.md", "requirements.md", "hld.md"]) {
-    rmSync(join(root, "docs", fileName), { force: true });
+    rmSync(join(root, "docs", "agentic-spec", fileName), { force: true });
   }
 }
 
@@ -2252,7 +2252,7 @@ function seedIdeReviewExecution(dbPath: string, suffix: string): void {
     projectId: "project-ide",
     context: {
       featureId: "FEAT-016",
-      featureSpecPath: "docs/features/feat-016-specdrive-ide-foundation",
+      featureSpecPath: "docs/agentic-spec/features/feat-016-specdrive-ide-foundation",
     },
   };
   runSqlite(dbPath, [

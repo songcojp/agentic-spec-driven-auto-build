@@ -1458,8 +1458,8 @@ function updateFeatureSpecFileState(input: {
       ? "implement-feature"
       : undefined);
   if (!input.workspaceRoot || !input.featureId || effectiveSkillName !== "implement-feature") return;
-  if (!featureSpecPath?.startsWith("docs/features/")) return;
-  const featureFolder = featureSpecPath.slice("docs/features/".length);
+  if (!featureSpecPath?.startsWith("docs/agentic-spec/features/")) return;
+  const featureFolder = featureSpecPath.slice("docs/agentic-spec/features/".length);
   try {
     const current = readFileSpecState(input.workspaceRoot, featureFolder, input.featureId);
     const patch = input.skillOutput
@@ -2020,12 +2020,12 @@ function defaultFeatureSpecPath(featureId: string | undefined, context: Executor
   if (contextPath) return contextPath.replaceAll("\\", "/").replace(/\/+$/, "");
   if (!featureId) return undefined;
   const docsFolder = findFeatureSpecFolder(workspaceRoot, featureId);
-  return `docs/features/${docsFolder ?? featureId.toLowerCase()}`;
+  return `docs/agentic-spec/features/${docsFolder ?? featureId.toLowerCase()}`;
 }
 
 function findFeatureSpecFolder(workspaceRoot: string, featureId: string): string | undefined {
   try {
-    return readdirSync(join(workspaceRoot, "docs", "features"), { withFileTypes: true })
+    return readdirSync(join(workspaceRoot, "docs", "agentic-spec", "features"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .find((folder) => featureIdFromFolder(folder).toUpperCase() === featureId.toUpperCase());

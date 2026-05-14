@@ -51,14 +51,14 @@ test("scheduler schema records executor job metadata without feature target colu
     executionId: "EXEC-001",
     operation: "feature_execution",
     projectId: "project-1",
-    context: { featureId: "FEAT-001", featureSpecPath: "docs/features/feat-001" },
+    context: { featureId: "FEAT-001", featureSpecPath: "docs/agentic-spec/features/feat-001" },
   });
   assert.equal(job.queueName, "specdrive:execution-adapter");
   const appServerJob = scheduler.enqueueRpcRun?.({
     executionId: "EXEC-APP",
     operation: "feature_execution",
     projectId: "project-1",
-    context: { featureId: "FEAT-001", featureSpecPath: "docs/features/feat-001" },
+    context: { featureId: "FEAT-001", featureSpecPath: "docs/agentic-spec/features/feat-001" },
   });
   assert.equal(appServerJob?.jobType, "rpc.run");
   const query = runSqlite(dbPath, [], [
@@ -256,10 +256,10 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
 test("cli.run default Feature paths use context Feature Spec folder", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-feature-folder-"));
   prepareSkillWorkspace(root);
-  mkdirSync(join(root, "docs", "features", "feat-cli"), { recursive: true });
-  writeFileSync(join(root, "docs", "features", "feat-cli", "requirements.md"), "# Requirements\n");
-  writeFileSync(join(root, "docs", "features", "feat-cli", "design.md"), "# Design\n");
-  writeFileSync(join(root, "docs", "features", "feat-cli", "tasks.md"), "# Tasks\n");
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-cli"), { recursive: true });
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "requirements.md"), "# Requirements\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "design.md"), "# Design\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "tasks.md"), "# Tasks\n");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -271,7 +271,7 @@ test("cli.run default Feature paths use context Feature Spec folder", async () =
       ...payload,
       context: {
         ...payload.context,
-        featureSpecPath: "docs/features/feat-cli",
+        featureSpecPath: "docs/agentic-spec/features/feat-cli",
       },
     },
     (_command, args) => {
@@ -286,9 +286,9 @@ test("cli.run default Feature paths use context Feature Spec folder", async () =
   const prompt = calls[0].args.join("\n");
 
   assert.equal(result.status, "completed");
-  assert.match(prompt, /docs\/features\/feat-cli\/requirements\.md/);
-  assert.match(prompt, /docs\/features\/feat-cli\/tasks\.md/);
-  assert.doesNotMatch(prompt, /docs\/features\/FEAT-CLI\/tasks\.md/);
+  assert.match(prompt, /docs\/agentic-spec\/features\/feat-cli\/requirements\.md/);
+  assert.match(prompt, /docs\/agentic-spec\/features\/feat-cli\/tasks\.md/);
+  assert.doesNotMatch(prompt, /docs\/agentic-spec\/features\/FEAT-CLI\/tasks\.md/);
 });
 
 test("cli.run creates a ReviewItem when feature execution returns review_needed", async () => {
@@ -369,11 +369,11 @@ test("cli.run classifies review_needed delivery fidelity losses as risk review b
 test("cli.run keeps large source documents out of the provider prompt", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-compact-prompt-"));
   prepareSkillWorkspace(root);
-  mkdirSync(join(root, "docs", "features", "FEAT-CLI"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI"), { recursive: true });
   const largeRequirements = `# Requirements\n\n${"REQ: keep prompt compact.\n".repeat(400)}`;
-  writeFileSync(join(root, "docs", "features", "FEAT-CLI", "requirements.md"), largeRequirements);
-  writeFileSync(join(root, "docs", "features", "FEAT-CLI", "design.md"), "# Design\n");
-  writeFileSync(join(root, "docs", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "requirements.md"), largeRequirements);
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "design.md"), "# Design\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -389,7 +389,7 @@ test("cli.run keeps large source documents out of the provider prompt", async ()
 
   const prompt = calls[0].args.join("\n");
   assert.equal(result.status, "completed");
-  assert.match(prompt, /docs\/features\/FEAT-CLI\/requirements\.md/);
+  assert.match(prompt, /docs\/agentic-spec\/features\/FEAT-CLI\/requirements\.md/);
   assert.match(prompt, /\[AUTOBUILD INVOCATION\]/);
   assert.match(prompt, /Source paths to read:/);
   assert.doesNotMatch(prompt, /Context:/);
@@ -401,9 +401,9 @@ test("cli.run passes clarification operator input into the skill invocation prom
   const root = mkdtempSync(join(tmpdir(), "specdrive-clarification-run-"));
   prepareSkillWorkspace(root);
   mkdirSync(join(root, ".agents", "skills", "manage-spec-change"), { recursive: true });
-  mkdirSync(join(root, "docs", "zh-CN"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "zh-CN"), { recursive: true });
   writeFileSync(join(root, ".agents", "skills", "manage-spec-change", "SKILL.md"), "# Ambiguity clarification skill\n");
-  writeFileSync(join(root, "docs", "zh-CN", "requirements.md"), "# Requirements\n\n## Open Questions\n\n1. 彩票类型未明确。\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "zh-CN", "requirements.md"), "# Requirements\n\n## Open Questions\n\n1. 彩票类型未明确。\n");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -417,8 +417,8 @@ test("cli.run passes clarification operator input into the skill invocation prom
       requestedAction: "resolve_clarification",
       traceability: { requirementIds: [] },
       context: {
-        sourcePaths: ["docs/zh-CN/requirements.md"],
-        expectedArtifacts: ["docs/zh-CN/requirements.md"],
+        sourcePaths: ["docs/agentic-spec/zh-CN/requirements.md"],
+        expectedArtifacts: ["docs/agentic-spec/zh-CN/requirements.md"],
         workspaceRoot: root,
         skillName: "manage-spec-change",
         skillPhase: "resolve_clarification",
@@ -449,8 +449,8 @@ test("cli.run uses danger-full-access for trusted direct-write runs with bounded
   prepareSkillWorkspace(root);
   mkdirSync(join(root, ".agents", "skills", "convert-ears-requirements"), { recursive: true });
   writeFileSync(join(root, ".agents", "skills", "convert-ears-requirements", "SKILL.md"), "# PR EARS skill\n");
-  mkdirSync(join(root, "docs"), { recursive: true });
-  writeFileSync(join(root, "docs", "PRD.md"), "# PRD\n");
+  mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(root, "docs", "agentic-spec", "PRD.md"), "# PRD\n");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -466,19 +466,19 @@ test("cli.run uses danger-full-access for trusted direct-write runs with bounded
       context: {
         skillName: "convert-ears-requirements",
         skillPhase: "generate_ears",
-        sourcePaths: ["docs/PRD.md"],
-        expectedArtifacts: ["docs/requirements.md"],
+        sourcePaths: ["docs/agentic-spec/PRD.md"],
+        expectedArtifacts: ["docs/agentic-spec/requirements.md"],
       },
     },
     (_command, args) => {
       calls.push({ args });
-      writeFileSync(join(root, "docs", "requirements.md"), "# Requirements\n");
+      writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"), "# Requirements\n");
       return {
         status: 0,
         stdout: `{"type":"session","session_id":"SESSION-EARS"}\n${skillOutputEvent("RUN-EARS-DIRECT", {
           skillName: "convert-ears-requirements",
           requestedAction: "generate_ears",
-          producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+          producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
         })}`,
         stderr: "",
       };
@@ -827,7 +827,7 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
 test("codex.rpc.run projects approval pending to Feature spec-state", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-app-server-approval-"));
   prepareSkillWorkspace(root);
-  const featureDir = join(root, "docs", "features", "feat-cli");
+  const featureDir = join(root, "docs", "agentic-spec", "features", "feat-cli");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-CLI\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
@@ -856,7 +856,7 @@ test("codex.rpc.run projects approval pending to Feature spec-state", async () =
     ...payload,
     context: {
       ...payload.context,
-      featureSpecPath: "docs/features/feat-cli",
+      featureSpecPath: "docs/agentic-spec/features/feat-cli",
       skillName: "implement-feature",
     },
   }, transport);
@@ -880,7 +880,7 @@ test("codex.rpc.run projects approval pending to Feature spec-state", async () =
 test("codex.rpc.run writes completed Feature execution to spec-state file", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-app-server-completed-state-"));
   prepareSkillWorkspace(root);
-  const featureDir = join(root, "docs", "features", "feat-cli");
+  const featureDir = join(root, "docs", "agentic-spec", "features", "feat-cli");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-CLI\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
@@ -908,7 +908,7 @@ test("codex.rpc.run writes completed Feature execution to spec-state file", asyn
     ...payload,
     context: {
       ...payload.context,
-      featureSpecPath: "docs/features/feat-cli",
+      featureSpecPath: "docs/agentic-spec/features/feat-cli",
     },
   }, transport);
   const state = JSON.parse(readFileSync(join(featureDir, "spec-state.json"), "utf8"));
@@ -1147,7 +1147,7 @@ test("cli.run accepts completed foundation feature with explicit downstream jour
       result: {
         deliveryFidelity: validDeliveryFidelity({
           journeys: [],
-          sourceIntent: [{ id: "INTENT-FOUNDATION", summary: "Foundation work supports downstream UI closure.", sourceRef: "docs/features/FEAT-CLI/requirements.md", status: "preserved" }],
+          sourceIntent: [{ id: "INTENT-FOUNDATION", summary: "Foundation work supports downstream UI closure.", sourceRef: "docs/agentic-spec/features/FEAT-CLI/requirements.md", status: "preserved" }],
         }),
         foundationExemption: {
           exempt: true,
@@ -1274,7 +1274,7 @@ function validJourneyResult(): Record<string, unknown> {
 
 function validDeliveryFidelity(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    sourceIntent: [{ id: "INTENT-CLI", summary: "Feature execution preserves the requested behavior.", sourceRef: "docs/features/FEAT-CLI/requirements.md", status: "preserved" }],
+    sourceIntent: [{ id: "INTENT-CLI", summary: "Feature execution preserves the requested behavior.", sourceRef: "docs/agentic-spec/features/FEAT-CLI/requirements.md", status: "preserved" }],
     journeys: [{ id: "US-CLI", summary: "User completes feature flow", status: "verified", obligations: ["BO-CLI"] }],
     behaviorObligations: [{ id: "BO-CLI", sourceRef: "AC-CLI", description: "Complete the feature behavior and verify it.", status: "verified", evidenceRefs: ["EV-CLI"] }],
     handoffs: [
@@ -1318,10 +1318,10 @@ function validGitDelivery(): Record<string, unknown> {
 
 function prepareSkillWorkspace(root: string): void {
   mkdirSync(join(root, ".agents", "skills", "implement-feature"), { recursive: true });
-  mkdirSync(join(root, "docs", "features", "FEAT-CLI"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI"), { recursive: true });
   writeFileSync(join(root, "AGENTS.md"), "# Test workspace\n");
   writeFileSync(join(root, ".agents", "skills", "implement-feature", "SKILL.md"), "# Feat implement skill\n");
-  writeFileSync(join(root, "docs", "features", "FEAT-CLI", "requirements.md"), "# Requirements\n");
-  writeFileSync(join(root, "docs", "features", "FEAT-CLI", "design.md"), "# Design\n");
-  writeFileSync(join(root, "docs", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "requirements.md"), "# Requirements\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "design.md"), "# Design\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
 }

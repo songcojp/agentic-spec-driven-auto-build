@@ -417,7 +417,7 @@ function executionInvocation(): ExecutionAdapterInvocationV1 {
     skillInstruction: {
       skillName: "implement-feature",
       requestedAction: "feature_execution",
-      sourcePaths: ["docs/features/feat-016/requirements.md"],
+      sourcePaths: ["docs/agentic-spec/features/feat-016/requirements.md"],
       expectedArtifacts: [],
     },
   };
@@ -453,7 +453,7 @@ function validJourneyResult(): Record<string, unknown> {
 
 function validDeliveryFidelity(): Record<string, unknown> {
   return {
-    sourceIntent: [{ id: "INTENT-RPC", summary: "Run a Feature through the RPC adapter.", sourceRef: "docs/features/feat-016/requirements.md", status: "preserved" }],
+    sourceIntent: [{ id: "INTENT-RPC", summary: "Run a Feature through the RPC adapter.", sourceRef: "docs/agentic-spec/features/feat-016/requirements.md", status: "preserved" }],
     journeys: [{ id: "US-RPC", summary: "RPC feature execution", status: "verified", obligations: ["BO-RPC"] }],
     behaviorObligations: [{ id: "BO-RPC", sourceRef: "AC-RPC", description: "Project Skill output through RPC into execution result.", status: "verified", evidenceRefs: ["EV-RPC"] }],
     handoffs: [

@@ -15,13 +15,13 @@ description: "Decompose product and architecture scope into implementation-ready
 
 ## Guidance
 
-Create vertical, testable Feature packages under docs/features with fixed, parser-compatible artifacts.
+Create vertical, testable Feature packages under docs/agentic-spec/features with fixed, parser-compatible artifacts.
 
 Use `templates/feature-spec-template.md` as the required output contract for every created or regenerated Feature package. The template fixes:
 
-- directory names as `docs/features/feat-<nnn>-<kebab-title>/`
+- directory names as `docs/agentic-spec/features/feat-<nnn>-<kebab-title>/`
 - mandatory file names as `requirements.md`, `design.md`, `tasks.md`, and `spec-state.json`
-- index and queue updates as `docs/features/README.md` and `docs/features/feature-pool-queue.json`; the index table must start with `Feature ID` and its `Folder` column must use only the folder basename
+- index and queue updates as `docs/agentic-spec/features/README.md` and `docs/agentic-spec/features/feature-pool-queue.json`; the index table must start with `Feature ID` and its `Folder` column must use only the folder basename
 - `tasks.md` task blocks as parseable `### TASK-<nnn>: <title>` or `### T-<feature-nnn>-<task-nn>: <title>` headings with `Status`, `Description`, `Requirements`, `Spec Refs`, `Allowed Paths`, `Forbidden Paths`, `Verification`, and `Acceptance`
 - explicit `Worktree Mode` metadata and per-task mode when the Feature performs implementation, verification writes, Git delivery, or read-only analysis
 

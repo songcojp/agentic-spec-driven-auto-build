@@ -5,10 +5,10 @@ This repository is a spec-driven autonomous coding system. Treat the spec artifa
 ## Project Context
 
 - Product name: SpecDrive AutoBuild.
-- Primary docs entry: `docs/README.md`.
-- Default product language: English, with localized docs in `docs/en/`, `docs/zh-CN/`, and `docs/ja/`.
-- Active planning source for the current MVP is primarily in `docs/zh-CN/PRD.md`, `docs/zh-CN/requirements.md`, `docs/zh-CN/hld.md`, `docs/zh-CN/design.md`, and `docs/features/README.md`.
-- Feature Specs live under `docs/features/<feature-id>/` and normally contain `requirements.md`, `design.md`, and `tasks.md`.
+- Primary docs entry: `docs/agentic-spec/README.md`.
+- Default product language: English, with localized docs in `docs/agentic-spec/en/`, `docs/agentic-spec/zh-CN/`, and `docs/agentic-spec/ja/`.
+- Active planning source for the current MVP is primarily in `docs/agentic-spec/zh-CN/PRD.md`, `docs/agentic-spec/zh-CN/requirements.md`, `docs/agentic-spec/zh-CN/hld.md`, `docs/agentic-spec/zh-CN/design.md`, and `docs/agentic-spec/features/README.md`.
+- Feature Specs live under `docs/agentic-spec/features/<feature-id>/` and normally contain `requirements.md`, `design.md`, and `tasks.md`.
 - Project-local skills live under `.agents/skills/`. Do not use project-local skills by default; use them only when the user explicitly names a skill, explicitly asks for the project workflow, or the task cannot be handled safely without the governed skill workflow.
 - UI product direction: VSCode IDE Webview is the primary current UI. Product Console is historical legacy and should be treated as a compatibility/reference surface unless the user explicitly scopes work to it. When choosing UI behavior, docs, tests, or examples, prefer the IDE Webview model; future UI work should move toward sharing one UI layer with the IDE instead of taking Product Console as the main source of truth.
 
@@ -20,7 +20,7 @@ This repository is a spec-driven autonomous coding system. Treat the spec artifa
 - When a repository fact conflicts with a spec, update the spec through the spec-evolution path instead of silently coding around it.
 - If implementation intent, acceptance criteria, or file scope is unclear, stop for clarification before making risky changes.
 - For Chinese docs, preserve Chinese structure, numbering, and terminology unless the user asks for a language or tone change.
-- For any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix, treat `.agents/skills/10.change.classify/SKILL.md` as the Spec protocol. Triage through that skill-owned protocol before editing, update the mainline spec lane first, and do not create project-level scratch requirement files under `docs/features/` or target-project `change-management.md` / `change-disposition-checklist.md` documents.
+- For any requirement addition, requirement change, coverage gap, clarification, deprecation, or traceability fix, treat `.agents/skills/10.change.classify/SKILL.md` as the Spec protocol. Triage through that skill-owned protocol before editing, update the mainline spec lane first, and do not create project-level scratch requirement files under `docs/agentic-spec/features/` or target-project `change-management.md` / `change-disposition-checklist.md` documents.
 - For broad delivery work that spans requirements, planning, implementation, verification, review, or release, use `.agents/skills/using-agent-skills/SKILL.md` to route the task through Define, Plan, Build, Verify, Review, and Ship responsibilities. The 00-14 skill numbers are an internal compatibility layer; do not let them hide missing lifecycle handoffs, behavior obligations, or quality losses.
 
 ## Skill-vs-Code Decision

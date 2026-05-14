@@ -442,7 +442,7 @@ function listFeatureSpecsFromDocs(
   projectPath: string,
   dbFeatures: SpecWorkspaceFeatureListItem[] = [],
 ): SpecWorkspaceFeatureListItem[] {
-  const featuresDir = join(projectPath, "docs", "features");
+  const featuresDir = join(projectPath, "docs", "agentic-spec", "features");
   if (!existsSync(featuresDir)) return [];
 
   const dbById = new Map(dbFeatures.map((feature) => [feature.id, feature]));
@@ -480,8 +480,8 @@ function readFeatureSpecDocuments(projectPath: string, folder: string): FeatureS
 }
 
 function readFeatureSpecDocument(projectPath: string, folder: string, filename: string): FeatureSpecDocumentViewModel {
-  const path = `docs/features/${folder}/${filename}`;
-  const fullPath = join(projectPath, "docs", "features", folder, filename);
+  const path = `docs/agentic-spec/features/${folder}/${filename}`;
+  const fullPath = join(projectPath, "docs", "agentic-spec", "features", folder, filename);
   if (!existsSync(fullPath)) {
     return { path, exists: false, sections: [] };
   }
@@ -570,7 +570,7 @@ function requirementIdsFromText(content: string): string[] {
 }
 
 function featureStatusFromDocs(projectPath: string, folder: string): string {
-  const featureDir = join(projectPath, "docs", "features", folder);
+  const featureDir = join(projectPath, "docs", "agentic-spec", "features", folder);
   if (existsSync(join(featureDir, "tasks.md"))) return "ready";
   if (existsSync(join(featureDir, "design.md"))) return "planning";
   return "draft";
@@ -622,7 +622,7 @@ function normalizeFeaturePoolPriority(value: unknown, fallback: number): number 
 }
 
 function readFeaturePoolQueuePlan(projectPath: string): { path: string; entries: FeaturePoolQueuePlanEntry[]; blockedReasons: string[] } {
-  const relativePath = "docs/features/feature-pool-queue.json";
+  const relativePath = "docs/agentic-spec/features/feature-pool-queue.json";
   const fullPath = join(projectPath, relativePath);
   if (!existsSync(fullPath)) {
     return {
@@ -758,7 +758,7 @@ function deterministicFeaturePoolSelection(input: FeaturePoolSelectionInput): Fe
       continue;
     }
 
-    const readiness = validateFeatureSpecDirectory(input.projectPath, `docs/features/${feature.folder}`);
+    const readiness = validateFeatureSpecDirectory(input.projectPath, `docs/agentic-spec/features/${feature.folder}`);
     if (readiness.length > 0) {
       const reason = `${entry.id} cannot run: ${readiness.join(" ")}`;
       blockedReasons.push(reason);
@@ -844,7 +844,7 @@ function validateFeatureSelectionDecision(input: FeaturePoolSelectionInput, deci
   const completed = completedFeatureIds(input);
   const dependencyMissing = entry.dependencies.filter((dependency) => !completed.has(dependency));
   const state = readFileSpecState(input.projectPath, feature.folder, entry.id, input.now);
-  const readiness = validateFeatureSpecDirectory(input.projectPath, `docs/features/${feature.folder}`);
+  const readiness = validateFeatureSpecDirectory(input.projectPath, `docs/agentic-spec/features/${feature.folder}`);
   const blockedReasons = [
     ...dependencyMissing.map((dependency) => `${entry.id} is blocked by incomplete dependency: ${dependency}.`),
     ...readiness.map((reason) => `${entry.id} cannot run: ${reason}`),
@@ -2015,7 +2015,7 @@ function buildPrdWorkflow(input: {
           { label: "Feature", value: input.selectedFeatureId ?? "Not selected" },
           { label: "Status", value: input.selectedFeatureStatus ?? "unknown" },
           { label: "Command", value: "schedule_run" },
-          { label: "UI outputs", value: "docs/ui/ui-spec.md + docs/ui/prototype/*.html" },
+          { label: "UI outputs", value: "docs/agentic-spec/ui/ui-spec.md + docs/agentic-spec/ui/prototype/*.html" },
         ],
         stages: planningActionStages,
       },
@@ -3033,7 +3033,7 @@ function executeScheduleCommand(
   const project = projectId ? getProject(dbPath, projectId) : undefined;
   const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, projectId, project?.targetRepoPath);
   const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, featureId);
-  const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
+  const featureFolder = featureSpecPath?.replace(/^docs\/agentic-spec\/features\//, "");
   const specState = workspaceRoot && featureFolder && featureId
     ? readFileSpecState(workspaceRoot, featureFolder, featureId, new Date(acceptedAt))
     : undefined;
@@ -3298,12 +3298,12 @@ function featureSpecPathForScheduleRun(dbPath: string, targetRepoPath?: string, 
   const docsFeature = targetRepoPath
     ? listFeatureSpecsFromDocs(targetRepoPath, []).find((feature) => feature.id === featureId)
     : undefined;
-  if (docsFeature?.folder) return `docs/features/${docsFeature.folder}`;
+  if (docsFeature?.folder) return `docs/agentic-spec/features/${docsFeature.folder}`;
   const result = runSqlite(dbPath, [], [
     { name: "features", sql: "SELECT folder FROM features WHERE id = ? LIMIT 1", params: [featureId] },
   ]);
   const folder = optionalString(result.queries.features[0]?.folder);
-  return `docs/features/${folder ?? featureId.toLowerCase()}`;
+  return `docs/agentic-spec/features/${folder ?? featureId.toLowerCase()}`;
 }
 
 function scheduleRunSourcePaths(payload: Record<string, unknown>, featureSpecPath?: string, workspaceRoot?: string): string[] {
@@ -3568,7 +3568,7 @@ function executeFeatureReviewCommand(
     return { blockedReasons: ["Feature review completion requires a project workspace root."], featureId };
   }
   const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, featureId);
-  const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
+  const featureFolder = featureSpecPath?.replace(/^docs\/agentic-spec\/features\//, "");
   if (!featureFolder) {
     return { blockedReasons: [`Feature Spec directory not found for ${featureId}.`], featureId };
   }
@@ -3679,7 +3679,7 @@ function executeFeatureReadyCommand(
     return { blockedReasons: ["Feature ready marking requires a project workspace root."], featureId };
   }
   const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, featureId);
-  const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
+  const featureFolder = featureSpecPath?.replace(/^docs\/agentic-spec\/features\//, "");
   if (!featureFolder) {
     return { blockedReasons: [`Feature Spec directory not found for ${featureId}.`], featureId };
   }
@@ -3857,7 +3857,7 @@ function enqueueNextFeatureExecutionFromQueue(
 
   const docsFeatures = listFeatureSpecsFromDocs(project.targetRepoPath, []);
   if (docsFeatures.length === 0) {
-    return { featureIds: [], blockedReasons: ["No completed Feature Spec packages found under docs/features."] };
+    return { featureIds: [], blockedReasons: ["No completed Feature Spec packages found under docs/agentic-spec/features."] };
   }
 
   const queuePlan = readFeaturePoolQueuePlan(project.targetRepoPath);
@@ -3958,7 +3958,7 @@ function enqueueNextFeatureExecutionFromQueue(
     };
   }
   const selectedFeature = docsById.get(selected.id)!;
-  const featureSpecPath = `docs/features/${selectedFeature.folder ?? selected.id.toLowerCase()}`;
+  const featureSpecPath = `docs/agentic-spec/features/${selectedFeature.folder ?? selected.id.toLowerCase()}`;
   const selectedFolder = selectedFeature.folder ?? selected.id.toLowerCase();
   const specState = readFileSpecState(project.targetRepoPath, selectedFolder, selected.id, new Date(acceptedAt));
   const executionId = randomUUID();
@@ -4181,7 +4181,7 @@ function sourcePathsForSpecAction(
       projectDocs.prd,
       projectDocs.requirements,
       projectDocs.hld,
-      "docs/features/README.md",
+      "docs/agentic-spec/features/README.md",
     ]);
   }
   if (action === "generate_ui_spec") {
@@ -4190,7 +4190,7 @@ function sourcePathsForSpecAction(
       projectDocs.prd,
       projectDocs.requirements,
       projectDocs.hld,
-      "docs/features/README.md",
+      "docs/agentic-spec/features/README.md",
       ...(featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/requirements.md`] : []),
     ];
   }
@@ -4230,10 +4230,10 @@ type ProjectSpecPaths = {
 
 function projectSpecPaths(workspaceRoot?: string): ProjectSpecPaths {
   if (!workspaceRoot) return rootProjectSpecPaths();
-  if (hasAnyProjectSpecFile(workspaceRoot, "docs")) return rootProjectSpecPaths();
+  if (hasAnyProjectSpecFile(workspaceRoot, "docs/agentic-spec")) return rootProjectSpecPaths();
   if (hasMultilingualSpecSupport(workspaceRoot)) {
     for (const language of preferredSpecLanguages(workspaceRoot)) {
-      const root = `docs/${language}`;
+      const root = `docs/agentic-spec/${language}`;
       if (hasAnyProjectSpecFile(workspaceRoot, root)) {
         return {
           prd: `${root}/PRD.md`,
@@ -4248,9 +4248,9 @@ function projectSpecPaths(workspaceRoot?: string): ProjectSpecPaths {
 
 function rootProjectSpecPaths(): ProjectSpecPaths {
   return {
-    prd: "docs/PRD.md",
-    requirements: "docs/requirements.md",
-    hld: "docs/hld.md",
+    prd: "docs/agentic-spec/PRD.md",
+    requirements: "docs/agentic-spec/requirements.md",
+    hld: "docs/agentic-spec/hld.md",
   };
 }
 
@@ -4261,18 +4261,18 @@ function hasAnyProjectSpecFile(workspaceRoot: string, root: string): boolean {
 }
 
 function hasMultilingualSpecSupport(workspaceRoot: string): boolean {
-  const docsReadme = join(workspaceRoot, "docs", "README.md");
+  const docsReadme = join(workspaceRoot, "docs", "agentic-spec", "README.md");
   if (existsSync(docsReadme)) {
     const content = readFileSafe(docsReadme).toLowerCase();
     if (content.includes("default language") || content.includes("languages:") || content.includes("multilingual")) {
       return true;
     }
   }
-  return ["en", "zh-CN", "ja"].filter((language) => hasAnyProjectSpecFile(workspaceRoot, `docs/${language}`)).length > 1;
+  return ["en", "zh-CN", "ja"].filter((language) => hasAnyProjectSpecFile(workspaceRoot, `docs/agentic-spec/${language}`)).length > 1;
 }
 
 function preferredSpecLanguages(workspaceRoot: string): string[] {
-  const docsReadme = join(workspaceRoot, "docs", "README.md");
+  const docsReadme = join(workspaceRoot, "docs", "agentic-spec", "README.md");
   if (existsSync(docsReadme)) {
     const content = readFileSafe(docsReadme).toLowerCase();
     if (content.includes("default language: english")) return ["en", "zh-CN", "ja"];
@@ -4313,17 +4313,17 @@ function expectedArtifactsForSpecAction(
           `${featureSpecPath}/spec-state.json`,
         ]
       : [
-          "docs/features/<feature-id>/requirements.md",
-          "docs/features/<feature-id>/design.md",
-          "docs/features/<feature-id>/tasks.md",
-          "docs/features/<feature-id>/spec-state.json",
+          "docs/agentic-spec/features/<feature-id>/requirements.md",
+          "docs/agentic-spec/features/<feature-id>/design.md",
+          "docs/agentic-spec/features/<feature-id>/tasks.md",
+          "docs/agentic-spec/features/<feature-id>/spec-state.json",
         ];
     return [
       requirementsArtifactForSource(sourcePaths[0], workspaceRoot),
       projectDocs.hld,
-      "docs/features/README.md",
+      "docs/agentic-spec/features/README.md",
       ...featureArtifacts,
-      "docs/features/feature-pool-queue.json",
+      "docs/agentic-spec/features/feature-pool-queue.json",
     ];
   }
   if (action === "generate_ears") {
@@ -4331,32 +4331,32 @@ function expectedArtifactsForSpecAction(
   }
   if (action === "split_feature_specs") {
     return [
-      "docs/features/README.md",
-      "docs/features/<feature-id>/requirements.md",
-      "docs/features/<feature-id>/design.md",
-      "docs/features/<feature-id>/tasks.md",
-      "docs/features/feature-pool-queue.json",
+      "docs/agentic-spec/features/README.md",
+      "docs/agentic-spec/features/<feature-id>/requirements.md",
+      "docs/agentic-spec/features/<feature-id>/design.md",
+      "docs/agentic-spec/features/<feature-id>/tasks.md",
+      "docs/agentic-spec/features/feature-pool-queue.json",
     ];
   }
   if (action === "generate_hld") {
     return [projectSpecPaths(workspaceRoot).hld];
   }
   if (action === "generate_ui_spec") {
-    const uiSpecPath = featureId ? `${featureSpecArtifactPath(featureId, workspaceRoot)}/ui-spec.md` : "docs/ui/ui-spec.md";
+    const uiSpecPath = featureId ? `${featureSpecArtifactPath(featureId, workspaceRoot)}/ui-spec.md` : "docs/agentic-spec/ui/ui-spec.md";
     return [
       uiSpecPath,
       ...uiPrototypeExpectedArtifacts(sourcePaths, workspaceRoot, featureId),
     ];
   }
-  return featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/tasks.md`] : ["docs/features/README.md"];
+  return featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/tasks.md`] : ["docs/agentic-spec/features/README.md"];
 }
 
 function featureSpecArtifactPath(featureId?: string, workspaceRoot?: string): string {
-  if (!featureId) return "docs/features/<feature-id>";
+  if (!featureId) return "docs/agentic-spec/features/<feature-id>";
   const docsFeature = workspaceRoot
     ? listFeatureSpecsFromDocs(workspaceRoot, []).find((feature) => feature.id.toUpperCase() === featureId.toUpperCase())
     : undefined;
-  return `docs/features/${docsFeature?.folder ?? featureId.toLowerCase()}`;
+  return `docs/agentic-spec/features/${docsFeature?.folder ?? featureId.toLowerCase()}`;
 }
 
 function uiPrototypeExpectedArtifacts(sourcePaths: string[], workspaceRoot?: string, featureId?: string): string[] {
@@ -4364,7 +4364,7 @@ function uiPrototypeExpectedArtifacts(sourcePaths: string[], workspaceRoot?: str
     .map((sourcePath) => readWorkspaceText(sourcePath, workspaceRoot))
     .filter((content): content is string => Boolean(content));
   const surfaces = uniqueSourcePaths(sourceTexts.flatMap(extractUiSurfaceInventory));
-  const basePath = featureId ? `${featureSpecArtifactPath(featureId, workspaceRoot)}/prototype` : "docs/ui/prototype";
+  const basePath = featureId ? `${featureSpecArtifactPath(featureId, workspaceRoot)}/prototype` : "docs/agentic-spec/ui/prototype";
   const pageArtifacts = surfaces.length === 0
     ? [`${basePath}/<page-id>.html`]
     : surfaces.map((surface) => `${basePath}/${uiConceptPageId(surface)}.html`);
@@ -4439,7 +4439,7 @@ function requirementsArtifactForSource(sourcePath?: string, workspaceRoot?: stri
     return fallback;
   }
   const normalizedSource = relativeSource.replaceAll("\\", "/");
-  if (normalizedSource === "docs/features/README.md") {
+  if (normalizedSource === "docs/agentic-spec/features/README.md") {
     return fallback;
   }
   if (basename(normalizedSource) === "PRD.md") {
@@ -4455,7 +4455,7 @@ function requirementsArtifactForSource(sourcePath?: string, workspaceRoot?: stri
 }
 
 function isLocalizedProjectSpecPath(relativeSource: string): boolean {
-  return /^docs\/(en|zh-CN|ja)\/PRD\.md$/.test(relativeSource.replaceAll("\\", "/"));
+  return /^docs\/agentic-spec\/(en|zh-CN|ja)\/PRD\.md$/.test(relativeSource.replaceAll("\\", "/"));
 }
 
 function writeSpecIntakeArtifact(projectPath: string, directory: string, fileName: string, value: unknown): string {
@@ -5080,9 +5080,9 @@ function safeSpecDocumentWritePath(path: string): string {
   if (!normalized || normalized.startsWith("../") || normalized.includes("/../") || isAbsolute(normalized)) {
     throw new Error(`Spec document path must stay inside the workspace: ${path}`);
   }
-  const allowed = normalized.startsWith("docs/") || normalized.startsWith(".agents/skills/");
+  const allowed = normalized.startsWith("docs/agentic-spec/") || normalized.startsWith(".agents/skills/");
   if (!allowed) {
-    throw new Error(`Spec document updates are limited to docs/ or .agents/skills/: ${path}`);
+    throw new Error(`Spec document updates are limited to docs/agentic-spec/ or .agents/skills/: ${path}`);
   }
   return normalized;
 }
@@ -5270,7 +5270,7 @@ function updateFeatureSpecStateForReviewDecision(
   const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, item.projectId, project?.targetRepoPath);
   if (!workspaceRoot) return;
   const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, item.featureId);
-  const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
+  const featureFolder = featureSpecPath?.replace(/^docs\/agentic-spec\/features\//, "");
   if (!featureFolder) return;
   const stateStatus = input.decision === "approve_continue" && item.runId
     ? "completed"
@@ -5323,7 +5323,7 @@ function updateFeatureSpecStateForReviewContinuation(
   const workspaceRoot = scheduleRunWorkspaceRoot(dbPath, item.projectId, project?.targetRepoPath);
   if (!workspaceRoot) return;
   const featureSpecPath = featureSpecPathForScheduleRun(dbPath, workspaceRoot, item.featureId);
-  const featureFolder = featureSpecPath?.replace(/^docs\/features\//, "");
+  const featureFolder = featureSpecPath?.replace(/^docs\/agentic-spec\/features\//, "");
   if (!featureFolder) return;
   try {
     const now = new Date(input.acceptedAt);

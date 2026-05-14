@@ -420,8 +420,8 @@ function renderLifecycleDiagnostic(diagnostic: SpecDriveIdeDiagnostic, t: SpecWo
 }
 
 export function preferredWorkspaceRequestSource(view: SpecDriveIdeView): string {
-  return view.documents.find((document) => document.exists && document.path === "docs/README.md")?.path
+  return view.documents.find((document) => document.exists && document.path === "docs/agentic-spec/README.md")?.path
     ?? view.documents.find((document) => document.exists && document.kind === "readme")?.path
     ?? view.documents.find((document) => document.exists)?.path
-    ?? "docs/README.md";
+    ?? "docs/agentic-spec/README.md";
 }

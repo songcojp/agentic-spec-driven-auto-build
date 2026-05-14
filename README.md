@@ -89,15 +89,15 @@ This is not a replacement for Git, CI, or issue trackers. It is a spec-first orc
 
 | Spec Workspace | Feature Spec |
 | --- | --- |
-| ![Spec Workspace](docs/ui-v2/spec-workspace.png) | ![Feature Spec](docs/ui-v2/feature-spec-project-home.png) |
+| ![Spec Workspace](docs/agentic-spec/ui-v2/spec-workspace.png) | ![Feature Spec](docs/agentic-spec/ui-v2/feature-spec-project-home.png) |
 
 | Execution Workbench | System Settings |
 | --- | --- |
-| ![Execution Workbench](docs/ui-v2/execution-workbench-runner.png) | ![System Settings](docs/ui-v2/system-settings.png) |
+| ![Execution Workbench](docs/agentic-spec/ui-v2/execution-workbench-runner.png) | ![System Settings](docs/agentic-spec/ui-v2/system-settings.png) |
 
 | Audit and Review |
 | --- |
-| ![Audit and Review](docs/ui-v2/audit-review.png) |
+| ![Audit and Review](docs/agentic-spec/ui-v2/audit-review.png) |
 
 ---
 
@@ -186,11 +186,11 @@ Spec remains the source of truth.
 Inputs can be natural language, an existing PRD, a product brief, a pull request, an issue, or an existing codebase. The system first turns them into mainline documents. In the current repository, the active MVP planning source is primarily the Chinese mainline lane, with English and Japanese entry documents kept for product-facing navigation:
 
 ```text
-docs/<language>/PRD.md
-docs/<language>/requirements.md
-docs/<language>/hld.md
-docs/features/README.md
-docs/features/<feature-id>/
+docs/agentic-spec/<language>/PRD.md
+docs/agentic-spec/<language>/requirements.md
+docs/agentic-spec/<language>/hld.md
+docs/agentic-spec/features/README.md
+docs/agentic-spec/features/<feature-id>/
 ```
 
 Mainline specs define product scope, acceptance behavior, architecture boundaries, user-facing flows, and change rules.
@@ -200,10 +200,10 @@ Mainline specs define product scope, acceptance behavior, architecture boundarie
 The system slices mainline specs into feature-level delivery units:
 
 ```text
-docs/features/<feature-id>/requirements.md
-docs/features/<feature-id>/design.md
-docs/features/<feature-id>/tasks.md
-docs/features/<feature-id>/spec-state.json
+docs/agentic-spec/features/<feature-id>/requirements.md
+docs/agentic-spec/features/<feature-id>/design.md
+docs/agentic-spec/features/<feature-id>/tasks.md
+docs/agentic-spec/features/<feature-id>/spec-state.json
 ```
 
 A good Feature Spec is not "frontend work" or "backend work". It is a vertical capability that can be implemented, verified, reviewed, and delivered independently.
@@ -252,7 +252,7 @@ Delivery is considered complete only when evidence, status, review, and spec tra
 ├── apps/
 │   ├── product-console/       # React/Vite compatibility console for settings and debugging
 │   └── vscode-extension/      # Primary VSCode extension and IDE Webview workbench
-├── docs/
+├── docs/agentic-spec/
 │   ├── en/                    # English product/spec documents
 │   ├── zh-CN/                 # Chinese product/spec documents and protocol docs
 │   ├── ja/                    # Japanese documents
@@ -266,12 +266,12 @@ Delivery is considered complete only when evidence, status, review, and spec tra
 
 Key documents:
 
-- [Product Requirements Document](docs/en/PRD.md)
-- [Documentation Index](docs/README.md)
-- [Feature Spec Index](docs/features/README.md)
-- [Project HLD](docs/zh-CN/hld.md)
-- [Agentic Spec Standard](docs/zh-CN/agentic-spec-standard.md)
-- [Project Skill Guide](docs/zh-CN/skills.md)
+- [Product Requirements Document](docs/agentic-spec/en/PRD.md)
+- [Documentation Index](docs/agentic-spec/README.md)
+- [Feature Spec Index](docs/agentic-spec/features/README.md)
+- [Project HLD](docs/agentic-spec/zh-CN/hld.md)
+- [Agentic Spec Standard](docs/agentic-spec/zh-CN/agentic-spec-standard.md)
+- [Project Skill Guide](docs/agentic-spec/zh-CN/skills.md)
 
 ---
 
@@ -284,7 +284,7 @@ The current product direction uses the VSCode IDE Webview as the primary daily U
 For the most precise status, use the Feature Spec index:
 
 ```text
-docs/features/README.md
+docs/agentic-spec/features/README.md
 ```
 
 That file is the working delivery map for MVP features, dependencies, follow-up changes, terminology migrations, and implementation notes.
@@ -445,15 +445,15 @@ SpecDrive follows several strict rules for agentic development:
 
 For product and architecture understanding:
 
-1. [docs/en/PRD.md](docs/en/PRD.md)
-2. [docs/zh-CN/hld.md](docs/zh-CN/hld.md)
-3. [docs/features/README.md](docs/features/README.md)
-4. [docs/zh-CN/agentic-spec-standard.md](docs/zh-CN/agentic-spec-standard.md)
-5. [docs/zh-CN/skills.md](docs/zh-CN/skills.md)
+1. [docs/agentic-spec/en/PRD.md](docs/agentic-spec/en/PRD.md)
+2. [docs/agentic-spec/zh-CN/hld.md](docs/agentic-spec/zh-CN/hld.md)
+3. [docs/agentic-spec/features/README.md](docs/agentic-spec/features/README.md)
+4. [docs/agentic-spec/zh-CN/agentic-spec-standard.md](docs/agentic-spec/zh-CN/agentic-spec-standard.md)
+5. [docs/agentic-spec/zh-CN/skills.md](docs/agentic-spec/zh-CN/skills.md)
 
 For implementation work:
 
-1. Read the relevant Feature Spec under `docs/features/`.
+1. Read the relevant Feature Spec under `docs/agentic-spec/features/`.
 2. Check `spec-state.json` before modifying files.
 3. Follow the task's allowed-files and verification rules.
 4. Run the targeted tests first, then broader regression tests.

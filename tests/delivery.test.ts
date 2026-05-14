@@ -412,9 +412,9 @@ function seedReadyDelivery(dbPath: string): void {
     {
       sql: `INSERT INTO requirements (id, feature_id, source_id, body, acceptance_criteria, priority, status)
         VALUES
-          ('REQ-048', 'FEAT-012', 'docs/zh-CN/requirements.md#REQ-048', 'Create Pull Request.', 'PR body is traceable.', 'must', 'active'),
-          ('REQ-049', 'FEAT-012', 'docs/zh-CN/requirements.md#REQ-049', 'Generate delivery report.', 'Report references evidence.', 'must', 'active'),
-          ('REQ-050', 'FEAT-012', 'docs/zh-CN/requirements.md#REQ-050', 'Suggest Spec Evolution.', 'Suggestion has source evidence.', 'must', 'active')`,
+          ('REQ-048', 'FEAT-012', 'docs/agentic-spec/zh-CN/requirements.md#REQ-048', 'Create Pull Request.', 'PR body is traceable.', 'must', 'active'),
+          ('REQ-049', 'FEAT-012', 'docs/agentic-spec/zh-CN/requirements.md#REQ-049', 'Generate delivery report.', 'Report references evidence.', 'must', 'active'),
+          ('REQ-050', 'FEAT-012', 'docs/agentic-spec/zh-CN/requirements.md#REQ-050', 'Suggest Spec Evolution.', 'Suggestion has source evidence.', 'must', 'active')`,
     },
     {
       sql: `INSERT INTO tasks (id, feature_id, title, status, recovery_state, allowed_files_json)

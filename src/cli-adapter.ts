@@ -1494,7 +1494,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     ? [
         "- For split_feature_specs, decompose PRD, EARS requirements, and HLD into implementation-ready Feature Spec package directories.",
         "- Do not treat .autobuild/specs/FEAT-INTAKE-*.json as a Feature Spec package; it is only an intake artifact.",
-        "- Write Feature Spec packages under docs/features/<feature-id>/ with requirements.md, design.md, tasks.md, and update docs/features/README.md.",
+        "- Write Feature Spec packages under docs/agentic-spec/features/<feature-id>/ with requirements.md, design.md, tasks.md, and update docs/agentic-spec/features/README.md.",
         "- The final response must be the last full SkillOutputContractV1 object, not shorthand JSON with only summary/status/evidence.",
         "- In the task-slicing result, include features, queuePlan, dependencyGraph, userStoryMapping, verificationPlan, and openQuestions.",
       ]
@@ -1530,7 +1530,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     ? [
         "- For this change flow, do not stop after updating only PRD, requirements, or HLD.",
         "- Create or update the affected Feature Spec package so it can be scheduled from the UI immediately after this run completes.",
-        "- Ensure docs/features/README.md lists the affected Feature with status ready, docs/features/feature-pool-queue.json contains a runnable queue entry, and the Feature spec-state.json records status ready with cleared blocking reasons unless a real blocker remains.",
+        "- Ensure docs/agentic-spec/features/README.md lists the affected Feature with status ready, docs/agentic-spec/features/feature-pool-queue.json contains a runnable queue entry, and the Feature spec-state.json records status ready with cleared blocking reasons unless a real blocker remains.",
         "- If the change cannot produce a ready Feature Spec, return status blocked or review_needed with the exact missing decision instead of reporting a partial documentation-only success.",
       ]
     : [];
@@ -1538,11 +1538,11 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
   const uiSpecRules = invocation.operation === "generate_ui_spec" || instruction.requestedAction === "generate_ui_spec"
     ? [
         "- UI Spec now means UI System Design: derive complete page coverage, interaction flows, state/data bindings, design tokens, component rules, accessibility, and verification obligations from PRD, requirements, HLD, and Feature Specs.",
-        "- High-fidelity static HTML artifacts are required when expected: generate a browsable prototype index and one concrete WYSIWYG page artifact for each expected docs/ui/prototype/<page-id>.html or feature-scoped prototype path.",
+        "- High-fidelity static HTML artifacts are required when expected: generate a browsable prototype index and one concrete WYSIWYG page artifact for each expected docs/agentic-spec/ui/prototype/<page-id>.html or feature-scoped prototype path.",
         "- Static HTML prototypes must be backend-free, locally browsable, responsive, representative of real states, and must not call Control Plane APIs or mutate real workspace state.",
         "- Do not generate concept images when high-fidelity static HTML artifacts are expected and no concrete image artifact is listed.",
         ...(hasExpectedImageArtifact ? [
-        "- UI concept image artifacts are page-specific: generate or preserve one distinct image for each concrete expected docs/ui/concepts/<page-id>.png artifact.",
+        "- UI concept image artifacts are page-specific: generate or preserve one distinct image for each concrete expected docs/agentic-spec/ui/concepts/<page-id>.png artifact.",
         "- Do not satisfy multiple expected UI concept image artifacts with one copied image, one generic overview image, or repeated overwrites of the same path.",
         "- If a required concept image already exists and no explicit repair is needed, keep it unchanged and list it as unchanged instead of regenerating that same path.",
         "- If a concept image must be repaired or replaced, report the replaced path and reason in result.details or result.items.",
@@ -1576,7 +1576,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     "- Each producedArtifacts item must include path, kind, status, checksum, and summary; use null for checksum or summary when unknown.",
     "- traceability must include only featureId; use null when no Feature applies. Do not include requirementIds, taskId, changeIds, or other non-Feature traceability in the common output contract.",
     "- The output contract must use contractVersion skill-contract/v1 and echo executionId, skillName, requestedAction, and traceability.featureId from this task instruction.",
-    "- When Feature state is present in source files, treat it as the machine-readable Feature state. Return status and result fields that allow the scheduler to patch docs/features/<feature-id>/spec-state.json.",
+    "- When Feature state is present in source files, treat it as the machine-readable Feature state. Return status and result fields that allow the scheduler to patch docs/agentic-spec/features/<feature-id>/spec-state.json.",
     "- Produce the expected artifacts and list every produced or intentionally unchanged artifact in producedArtifacts.",
     "- Prefer writing expected artifacts directly to the workspace paths named in this task instruction.",
     "- Do not assume a platform Skill Registry or Skill Center exists.",
@@ -2990,7 +2990,7 @@ function missingExpectedArtifacts(result: CliAdapterResult): string[] {
 }
 
 function isMaterializedSpecArtifact(artifact: string): boolean {
-  return artifact.startsWith("docs/") && !artifact.includes("<") && !artifact.startsWith("/");
+  return artifact.startsWith("docs/agentic-spec/") && !artifact.includes("<") && !artifact.startsWith("/");
 }
 
 function outputSchemaForExecutionInvocation(schema: Record<string, unknown>, invocation: ExecutionAdapterInvocationV1 | undefined): Record<string, unknown> {
@@ -3258,7 +3258,7 @@ function isSafeWorkspaceWritePath(value: string): boolean {
 function isSafeExpectedArtifactPath(value: string): boolean {
   const normalized = normalizePath(value.trim());
   return isSafeWorkspaceWritePath(normalized) &&
-    (normalized.startsWith("docs/") || normalized.startsWith(".autobuild/reports/") || normalized.startsWith(".autobuild/runs/"));
+    (normalized.startsWith("docs/agentic-spec/") || normalized.startsWith(".autobuild/reports/") || normalized.startsWith(".autobuild/runs/"));
 }
 
 export function runCommand(

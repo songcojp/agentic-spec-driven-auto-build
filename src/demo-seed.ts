@@ -197,7 +197,7 @@ function demoSeedStatements(targetRepoPath: string) {
         "review_needed",
         JSON.stringify(["DEMO-REQ-204"]),
         "[]",
-        JSON.stringify(["docs/features/demo-feat-204-mobile-returns/tasks.md"]),
+        JSON.stringify(["docs/agentic-spec/features/demo-feat-204-mobile-returns/tasks.md"]),
         JSON.stringify([DEMO_TASK_READY_ID]),
         "high",
         1,
@@ -220,7 +220,7 @@ function demoSeedStatements(targetRepoPath: string) {
         "Approve refund decision copy",
         "review_needed",
         "pending",
-        JSON.stringify(["docs/features/demo-feat-204-mobile-returns/tasks.md"]),
+        JSON.stringify(["docs/agentic-spec/features/demo-feat-204-mobile-returns/tasks.md"]),
       ],
     },
     {

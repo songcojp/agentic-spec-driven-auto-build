@@ -249,15 +249,15 @@ test("initializeProjectPhase1 creates SpecDrive gitignore and AGENTS guidance", 
   assert.match(agents, /## SpecDrive Workflow Skills/);
   assert.match(agents, /## Skill Reference/);
   assert.match(agents, /manage-spec-change/);
-  assert.match(agents, /Do not create project-level scratch requirement files under `docs\/features\/`/);
+  assert.match(agents, /Do not create project-level scratch requirement files under `docs\/agentic-spec\/features\/`/);
   assert.match(agents, /skill-owned change protocol/);
-  assert.match(agents, /Do not create target-project `docs\/change-management\.md`/);
+  assert.match(agents, /Do not create target-project `docs\/agentic-spec\/change-management\.md`/);
   assert.match(agents, /Use this file as the target project's SpecDrive operating contract/);
   assert.doesNotMatch(agents, /Skill-vs-Code Rule/);
   assert.equal(existsSync(join(root, ".agents", "templates", "project-AGENTS.md")), true);
   assert.equal(existsSync(join(root, "docs", "change-management.md")), false);
-  assert.equal(existsSync(join(root, "docs", "zh-CN", "change-management.md")), false);
-  assert.equal(existsSync(join(root, "docs", "zh-CN", "change-disposition-checklist.md")), false);
+  assert.equal(existsSync(join(root, "docs", "agentic-spec", "zh-CN", "change-management.md")), false);
+  assert.equal(existsSync(join(root, "docs", "agentic-spec", "zh-CN", "change-disposition-checklist.md")), false);
 
   const constitution = readFileSync(join(root, ".autobuild", "memory", "constitution.md"), "utf8");
   assert.match(constitution, /^# InitFiles Project Constitution/m);

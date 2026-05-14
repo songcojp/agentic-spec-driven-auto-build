@@ -712,5 +712,5 @@ function normalizeStatusText(status: string): string {
 export function preferredFeatureReviewSource(feature: SpecDriveIdeFeatureNode): string {
   return feature.documents.find((document) => document.kind === "feature-requirements" && document.exists)?.path
     ?? feature.documents.find((document) => document.exists)?.path
-    ?? "docs/features/README.md";
+    ?? "docs/agentic-spec/features/README.md";
 }

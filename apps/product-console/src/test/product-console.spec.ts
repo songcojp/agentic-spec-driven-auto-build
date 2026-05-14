@@ -39,7 +39,7 @@ test("renders the console first screen and navigates across all pages", async ({
       await expect(skillDrawer.getByText("执行结果")).toBeVisible();
       await expect(skillDrawer.getByText("Skill 输出")).toBeVisible();
       await expect(skillDrawer.getByText("Carrier label quote fixture wired and acceptance evidence recorded.", { exact: true }).first()).toBeVisible();
-      await expect(skillDrawer.getByText("docs/features/feat-204-mobile-returns/tasks.md")).toBeVisible();
+      await expect(skillDrawer.getByText("docs/agentic-spec/features/feat-204-mobile-returns/tasks.md")).toBeVisible();
       await expect(skillDrawer.getByText("原始 JSON")).toBeVisible();
       await page.getByRole("button", { name: "关闭" }).click();
       await expect(page.getByText("1-10 / 13")).toBeVisible();
@@ -289,7 +289,7 @@ test("renders the Spec workspace workbench and submits controlled spec commands"
   await expect(page.getByText("PRD").first()).toBeVisible();
   await expect(page.getByText("EARS").first()).toBeVisible();
   await expect(page.getByText("HLD").first()).toBeVisible();
-  await expect(page.getByText("workspace/acme-returns-portal/docs/zh-CN/PRD.md").first()).toBeVisible();
+  await expect(page.getByText("workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md").first()).toBeVisible();
   await page.getByRole("button", { name: /阶段 3 设计规划与任务调度/ }).click();
   await expect(page.getByRole("button", { name: /阶段 2 需求录入/ })).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByText("生成 HLD").first()).toBeVisible();
@@ -305,7 +305,7 @@ test("renders the Spec workspace workbench and submits controlled spec commands"
   await expect(page.getByRole("button", { name: "生成 UI Spec" })).toBeVisible();
   await page.getByRole("button", { name: "生成 UI Spec" }).click();
   await expect(page.getByLabel("Notifications (F8)").getByText("generate_ui_spec recorded")).toBeVisible();
-  await expect(page.getByText("docs/ui/concepts/*.png", { exact: true })).toBeVisible();
+  await expect(page.getByText("docs/agentic-spec/ui/concepts/*.png", { exact: true })).toBeVisible();
   await expect(page.getByText("Feature Spec", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Feature Spec List" })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Feature Spec List" }).getByText("共 3 项")).toBeVisible();

@@ -283,8 +283,8 @@ test("project health checker classifies ready, blocked, and failed states with r
 test("project directory scan does not treat an unborn HEAD as a commit", () => {
   const root = makeTempDir();
   const repo = join(root, "docs-only");
-  mkdirSync(join(repo, "docs"), { recursive: true });
-  writeFileSync(join(repo, "docs", "PRD.md"), "# PRD\n", "utf8");
+  mkdirSync(join(repo, "docs", "agentic-spec"), { recursive: true });
+  writeFileSync(join(repo, "docs", "agentic-spec", "PRD.md"), "# PRD\n", "utf8");
   execFileSync("git", ["init", "-b", "main"], { cwd: repo });
 
   const scan = scanProjectDirectory({ targetRepoPath: repo });
@@ -555,7 +555,7 @@ function makeTempDir(): string {
 function createReadyGitRepo(path: string): string {
   mkdirSync(path, { recursive: true });
   mkdirSync(join(path, ".codex"));
-  mkdirSync(join(path, "docs", "features"), { recursive: true });
+  mkdirSync(join(path, "docs", "agentic-spec", "features"), { recursive: true });
   writeFileSync(join(path, "AGENTS.md"), "# Agent Instructions\n");
   writeFileSync(
     join(path, "package.json"),

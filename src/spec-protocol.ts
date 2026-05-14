@@ -609,18 +609,18 @@ export function scanSpecSources(projectPath: string, now = new Date()): SpecSour
 
   const rootCandidates: Array<[string, SpecSourceFileType]> = [
     ["README.md", "README"],
-    ["docs/README.md", "README"],
-    ["docs/PRD.md", "PRD"],
-    ["docs/requirements.md", "EARS"],
-    ["docs/hld.md", "HLD"],
-    ["docs/design.md", "design"],
+    ["docs/agentic-spec/README.md", "README"],
+    ["docs/agentic-spec/PRD.md", "PRD"],
+    ["docs/agentic-spec/requirements.md", "EARS"],
+    ["docs/agentic-spec/hld.md", "HLD"],
+    ["docs/agentic-spec/design.md", "design"],
   ];
   const localizedCandidates: Array<[string, SpecSourceFileType]> = hasMultilingualSpecSupport(root)
     ? preferredSpecLanguages(root).flatMap((language): Array<[string, SpecSourceFileType]> => [
-      [`docs/${language}/PRD.md`, "PRD"],
-      [`docs/${language}/requirements.md`, "EARS"],
-      [`docs/${language}/hld.md`, "HLD"],
-      [`docs/${language}/design.md`, "design"],
+      [`docs/agentic-spec/${language}/PRD.md`, "PRD"],
+      [`docs/agentic-spec/${language}/requirements.md`, "EARS"],
+      [`docs/agentic-spec/${language}/hld.md`, "HLD"],
+      [`docs/agentic-spec/${language}/design.md`, "design"],
     ])
     : [];
   const staticCandidates = [...rootCandidates, ...localizedCandidates];
@@ -632,12 +632,12 @@ export function scanSpecSources(projectPath: string, now = new Date()): SpecSour
     }
   }
 
-  const featuresDir = join(root, "docs", "features");
+  const featuresDir = join(root, "docs", "agentic-spec", "features");
   if (existsSync(featuresDir)) {
     for (const entry of readdirSync(featuresDir, { withFileTypes: true })) {
       if (!entry.isDirectory() || !/^feat-\d+/.test(entry.name)) continue;
 
-      const featRel = join("docs", "features", entry.name);
+      const featRel = join("docs", "agentic-spec", "features", entry.name);
       const featureFiles: Array<[string, SpecSourceFileType]> = [
         [join(featRel, "requirements.md"), "feature-requirements"],
         [join(featRel, "design.md"), "design"],
@@ -694,18 +694,18 @@ export function scanSpecSources(projectPath: string, now = new Date()): SpecSour
 }
 
 function hasMultilingualSpecSupport(root: string): boolean {
-  const docsReadme = join(root, "docs", "README.md");
+  const docsReadme = join(root, "docs", "agentic-spec", "README.md");
   if (existsSync(docsReadme)) {
     const content = readFileSafe(docsReadme).toLowerCase();
     if (content.includes("default language") || content.includes("languages:") || content.includes("multilingual")) {
       return true;
     }
   }
-  return ["en", "zh-CN", "ja"].filter((language) => hasAnyProjectSpecFile(join(root, "docs", language))).length > 1;
+  return ["en", "zh-CN", "ja"].filter((language) => hasAnyProjectSpecFile(join(root, "docs", "agentic-spec", language))).length > 1;
 }
 
 function preferredSpecLanguages(root: string): string[] {
-  const docsReadme = join(root, "docs", "README.md");
+  const docsReadme = join(root, "docs", "agentic-spec", "README.md");
   if (existsSync(docsReadme)) {
     const content = readFileSafe(docsReadme).toLowerCase();
     if (content.includes("default language: english")) return ["en", "zh-CN", "ja"];
@@ -798,7 +798,7 @@ function normalizeFeatureTaskStatus(value: string): string {
 
 export function specStateRelativePath(featureFolder: string): string {
   const safeFolder = sanitizeFeatureFolder(featureFolder);
-  return `docs/features/${safeFolder}/spec-state.json`;
+  return `docs/agentic-spec/features/${safeFolder}/spec-state.json`;
 }
 
 export function readFileSpecState(
@@ -1048,7 +1048,7 @@ function isFileSpecStateHistoryEntry(value: unknown): value is FileSpecState["hi
 function sanitizeFeatureFolder(featureFolder: string): string {
   const normalized = featureFolder.replaceAll("\\", "/").split("/").filter(Boolean).join("/");
   if (!normalized || normalized.startsWith("../") || normalized.includes("/../") || normalized.startsWith("/")) {
-    throw new Error(`Feature folder must stay inside docs/features: ${featureFolder}`);
+    throw new Error(`Feature folder must stay inside docs/agentic-spec/features: ${featureFolder}`);
   }
   return normalized;
 }
@@ -1403,12 +1403,12 @@ function detectOrphanedTraceability(
       missingItems.push({
         id: missingItemId(missingItems.length + 1),
         kind: "orphaned_traceability",
-        relatedPath: "docs/features/",
+        relatedPath: "docs/agentic-spec/features/",
         description: `${reqId} appears in EARS requirements but is not referenced by any Feature Spec`,
       });
       clarificationItems.push({
         id: scanClarId(clarificationItems.length + 1),
-        sourcePath: "docs/features/",
+        sourcePath: "docs/agentic-spec/features/",
         description: `${reqId} is not yet assigned to a Feature Spec`,
         type: "orphaned",
       });

@@ -74,7 +74,7 @@ function invocation(): ExecutionAdapterInvocationV1 {
     skillInstruction: {
       skillName: "implement-feature",
       requestedAction: "feature_execution",
-      sourcePaths: ["docs/features/feat-quality/requirements.md"],
+      sourcePaths: ["docs/agentic-spec/features/feat-quality/requirements.md"],
       expectedArtifacts: [],
     },
   };

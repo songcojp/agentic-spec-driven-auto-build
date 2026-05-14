@@ -415,7 +415,7 @@ export function buildSpecDriveIdeView(dbPath: string, options: BuildSpecDriveIde
   const projectId = options.projectId ?? optionalString(project?.id);
   if (projectId) ensureTokenConsumptionRecords(dbPath, projectId);
   const specRoot = workspaceRoot ? detectSpecRoot(workspaceRoot) : undefined;
-  const language = specRoot?.startsWith("docs/") ? specRoot.slice("docs/".length) : undefined;
+  const language = specRoot?.startsWith("docs/agentic-spec/") ? specRoot.slice("docs/agentic-spec/".length) : undefined;
   const documents = workspaceRoot ? buildTopLevelDocuments(workspaceRoot, specRoot) : [];
   const features = workspaceRoot ? buildFeatureNodes(dbPath, workspaceRoot, projectId) : [];
   const projectCost = buildProjectCostSummary(dbPath, projectId);
@@ -426,12 +426,12 @@ export function buildSpecDriveIdeView(dbPath: string, options: BuildSpecDriveIde
   const projectInitialization = buildProjectInitialization(dbPath, { project, projectId, workspaceRoot });
   const missing = [
     ...documents.filter((document) => !document.exists).map((document) => document.path),
-    ...(workspaceRoot && !existsSync(join(workspaceRoot, "docs/features")) ? ["docs/features"] : []),
+    ...(workspaceRoot && !existsSync(join(workspaceRoot, "docs/agentic-spec/features")) ? ["docs/agentic-spec/features"] : []),
   ];
   const diagnostics = buildDiagnostics(documents, features, queue.groups, workspaceRoot);
 
   return {
-    recognized: Boolean(workspaceRoot && specRoot && existsSync(join(workspaceRoot, "docs/features"))),
+    recognized: Boolean(workspaceRoot && specRoot && existsSync(join(workspaceRoot, "docs/agentic-spec/features"))),
     workspaceRoot,
     specRoot,
     language,
@@ -452,8 +452,8 @@ export function buildSpecDriveIdeView(dbPath: string, options: BuildSpecDriveIde
     missing,
     factSources: [
       "workspace_files",
-      "docs/features/feature-pool-queue.json",
-      "docs/features/*/spec-state.json",
+      "docs/agentic-spec/features/feature-pool-queue.json",
+      "docs/agentic-spec/features/*/spec-state.json",
       "scheduler_job_records",
       "execution_records",
       "token_consumption_records",
@@ -1294,19 +1294,19 @@ function escapeLike(value: string): string {
 }
 
 function detectSpecRoot(workspaceRoot: string): string | undefined {
-  if (hasRootSpec(workspaceRoot)) return "docs";
+  if (hasRootSpec(workspaceRoot)) return "docs/agentic-spec";
   if (!hasMultilingualSpecSupport(workspaceRoot)) return undefined;
   for (const language of preferredSpecLanguages(workspaceRoot)) {
-    const root = join(workspaceRoot, "docs", language);
+    const root = join(workspaceRoot, "docs", "agentic-spec", language);
     if (existsSync(join(root, "PRD.md")) || existsSync(join(root, "requirements.md")) || existsSync(join(root, "hld.md"))) {
-      return `docs/${language}`;
+      return `docs/agentic-spec/${language}`;
     }
   }
   return undefined;
 }
 
 function hasMultilingualSpecSupport(workspaceRoot: string): boolean {
-  const docsReadme = join(workspaceRoot, "docs", "README.md");
+  const docsReadme = join(workspaceRoot, "docs", "agentic-spec", "README.md");
   if (existsSync(docsReadme)) {
     const content = readFileSafe(docsReadme).toLowerCase();
     if (content.includes("default language") || content.includes("languages:") || content.includes("multilingual")) {
@@ -1314,13 +1314,13 @@ function hasMultilingualSpecSupport(workspaceRoot: string): boolean {
     }
   }
   return ["en", "zh-CN", "ja"].filter((language) => {
-    const root = join(workspaceRoot, "docs", language);
+    const root = join(workspaceRoot, "docs", "agentic-spec", language);
     return existsSync(join(root, "PRD.md")) || existsSync(join(root, "requirements.md")) || existsSync(join(root, "hld.md"));
   }).length > 1;
 }
 
 function preferredSpecLanguages(workspaceRoot: string): string[] {
-  const docsReadme = join(workspaceRoot, "docs", "README.md");
+  const docsReadme = join(workspaceRoot, "docs", "agentic-spec", "README.md");
   if (existsSync(docsReadme)) {
     const content = readFileSafe(docsReadme).toLowerCase();
     if (content.includes("default language: english")) return ["en", "zh-CN", "ja"];
@@ -1331,9 +1331,9 @@ function preferredSpecLanguages(workspaceRoot: string): string[] {
 }
 
 function hasRootSpec(workspaceRoot: string): boolean {
-  return existsSync(join(workspaceRoot, "docs", "PRD.md"))
-    || existsSync(join(workspaceRoot, "docs", "requirements.md"))
-    || existsSync(join(workspaceRoot, "docs", "hld.md"));
+  return existsSync(join(workspaceRoot, "docs", "agentic-spec", "PRD.md"))
+    || existsSync(join(workspaceRoot, "docs", "agentic-spec", "requirements.md"))
+    || existsSync(join(workspaceRoot, "docs", "agentic-spec", "hld.md"));
 }
 
 function readFileSafe(path: string): string {
@@ -1345,14 +1345,14 @@ function readFileSafe(path: string): string {
 }
 
 function buildTopLevelDocuments(workspaceRoot: string, specRoot?: string): SpecDriveIdeDocument[] {
-  const root = specRoot ?? "docs";
+  const root = specRoot ?? "docs/agentic-spec";
   const docs = [
     document("prd", "PRD", `${root}/PRD.md`, workspaceRoot),
     document("requirements", "EARS Requirements", `${root}/requirements.md`, workspaceRoot),
     document("hld", "HLD", `${root}/hld.md`, workspaceRoot),
-    document("ui-spec", "UI Spec", "docs/ui/ui-spec.md", workspaceRoot),
-    document("feature-index", "Feature Spec Index", "docs/features/README.md", workspaceRoot),
-    document("queue", "Feature Pool Queue", "docs/features/feature-pool-queue.json", workspaceRoot),
+    document("ui-spec", "UI Spec", "docs/agentic-spec/ui/ui-spec.md", workspaceRoot),
+    document("feature-index", "Feature Spec Index", "docs/agentic-spec/features/README.md", workspaceRoot),
+    document("queue", "Feature Pool Queue", "docs/agentic-spec/features/feature-pool-queue.json", workspaceRoot),
   ] satisfies SpecDriveIdeDocument[];
   return docs;
 }
@@ -1481,7 +1481,7 @@ function buildProjectInitialization(
 }
 
 function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: string): SpecDriveIdeFeatureNode[] {
-  const featureRoot = join(workspaceRoot, "docs/features");
+  const featureRoot = join(workspaceRoot, "docs/agentic-spec/features");
   if (!existsSync(featureRoot)) return [];
   const queueEntries = readFeatureQueueEntries(workspaceRoot);
   const queueById = new Map(queueEntries.map((entry) => [entry.id, entry]));
@@ -1507,21 +1507,21 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
       const baseBlockedReasons = stringArray(state.blockedReasons);
       const taskProjection = folderExists ? readFeatureTasks(workspaceRoot, folder) : {
         tasks: [],
-        blockedReasons: [`Feature index references missing folder: docs/features/${folder}`],
+        blockedReasons: [`Feature index references missing folder: docs/agentic-spec/features/${folder}`],
       };
       const description = folderExists
         ? optionalString(state.description) ?? readFeatureDescription(workspaceRoot, folder)
         : undefined;
       const documents = [
-        document("feature-requirements", "requirements.md", `docs/features/${folder}/requirements.md`, workspaceRoot),
-        document("feature-design", "design.md", `docs/features/${folder}/design.md`, workspaceRoot),
-        document("feature-tasks", "tasks.md", `docs/features/${folder}/tasks.md`, workspaceRoot),
-        document("spec-state", "spec-state.json", `docs/features/${folder}/spec-state.json`, workspaceRoot),
+        document("feature-requirements", "requirements.md", `docs/agentic-spec/features/${folder}/requirements.md`, workspaceRoot),
+        document("feature-design", "design.md", `docs/agentic-spec/features/${folder}/design.md`, workspaceRoot),
+        document("feature-tasks", "tasks.md", `docs/agentic-spec/features/${folder}/tasks.md`, workspaceRoot),
+        document("spec-state", "spec-state.json", `docs/agentic-spec/features/${folder}/spec-state.json`, workspaceRoot),
       ];
       const syncBlockedReasons = [
         ...baseBlockedReasons,
         ...(indexed ? [] : [`Feature index is missing an entry for ${featureId} (${folder}).`]),
-        ...(folderExists ? [] : [`Feature folder is missing for indexed Feature ${featureId}: docs/features/${folder}.`]),
+        ...(folderExists ? [] : [`Feature folder is missing for indexed Feature ${featureId}: docs/agentic-spec/features/${folder}.`]),
         ...taskProjection.blockedReasons,
       ];
       const status = resolveFeatureNodeStatus(optionalString(state.status), indexEntry?.status, documents, taskProjection);
@@ -1710,7 +1710,7 @@ function featureNodeStatusFromDocuments(
 }
 
 function readFeatureQueueEntries(workspaceRoot: string): FeatureQueueEntry[] {
-  const queuePlan = readJson(join(workspaceRoot, "docs/features/feature-pool-queue.json")) as FeatureQueuePlan;
+  const queuePlan = readJson(join(workspaceRoot, "docs/agentic-spec/features/feature-pool-queue.json")) as FeatureQueuePlan;
   const rawEntries = arrayValue(queuePlan.features).length > 0 ? arrayValue(queuePlan.features) : arrayValue(queuePlan.queue);
   return rawEntries
     .map((entry) => {
@@ -1727,7 +1727,7 @@ function readFeatureQueueEntries(workspaceRoot: string): FeatureQueueEntry[] {
 }
 
 function readFeatureIndex(workspaceRoot: string): FeatureIndexEntry[] {
-  const indexPath = join(workspaceRoot, "docs/features/README.md");
+  const indexPath = join(workspaceRoot, "docs/agentic-spec/features/README.md");
   if (!existsSync(indexPath)) return [];
   const content = readFileSync(indexPath, "utf8");
   const entries: FeatureIndexEntry[] = [];
@@ -1778,16 +1778,16 @@ function resolveFeatureFolder(featureId: string, indexedFolder: string | undefin
 }
 
 function readFeatureTasks(workspaceRoot: string, folder: string): { tasks: SpecDriveIdeTaskProjection[]; blockedReasons: string[] } {
-  const tasksPath = join(workspaceRoot, "docs/features", folder, "tasks.md");
+  const tasksPath = join(workspaceRoot, "docs/agentic-spec/features", folder, "tasks.md");
   if (!existsSync(tasksPath)) return {
     tasks: [],
-    blockedReasons: [`Feature tasks file is missing: docs/features/${folder}/tasks.md`],
+    blockedReasons: [`Feature tasks file is missing: docs/agentic-spec/features/${folder}/tasks.md`],
   };
   const content = readFileSync(tasksPath, "utf8");
   const tasks = parseFeatureTasksMarkdown(content);
   return {
     tasks,
-    blockedReasons: tasks.length > 0 ? [] : [`Feature tasks file has no parseable tasks: docs/features/${folder}/tasks.md`],
+    blockedReasons: tasks.length > 0 ? [] : [`Feature tasks file has no parseable tasks: docs/agentic-spec/features/${folder}/tasks.md`],
   };
 }
 
@@ -2314,11 +2314,11 @@ function queueStatusSpecStateNextAction(status: FileSpecLifecycleStatus): string
 
 function featureFolderForQueueTarget(dbPath: string, workspaceRoot: string, featureId: string, target: QueueExecutionRow): string | undefined {
   const specStatePath = optionalString(target.context.specStatePath) ?? optionalString(target.payload.specStatePath);
-  if (specStatePath?.startsWith("docs/features/") && specStatePath.endsWith("/spec-state.json")) {
-    return specStatePath.slice("docs/features/".length, -"/spec-state.json".length);
+  if (specStatePath?.startsWith("docs/agentic-spec/features/") && specStatePath.endsWith("/spec-state.json")) {
+    return specStatePath.slice("docs/agentic-spec/features/".length, -"/spec-state.json".length);
   }
   const featureSpecPath = optionalString(target.context.featureSpecPath) ?? optionalString(target.payload.featureSpecPath);
-  if (featureSpecPath?.startsWith("docs/features/")) return featureSpecPath.slice("docs/features/".length);
+  if (featureSpecPath?.startsWith("docs/agentic-spec/features/")) return featureSpecPath.slice("docs/agentic-spec/features/".length);
   const rows = runSqlite(dbPath, [], [
     {
       name: "features",
@@ -2328,7 +2328,7 @@ function featureFolderForQueueTarget(dbPath: string, workspaceRoot: string, feat
   ]).queries.features;
   const dbFolder = optionalString(rows[0]?.folder);
   if (dbFolder) return dbFolder;
-  const featureRoot = join(workspaceRoot, "docs/features");
+  const featureRoot = join(workspaceRoot, "docs/agentic-spec/features");
   if (!existsSync(featureRoot)) return undefined;
   const folders = new Set(readdirSync(featureRoot).filter((entry) => statSync(join(featureRoot, entry)).isDirectory()).sort());
   const indexEntry = readFeatureIndex(workspaceRoot).find((entry) => entry.id === featureId);
@@ -2528,7 +2528,7 @@ function readDbFeatureIdentities(dbPath: string, projectId?: string): Map<string
 }
 
 function readFeatureDescription(workspaceRoot: string, folder: string): string | undefined {
-  const requirementsPath = join(workspaceRoot, "docs/features", folder, "requirements.md");
+  const requirementsPath = join(workspaceRoot, "docs/agentic-spec/features", folder, "requirements.md");
   if (existsSync(requirementsPath)) {
     const description = firstMarkdownSectionText(readFileSync(requirementsPath, "utf8"), [
       "目标",
@@ -2544,7 +2544,7 @@ function readFeatureDescription(workspaceRoot: string, folder: string): string |
     if (description) return description;
   }
 
-  const designPath = join(workspaceRoot, "docs/features", folder, "design.md");
+  const designPath = join(workspaceRoot, "docs/agentic-spec/features", folder, "design.md");
   if (existsSync(designPath)) {
     return firstMarkdownSectionText(readFileSync(designPath, "utf8"), [
       "Overview",
@@ -2632,7 +2632,7 @@ function readFeatureStateProjection(
   const dbFeature = readDbFeatureIdentities(dbPath, projectId).get(featureId);
   const workspaceRoot = workspaceRootForProject(dbPath, projectId);
   if (!workspaceRoot) return dbFeature;
-  const featureRoot = join(workspaceRoot, "docs/features");
+  const featureRoot = join(workspaceRoot, "docs/agentic-spec/features");
   if (!existsSync(featureRoot)) return dbFeature;
   const folders = new Set(readdirSync(featureRoot)
     .filter((entry) => statSync(join(featureRoot, entry)).isDirectory())

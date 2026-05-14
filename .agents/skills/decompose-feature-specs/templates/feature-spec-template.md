@@ -7,7 +7,7 @@ Use this template as a contract, not as an example. Generated Feature Specs must
 Create or update one directory per Feature:
 
 ```text
-docs/features/feat-<nnn>-<kebab-title>/
+docs/agentic-spec/features/feat-<nnn>-<kebab-title>/
   requirements.md
   design.md
   tasks.md
@@ -17,8 +17,8 @@ docs/features/feat-<nnn>-<kebab-title>/
 Also update:
 
 ```text
-docs/features/README.md
-docs/features/feature-pool-queue.json
+docs/agentic-spec/features/README.md
+docs/agentic-spec/features/feature-pool-queue.json
 ```
 
 Rules:
@@ -28,8 +28,8 @@ Rules:
 - `requirements.md`, `design.md`, and `tasks.md` are mandatory before a Feature can be marked `ready`.
 - `tasks.md` must contain at least one parser-compatible task heading matching `### TASK-<nnn>: <title>` or `### T-<feature-nnn>-<task-nn>: <title>`.
 - `tasks.md` must declare a Feature-level `Worktree Mode` and every write-capable task must either inherit it or override it explicitly.
-- `docs/features/README.md` must use a parser-compatible index table whose first column is `Feature ID`; do not put `Order`, `#`, or any other column before `Feature ID`.
-- The index table `Folder` column must contain only the folder basename, such as `feat-001-example`, not `docs/features/feat-001-example`.
+- `docs/agentic-spec/features/README.md` must use a parser-compatible index table whose first column is `Feature ID`; do not put `Order`, `#`, or any other column before `Feature ID`.
+- The index table `Folder` column must contain only the folder basename, such as `feat-001-example`, not `docs/agentic-spec/features/feat-001-example`.
 
 ## Worktree Mode Values
 
@@ -39,7 +39,7 @@ Rules:
 - `shared-readonly`: read-only planning, review, analysis, or verification that must not write files.
 - `manual-gated`: Git lifecycle or write execution requires explicit human approval before worktree creation, merge, cleanup, or other side effects.
 
-## docs/features/README.md
+## docs/agentic-spec/features/README.md
 
 ```markdown
 # Feature Spec Index
@@ -52,7 +52,7 @@ Rules:
 Rules:
 
 - Keep `Feature ID` as the first column so IDE and scheduler parsers can identify entries.
-- Keep `Folder` as a basename that exists directly under `docs/features/`.
+- Keep `Folder` as a basename that exists directly under `docs/agentic-spec/features/`.
 - Keep status values aligned with `spec-state.json`.
 
 ## requirements.md
@@ -63,7 +63,7 @@ Rules:
 ## Metadata
 
 - Feature ID: FEAT-<NNN>
-- Folder: docs/features/feat-<nnn>-<kebab-title>
+- Folder: docs/agentic-spec/features/feat-<nnn>-<kebab-title>
 - Status: draft | review_needed | ready
 - Priority: Must | Should | Could
 - Source Requirements:
@@ -163,8 +163,8 @@ Description: <One concrete implementation or spec task.>
 Requirements:
 - FEAT-<NNN>-REQ-001
 Spec Refs:
-- docs/features/feat-<nnn>-<kebab-title>/requirements.md#<anchor>
-- docs/features/feat-<nnn>-<kebab-title>/design.md#<anchor>
+- docs/agentic-spec/features/feat-<nnn>-<kebab-title>/requirements.md#<anchor>
+- docs/agentic-spec/features/feat-<nnn>-<kebab-title>/design.md#<anchor>
 Allowed Paths:
 - <path/glob>
 Forbidden Paths:
@@ -180,8 +180,8 @@ Description: <One concrete implementation or verification task.>
 Requirements:
 - FEAT-<NNN>-REQ-001
 Spec Refs:
-- docs/features/feat-<nnn>-<kebab-title>/requirements.md#<anchor>
-- docs/features/feat-<nnn>-<kebab-title>/design.md#<anchor>
+- docs/agentic-spec/features/feat-<nnn>-<kebab-title>/requirements.md#<anchor>
+- docs/agentic-spec/features/feat-<nnn>-<kebab-title>/design.md#<anchor>
 Allowed Paths:
 - <path/glob>
 Forbidden Paths:

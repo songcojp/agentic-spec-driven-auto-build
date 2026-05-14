@@ -260,7 +260,7 @@ const returnsPortalData: ConsoleProjectData = {
         status: "done",
         risk: "low",
         dependencies: [],
-        diff: { files: ["docs/features/feat-204-mobile-returns/requirements.md"], additions: 118, deletions: 4 },
+        diff: { files: ["docs/agentic-spec/features/feat-204-mobile-returns/requirements.md"], additions: 118, deletions: 4 },
         testResults: { command: "npm test", passed: true, total: 24 },
         approvalStatus: "approved",
         recoveryHistory: [],
@@ -312,7 +312,7 @@ const returnsPortalData: ConsoleProjectData = {
         status: "review_needed",
         risk: "medium",
         dependencies: [{ id: "T-227", status: "done", satisfied: true }],
-        diff: { files: ["apps/web/src/returns/RefundDecision.tsx", "docs/features/feat-204-mobile-returns/copy.md"], additions: 74, deletions: 22 },
+        diff: { files: ["apps/web/src/returns/RefundDecision.tsx", "docs/agentic-spec/features/feat-204-mobile-returns/copy.md"], additions: 74, deletions: 22 },
         testResults: { command: "npm test -- refund-copy", passed: true, total: 9 },
         approvalStatus: "pending",
         recoveryHistory: [],
@@ -345,8 +345,8 @@ const returnsPortalData: ConsoleProjectData = {
   spec: {
     prdWorkflow: {
       targetRepoPath: "workspace/acme-returns-portal",
-      sourcePath: "docs/zh-CN/PRD.md",
-      resolvedSourcePath: "workspace/acme-returns-portal/docs/zh-CN/PRD.md",
+      sourcePath: "docs/agentic-spec/zh-CN/PRD.md",
+      resolvedSourcePath: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md",
       sourceVersion: "v1.3.0",
       scanMode: "smart",
       lastScanAt: "05-19 09:12",
@@ -377,7 +377,7 @@ const returnsPortalData: ConsoleProjectData = {
           updatedAt: "05-19 09:16",
           blockedReasons: ["存在阻塞项，无法进入调度状态"],
           facts: [
-            { label: "PRD", value: "workspace/acme-returns-portal/docs/zh-CN/PRD.md" },
+            { label: "PRD", value: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md" },
             { label: "Features", value: "3" },
             { label: "Requirements", value: "3" },
           ],
@@ -398,7 +398,7 @@ const returnsPortalData: ConsoleProjectData = {
             { label: "Feature", value: "FEAT-204" },
             { label: "Status", value: "implementing" },
             { label: "Command", value: "schedule_run" },
-            { label: "UI outputs", value: "docs/ui/ui-spec.md + docs/ui/concepts/*.png" },
+            { label: "UI outputs", value: "docs/agentic-spec/ui/ui-spec.md + docs/agentic-spec/ui/concepts/*.png" },
           ],
           stages: [
             { key: "generate_hld", action: "generate_hld", status: "pending" },
@@ -415,14 +415,14 @@ const returnsPortalData: ConsoleProjectData = {
         { key: "generate_ears", action: "generate_ears", status: "completed", updatedAt: "05-19 09:16", auditEventId: "AUD-PRD-003", resultPath: "ears/FEAT-013.md" },
       ],
       specSources: [
-        { type: "prd", label: "PRD", path: "workspace/acme-returns-portal/docs/zh-CN/PRD.md", status: "found" },
-        { type: "ears", label: "EARS", path: "workspace/acme-returns-portal/docs/zh-CN/requirements.md", status: "found" },
-        { type: "requirements", label: "Requirements", path: "workspace/acme-returns-portal/docs/en/requirements.md", status: "found" },
-        { type: "hld", label: "HLD", path: "workspace/acme-returns-portal/docs/zh-CN/hld.md", status: "found" },
-        { type: "design", label: "Design", status: "missing", detail: "No design.md found in docs/" },
-        { type: "feature_spec", label: "Feature Spec", path: "workspace/acme-returns-portal/docs/features/", status: "found", detail: "3 feature specs" },
-        { type: "tasks", label: "Tasks", path: "workspace/acme-returns-portal/docs/features/", status: "found", detail: "3 tasks.md files" },
-        { type: "readme", label: "README / Index", path: "workspace/acme-returns-portal/docs/features/README.md", status: "conflict", detail: "Feature index references FEAT-204 but folder is missing" },
+        { type: "prd", label: "PRD", path: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md", status: "found" },
+        { type: "ears", label: "EARS", path: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/requirements.md", status: "found" },
+        { type: "requirements", label: "Requirements", path: "workspace/acme-returns-portal/docs/agentic-spec/en/requirements.md", status: "found" },
+        { type: "hld", label: "HLD", path: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/hld.md", status: "found" },
+        { type: "design", label: "Design", status: "missing", detail: "No design.md found in docs/agentic-spec/" },
+        { type: "feature_spec", label: "Feature Spec", path: "workspace/acme-returns-portal/docs/agentic-spec/features/", status: "found", detail: "3 feature specs" },
+        { type: "tasks", label: "Tasks", path: "workspace/acme-returns-portal/docs/agentic-spec/features/", status: "found", detail: "3 tasks.md files" },
+        { type: "readme", label: "README / Index", path: "workspace/acme-returns-portal/docs/agentic-spec/features/README.md", status: "conflict", detail: "Feature index references FEAT-204 but folder is missing" },
       ],
     },
     features: [
@@ -441,7 +441,7 @@ const returnsPortalData: ConsoleProjectData = {
       ],
       documents: {
         requirements: {
-          path: "docs/features/feat-204-mobile-returns/requirements.md",
+          path: "docs/agentic-spec/features/feat-204-mobile-returns/requirements.md",
           exists: true,
           title: "Feature Spec: FEAT-204 Mobile Returns Portal",
           sections: [
@@ -451,7 +451,7 @@ const returnsPortalData: ConsoleProjectData = {
           raw: "# Feature Spec: FEAT-204 Mobile Returns Portal\n\nSpec Evolution:\n- CHG-204-003 Added local carrier label fixture.\n\n## Requirements\n- REQ-204-001 Customers can find eligible orders.\n- REQ-204-003 The portal shows carrier label options.\n\n## Acceptance Criteria\n- Customer can complete the mobile return flow.\n- Expired orders are blocked with a clear reason.",
         },
         design: {
-          path: "docs/features/feat-204-mobile-returns/design.md",
+          path: "docs/agentic-spec/features/feat-204-mobile-returns/design.md",
           exists: true,
           title: "Design: FEAT-204 Mobile Returns Portal",
           sections: [
@@ -462,7 +462,7 @@ const returnsPortalData: ConsoleProjectData = {
           raw: "# Design: FEAT-204 Mobile Returns Portal\n\n## Design Summary\nMobile returns are implemented as a guided customer workflow with mocked carrier labels.\n\n## Controlled Command Boundary\nReturn submission writes through governed API commands and records evidence.\n\n## Review and Evidence\nBrowser evidence covers mobile layout and carrier quote rendering.",
         },
         tasks: {
-          path: "docs/features/feat-204-mobile-returns/tasks.md",
+          path: "docs/agentic-spec/features/feat-204-mobile-returns/tasks.md",
           exists: true,
           sections: [{ heading: "Tasks", level: 2, body: "- [x] Connect carrier label quote mock." }],
         },
@@ -496,9 +496,9 @@ const returnsPortalData: ConsoleProjectData = {
           skillName: "implement-feature",
           skillPhase: "task_execution",
           required: ["featureId", "featureSpecPath", "workspaceRoot"],
-          context: { featureId: "FEAT-204", featureSpecPath: "docs/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
+          context: { featureId: "FEAT-204", featureSpecPath: "docs/agentic-spec/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
         },
-        producedArtifacts: [{ path: "docs/features/feat-204-mobile-returns/tasks.md", kind: "markdown", status: "updated" }],
+        producedArtifacts: [{ path: "docs/agentic-spec/features/feat-204-mobile-returns/tasks.md", kind: "markdown", status: "updated" }],
         evidence: [{ kind: "browser", summary: "Mobile return quote flow rendered.", path: ".autobuild/reports/RUN-709.json" }],
         traceability: { featureId: "FEAT-204", requirementIds: ["REQ-204-003"], changeIds: ["CHG-204-003"] },
         result: { completedTasks: ["T-229"] },
@@ -514,7 +514,7 @@ const returnsPortalData: ConsoleProjectData = {
   runner: {
     summary: { onlineRunners: 1, runningTasks: 1, readyTasks: 1, blockedTasks: 2, successRate: 0.957, failureRate: 0.043 },
     schedulerJobs: [
-      { id: "JOB-709", bullmqJobId: "BULL-709", queueName: "specdrive:cli-runner", jobType: "cli.run", operation: "feature_execution", targetType: "execution", targetId: "RUN-709", status: "queued", attempts: 0, updatedAt: "2026-04-29T03:42:00.000Z", executionId: "RUN-709", runId: "RUN-709", taskId: "T-229", featureId: "FEAT-204", projectId: "project-1", workspaceRoot: "workspace/acme-returns-portal", context: { featureId: "FEAT-204", featureSpecPath: "docs/features/FEAT-204/tasks.md", taskId: "T-229", taskName: "Connect carrier label quote mock", workspaceRoot: "workspace/acme-returns-portal", skillName: "implement-feature", skillPhase: "task_execution" }, skillOutput: {
+      { id: "JOB-709", bullmqJobId: "BULL-709", queueName: "specdrive:cli-runner", jobType: "cli.run", operation: "feature_execution", targetType: "execution", targetId: "RUN-709", status: "queued", attempts: 0, updatedAt: "2026-04-29T03:42:00.000Z", executionId: "RUN-709", runId: "RUN-709", taskId: "T-229", featureId: "FEAT-204", projectId: "project-1", workspaceRoot: "workspace/acme-returns-portal", context: { featureId: "FEAT-204", featureSpecPath: "docs/agentic-spec/features/FEAT-204/tasks.md", taskId: "T-229", taskName: "Connect carrier label quote mock", workspaceRoot: "workspace/acme-returns-portal", skillName: "implement-feature", skillPhase: "task_execution" }, skillOutput: {
         parseStatus: "found",
         stdoutLogPath: "workspace/acme-returns-portal/.autobuild/runs/RUN-709/stdout.log",
         status: "completed",
@@ -524,9 +524,9 @@ const returnsPortalData: ConsoleProjectData = {
           skillName: "implement-feature",
           skillPhase: "task_execution",
           required: ["featureId", "featureSpecPath", "workspaceRoot"],
-          context: { featureId: "FEAT-204", featureSpecPath: "docs/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
+          context: { featureId: "FEAT-204", featureSpecPath: "docs/agentic-spec/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
         },
-        producedArtifacts: [{ path: "docs/features/feat-204-mobile-returns/tasks.md", kind: "markdown", status: "updated" }],
+        producedArtifacts: [{ path: "docs/agentic-spec/features/feat-204-mobile-returns/tasks.md", kind: "markdown", status: "updated" }],
         evidence: [{ kind: "browser", summary: "Mobile return quote flow rendered.", path: ".autobuild/reports/RUN-709.json" }],
         traceability: { featureId: "FEAT-204", requirementIds: ["REQ-204-003"], changeIds: ["CHG-204-003"] },
         result: { completedTasks: ["T-229"] },
@@ -592,9 +592,9 @@ const returnsPortalData: ConsoleProjectData = {
             skillName: "implement-feature",
             skillPhase: "task_execution",
             required: ["featureId", "featureSpecPath", "workspaceRoot"],
-            context: { featureId: "FEAT-204", featureSpecPath: "docs/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
+            context: { featureId: "FEAT-204", featureSpecPath: "docs/agentic-spec/features/feat-204-mobile-returns", workspaceRoot: "workspace/acme-returns-portal" },
           },
-          producedArtifacts: [{ path: "docs/features/feat-204-mobile-returns/tasks.md", kind: "markdown", status: "updated" }],
+          producedArtifacts: [{ path: "docs/agentic-spec/features/feat-204-mobile-returns/tasks.md", kind: "markdown", status: "updated" }],
           evidence: [{ kind: "browser", summary: "Mobile return quote flow rendered.", path: ".autobuild/reports/RUN-709.json" }],
           traceability: { featureId: "FEAT-204", requirementIds: ["REQ-204-003"], changeIds: ["CHG-204-003"] },
           result: { completedTasks: ["T-229"] },

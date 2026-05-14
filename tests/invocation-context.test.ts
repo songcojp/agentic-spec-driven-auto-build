@@ -62,7 +62,7 @@ function invocation(workspaceRoot: string): ExecutionAdapterInvocationV1 {
     skillInstruction: {
       skillName: "implement-feature",
       requestedAction: "feature_execution",
-      sourcePaths: ["docs/features/feat-023-full-lifecycle-delivery-fidelity/tasks.md"],
+      sourcePaths: ["docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/tasks.md"],
       expectedArtifacts: [],
     },
   };

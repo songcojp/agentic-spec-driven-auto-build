@@ -1851,7 +1851,7 @@ async function collectUiConceptImages(
   if (!rootUri) return [];
   const uiSpecDetail = await latestUiSpecExecutionDetail(view);
   const artifacts = uiConceptImageArtifacts(uiSpecDetail);
-  const discovered = await discoverUiConceptImages(rootUri, "docs/ui/concepts");
+  const discovered = await discoverUiConceptImages(rootUri, "docs/agentic-spec/ui/concepts");
   const candidates = [...artifacts, ...discovered];
   const images: UiConceptImage[] = [];
   const seen = new Set<string>();
@@ -2058,17 +2058,17 @@ function workspaceRelativePath(fileName: string): string | undefined {
 }
 
 function isSpecMarkdown(path: string): boolean {
-  return path.endsWith(".md") && (path.startsWith("docs/") || path.startsWith(".agents/"));
+  return path.endsWith(".md") && (path.startsWith("docs/agentic-spec/") || path.startsWith(".agents/"));
 }
 
 function featureForPath(view: SpecDriveIdeView, path: string): SpecDriveIdeFeatureNode | undefined {
-  const match = path.match(/^docs\/features\/([^/]+)\//);
+  const match = path.match(/^docs\/agentic-spec\/features\/([^/]+)\//);
   if (!match) return undefined;
   return view.features.find((feature) => feature.folder === match[1]);
 }
 
 function featureIdForPath(path: string): string | undefined {
-  const match = path.match(/^docs\/features\/feat-(\d+)/i);
+  const match = path.match(/^docs\/agentic-spec\/features\/feat-(\d+)/i);
   return match ? `FEAT-${match[1]}` : undefined;
 }
 

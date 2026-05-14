@@ -738,7 +738,7 @@ test("VSCode Spec Workspace keeps global skill input at top and document actions
   assert.match(specWorkspaceWebviewSource, /<h2>\$\{escapeHtml\(t\("UI Concept Images"\)\)\}<\/h2>/);
   assert.match(specWorkspaceWebviewSource, /images\.map\(renderUiConceptImage\)/);
   assert.doesNotMatch(specWorkspaceWebviewSource, /images\.slice\(0, 6\)\.map\(renderUiConceptImage\)/);
-  assert.match(extensionSource, /const discovered = await discoverUiConceptImages\(rootUri, "docs\/ui\/concepts"\)/);
+  assert.match(extensionSource, /const discovered = await discoverUiConceptImages\(rootUri, "docs\/agentic-spec\/ui\/concepts"\)/);
   assert.match(extensionSource, /const candidates = \[\.\.\.artifacts, \.\.\.discovered\]/);
   assert.doesNotMatch(extensionSource, /artifacts\.length > 0\s*\?\s*artifacts\s*:\s*await discoverUiConceptImages/);
   assert.doesNotMatch(extensionSource, /<h3>UI Spec Assets<\/h3>/);
@@ -758,7 +758,7 @@ test("VSCode Spec Workspace keeps global skill input at top and document actions
   assert.doesNotMatch(extensionSource, /optionalString\(artifact\.summary\)\s*\?\?\s*conceptImageLabel\(path\)/);
   assert.match(extensionSource, /uiConceptWorkspaceRoot\(provider\.currentView\(\), workspaceRoot\)/);
   assert.match(extensionSource, /localResourceRoots/);
-  assert.match(extensionSource, /discoverUiConceptImages\(rootUri, "docs\/ui\/concepts"\)/);
+  assert.match(extensionSource, /discoverUiConceptImages\(rootUri, "docs\/agentic-spec\/ui\/concepts"\)/);
   assert.match(extensionSource, /readDirectory\(directoryUri\)/);
   assert.match(extensionSource, /img-src \$\{imgSource\}/);
   assert.doesNotMatch(extensionSource, /<h2>Lifecycle<\/h2>/);

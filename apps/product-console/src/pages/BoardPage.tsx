@@ -91,7 +91,7 @@ function ProjectHomeOverview({ data, text, project }: { data: ConsoleData; text:
               <div className="break-words text-[18px] font-semibold tracking-normal">{activeFeature?.title ?? text.none}</div>
               <a className="mt-3 inline-flex max-w-full items-center gap-1 truncate text-[13px] font-medium text-action" href="#">
                 <FileText size={14} />
-                docs/features/{activeFeature?.id.toLowerCase() ?? "none"}
+                docs/agentic-spec/features/{activeFeature?.id.toLowerCase() ?? "none"}
               </a>
               <div className="mt-3 text-[12px] text-muted">
                 {text.owner}: {text.operator}

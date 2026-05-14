@@ -235,7 +235,7 @@ RP: When review starts, the system shall return spec JSON for inspection.
 
 test("file spec state reads, merges, writes, and blocks path escapes", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-state-"));
-  mkdirSync(join(root, "docs", "features", "feat-001-demo"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-001-demo"), { recursive: true });
   const initial = readFileSpecState(root, "feat-001-demo", "FEAT-001", stableDate);
   const merged = mergeFileSpecState(initial, {
     status: "blocked",
@@ -251,7 +251,7 @@ test("file spec state reads, merges, writes, and blocks path escapes", () => {
   const relativePath = writeFileSpecState(root, "feat-001-demo", merged);
   const reread = readFileSpecState(root, "feat-001-demo", "FEAT-001", stableDate);
 
-  assert.equal(relativePath, "docs/features/feat-001-demo/spec-state.json");
+  assert.equal(relativePath, "docs/agentic-spec/features/feat-001-demo/spec-state.json");
   assert.equal(specStateRelativePath("feat-001-demo"), relativePath);
   assert.equal(existsSync(join(root, relativePath)), true);
   assert.equal(reread.status, "blocked");
@@ -274,7 +274,7 @@ test("file spec state reads, merges, writes, and blocks path escapes", () => {
     summary: "Blocked reason resolved.",
   });
   assert.equal(resumed.resumeTarget, undefined);
-  assert.throws(() => specStateRelativePath("../outside"), /inside docs\/features/);
+  assert.throws(() => specStateRelativePath("../outside"), /inside docs\/agentic-spec\/features/);
 });
 
 test("rejects unsafe spec artifact ids before projection", () => {
@@ -300,23 +300,23 @@ test("scanSpecSources returns scan results for existing project spec files", () 
   const root = mkdtempSync(join(tmpdir(), "spec-scan-"));
 
   // Create a minimal project structure
-  mkdirSync(join(root, "docs"), { recursive: true });
-  mkdirSync(join(root, "docs", "features", "feat-001"), { recursive: true });
-  mkdirSync(join(root, "docs", "features", "feat-002"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-001"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-002"), { recursive: true });
 
   writeFileSync(join(root, "README.md"), "# My Project\nREQ-001 is satisfied by FEAT-001.");
-  writeFileSync(join(root, "docs", "PRD.md"), "## Root PRD\n# Goal\nCreate a project from root docs.");
-  writeFileSync(join(root, "docs", "requirements.md"),
+  writeFileSync(join(root, "docs", "agentic-spec", "PRD.md"), "## Root PRD\n# Goal\nCreate a project from root docs.");
+  writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"),
     "REQ-001: The system shall create a project.\nREQ-002: The system shall validate input.");
-  writeFileSync(join(root, "docs", "hld.md"), "## HLD\nFEAT-001 covers REQ-001.");
+  writeFileSync(join(root, "docs", "agentic-spec", "hld.md"), "## HLD\nFEAT-001 covers REQ-001.");
 
   // feat-001 has all three files
-  writeFileSync(join(root, "docs", "features", "feat-001", "requirements.md"), "REQ-001, REQ-002");
-  writeFileSync(join(root, "docs", "features", "feat-001", "design.md"), "## Design for FEAT-001");
-  writeFileSync(join(root, "docs", "features", "feat-001", "tasks.md"), "- [ ] TASK-001: Implement REQ-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "requirements.md"), "REQ-001, REQ-002");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "design.md"), "## Design for FEAT-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "tasks.md"), "- [ ] TASK-001: Implement REQ-001");
 
   // feat-002 has requirements but no design or tasks
-  writeFileSync(join(root, "docs", "features", "feat-002", "requirements.md"), "REQ-002");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-002", "requirements.md"), "REQ-002");
 
   const stableDate = new Date("2026-04-29T00:00:00.000Z");
   const summary = scanSpecSources(root, stableDate);
@@ -331,7 +331,7 @@ test("scanSpecSources returns scan results for existing project spec files", () 
   assert.ok(fileTypes.includes("HLD"), "hld.md should be scanned");
   assert.ok(fileTypes.includes("feature-requirements"), "feature requirements should be scanned");
   assert.ok(fileTypes.includes("design"), "feature design should be scanned");
-  assert.ok(summary.sources.some((source) => source.relativePath === "docs/PRD.md" && source.fileType === "PRD"));
+  assert.ok(summary.sources.some((source) => source.relativePath === "docs/agentic-spec/PRD.md" && source.fileType === "PRD"));
   assert.ok(fileTypes.includes("tasks"), "feature tasks should be scanned");
 
   // All returned sources should exist
@@ -340,26 +340,26 @@ test("scanSpecSources returns scan results for existing project spec files", () 
 
 test("scanSpecSources ignores single localized lane unless multilingual docs are declared", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-scan-single-localized-"));
-  mkdirSync(join(root, "docs", "zh-CN"), { recursive: true });
-  writeFileSync(join(root, "docs", "zh-CN", "PRD.md"), "# Localized PRD\n");
-  writeFileSync(join(root, "docs", "zh-CN", "requirements.md"), "# Localized Requirements\n");
+  mkdirSync(join(root, "docs", "agentic-spec", "zh-CN"), { recursive: true });
+  writeFileSync(join(root, "docs", "agentic-spec", "zh-CN", "PRD.md"), "# Localized PRD\n");
+  writeFileSync(join(root, "docs", "agentic-spec", "zh-CN", "requirements.md"), "# Localized Requirements\n");
 
   const summary = scanSpecSources(root);
 
-  assert.equal(summary.sources.some((source) => source.relativePath === "docs/zh-CN/PRD.md"), false);
-  assert.equal(summary.sources.some((source) => source.relativePath === "docs/zh-CN/requirements.md"), false);
+  assert.equal(summary.sources.some((source) => source.relativePath === "docs/agentic-spec/zh-CN/PRD.md"), false);
+  assert.equal(summary.sources.some((source) => source.relativePath === "docs/agentic-spec/zh-CN/requirements.md"), false);
 });
 
 test("scanSpecSources detects trace IDs in spec files", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-scan-trace-"));
-  mkdirSync(join(root, "docs"), { recursive: true });
-  mkdirSync(join(root, "docs", "features", "feat-001"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-001"), { recursive: true });
 
-  writeFileSync(join(root, "docs", "requirements.md"),
+  writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"),
     "REQ-001: The system shall validate.\nREQ-002: The system shall record.\nNFR-001: Performance under 200ms.\nEDGE-001: Empty input is rejected.");
-  writeFileSync(join(root, "docs", "features", "feat-001", "requirements.md"), "Covers REQ-001, REQ-002");
-  writeFileSync(join(root, "docs", "features", "feat-001", "design.md"), "## Design\nFEAT-001");
-  writeFileSync(join(root, "docs", "features", "feat-001", "tasks.md"), "TASK-001: implement REQ-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "requirements.md"), "Covers REQ-001, REQ-002");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "design.md"), "## Design\nFEAT-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "tasks.md"), "TASK-001: implement REQ-001");
 
   const summary = scanSpecSources(root);
 
@@ -373,11 +373,11 @@ test("scanSpecSources detects trace IDs in spec files", () => {
 
 test("scanSpecSources detects missing design file when tasks exist", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-scan-miss-"));
-  mkdirSync(join(root, "docs", "features", "feat-003"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-003"), { recursive: true });
 
   // Tasks without design
-  writeFileSync(join(root, "docs", "features", "feat-003", "requirements.md"), "REQ-010: The system shall run.");
-  writeFileSync(join(root, "docs", "features", "feat-003", "tasks.md"), "- [x] TASK-001 done");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-003", "requirements.md"), "REQ-010: The system shall run.");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-003", "tasks.md"), "- [x] TASK-001 done");
 
   const summary = scanSpecSources(root);
 
@@ -389,11 +389,11 @@ test("scanSpecSources detects missing design file when tasks exist", () => {
 
 test("scanSpecSources detects missing requirements file when tasks exist", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-scan-miss2-"));
-  mkdirSync(join(root, "docs", "features", "feat-004"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-004"), { recursive: true });
 
   // Tasks without requirements
-  writeFileSync(join(root, "docs", "features", "feat-004", "design.md"), "## Design");
-  writeFileSync(join(root, "docs", "features", "feat-004", "tasks.md"), "TASK-001: implement something");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-004", "design.md"), "## Design");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-004", "tasks.md"), "TASK-001: implement something");
 
   const summary = scanSpecSources(root);
 
@@ -404,14 +404,14 @@ test("scanSpecSources detects missing requirements file when tasks exist", () =>
 
 test("scanSpecSources detects orphaned traceability (REQ not in any feature spec)", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-scan-orphan-"));
-  mkdirSync(join(root, "docs"), { recursive: true });
-  mkdirSync(join(root, "docs", "features", "feat-001"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-001"), { recursive: true });
 
   // REQ-001 and REQ-002 in EARS, only REQ-001 in feature spec
-  writeFileSync(join(root, "docs", "requirements.md"), "REQ-001: feature one.\nREQ-002: unassigned requirement.");
-  writeFileSync(join(root, "docs", "features", "feat-001", "requirements.md"), "REQ-001");
-  writeFileSync(join(root, "docs", "features", "feat-001", "design.md"), "REQ-001 design.");
-  writeFileSync(join(root, "docs", "features", "feat-001", "tasks.md"), "TASK-001: implement REQ-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"), "REQ-001: feature one.\nREQ-002: unassigned requirement.");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "requirements.md"), "REQ-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "design.md"), "REQ-001 design.");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "tasks.md"), "TASK-001: implement REQ-001");
 
   const summary = scanSpecSources(root);
 
@@ -426,13 +426,13 @@ test("scanSpecSources detects orphaned traceability (REQ not in any feature spec
 
 test("scanSpecSources scan summary integrates into createFeatureSpec clarification log", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-scan-integrate-"));
-  mkdirSync(join(root, "docs"), { recursive: true });
-  mkdirSync(join(root, "docs", "features", "feat-001"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-001"), { recursive: true });
 
-  writeFileSync(join(root, "docs", "requirements.md"), "REQ-001: validate.\nREQ-999: unassigned requirement.");
-  writeFileSync(join(root, "docs", "features", "feat-001", "requirements.md"), "REQ-001");
-  writeFileSync(join(root, "docs", "features", "feat-001", "design.md"), "Design for REQ-001.");
-  writeFileSync(join(root, "docs", "features", "feat-001", "tasks.md"), "TASK-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"), "REQ-001: validate.\nREQ-999: unassigned requirement.");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "requirements.md"), "REQ-001");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "design.md"), "Design for REQ-001.");
+  writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "tasks.md"), "TASK-001");
 
   const scanSummary = scanSpecSources(root);
 
@@ -459,16 +459,16 @@ PRD: When the scan runs, the system shall detect missing traceability.
 
 test("scanSpecSources is read-only and does not modify project files", () => {
   const root = mkdtempSync(join(tmpdir(), "spec-scan-readonly-"));
-  mkdirSync(join(root, "docs"), { recursive: true });
+  mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
 
-  writeFileSync(join(root, "docs", "requirements.md"), "REQ-001: The system shall validate.");
-  const mtime = readFileSync(join(root, "docs", "requirements.md")).length;
+  writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"), "REQ-001: The system shall validate.");
+  const mtime = readFileSync(join(root, "docs", "agentic-spec", "requirements.md")).length;
 
   scanSpecSources(root);
 
   // File should be unchanged
-  const mtimeAfter = readFileSync(join(root, "docs", "requirements.md")).length;
+  const mtimeAfter = readFileSync(join(root, "docs", "agentic-spec", "requirements.md")).length;
   assert.equal(mtime, mtimeAfter, "scanSpecSources must not modify spec files");
   // No new files created
-  assert.equal(existsSync(join(root, "docs", "zh-CN", "hld.md")), false, "Scanner must not create missing files");
+  assert.equal(existsSync(join(root, "docs", "agentic-spec", "zh-CN", "hld.md")), false, "Scanner must not create missing files");
 });

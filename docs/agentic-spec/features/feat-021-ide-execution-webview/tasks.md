@@ -1,0 +1,213 @@
+# FEAT-021 IDE Workbench Webviews — 任务
+
+Feature ID: FEAT-021
+来源需求: REQ-084
+状态: done
+
+## 任务列表
+
+### T-021-01 Webview 前端入口
+状态: done
+描述: 为 VSCode 插件新增独立 Execution Workbench、Spec Workspace、Feature Spec 三个 Webview 入口、命令注册、CSP 和资源加载，不复用 Product Console 页面、路由、导航或组件。
+验证: `npm run ide:build`，Webview HTML/CSP 单测。
+
+### T-021-02 执行工作台布局
+状态: done
+描述: 实现以任务调度和自动执行为核心的第一屏布局，展示 Job 队列、当前运行、下一步动作、阻塞原因、自动执行控制和审批待办。
+验证: VSCode Webview UI 测试或快照验证。
+
+### T-021-03 Queue / Automation Command Bridge
+状态: done
+描述: 将 enqueue、run now、auto run、pause automation、resume automation、retry、cancel、skip 和 reprioritize 转换为 Control Plane command API 调用并展示 `IdeCommandReceiptV1`。
+验证: command payload 单测，extension host message routing 测试。
+
+### T-021-04 Execution Detail Projection
+状态: done
+描述: 在 Webview 中展示 Execution Record、raw log refs、diff 摘要、`SkillOutputContractV1` 校验结果、produced artifacts 和 `spec-state.json` 投影摘要；结构化 Skill 输出默认以摘要、traceability、产物表、常见 result 分组和 Additional Result JSON 展示。
+Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree、branch、commit、PR、checks、merge 和 cleanup 状态作为常见 result 分组展示；缺失证据导致的 contract validation failure 应显示为 review needed / blocked reason。
+验证: view model normalization 单测，日志增量加载测试。
+
+### T-021-05 独立 UI 边界校验
+状态: done
+描述: 增加测试或静态检查，确认三组 Webview 不导入 Product Console 页面、App Shell、路由或组件实现，只允许复用 shared contract/type/query client。
+验证: dependency boundary test。
+
+### T-021-06 Spec Workspace 全流程控制
+状态: done
+描述: 实现 Spec Workspace Webview，展示 PRD、EARS Requirements、HLD、UI Spec、Architecture Plan、Data Model、Contracts、Tasks、Quickstart、Execution、Review、Delivery 的阶段状态，并通过受控命令推进当前阶段。
+验证: `npm run ide:build`，手动打开 `SpecDrive: Open Spec Workspace`。
+
+### T-021-07 Feature Spec 卡片总览
+状态: done
+描述: 实现 Feature Spec Webview，按状态卡片展示 Feature 情况，支持查看选中 Feature 详情、打开 artifacts、查看 acceptance/latest run/blockers/traceability，并从 VSCode 内调度执行。
+验证: `npm run ide:build`，手动打开 `SpecDrive: Open Feature Spec`。
+
+### T-021-08 UI 概念图归档
+状态: done
+描述: 将 Execution Workbench、Spec Workspace、Feature Spec 三张 VSCode IDE 概念图保存到 `docs/agentic-spec/ui`，并在 Feature 21 文档中引用。
+验证: `git diff --check`，检查 `docs/agentic-spec/ui/feat-021-*-concept.png` 存在。
+
+### T-021-09 New Feature 需求输入弹窗
+状态: done
+描述: 在 Feature Spec Webview 顶部增加 New Feature 按钮和弹出输入框，提交自然语言内容后只发送受控需求输入，由模型判定需求新增或需求变更流程，并展示 command receipt、路由结论和阻塞原因。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide.test.ts`。
+
+### T-021-10 Feature index 与目录同步刷新
+状态: done
+描述: 刷新 Feature Spec Webview 时以 `docs/agentic-spec/features/README.md` 作为 Feature 身份来源；只读取 index 中 folder 对应的三件套目录，识别缺失 folder、缺失文件和状态冲突。未写入 index 的目录、数据库 Feature 记录和历史同步残留不得生成 Feature 列表项。
+验证: `node --test tests/specdrive-ide.test.ts` 覆盖 index 身份来源、非 index 目录不进入 Feature 列表、缺失 folder 和冲突阻塞。
+
+### T-021-11 需求新增 Skill 同步 Feature index
+状态: done
+描述: 修改 `manage-spec-change` 流程，要求新增或更新 Feature Spec 后必须同步 `docs/agentic-spec/features/README.md`，写入 Feature ID、Feature、Folder、Status、Primary Requirements、Suggested Milestone 和 Dependencies。
+验证: `git diff --check`，检查 `.agents/skills/manage-spec-change/SKILL.md` 明确 Feature index 同步责任。
+
+### T-021-11A 目标项目变更协议收拢到技能
+状态: done
+描述: 修改 `manage-spec-change`、`manage-spec-change`、`manage-spec-change` 和目标项目 `AGENTS.md` 模板，要求需求新增/变更协议由技能承载，目标项目不得生成 `change-management.md` 或 `change-disposition-checklist.md`；当 New Requirement 仅完成主线需求追加时，将 Feature Spec 拆分/同步作为后续 `split_feature_specs` / `decompose-feature-specs` 工作。
+验证: `node --test tests/projects.test.ts tests/specdrive-ide.test.ts`，`git diff --check`。
+
+### T-021-11B Spec 变更入口生成可调度 Feature Spec
+状态: done
+描述: 调整 New Requirement、Requirement Change 和 Clarification 的后端路由，要求技能调用以 `feature_spec_ready_for_execution` 为目标，输出可执行 Feature Spec 三件套、Feature index、Feature Pool Queue 和 `spec-state.json` ready 状态；Requirement Change 不再只写 `spec_evolution` 记录，而是排入 `manage-spec-change` 技能任务。
+验证: `node --test tests/specdrive-ide.test.ts tests/cli-adapter.test.ts`，`npm run ide:build`，`git diff --check`。
+
+### T-021-12 Feature 详情 tasks.md 任务解析
+状态: done
+描述: 点击 Feature 后在详情面板解析对应 `tasks.md`，展示任务 ID、标题、状态、描述和验证命令；缺失或无法解析时显示 blocked reason，并保留打开原始 `tasks.md` 的操作。
+验证: `node --test tests/specdrive-ide.test.ts` 覆盖 checkbox 和“状态/描述/验证”段落格式；`npm run ide:build` 验证 Webview 编译。
+
+### T-021-13 Need Review 澄清入口
+状态: done
+描述: 状态为 `need review` / `review_needed` 的 Feature Spec 在工具栏和详情面板显示 Review 入口；点击后弹出澄清输入框，提交后以 `clarification` 意图进入 Spec change request。Feature Spec 详情移除 Evidence 验收项。
+验证: `npm run ide:build` 验证 VSCode Webview 编译；`node --test tests/specdrive-ide.test.ts` 验证现有 IDE contract 未回归。
+
+### T-021-14 Feature 分类横向折叠 Panel
+状态: done
+描述: 将 Feature Spec Webview 的状态看板改为横向分类 panel，固定显示顺序为 `Blocked`、`In-Process`、`Todo`、`Ready`、`Done`；每组支持点击折叠/展开，并在 panel header 显示展开/折叠状态图标；Done 默认折叠，其它默认展开。
+验证: `npm run ide:build` 验证 VSCode Webview 编译；`npm run ide:test` 验证现有 IDE contract 和 Webview 边界未回归。
+
+### T-021-15 Feature Dependency Graph
+状态: done
+描述: 将 `Feature List` 和 `Dependency Graph` 合并为顶部第一个单按钮视图切换；Feature List 视图下按钮显示 `Dependency Graph`，点击后切换到 Dependency Graph 并将文字改为 `Feature List`。Dependency Graph 视图按“依赖项 -> 依赖它的 Feature”展示树状层级，标出缺失依赖，节点支持折叠和展开，并默认展开到二级节点。
+验证: `npm run ide:build` 验证 VSCode Webview 编译；`npm run ide:test` 验证现有 IDE contract 和 Webview 边界未回归。
+
+### T-021-16 移除 Feature Index Sync 显示
+状态: done
+描述: Feature Spec Webview 刷新仍保留 Feature index 与目录扫描合并能力，但不再渲染独立 `Feature Index Sync` 信息区块。
+验证: `npm run ide:build` 验证 VSCode Webview 编译；`git diff --check` 验证文档和代码格式。
+
+### T-021-17 Feature List 自适应换行
+状态: done
+描述: Feature panel 中的 Feature list 改为自适应换行布局，不使用水平滚动条，也不依赖 panel 内垂直滚动条展示卡片。
+验证: `npm run ide:build` 验证 VSCode Webview 编译；`git diff --check` 验证文档和代码格式。
+
+### T-021-18 Clarification 技能队列路由
+状态: done
+描述: VSCode Spec Workspace / Feature Review 的 `clarification` 提交由 Control Plane 路由为 `resolve_clarification`，并在任务队列中创建 `manage-spec-change` 技能调用任务。
+验证: `node --test tests/specdrive-ide.test.ts` 覆盖 `clarification` receipt、scheduler job 和技能上下文。
+
+### T-021-19 Execution Workbench 选中任务操作
+状态: done
+描述: Execution Workbench 队列 Job 支持显式选中；顶部自动执行入口使用 Control Plane 自动执行状态投影显示 Start Auto Run / Pause Auto Run 两态；全局任务调度动作不依赖 Job 选择，其它 Job 操作默认禁用，只对选中 Job 可用，并按选中 Job 状态启用、禁用或切换双态按钮。Pause / Resume 合并为一个 Job 级双态入口；Job 操作必须支持 schedule-only Job 和已有 Execution Record 的 Run；禁用按钮必须具备明显不同的视觉样式。
+验证: `npm run ide:build` 验证 VSCode Webview 编译；`npm run ide:test` 覆盖选中任务、按钮状态规则、成功启动切换和队列为空/选不到 Feature 时仍启用 Auto Run。
+
+### T-021-20 Feature 多选调度与 adapter 选择
+状态: done
+描述: Feature Spec Webview 支持勾选多个 Feature，并在顶部提供 provider adapter 选择；点击 Schedule Selected 后通过 VSCode extension host 为每个选中 Feature 创建独立 `schedule_run`，每个 Job 都携带 `mode=manual`、`operation=feature_execution`、`projectId`、`featureId` 和 Job 级 `executionPreference`；run mode 由 adapter id 推导。单个 Feature 的 Schedule Current 和详情 Schedule 也使用同一组执行偏好。
+验证: `npm run ide:build` 验证 VSCode Webview 编译；`node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 Webview 控件、批量调度消息和 adapter payload。
+
+### T-021-21 Execution Workbench 队列分类折叠
+状态: done
+描述: Execution Workbench 队列分类 panel 支持折叠/展开；分类移除 `ready`，并按 `running`、`queued`、`approval / review`（合并 `approval_needed`、`approval_answered` 与 `review_needed`）、`blocked / failed`（合并 `blocked` 与 `failed`）、`paused`、`cancelled`、`skipped`、`completed` 固定排序；`running` 和 `queued` 默认展开，其它分类默认折叠。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 Webview 源码边界；`git diff --check` 验证文档和代码格式。
+
+### T-021-22 Feature blocked / review 临时 Pass 命令
+状态: done
+描述: 保留 `mark_feature_complete` 受控命令作为 blocked / block 或 need review / review_needed Feature 的临时状态重置能力；命令将 Feature 状态、`spec-state.json.executionStatus`、当前或最近 `feature_execution` Execution Record 和对应 Scheduler Job 同步为 `completed`。该命令不作为 Feature Spec Webview 的默认按钮展示。
+验证: `node --test tests/specdrive-ide.test.ts` 覆盖 blocked 与 review-needed 状态的完成投影；`node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 Webview 不展示 Pass 默认入口。
+
+### T-021-23 Feature Ready 状态入口
+状态: done
+描述: Feature Spec Webview 在选中非 ready、非终态 Feature 后显示 `Ready` 按钮；点击后通过 `mark_feature_ready` 受控命令将 Feature `spec-state.json.status` 和数据库 Feature 状态同步为 `ready`，并清空 blocked reasons。
+验证: `node --test tests/specdrive-ide.test.ts` 覆盖 ready 状态写入；`node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 Webview 按钮和受控命令边界。
+
+### T-021-24 Feature 详情紧凑化与成本指标
+状态: done
+描述: Feature Spec 详情中 Artifacts 改为每行展示文件名、状态和 Open 按钮；Tasks 只显示任务编号和状态；Acceptance 状态合并到 Artifacts；详情展示最新运行的 token 消耗和成本，token/cost 由 `cli-output.json.usage` 落库后投影到 UI。
+验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts tests/product-console.test.ts` 覆盖最新运行 token/cost 投影、`cli-output.json` 落库来源、Artifacts / Tasks 渲染边界和 Acceptance 区块移除。
+
+### T-021-25 Feature 详情展示 adapter pricing source
+状态: done
+描述: Feature Spec 和 Execution Workbench 的 token/cost 投影展示 pricing source，来源为 `token_consumption_records.pricing_json` 中的 adapter id 与 adapter kind。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts tests/product-console.test.ts` 覆盖 Webview 渲染边界和 adapter 级价格快照。
+
+### T-021-26 Feature 最新费用与 Job 累计费用边界
+状态: done
+描述: Feature Spec 详情将 token/cost 标注并投影为最后一次有效执行费用；清空 `spec-state.json.currentJob` 只表示当前 Job 已解除，不清空历史最后执行费用。Execution Workbench / Execution Workspace 继续按 Job / Run 展示单次费用；同一 Feature 多次执行总成本只能从 Job / Execution 历史累计 `token_consumption_records`。Feature 是否能再次 queued 或 run 只看当前 Feature 状态、依赖、安全闸和 active execution，不因历史 Job 中出现同一 Feature 多次执行而阻塞。
+验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts` 覆盖 ready Feature 保留最后执行费用、多次执行只展示最新费用、Webview 标题边界和历史 Job 费用不覆盖。
+
+### T-021-27 Feature Spec 自动刷新默认开启
+状态: done
+描述: Feature Spec Webview 打开时默认开启自动刷新，并在 VSCode extension host 中立即启动自动刷新定时器；Webview switch 初始状态显示为开启，用户仍可手动关闭。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 Feature Spec Webview 默认开启自动刷新和定时器启动边界。
+
+### T-021-28 Spec Workspace UI Spec Concept Images 每行上限
+状态: done
+描述: Spec Workspace 的 UI Spec Concept Images 使用响应式图片网格展示所有可访问概念图；图片来源合并 UI Spec execution artifacts 与 `docs/agentic-spec/ui/concepts` 目录扫描结果，按路径去重后全部渲染，超过单行容量自动换行，并在窄宽度下自适应减少列数。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 concept image grid 不截断图片列表、artifact 与目录扫描合并、以及窄屏断点。
+
+### T-021-29 Feature Spec 项目成本总计
+状态: done
+描述: Feature Spec Webview 顶部操作栏靠右显示当前项目成本总计；总计按当前项目执行历史累计 `token_consumption_records.cost_usd`，保留两位小数并四舍五入，不改变选中 Feature 详情中“最新执行成本”的投影语义。
+验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts` 覆盖项目累计成本 ViewModel 和 toolbar 靠右渲染边界。
+
+### T-021-30 Feature Review 审批入口
+状态: done
+描述: Feature Spec Webview 在 need review / review_needed Feature 上显示 `Review` 入口，使用当前 Feature 对应的 ReviewItem 执行 `approve_review` 受控命令；执行返回的 review_needed 结果必须创建 ReviewItem，保证 Webview 和 Product Console 使用同一审批事实源。`Pass` 按钮从默认 Webview 隐藏，仅保留为临时重置命令。
+验证: `node --test tests/scheduler.test.ts tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts` 覆盖 review_needed 执行创建 ReviewItem、IDE ViewModel 投影 ReviewItem、Webview 使用 approve_review 且不展示 Pass。
+
+### T-021-31 队列动作状态回流与 resumeTarget
+状态: done
+描述: pause、resume、retry、cancel、skip 和 Review 审批后的状态变化必须由 Control Plane 同步 Scheduler Job、Execution Record、Feature `spec-state.json.history` 和必要的 `resumeTarget`；Webview 只展示投影和提交受控命令。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts tests/specdrive-ide.test.ts` 覆盖 Webview 状态投影、ReviewItem 入口和队列动作；`node --test tests/review-center.test.ts tests/scheduler.test.ts tests/spec-protocol.test.ts` 覆盖 Review 审批、Scheduler 和 `spec-state.json.resumeTarget` 回流。
+
+### T-021-32 Spec / Feature / Job 操作状态协同
+状态: done
+描述: VSCode IDE Webview 按操作对象和对象状态补齐需求新增、需求变更、澄清、审批、恢复、重试、取消、跳过、暂停、继续和重新排期入口；Spec Workspace 区分 New Requirement / Requirement Change / Clarification，Feature 详情按 `spec-state.json`、最新 Job / Execution Record 和 ReviewItem 投影显示或禁用 Feature 级动作，Execution Workbench Review 决策覆盖 approve / reject / request changes / rollback / split task / update spec。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts tests/specdrive-ide.test.ts`，`git diff --check`。
+
+### T-021-33 Webview 输入草稿刷新恢复
+状态: done
+描述: 将共享 Workbench 输入面板改为聊天对话框形态，并使用 VSCode Webview state 按表单模式、Feature 和 intent 保存 New Requirement、Requirement Change、Clarification、New Feature 和 Feature-scoped Requirement Change 的未提交草稿；自动刷新、手动刷新和 Webview 重新渲染后恢复当前打开表单与输入内容。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-34 详情显示 Feature Spec 描述
+状态: done
+描述: Feature Spec 详情和 Execution Workbench 选中 Job 详情显示 Feature Spec 标题与描述信息；Control Plane 从 Feature `spec-state.json.description` 或 Feature `requirements.md` 的目标 / 用户价值 / Scope 等段落提取描述，并随 Feature / Queue ViewModel 投影到 VSCode Webview，避免详情只显示 Feature 编号。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-35 Review Needed 具体审查事项投影
+状态: done
+描述: Execution Workbench 与 Feature Spec 的 review_needed 投影优先显示 Execution Record summary / ReviewItem message 中的具体缺口，并展示 ReviewItem trigger、推荐动作、风险说明和 refs；Delivery Fidelity、behavior obligation 或 unresolved loss 触发时归类为 `risk_review_needed` 和 `quality_evidence_gap`，不得因 PR / approval / permission 字样误判为 `approval_needed`；request changes、update spec、reject、rollback 和 split task 决策要求输入澄清/修改说明并写入 approval metadata。
+验证: `node --test tests/scheduler.test.ts tests/specdrive-ide.test.ts`，`npm run ide:build`，`git diff --check`。
+
+### T-021-36 Job 执行耗时统计投影
+状态: done
+描述: Control Plane 从 Execution Record 的 `started_at` 与 `completed_at` 派生 `durationMs`，并在 VSCode Execution Workbench 队列行、选中 Job 详情和 State Flow 中展示开始时间、结束时间和单次执行耗时；缺失或无效时间范围显示为空/none。
+验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts`，`npm run ide:build`，`git diff --check`。
+
+### T-021-37 VSCode Webview 多语言切换
+状态: done
+描述: 在 System Settings 中提供共享语言切换入口，支持中文、英语和日语；将选择保存到 Webview state / localStorage，并在 Execution Workbench、Spec Workspace、Feature Spec 和 System Settings 中翻译页面标题、操作按钮、字段标签、空态、提示和设置面板 chrome；执行结果、diff、日志、文件路径、命令输出、JSON 配置、用户输入和 Feature 文档内容保持原文。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-38 统一紧凑工作台与主题
+状态: done
+描述: VSCode IDE Webview 采用与 Product Console 一致的紧凑工作台 token；语言和主题入口集中到 System Settings，主题支持 VS Code / Light / Dark / High Contrast；Execution Workbench 和 Feature Spec 详情取消内部滚动，把低优先级详情折叠为 compact section，同时保留关键字段和全部操作按钮。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-39 共享左侧导航栏
+状态: done
+描述: 在共享 Webview shell 中为 Spec Workspace、Feature Spec、Execution Workbench 和 System Settings 提供左侧导航栏；当前页面高亮，点击导航项通过 extension host 打开对应 Webview，导航栏可折叠/展开并只使用工作台级 localStorage 保留状态，不在每个页面的 Webview state 中保存副本。
+验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。

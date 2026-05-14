@@ -85,15 +85,15 @@ SpecDrive AutoBuild 是一个面向自主软件交付的控制平面。它可以
 
 | Spec Workspace | Feature Spec |
 | --- | --- |
-| ![Spec Workspace](docs/ui-v2/spec-workspace.png) | ![Feature Spec](docs/ui-v2/feature-spec-project-home.png) |
+| ![Spec Workspace](docs/agentic-spec/ui-v2/spec-workspace.png) | ![Feature Spec](docs/agentic-spec/ui-v2/feature-spec-project-home.png) |
 
 | Execution Workbench | 系统设置 |
 | --- | --- |
-| ![Execution Workbench](docs/ui-v2/execution-workbench-runner.png) | ![系统设置](docs/ui-v2/system-settings.png) |
+| ![Execution Workbench](docs/agentic-spec/ui-v2/execution-workbench-runner.png) | ![系统设置](docs/agentic-spec/ui-v2/system-settings.png) |
 
 | 审计与评审 |
 | --- |
-| ![审计与评审](docs/ui-v2/audit-review.png) |
+| ![审计与评审](docs/agentic-spec/ui-v2/audit-review.png) |
 
 ---
 
@@ -182,11 +182,11 @@ Spec 始终是事实源。
 输入可以是自然语言需求、现有 PRD、产品 brief、Pull Request、Issue、业务文档或已有代码仓库。系统首先将这些输入转换为主线文档。当前仓库的 MVP 规划事实源主要在中文主线文档，英文和日文入口用于产品级导航：
 
 ```text
-docs/<language>/PRD.md
-docs/<language>/requirements.md
-docs/<language>/hld.md
-docs/features/README.md
-docs/features/<feature-id>/
+docs/agentic-spec/<language>/PRD.md
+docs/agentic-spec/<language>/requirements.md
+docs/agentic-spec/<language>/hld.md
+docs/agentic-spec/features/README.md
+docs/agentic-spec/features/<feature-id>/
 ```
 
 主线文档负责定义产品范围、验收行为、架构边界、用户流程和变更规则。
@@ -196,10 +196,10 @@ docs/features/<feature-id>/
 系统将主线文档拆分为功能级交付单元：
 
 ```text
-docs/features/<feature-id>/requirements.md
-docs/features/<feature-id>/design.md
-docs/features/<feature-id>/tasks.md
-docs/features/<feature-id>/spec-state.json
+docs/agentic-spec/features/<feature-id>/requirements.md
+docs/agentic-spec/features/<feature-id>/design.md
+docs/agentic-spec/features/<feature-id>/tasks.md
+docs/agentic-spec/features/<feature-id>/spec-state.json
 ```
 
 一个好的 Feature Spec 不应该是“实现后端”或“实现前端”，而应该是一个纵向闭环能力，可以独立实现、验证、评审和交付。
@@ -248,7 +248,7 @@ state transition proposal
 ├── apps/
 │   ├── product-console/       # React / Vite 兼容控制台，用于设置和调试
 │   └── vscode-extension/      # 主要 VSCode 插件和 IDE Webview Workbench
-├── docs/
+├── docs/agentic-spec/
 │   ├── en/                    # 英文产品与规格文档
 │   ├── zh-CN/                 # 中文产品、规格和协议文档
 │   ├── ja/                    # 日文文档
@@ -262,12 +262,12 @@ state transition proposal
 
 关键文档：
 
-- [产品需求文档](docs/zh-CN/PRD.md)
-- [文档索引](docs/README.md)
-- [Feature Spec 索引](docs/features/README.md)
-- [项目高层设计文档](docs/zh-CN/hld.md)
-- [Agentic Spec Standard](docs/zh-CN/agentic-spec-standard.md)
-- [项目级 Skill 说明](docs/zh-CN/skills.md)
+- [产品需求文档](docs/agentic-spec/zh-CN/PRD.md)
+- [文档索引](docs/agentic-spec/README.md)
+- [Feature Spec 索引](docs/agentic-spec/features/README.md)
+- [项目高层设计文档](docs/agentic-spec/zh-CN/hld.md)
+- [Agentic Spec Standard](docs/agentic-spec/zh-CN/agentic-spec-standard.md)
+- [项目级 Skill 说明](docs/agentic-spec/zh-CN/skills.md)
 
 ---
 
@@ -280,7 +280,7 @@ SpecDrive AutoBuild 处于活跃实现阶段。当前仓库已经包含 Control 
 最准确的实现状态以 Feature Spec 索引为准：
 
 ```text
-docs/features/README.md
+docs/agentic-spec/features/README.md
 ```
 
 该文件记录 MVP Feature、依赖关系、后续变更、术语迁移和实现说明。
@@ -441,15 +441,15 @@ SpecDrive 遵循以下 Agentic Development 规则：
 
 理解产品与架构：
 
-1. [docs/zh-CN/PRD.md](docs/zh-CN/PRD.md)
-2. [docs/zh-CN/hld.md](docs/zh-CN/hld.md)
-3. [docs/features/README.md](docs/features/README.md)
-4. [docs/zh-CN/agentic-spec-standard.md](docs/zh-CN/agentic-spec-standard.md)
-5. [docs/zh-CN/skills.md](docs/zh-CN/skills.md)
+1. [docs/agentic-spec/zh-CN/PRD.md](docs/agentic-spec/zh-CN/PRD.md)
+2. [docs/agentic-spec/zh-CN/hld.md](docs/agentic-spec/zh-CN/hld.md)
+3. [docs/agentic-spec/features/README.md](docs/agentic-spec/features/README.md)
+4. [docs/agentic-spec/zh-CN/agentic-spec-standard.md](docs/agentic-spec/zh-CN/agentic-spec-standard.md)
+5. [docs/agentic-spec/zh-CN/skills.md](docs/agentic-spec/zh-CN/skills.md)
 
 参与实现开发：
 
-1. 阅读 `docs/features/` 下相关 Feature Spec。
+1. 阅读 `docs/agentic-spec/features/` 下相关 Feature Spec。
 2. 修改文件前检查 `spec-state.json`。
 3. 遵循任务中的 allowed-files 和 verification rules。
 4. 先运行目标测试，再运行更大范围回归测试。

@@ -199,7 +199,7 @@ function SpecPrdWorkflowPanel({
     ? workflow.stages
     : workflowStageFallbacks.map((stage) => ({ ...stage, status: "pending" as const }));
   const targetRepoPath = workflow?.targetRepoPath ?? currentProject.projectDirectory;
-  const relativeSourcePath = workflow?.sourcePath ?? "docs/zh-CN/PRD.md";
+  const relativeSourcePath = workflow?.sourcePath ?? "docs/agentic-spec/zh-CN/PRD.md";
   const resolvedSourcePath = workflow?.resolvedSourcePath ?? joinDisplayPath(targetRepoPath, relativeSourcePath);
   const sourcePath = workflow?.sourceName ?? resolvedSourcePath;
   const blockedReasons = workflow?.blockedReasons?.length ? workflow.blockedReasons : [];
@@ -596,11 +596,11 @@ function SpecPrdWorkflowPanel({
                 <p className="mb-3 text-[12px] text-muted">{text.uiSpecConceptDescription}</p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="rounded-md border border-line bg-slate-50 px-3 py-2 text-[12px] text-ink">
-                    <div className="font-semibold">docs/ui/ui-spec.md</div>
+                    <div className="font-semibold">docs/agentic-spec/ui/ui-spec.md</div>
                     <div className="mt-1 text-muted">{text.uiSpecDocumentOutput}</div>
                   </div>
                   <div className="rounded-md border border-line bg-slate-50 px-3 py-2 text-[12px] text-ink">
-                    <div className="font-semibold">docs/ui/concepts/*.png</div>
+                    <div className="font-semibold">docs/agentic-spec/ui/concepts/*.png</div>
                     <div className="mt-1 text-muted">{text.uiSpecConceptOutput}</div>
                   </div>
                 </div>
@@ -1106,7 +1106,7 @@ export function SpecPage({
                   <FileText size={14} />
                   {text.folder}:{" "}
                   {selectedListItem?.folder
-                    ? `docs/features/${selectedListItem.folder}`
+                    ? `docs/agentic-spec/features/${selectedListItem.folder}`
                     : text.none}
                 </div>
               </div>

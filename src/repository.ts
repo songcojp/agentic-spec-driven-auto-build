@@ -116,7 +116,7 @@ function enrichFilesystemSummary(summary: RepositorySummary): RepositorySummary 
   summary.hasAgentsFile = existsSync(join(summary.localPath, "AGENTS.md"));
   summary.hasSpecProtocolDirectory =
     existsSync(join(summary.localPath, ".autobuild")) ||
-    existsSync(join(summary.localPath, "docs", "features")) ||
+    existsSync(join(summary.localPath, "docs", "agentic-spec", "features")) ||
     existsSync(join(summary.localPath, ".spec"));
   summary.sensitiveFileRisks = readSensitiveFileRisks(summary.localPath);
   return summary;

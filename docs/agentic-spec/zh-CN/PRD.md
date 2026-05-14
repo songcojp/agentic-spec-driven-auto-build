@@ -1,0 +1,1420 @@
+# PR：Spec-Driven Autonomous Coding System
+
+版本：V2.0
+
+2026-04-29 边界更新：平台能力收缩为项目/Feature/Task 的调度、状态机、状态聚合、审计、Project Memory 和 Product Console 状态展示。平台不再提供 Skill 注册/发现/调用/schema 校验/Skill Center，不再提供 Subagent Runtime/Context Broker/Agent Run Contract/Subagent Console，不再提供 Planning Pipeline 主动编排执行。历史章节中涉及 Skill、Subagent 或 Planning Pipeline 的平台能力均按“已废弃”理解；Runner 仅作为外部执行队列、心跳、日志、证据和状态检测来源。
+
+2026-05-01 调度队列重构：调度中心管理执行 Job，不再把 Feature 作为 Job 顶层属性。`feature-pool-queue.json` 是 Feature 队列规划来源；Project `schedule_run` 和 `start_auto_run` 读取该文件后选择下一 Feature 并创建 `<executor>.run` Job。当前 executor 为 `cli.run`，后续可扩展 `native.run`；payload 使用 `operation` 区分 `feature_execution`、EARS、HLD、UI Spec、Feature split 等操作。`feature.select`、`feature.plan`、`feature_planning` 和独立 `push_feature_spec_pool` 步骤已废弃。真实执行实例统一称为 Execution Record / 执行记录，替代旧 Run 领域词。
+
+2026-05-02 Spec 状态文件化更新：Spec / Feature 流程状态不再以数据库为主事实源。人类可读状态保留在 `requirements.md`、`design.md`、`tasks.md` 和 Feature Index 中；机器可读状态写入 `docs/agentic-spec/features/feature-pool-queue.json` 与 `docs/agentic-spec/features/<feature-id>/spec-state.json`。SQLite 继续保存运行时事实，包括 Scheduler Job、Execution Record、heartbeat、raw logs、adapter config、command receipt 和 执行结果。审计中心降级为轻量活动记录，操作者主视图以 Runner / Scheduler 队列、Execution Record、Skill 输出和 execution result 为准。
+
+2026-05-02 VSCode IDE 入口新增：SpecDrive 增加 VSCode 插件作为日常 Spec 阅读、澄清、需求新增/变更、任务队列管理、执行观察和审批入口。插件不复用 Codex VS 插件私有 Chat UI，不模拟其输入框，而是通过 Control Plane 受控命令和 Runner 的 Codex RPC Adapter 调用 `codex app-server` JSON-RPC 协议。Product Console 不删除，继续承担系统设置、adapter 配置、队列调试和全局状态总览。
+
+2026-05-03 VSCode 插件 UI 方向更新：VSCode 插件必须开发独立 Webview Web UI，不复用当前 Product Console Web UI 的页面、路由、布局或组件实现。插件 Web UI 的核心关注点是任务调度和自动执行，第一屏必须优先展示 Job 队列、当前运行、下一步动作、阻塞原因、自动执行控制和审批待办。
+
+2026-05-03 自主执行选择更新：Project Scheduler 不再仅用代码中的 priority / dependency 过滤作为最终选择结论。启动自动执行或项目级调度运行时，系统应调用 `plan-feature-execution` 对 `feature-pool-queue.json`、Feature `spec-state.json`、依赖完成情况、最近 Execution Record、resume/skip hints 和 approval/block 状态进行推理，返回 `select_next_feature` 决策；代码只负责结构校验、安全闸和 `<executor>.run` Job 创建。CLI/app-server 返回的 `approval_needed`、`blocked`、`review_needed`、`failed` 必须投影到 Feature 执行结果，暂停自动继续。
+
+2026-05-10 Git 生命周期边界更新：Feature 实现和交付采用 Skill-first 流程。`implement-feature` 负责创建或回退 Feature worktree、分支、提交、PR、检查、合并、远程分支清理、本地分支清理和 worktree 清理；平台代码只负责调度 `feature_execution`、传递 owner workspace 与 Feature Spec 路径、记录 Execution Record / run report / UI 投影，并校验 `SkillOutputContractV1.result.gitDelivery`。项目级并发时默认一个 Feature 一个 PR；Feature 内 worker worktree 只服务于同一个 Feature PR 的内部并发。
+
+2026-05-11 Delivery Fidelity 更新：Agentic Spec 不再只依赖最终质量门，而是升级为 lifecycle-first 的 Delivery Lifecycle OS。Define、Plan、Build、Verify、Review、Ship 每个 handoff 必须保留 source intent、journey、behavior obligation、loss、evidence 和 independent review；`feature_execution` completed 必须使用 `skill-contract/v2` 和 `result.deliveryFidelity`。
+
+2026-05-12 质量优化 UI 边界更新：VSCode IDE Webview 是新增质量闭环的主操作界面。Execution Workbench 和 Feature Spec 详情必须优先展示 requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity、Git delivery、Workpad、日志、截图/trace、PR/check 和 ReviewItem 状态；Product Console 定位为历史遗留兼容面，仅保留系统设置、adapter 配置、队列调试和全局状态总览，不承载新的主质量 UI。
+
+---
+
+## 1. 产品定义
+
+SpecDrive AutoBuild 是一个面向软件团队的长时间自主编程系统。系统以结构化 Spec 管理产品目标和验收标准，以项目本地 CLI Skill 固化可复用工程方法，以 Codex CLI 原生 Subagent 处理委托和上下文传递，以 Project Memory 为 CLI 提供跨会话持久记忆，以 Runner CLI Adapter 执行代码修改、测试和修复，以内部任务状态机管理任务流转、审批、恢复和交付，并通过 Dashboard / 看板呈现状态。
+
+产品核心结论：
+
+```text
+Spec Protocol
++ CLI Skill Directory
++ CLI Subagent Delegation
++ Project Memory
++ Runner CLI Adapter
++ Internal Task State Machine
++ Dashboard View
+```
+
+一句话定位：
+
+> 让 AI 在可控、可恢复、可审计的工程流程中持续交付代码。
+
+---
+
+## 2. 产品目标
+
+### 2.1 核心目标
+
+1. 用户输入自然语言需求后，系统生成结构化 Feature Spec。
+2. 系统基于优先级和就绪状态自动选择下一个待执行的 Feature Spec。
+3. 系统自动驱动 Feature Spec 流水线：技术计划 → 任务图 → 看板 → 调度执行。
+4. 系统基于 Spec 生成技术计划、任务图、验收标准和风险规则。
+5. 系统将大任务拆分为可调度任务，并通过 CLI 原生 Subagent 委托执行。
+6. 系统记录持久 run、execution results、status、review 和 recovery 状态，不再重复实现 CLI 上下文切片。
+7. Runner CLI Adapter 执行代码修改、测试、修复、PR 生成。
+8. Status Checker 自动判断任务完成、失败、阻塞或需要审批。
+9. Dashboard 实时呈现由内部任务状态机维护的任务状态和交付进度。
+10. 系统以 Project Memory 为每次 CLI 会话提供项目级记忆，支持跨会话恢复目标、决策和阻塞状态。
+11. 系统支持长时间运行、失败重试、断点恢复和交付审计。
+
+### 2.2 非目标
+
+MVP 不包含：
+
+* 自研大模型。
+* 自研完整 IDE。
+* 企业级复杂权限矩阵。
+* 生产环境自动发布。
+* 多大型仓库复杂微服务自动迁移。
+* 完整替代 Jira、GitHub Issues 或 Linear。
+* MVP 不接入 Issue Tracker，仅保留外部链接和追踪字段。
+* VSCode 插件不替代完整 IDE，不依赖 Codex VS 插件私有 Webview 消息协议，也不注入、模拟或自动操作 Codex VS 插件输入框。
+
+---
+
+## 3. 核心架构
+
+```text
+User / PM / Developer
+        ↓
+Product Console
+        ↓
+Spec Protocol Engine ───────────────┐
+        ↓                           │
+Requirement Intake + Checklist       │
+        ↓                           │
+Feature Spec Pool                    │
+        ↓                           │
+Project Scheduler                    │
+        ↓                           │
+Feature Selector                     │
+        ↓                           │
+Scheduler and State Maintenance      │
+        ↓                           │
+Task Graph + Internal State Machine  │
+        ↓                           │
+Feature Scheduler                    │
+        ↓                           │
+Project Memory Store ───────────────┤
+        ↓                           │
+External Run Observation             │
+   ├── Runner queue                  │
+   ├── Heartbeat                     │
+   ├── Logs                          │
+   ├── execution result                      │
+   └── Status checks                 │
+        ↓                           │
+Codex Runner                         │
+        ↓                           │
+Git Workspace / Worktree / Branch    │
+        ↓                           │
+Status Checker                       │
+        ↓                           │
+Feature / Task State Aggregator      │
+        ├── Done → next task / Feature done
+        ├── Review Needed → approval_needed / clarification_needed / risk_review_needed
+        ├── Blocked → unblock workflow or alternate task
+        └── Failed → recovery workflow or manual review
+        ↓                           │
+PR / Delivery Report / Spec Evolution│
+        ↓                           │
+Feature Selector ◀───────────────────┘
+```
+
+---
+
+## 4. 核心概念
+
+### 4.1 Spec Protocol
+
+Spec Protocol 是系统内部的需求、计划、验收和运行证据协议。它是产品交付的真实源头，支持导出 Markdown，也支持以 JSON/YAML 持久化。
+
+Spec Protocol 包含：
+
+* Product Brief
+* Feature Spec
+* Clarification Log
+* Requirement Checklist
+* Technical Plan
+* Research Decisions
+* Data Model
+* Interface Contracts
+* Quickstart Scenarios
+* Task Graph
+* Acceptance Criteria
+* Run 执行结果
+* Review Findings
+* Spec Evolution Record
+
+### 4.2 Skill System
+
+Skill 是项目本地 `.agents/skills/*/SKILL.md` 中固化的可复用工程能力。编码 CLI 负责 Skill 发现、调用和上下文处理；SpecDrive 只读取 Skill 文件元数据，用于 bootstrap readiness 和 Console 展示。
+
+### 4.3 Subagent Runtime
+
+Subagent 委托由 Codex CLI 原生能力负责。SpecDrive 不生成 Agent Run Contract 或上下文切片，只记录 CLI 执行周边的 run event、执行结果、Status Check、Review、Recovery 和 Audit 历史。
+
+### 4.4 Project Memory
+
+Project Memory 是面向 CLI 长时间运行的项目级持久记忆文件。每次编码 CLI 会话启动前，系统将 Project Memory 注入为会话上下文，确保 CLI 无需重新探索即可恢复当前目标、关键决策、已知阻塞和任务进度。
+
+Project Memory 以结构化 Markdown 持久化，保存在 `.autobuild/memory/project.md`，并在每次 Run 结束后由系统自动更新。
+
+Project Memory 包含：
+
+* 当前活跃 Feature 和任务
+* **任务看板状态快照**（当前各 Feature 下任务的状态分布）
+* **当前 Run 状态**（正在运行/上次运行结果）
+* 最近关键决策及其原因
+* 已知阻塞和当前处理状态
+* 核心架构决策摘要
+* 最近 Execution Result 摘要
+* 待审批事项
+* 当前 Spec 版本
+* 禁止重复的失败模式
+
+Project Memory 有大小预算（默认 ≤ 8000 tokens），超出时自动压缩旧条目为摘要。
+
+### 4.5 Execution Result
+
+Execution Result 是每个 Subagent Run 的结构化结果，用于状态判断、审批、恢复和交付报告。
+
+```json
+{
+  "run_id": "RUN-20260427-001",
+  "agent_type": "test-agent",
+  "task_id": "T-014",
+  "status": "failed",
+  "summary": "登录表单校验测试失败",
+  "execution results": {
+    "commands": ["pnpm test auth"],
+    "failed_tests": ["auth-login-form.spec.ts"],
+    "likely_cause": "password empty case not handled",
+    "related_files": [
+      "src/features/auth/LoginForm.tsx",
+      "tests/auth-login-form.spec.ts"
+    ]
+  },
+  "recommendation": {
+    "next_action": "dispatch_recovery",
+    "risk": "medium"
+  }
+}
+```
+
+---
+
+## 5. 用户流程
+
+```text
+阶段 1：项目初始化
+  用户选择创建新项目或导入现有项目
+    ↓
+  系统自动创建项目记录并连接或探测 Git 仓库
+    ↓
+  系统自动初始化 Spec Protocol
+    ↓
+  系统自动导入已有项目宪章或创建默认项目宪章
+    ↓
+  系统自动初始化 Project Memory、健康检查和当前项目上下文
+
+阶段 2：需求录入
+  Spec 来源录入：在同一步骤中提供“扫描”和“上传”两个动作
+    ↓
+  识别 PR/RP/PRD/EARS 需求格式和已有规格产物
+    ↓
+  生成 EARS 文档
+    ↓
+  完成关键澄清
+    ↓
+  通过需求质量检查
+    ↓
+  Feature 状态 → ready
+    ↓
+  Feature Spec Pool
+
+阶段 3：自主执行循环
+  Project Scheduler 触发 Feature Spec 选择器选择下一个 ready Feature
+    ↓
+  Feature 状态 → planning
+    ↓
+  自动生成技术计划、研究结论、数据模型、接口契约
+    ↓
+  生成任务图
+    ↓
+  Feature 状态 → tasked
+    ↓
+  任务进入看板
+    ↓
+  Feature Scheduler 在当前 Feature 内调度任务执行
+    ↓
+  Project Memory 注入 CLI 会话上下文
+    ↓
+  Subagent + Codex Runner 执行编码、测试、修复
+    ↓
+  Project Memory 更新
+    ↓
+  Status Checker 判断任务状态
+    ├── Done → 更新任务图；若全部任务 Done 且验收通过，Feature 状态 → done
+    ├── Review Needed → 人工审批/澄清；通过后回到 Ready 或 Scheduled
+    ├── Blocked → 记录阻塞；解除后回到 Ready，无法解除时选择其他可执行任务或 Feature
+    └── Failed → 生成恢复任务；超过阈值后进入人工 Review Needed
+    ↓
+  Feature done → PR / Delivery Report / Spec Evolution
+    ↓
+  Feature delivered 或当前 Feature 无可继续任务
+    ↓
+  回到 Feature Spec 选择器选择下一个 Feature
+```
+
+---
+
+## 6. 功能需求
+
+### 6.1 项目管理
+
+#### FR-001 创建项目
+
+用户可以创建 AutoBuild 项目并配置：
+
+* 项目名称
+* 产品目标
+* 项目类型
+* 技术偏好
+* 项目目录
+* 目标仓库或现有项目路径
+* 默认分支
+* 默认运行环境
+* Codex Runner 开关
+* 定时任务开关
+* 自动 PR 开关
+
+系统必须支持创建多个 AutoBuild 项目，并在 Product Console 中维护当前选中的项目上下文。用户切换项目后，Dashboard、Spec Workspace、Runner Console、Review Center、Project Memory 投影和调度入口必须只读取当前项目的数据。
+
+项目创建入口必须支持两种路径：
+
+* 导入现有项目：用户填写已有项目目录，系统将该目录作为项目目录并执行仓库探测和健康检查。
+* 创建新项目：用户填写项目创建表单，系统在统一 `workspace/` 目录下创建项目目录，并将该目录作为项目后续 Spec、Project Memory、仓库连接和 Runner 工作的基础路径。
+
+无论用户选择导入现有项目还是创建新项目，系统都必须自动完成阶段 1 的初始化闭环：持久化项目、保存或探测仓库连接、初始化 `.autobuild/` / Spec Protocol、从模板生成目标项目 `AGENTS.md`、同步项目本地 `.agents/skills/`、导入已有项目宪章或创建默认项目宪章、初始化 Project Memory、执行健康检查并设置当前项目上下文。`AGENTS.md` 模板必须作为 Spec Protocol 的目标项目操作规范，覆盖 Spec 标准、Spec 操作、Spec 流程、技能说明、技能路由和实现边界；除非缺少目录权限、Git 仓库不可读、Spec Protocol 初始化失败、模板缺失或宪章内容无法满足项目事实源约束，否则系统不得要求用户逐步手动执行阶段 1 操作。
+
+#### FR-002 连接 Git 仓库
+
+系统支持连接 GitHub、GitLab、本地 Git 仓库和私有仓库，并展示：
+
+* 当前分支
+* 最新 commit
+* 未提交变更
+* 当前 PR
+* CI 状态
+* 任务对应分支
+* Worktree 状态
+
+#### FR-003 项目健康检查
+
+系统检测：
+
+* 是否是 Git 仓库。
+* 是否存在 package manager。
+* 是否存在测试命令。
+* 是否存在构建命令。
+* 是否有 `.codex/config.toml`。
+* 是否有 AGENTS.md。
+* 是否存在 Spec Protocol 目录。
+* 是否有未提交变更。
+* 是否存在敏感文件风险。
+
+### 6.2 Spec Protocol Engine
+
+#### FR-010 创建 Feature Spec
+
+系统通过 `convert-ears-requirements` 生成 EARS requirements 文档，并通过独立的 `decompose-feature-specs` 将已确认需求拆分为 Feature Spec，同时产出机器可读的 `feature-pool-queue.json` 队列规划；拆分完成后不再存在独立“推入 Feature Spec Pool”步骤，任务调度全流程直接读取已生成的 Feature Spec 和队列规划结果来选择下一 Feature 并创建执行队列。Feature Spec 必须包含：
+
+* Feature 名称
+* Feature 目标
+* 用户角色
+* 用户故事
+* 优先级
+* 验收场景
+* 功能需求
+* 非功能需求
+* 成功指标
+* 关键实体
+* 假设
+* 不做范围
+* 风险点
+
+#### FR-011 PR/EARS 需求拆解
+
+系统支持将用户提供的 PR、RP、PRD 片段或 EARS 格式需求拆解为标准 Feature Spec。
+
+输入支持：
+
+* 自然语言产品需求。
+* PR/RP/PRD 格式需求描述。
+* EARS 格式需求句式。
+* 混合格式需求文档。
+
+在阶段 2 需求录入开始时，系统必须自动扫描当前项目的 Spec Sources，包括 PRD、EARS、requirements、HLD、design、已有 Feature Spec、tasks 和 README / 索引等文档，识别已有需求、设计、规划产物和缺口，并将扫描结果作为 EARS 生成、澄清和质量检查的事实输入。阶段 2 允许扫描 HLD 和 Feature Spec 作为事实源，但不得在该阶段生成 HLD、拆分 Feature Spec 或启动规划流水线；这些操作属于阶段 3 的选中 Feature 受控操作。
+
+EARS 标准句式：
+
+```text
+WHEN [condition/event]
+THE SYSTEM SHALL [expected behavior]
+```
+
+示例：
+
+```text
+WHEN a user submits valid registration data
+THE SYSTEM SHALL create a new user account
+
+WHEN a user submits an email that already exists
+THE SYSTEM SHALL display "Email already registered" error
+
+WHEN a user submits invalid email format
+THE SYSTEM SHALL display email validation error
+```
+
+拆解结果必须包含：
+
+* feature candidate
+* user story
+* requirement id
+* condition/event
+* expected behavior
+* acceptance criteria
+* test scenario
+* priority
+* ambiguity flags
+* source trace
+
+每条 EARS 需求必须保留源文本追踪关系，并能映射到 Feature Spec、Acceptance Criteria 和后续测试用例。
+
+#### FR-012 Spec 切片
+
+系统必须支持按 feature、user story、requirement、acceptance criteria 和 related files 切分 Spec。Coding Agent 默认只能读取当前任务相关切片。
+
+#### FR-013 Clarification Log
+
+系统记录每个澄清问题：
+
+* question
+* recommended answer
+* user answer
+* affected spec section
+* timestamp
+* decision owner
+
+#### FR-014 Requirement Checklist
+
+系统为每个 Feature 生成需求质量 checklist，覆盖完整性、清晰度、一致性、可测量性、场景覆盖、边界条件、非功能属性、依赖、假设、歧义和冲突。
+
+#### FR-015 Spec Versioning
+
+Spec 每次变更必须生成版本：
+
+```text
+SPEC-1.0.0
+SPEC-1.1.0
+SPEC-1.1.1
+```
+
+版本变化规则：
+
+* MAJOR：需求目标或核心边界变化。
+* MINOR：新增用户故事、能力或约束。
+* PATCH：澄清、措辞、验收标准细化。
+
+### 6.3 Skill Center（已废弃）
+
+#### FR-020 项目本地 Skill 发现（废弃）
+
+平台不得发现、注册、展示或调用 Skill。Bootstrap readiness 不再要求项目 Skill 文件存在。
+
+#### FR-021 CLI Skill 文件事实源（废弃）
+
+平台不维护内置 Skill 种子数据、启用状态、版本或调用契约。
+
+#### FR-022 CLI Skill 执行契约（废弃）
+
+平台不得把 Skill 输入输出作为调度或状态迁移契约。
+
+#### FR-023 Skill 文件治理（废弃）
+
+Skill 文件如存在，由外部 CLI、插件或仓库治理负责；平台不提供 Skill Center。
+
+### 6.4 Subagent Runtime（已废弃）
+
+#### FR-030 Subagent 类型（废弃）
+
+平台不定义 Subagent 类型。
+
+#### FR-031 CLI 原生 Subagent 委托记录
+
+平台不记录 `subagent_events`。SpecDrive 仅记录 `runs`、`raw_execution_logs`、`status_check_results` 和 `status_check_results`，用于跨 session 恢复、审计和 Console 展示。
+
+#### FR-032 Subagent 并行策略
+
+系统支持：
+
+* 只读 Subagent 并行。
+* 不同文件的 Coding Agent 可并行。
+* 同一文件写任务串行。
+* 同一分支写任务默认串行。
+* 高风险任务单 Agent 执行。
+* 任意写入型并行必须使用独立 Git worktree 隔离修改；不得在同一工作区内并行写入。
+* 每个 worktree 必须绑定独立分支、任务/Feature 标识和合并目标，并在状态检测和交付前完成冲突检测。
+
+#### FR-033 Subagent 结果判定
+
+Subagent 自报结果不能直接推动任务 Done。Status Checker、Execution Result、Review Center 和 Feature Aggregator 共同判断下一步动作和看板状态。**看板状态变更后触发 Project Memory 状态快照同步。**
+
+### 6.5 Project Memory
+
+#### FR-044 Project Memory 初始化
+
+项目创建时系统初始化 Project Memory 文件 `.autobuild/memory/project.md`，内容包含项目名称、目标、默认分支、当前 Spec 版本、初始任务状态快照和空的运行记录。
+
+#### FR-045 Project Memory 注入
+
+每次启动编码 CLI 会话前，系统将 Project Memory 文件内容作为首段系统提示注入，格式为：
+
+```text
+[PROJECT MEMORY]
+<project.md 内容>
+[/PROJECT MEMORY]
+```
+
+CLI 据此恢复：当前任务目标、**当前任务及相关任务的看板状态**、**上次 Run 的结果与状态**、已完成事项、已知阻塞、禁止操作和待审批事项，无需重新探索仓库。
+
+#### FR-046 Project Memory 更新
+
+每次 Run 结束后，系统根据 Execution Result 和 Status Checker 结果自动更新 Project Memory：
+
+* 将已完成任务移入完成列表
+* **更新任务看板状态快照**（同步内部任务状态机的最新状态，并供 Dashboard 呈现）
+* **更新当前 Run 状态**（run_id、agent_type、结果、耗时）
+* 追加新决策和架构变更
+* 更新当前阻塞状态
+* 追加失败模式指纹
+* 压缩超过预算的旧条目
+
+更新操作必须幂等，支持重放。
+
+#### FR-047 Project Memory 大小控制
+
+* 默认预算：≤ 8000 tokens
+* 超出时优先压缩：旧 Execution Result 摘要 → 历史决策 → 已完成任务列表
+* 当前任务、**当前任务状态快照**、当前阻塞、禁止操作永不压缩
+* 系统记录每次压缩操作到审计日志
+
+#### FR-048 Project Memory 版本
+
+Project Memory 每次变更生成版本记录（时间戳 + run_id），支持查看历史版本和回滚。
+
+### 6.6 Feature Spec 流水线与选择
+
+#### FR-054 Feature 状态机
+
+Feature Spec 必须经历如下状态流转，系统自动驱动：
+
+```text
+draft        → ready        （通过需求质量检查后）
+ready        → planning     （Feature 选择器自动选中后触发）
+planning     → tasked       （技术计划 + 任务图生成完成）
+tasked       → implementing （Feature Scheduler 排期首个任务）
+implementing → done         （所有任务 Done，验收通过）
+done         → delivered    （PR 合并，交付报告生成）
+
+planning     → review_needed（计划流水线失败或需求仍不清楚）
+implementing → review_needed（任务需要人工审批、澄清或风险确认）
+implementing → blocked      （存在阻塞且没有可继续任务）
+implementing → failed       （恢复次数超过阈值或不可自动修复）
+blocked      → ready        （阻塞解除后重新进入候选池）
+review_needed → ready       （人工处理完成后重新进入候选池）
+failed       → review_needed（生成失败摘要后等待人工处理）
+```
+
+`planning` 阶段不要人工触发，由 Feature 选择器驱动。
+
+`review_needed` 是状态机上的聚合状态，进入该状态时必须同时记录细分原因：
+
+* `approval_needed`：需要权限、安全、合规、预算或高风险操作审批。
+* `clarification_needed`：需求、验收标准、技术边界或用户意图仍不清楚。
+* `risk_review_needed`：diff 过大、影响范围异常、测试证据不足或架构风险需要人工复核。
+
+Dashboard、Project Memory 和 Execution Result 必须展示 `review_needed_reason`，便于责任人快速判断下一步动作。
+
+#### FR-055 Feature Spec 自动选择
+
+系统内置 Feature 选择器，在以下时机自动从所有 `ready` 状态的 Feature Spec 中选一个进入 `planning`：
+
+* 当前没有 `implementing` 中的 Feature
+* 当前 `implementing` 中的 Feature 所有任务全部 Done 或 Delivered
+* 当前 `implementing` 中的 Feature 进入 Blocked 且没有可继续任务
+
+选择优先级顺序：
+
+1. 优先级最高（P1 > P2 > P3）
+2. 所有前置依赖 Feature 已完成
+3. 验收标准明确、着手风险最低
+4. 处于最长时间的 `ready` 状态的优先（防止饥饿）
+
+Project Scheduler 每次触发时必须从 `feature-pool-queue.json` 和 Feature `spec-state.json` 动态读取当前 `ready` Feature、优先级、依赖状态和人工覆盖结果并重新评估候选集；不得依赖 Project Memory 中固化的静态候选队列作为真实调度来源。
+
+选择结果写入 Project Memory，下一次 CLI 会话即可从选中的 Feature 继续恢复。Project Memory 只保存最近选择结果、候选摘要和选择原因，用于恢复和审计；真实候选集以 Feature Pool Queue 和 Feature `spec-state.json` 当前状态为准。
+
+#### FR-056 Feature 计划流水线自动驱动
+
+Feature 进入 `planning` 后，系统依次自动调用如下 Skill，每次 Skill 完成后推进至下一阶段，无需人工介入：
+
+```text
+implement-feature
+  ↓
+plan-feature-execution
+  ↓
+design-architecture
+  ↓
+design-architecture + design-architecture（可并行）
+  ↓
+decompose-feature-specs → 生成任务图
+  ↓
+Feature 状态 → tasked
+```
+
+任一阶段失败时进入 `Review Needed`，待人工处理后继续。
+
+#### FR-057 Feature 状态聚合与完成判定
+
+系统必须在每次任务状态变化后聚合该 Feature 下所有任务状态，并自动判断 Feature 后续路径：
+
+```text
+所有任务 Done + Feature 验收通过
+  → Feature 状态 → done
+  → 生成 PR / Delivery Report / Spec Evolution
+  → done 或 delivered 后触发 Feature 选择器继续选择下一个 ready Feature
+
+存在 Review Needed 任务
+  → Feature 保持 implementing
+  → 暂停受影响任务
+  → 等待人工审批、澄清或风险确认
+  → 处理完成后相关任务回到 Ready 或 Scheduled
+
+存在 Blocked 任务且没有可继续任务
+  → Feature 状态 → blocked
+  → 记录阻塞原因到 Project Memory
+  → 触发 Feature 选择器选择其他可执行 Feature
+
+存在 Failed 任务且恢复次数超过阈值
+  → Feature 状态 → failed 或 review_needed
+  → 生成恢复摘要和人工处理建议
+  → 触发 Feature 选择器选择其他可执行 Feature
+```
+
+Feature `done` 判定不得只依赖任务卡片状态；必须同时满足 Feature 级 Acceptance Criteria、Spec Alignment Check 和必要测试通过。
+
+#### FR-058 多 Feature 并行策略
+
+* 默认项目级单 Feature 串行执行（防止工作区冲突）
+* 项目级 Feature 并行必须由显式开关控制，默认关闭
+* 开关开启后，可允许多个互不影响文件和依赖的 Feature 并行 `implementing`
+* 任意项目级并行写入必须由 `implement-feature` 为每个 Feature 创建独立 Git worktree 和隔离分支
+* Feature 间有依赖关系时，依赖未完成的 Feature 不得进入 `implementing`
+* 多 Feature 并行完成后必须通过 Status Checker、Git Delivery Gate 和 PR 检查汇总 diff、执行结果、PR/merge/cleanup 证据，并按目标分支顺序合并
+
+### 6.7 任务图与看板
+
+#### FR-050 任务图生成
+
+任务必须包含：
+
+* task_id
+* title
+* description
+* source_requirement
+* user_story
+* acceptance_criteria
+* allowed_files
+* dependencies
+* parallelizable
+* risk_level
+* estimated_effort
+* status
+
+#### FR-051 看板列
+
+默认看板列：
+
+```text
+Backlog
+Ready
+Scheduled
+Running
+Checking
+Review Needed
+Blocked
+Failed
+Done
+Delivered
+```
+
+#### FR-052 状态自动流转
+
+```text
+Backlog → Ready
+Ready → Scheduled
+Scheduled → Running
+Running → Checking
+Checking → Done
+Checking → Review Needed
+Checking → Blocked
+Checking → Failed
+Done → Delivered
+```
+
+#### FR-053 任务卡片
+
+任务卡片展示标题、Feature、User Story、当前状态、依赖任务、计划执行时间、最近 Runner、最近 Execution Result、测试状态、diff 摘要、风险等级和审批状态。
+
+### 6.8 Scheduler
+
+#### FR-060 定时执行
+
+系统支持立即执行、指定时间执行、每日执行、每小时巡检、夜间自动执行、工作日执行、依赖完成后执行、CI 失败后执行、审批通过后执行。
+
+调度触发必须进入真实任务调度系统，而不是由 Console 请求同步完成。MVP 使用 BullMQ + Redis 承担延迟、周期和 Worker 执行，SQLite 继续作为业务事实、审计和恢复来源。Redis 不可用时，调度健康状态为 blocked，API 和 Console 不得崩溃。
+
+#### FR-061 调度层级
+
+系统调度分为两层：
+
+```text
+Project Scheduler
+  → 在项目级别从 Feature Pool Queue 中逐个选择 ready Feature
+  → 默认一次只推进一个 Feature
+  → 项目级并行开关开启后，可同时推进多个互不冲突的 Feature
+
+Feature Scheduler
+  → 在单个 Feature Spec 内部调度任务图
+  → 根据任务依赖、风险、文件范围和 Runner 可用性推进 Backlog / Ready / Scheduled / Running
+  → Feature 内任务并行必须满足依赖和文件隔离条件
+```
+
+Project Scheduler 负责读取 `feature-pool-queue.json` 队列规划，调用 `plan-feature-execution` 推理选择下一项可执行 Feature，校验技能决策后创建 `<executor>.run` Job、记录 Execution Record 和跨 Feature 资源约束。Feature 内任务排序、并行、worker worktree 和 task 状态由 `implement-feature` 与 Feature Spec `tasks.md` 管理，平台不再维护二次 TaskGraph，也不直接创建 Feature worktree、分支或 PR。
+
+Project Scheduler 的调度 job 类型为 `<executor>.run`，当前为 `cli.run`，后续可扩展 `native.run`。Job payload 必须包含 `operation`、`projectId`、`context`；Feature/Task/Project 只出现在 context 中。Feature 执行统一使用 `operation = "feature_execution"`。
+
+CLI 执行调度由 Runner Worker 消费 `cli.run` Job，写 heartbeat/session/log/execution results/status check，并回写 Execution Record 与相关 context 状态。
+
+#### FR-062 调度策略
+
+**项目级调度**：Project Scheduler 触发 `plan-feature-execution` 根据优先级、依赖完成情况、验收风险、就绪状态、最近执行结果、approval pending、blocked/review_needed/failed 状态、worktree 并发适配性和人工 resume/skip 选定下一个 Feature；每次调度都从 Feature Pool Queue 动态计算候选集，识别最新优先级、阻塞解除、人工覆盖和 Spec 变更；项目级并行开关关闭时逐个 Feature 串行推进，开启时按 FR-058 选择多个可并行 Feature。技能输出只是选择建议，代码必须再次校验 Feature 属于队列、三件套完整、依赖满足且没有 active `feature_execution`。
+
+**Feature 内调度**：Feature Scheduler 在单个 Feature Spec 的任务图内，根据优先级、依赖状态、风险等级、并行能力、Runner 可用性、Git worktree 状态、成本预算、允许执行窗口和审批要求排序。
+
+Console 中的项目级 `schedule_run` 和 `start_auto_run` 返回调度触发 ID、scheduler job ID、Execution Record ID 与 Feature selection reason；Feature 选择必须先通过 `plan-feature-execution` 推理和代码安全闸，随后才创建 `<executor>.run` Job。`schedule_board_tasks` 只执行 `ready -> scheduled` 和审计；`run_board_tasks` 只创建 Run 并入队 `cli.run`，不得在点击时直接执行 CLI 或伪造执行结果。
+
+#### FR-063 Worktree 并行隔离
+
+项目级并行和 Feature 内写入型任务并行都必须使用 Skill-owned Git worktree：
+
+* 项目级并行：每个并行 Feature 由 `implement-feature` 使用独立 worktree、独立分支和独立 PR。
+* Feature 内并行：每个并行写任务或任务组可以由该 Feature 的执行技能创建 worker worktree；worker 分支先合回 Feature 分支，最终仍由一个 Feature PR 管理。
+* 只读任务可共享只读工作区，但不得写入文件。
+* 同一文件、同一目录迁移、数据库 schema、锁文件、公共配置等高冲突范围默认串行，不得仅依赖 worktree 并行。
+* 涉及数据库、缓存、消息队列、搜索索引、外部 API、文件上传目录等共享运行时资源的并行任务，必须使用 mock、命名空间隔离、临时容器、独立 schema/database 或一次性测试实例；无法隔离时必须串行执行。
+* 集成测试和端到端测试不得默认共享同一可变本地数据库或缓存实例；测试环境标识、连接串、容器名和清理策略必须写入 workspace schema 和 Execution Result。
+* worktree 创建、分支名、base commit、目标分支、关联 Feature/Task、Runner、PR、merge 和清理状态必须通过 `result.gitDelivery`、Execution Record、Project Memory 投影和审计日志记录。
+* 合并前必须执行冲突检测、Spec Alignment Check、必要测试和 PR checks；冲突、高风险 diff、缺少 PR/merge/cleanup 证据时进入 Review Needed / Approval Needed / Blocked。
+
+#### FR-064 长时间恢复
+
+系统重启后必须恢复：
+
+* 未完成 Run
+* Running 任务
+* Scheduled 任务
+* Runner 心跳
+* Git worktree 状态
+* CLI session 信息
+* 最近 Execution Result
+* Project Memory（注入下一次 CLI 会话）
+
+### 6.9 Codex Runner
+
+#### FR-070 编码 CLI 执行
+
+系统通过 Runner CLI Adapter 调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价编码 CLI。Codex 是 MVP 默认 adapter，Gemini 和 Claude 是内置可选 adapter preset；Runner 不得把命令模板、参数映射、输出解析和 session resume 逻辑硬编码到调度状态机中。Codex CLI preset 必须支持 Fast mode 配置，通过 adapter defaults 控制 `service_tier` 和 `features.fast_mode`，并在命令模板中以 Codex CLI 配置覆盖方式传递。
+
+编码 CLI 调用必须以当前项目 workspace 启动。workspace root 的来源优先级为当前项目 repository `local_path`、项目 `target_repo_path`；不得回退到 SpecDrive Control Plane 进程运行目录。缺少项目路径、路径不可读、不是可用 workspace，或 workspace 中缺少所需 `.agents/skills/*` / `AGENTS.md` 时，新 Run 必须进入 blocked 并给出可观察原因。
+
+```bash
+codex exec --cd <workspace> --json --output-schema execution results.schema.json "<prompt>"
+gemini --model <model> --output-format stream-json -p "<prompt>"
+```
+
+Product Console 和 Spec Workspace 的用户操作不直接执行生成、规划或编码逻辑，而是转换为 CLI skill invocation prompt 后进入 Runner：
+
+* Stage 2 需求录入操作生成 `collect-project-context`、`convert-ears-requirements`、`manage-spec-change` 或 `validate-requirements` 的调用提示，并通过 CLI Adapter 在项目 workspace 中执行。
+* Stage 3 planning 操作通过 CLI Skill Planning Bridge 调用 Skill：项目级 HLD 生成使用 `design-architecture` 并输出 `docs/agentic-spec/zh-CN/hld.md`；UI Spec 生成使用 `design-ui-spec`；per-Feature 规划继续调用 `implement-feature`、`plan-feature-execution`、`design-architecture`、`design-architecture`、`design-architecture`、`plan-feature-execution`、`decompose-feature-specs` 和 `review-code-spec`。
+* Task Board 的运行操作通过 `implement-feature` 执行已排期任务；该 Skill 拥有 Feature worktree、分支、提交、PR、merge 和 cleanup 生命周期，平台代码只验证 `result.gitDelivery` 并投影状态。
+
+平台只记录 Console command、scheduler job、Run、执行结果、Status、Review 和 Audit，不恢复 Skill Registry、Skill Center、Skill schema 校验或平台级 SkillRun 表；Skill 发现和执行属于 CLI workspace 内部行为。
+
+每个 CLI Adapter 必须声明：
+
+* adapter id
+* executable
+* argument template
+* environment allowlist
+* working directory policy
+* output mode
+* execution results schema mapping
+* session resume mapping
+* safety capability flags
+* provider-specific speed / service tier defaults
+
+#### FR-071 Codex 安全策略
+
+Codex Runner 必须支持 sandbox mode、approval policy、model、profile、provider-specific speed / service tier、output schema、JSON event stream、workspace root 和 session resume。
+
+#### FR-072 默认安全配置
+
+| 任务风险  | sandbox         | approval   | 说明      |
+| ----- | --------------- | ---------- | ------- |
+| 只读分析  | read-only       | never      | 不修改文件   |
+| 低风险编码 | danger-full-access | never | 开发阶段默认最大操作权限，不触发编码 CLI 人工确认 |
+| 中风险编码 | danger-full-access | never | 开发阶段默认最大操作权限，不触发编码 CLI 人工确认 |
+| 高风险编码 | danger-full-access | never | 开发阶段默认最大操作权限；敏感文件和破坏性命令仍由 Safety Gate 阻断 |
+| 危险任务  | 禁止              | 必须人工       | 不自动执行   |
+
+#### FR-073 CLI Adapter JSON 配置
+
+Runner CLI Adapter 配置必须通过 JSON 持久化，并由 JSON Schema 校验。配置至少包含 adapter 身份、命令模板、参数字段、默认模型或 profile、provider-specific speed / service tier、安全策略、输出解析、执行结果映射、session resume、环境变量 allowlist 和可见性元数据。
+
+配置变更必须写审计日志，并在生效前通过 dry-run 校验命令模板、必填字段、安全约束和 schema 版本。无效配置不得进入 active 状态，也不得影响正在运行的 Run。
+
+### 6.10 状态检测
+
+#### FR-080 检测项
+
+每次 Run 后自动检测：
+
+* Git diff
+* 构建结果
+* 单元测试
+* 集成测试
+* 类型检查
+* lint
+* 安全扫描
+* 敏感信息扫描
+* Spec alignment
+* 任务完成度
+* 风险文件修改
+* 未授权文件修改
+
+#### FR-081 状态判断
+
+```text
+无代码变更 + 无法解释 → Blocked
+有代码变更 + 测试通过 + 验收通过 → Done
+有代码变更 + 测试失败 + 可修复 → Ready 或 Scheduled
+有高风险 diff → Review Needed
+缺依赖/缺权限 → Blocked
+连续失败超过阈值 → Failed
+需求不清楚 → Review Needed
+```
+
+#### FR-082 Spec Alignment Check
+
+系统检查 diff、task、user story、requirement、acceptance criteria、测试覆盖和 forbidden files 之间的一致性。
+
+### 6.11 自动恢复
+
+#### FR-090 Failure Recovery Skill
+
+失败后系统生成恢复任务。
+
+```json
+{
+  "failure_type": "test_failed",
+  "failed_command": "pnpm test",
+  "summary": "auth form validation failed",
+  "related_files": [],
+  "previous_attempts": [],
+  "forbidden_retries": [],
+  "max_retry": 3
+}
+```
+
+#### FR-091 恢复策略
+
+系统支持自动修复、回滚当前任务修改、拆分任务、降级为只读分析、请求人工审批、更新 Spec 和更新任务依赖。
+
+#### FR-092 防止重复失败
+
+系统记录上次失败原因、上次修复方案、禁止重复策略、失败次数和失败模式指纹。对同一失败模式最多自动重试 3 次，重试等待时间依次为 2 分钟、4 分钟和 8 分钟；达到最大重试次数后停止自动重试并进入人工处理路径。
+
+失败模式指纹至少由 task_id、失败阶段、失败命令或检查项、规范化错误摘要和相关文件集合生成。禁止重复策略必须记录已导致同一指纹重复失败的修复方案、命令和文件范围，并阻止再次自动执行相同尝试。
+
+### 6.12 审批中心
+
+#### FR-100 审批触发
+
+以下情况进入 Review Needed：
+
+* 修改认证、权限、支付、数据迁移。
+* diff 超过阈值。
+* 修改 forbidden files。
+* 多次失败。
+* 测试未通过但 Agent 建议继续。
+* 需求存在高影响歧义。
+* 需要提升 Codex 权限。
+* 需要变更 constitution。
+* 需要变更架构方案。
+
+#### FR-101 审批页面
+
+审批页面展示任务目标、关联 Spec、Runner policy、diff 摘要、测试结果、风险说明、推荐动作和可选操作。
+
+可选操作包括：
+
+* 批准继续
+* 拒绝
+* 要求修改
+* 回滚
+* 拆分任务
+* 更新 Spec
+* 标记完成
+
+### 6.13 PR 与交付
+
+#### FR-110 自动生成 PR
+
+PR 内容包括 Feature 摘要、完成任务、关联 requirements、测试结果、风险说明、人工审批记录、回滚方案和未完成事项。
+
+#### FR-111 交付报告
+
+交付报告包括本轮完成内容、变更文件、验收结果、测试摘要、失败和恢复记录、风险项、下一步建议和 Spec 演进建议。
+
+#### FR-112 Spec Evolution
+
+实现过程中发现需求不准确、验收标准不可测、代码库现实与计划冲突、审批意见改变范围、测试暴露缺失边界条件或运行指标暴露新约束时，系统建议更新 Spec。
+
+### 6.14 Delivery Lifecycle OS
+
+#### FR-120 Lifecycle-first 工作流
+
+Agentic Spec 的用户心智模型从编号阶段切换为 Define、Plan、Build、Verify、Review、Ship。现有 00-14 Skill 编号保留为内部兼容层；调度、文档和 Skill 导航应优先说明每个生命周期阶段保留了哪些产品意图、产生了哪些行为义务、发现了哪些损失以及如何关闭。
+
+#### FR-121 Delivery Fidelity Ledger
+
+每次 Feature execution、验证、审查和交付判断都必须维护 Delivery Fidelity Ledger。Ledger 记录 sourceIntent、journeys、behaviorObligations、handoffs、losses、evidence、agentReviews 和 completionDecision。质量损失作为一等事实记录，类型包括 intent_loss、journey_loss、interaction_loss、state_loss、data_loss、task_loss、implementation_shortcut、test_bypass、review_gap 和 delivery_gap。
+
+#### FR-122 Skill / Agent 路由
+
+系统通过 `use-specdrive-lifecycle` 元技能和项目 Skill 文档为任务选择 workflow、skill 与 agent persona。Product Interpreter、Requirement Critic、Interaction Designer、Task Slicer、Implementation Agent、Test Engineer、Browser QA、Code Reviewer 和 Release Reviewer 是责任角色；当运行时无法创建真实 subagent 时，owner thread 也必须按角色执行独立 pass 并记录 fallback。
+
+#### FR-123 Skill Contract V2
+
+`implement-feature` 返回 completed 的 `feature_execution` 必须使用 `skill-contract/v2`。v2 在现有 requirementCoverage、acceptanceEvidence、journeyEvidence 和 gitDelivery 之外，强制包含 `result.deliveryFidelity`。当变更触碰 UI/App 行为时，v2 还必须提供 `result.runtimeEvidence`，覆盖 app launch、route、用户操作、状态变化、reload 持久化或等价断言、负向/边界路径和 screenshot / trace / log 证据；foundation 或 stateless 变更必须用 `result.runtimeExemption` 显式豁免。`skill-contract/v1` 仍可读取 legacy 或非 Feature 输出，但不得作为新 Feature completed 的依据。
+
+#### FR-124 全流程损失审查
+
+Status Checker、Review Center、Execution Workbench 和 Feature Aggregator 必须把 Delivery Fidelity 失败投影为 `review_needed`，并显示质量损失发生阶段、责任角色、缺失证据、推荐修复和是否允许延期。仅依赖测试通过、入口存在、API-seeded fixture、commit、PR 或实现 agent 自证不得关闭 Feature。
+
+#### FR-125 Spec Artifact Granularity Gate
+
+Agentic Spec 必须采用 requirements-first 的规格生成顺序：先确认 PRD 与 EARS requirements 是否足够具体，再生成 HLD / UI Spec / Feature Spec design，最后生成 tasks。需求变更后必须 refine design 并 sync tasks，不得让粗颗粒度主线文档或 Feature Spec 直接进入实现。
+
+Spec Artifact Granularity Gate 按文档层级检查：
+
+* PRD 必须把大模块拆到用户、目标、业务流程、子能力、成功样例、失败样例、非目标和优先级。
+* requirements 必须把每个 `REQ-*` / `NFR-*` / `EDGE-*` 写成原子、可观察、可测试的行为单元，并映射 `US-*`、验收、边界路径和证据类型。
+* HLD 必须说明系统级子系统、数据事实源、状态流、接口/事件策略、运行拓扑、质量策略和 Feature 拆分指导；不能只列组件名或页面名。
+* UI Spec 升级为 UI System Design：必须基于 PRD、requirements 和 HLD 覆盖全部页面、视图、弹窗、状态、用户动作、端到端交互流程、交互矩阵、设计 token、组件语义、数据绑定、保存/校验/reload 断言、浏览器验收，并输出可本地打开的高保真静态 HTML 原型作为 WYSIWYG 评审证据。
+* Feature Spec 必须把上游义务承接为垂直用户旅程、Feature-scoped design、parser-compatible tasks、Journey Checkpoints 和验收证据计划。
+
+任何层级只包含模块名、页面名、概念名、happy path、只读截图或入口文字时，`review-delivery-evidence` 必须返回 `review_needed`，并列出 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap` 或 `evidence_gap`。
+
+#### FR-126 VSCode Webview Quality Workbench
+
+质量完成判断由代码门禁、Status Checker、ReviewItem 和 VSCode IDE Webview 共同承载。Execution Workbench 和 Feature Spec 详情必须从 durable runtime fields 读取并展示 requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity losses、Git delivery、Workpad、原始日志、截图/trace、PR/check 和 ReviewItem 状态。Product Console 仅作为历史兼容面，不新增主要质量 UI，也不得作为 VSCode Webview 的 ViewModel 或组件事实源。
+
+#### FR-127 Spec 文档生成质量修复循环
+
+所有 Spec 文档生成或更新操作都必须在返回完成前执行质量检测与修复循环。适用范围包括项目章程、PRD、requirements、HLD、UI Spec、Feature Spec `requirements.md` / `design.md` / `tasks.md`、Feature index、Feature Pool Queue、ADR，以及后续会向规划或执行传递的 Markdown / JSON 规格产物。
+
+循环由调用该 loop 的生成 Skill 选择本次 Quality Review Skill / Repair Owner，并由主生成线程定义完整 `qualityLoopPlan` 后分别委派 Quality Review Subagent 与 Repair Subagent 执行。共享 loop 不维护产物类型到质检技能的中央路由表；主生成线程不得自己把失败项静默修掉，只负责合并结构化结果、判断是否继续和选择退出状态。每次循环必须先确定允许修复的文件、来源事实、禁止文件、允许 gap 类型、风险上限、ID 策略、是否允许下游同步、所选质检技能及选择理由、修复 owner 及选择理由；只有在现有来源足够、修复位于范围内且不会新增产品/架构决策时，才允许 Repair Subagent 修改产物。
+
+每次文档生成最多执行 10 轮质量检测/修复。质量通过即返回完成；没有可修复项、剩余项不在修复范围、需要用户澄清、需要风险评审、重复同一 gap 指纹或达到 10 轮时，必须退出到 `clarification_needed`、`review_needed`、`risk_review_needed` 或 `blocked`，不得继续推进到 HLD、UI Spec、Feature 拆分、任务生成、ready、planning 或 execution。
+
+---
+
+## 7. 核心数据模型
+
+### Project
+
+```json
+{
+  "id": "PRJ-001",
+  "name": "SpecDrive Demo",
+  "repo_url": "",
+  "default_branch": "main",
+  "status": "active",
+  "trust_level": "trusted",
+  "created_at": "",
+  "settings": {}
+}
+```
+
+### ProjectSelectionContext
+
+```json
+{
+  "current_project_id": "PRJ-001",
+  "available_project_ids": ["PRJ-001", "PRJ-002"],
+  "last_switched_at": "",
+  "selection_source": "user|system_default|resume"
+}
+```
+
+### Feature
+
+```json
+{
+  "id": "FEAT-001",
+  "project_id": "PRJ-001",
+  "title": "",
+  "priority": "P1|P2|P3",
+  "status": "draft|ready|planning|tasked|implementing|review_needed|blocked|failed|done|delivered",
+  "review_needed_reason": "approval_needed|clarification_needed|risk_review_needed|null",
+  "dependencies": [],
+  "spec_version": "1.0.0",
+  "selected_at": "",
+  "planning_started_at": "",
+  "implementing_started_at": ""
+}
+```
+
+### Requirement
+
+```json
+{
+  "id": "FR-001",
+  "feature_id": "FEAT-001",
+  "type": "functional|non_functional|constraint",
+  "text": "",
+  "acceptance_criteria": [],
+  "priority": "P1"
+}
+```
+
+### Task
+
+```json
+{
+  "id": "T-001",
+  "feature_id": "FEAT-001",
+  "user_story_id": "US-001",
+  "title": "",
+  "status": "backlog|ready|scheduled|running|checking|review_needed|blocked|failed|done|delivered",
+  "review_needed_reason": "approval_needed|clarification_needed|risk_review_needed|null",
+  "dependencies": [],
+  "parallelizable": true,
+  "allowed_files": [],
+  "risk_level": "low",
+  "status": "ready"
+}
+```
+
+### Run
+
+```json
+{
+  "id": "RUN-001",
+  "task_id": "T-001",
+  "adapter_id": "codex-cli",
+  "skill": "implement-feature",
+  "status": "running|success|failed|blocked",
+  "started_at": "",
+  "ended_at": "",
+  "codex_session_id": "",
+  "execution_result_id": ""
+}
+```
+
+### CliAdapterConfig
+
+```json
+{
+  "id": "codex-cli",
+  "display_name": "Codex CLI",
+  "schema_version": 1,
+  "executable": "codex",
+  "argument_template": ["exec", "--cd", "{{workspace}}", "--json", "--output-schema", "{{output_schema}}", "{{prompt}}"],
+  "config_schema": {},
+  "form_schema": {},
+  "defaults": {
+    "model": "",
+    "profile": "",
+    "sandbox": "danger-full-access",
+    "approval": "never"
+  },
+  "environment_allowlist": [],
+  "output_mapping": {
+    "event_stream": "json",
+    "skill_output_schema": "execution results.schema.json",
+    "session_id_path": "session_id"
+  },
+  "status": "draft|active|disabled|invalid",
+  "updated_at": ""
+}
+```
+
+### ProjectMemory
+
+```json
+{
+  "version": "MEM-20260427-042",
+  "project_id": "PRJ-001",
+  "updated_at": "",
+  "updated_by_run": "RUN-001",
+  "current_feature": "FEAT-001",
+  "current_feature_status": "implementing",
+  "last_feature_selection": {
+    "selected_feature_id": "FEAT-001",
+    "selected_at": "",
+    "reason": "P1, dependencies done, lowest acceptance risk"
+  },
+  "ready_feature_snapshot": [
+    { "feature_id": "FEAT-002", "priority": "P1", "status": "ready", "snapshot_at": "" },
+    { "feature_id": "FEAT-003", "priority": "P2", "status": "ready", "snapshot_at": "" }
+  ],
+  "current_task": "T-021",
+  "current_run": {
+    "run_id": "RUN-001",
+    "agent_type": "coding-agent",
+    "status": "running|success|failed|blocked",
+    "started_at": "",
+    "ended_at": ""
+  },
+  "task_state_snapshot": [
+    { "task_id": "T-019", "title": "", "status": "done" },
+    { "task_id": "T-020", "title": "", "status": "done" },
+    { "task_id": "T-021", "title": "", "status": "running" },
+    { "task_id": "T-022", "title": "", "status": "blocked", "blocker": "" },
+    { "task_id": "T-023", "title": "", "status": "ready" }
+  ],
+  "active_blockers": [],
+  "pending_approvals": [],
+  "recent_decisions": [],
+  "failure_fingerprints": [],
+  "forbidden_retries": [],
+  "completed_tasks_summary": "",
+  "spec_version": "1.2.0",
+  "token_budget_used": 3200
+}
+```
+
+### ExecutionResult
+
+```json
+{
+  "id": "EV-001",
+  "run_id": "RUN-001",
+  "summary": "",
+  "changed_files": [],
+  "commands": [],
+  "test_result": {},
+  "risk": "low",
+  "recommendation": ""
+}
+```
+
+---
+
+## 8. 页面需求
+
+### 8.1 Dashboard
+
+展示项目健康度、当前活跃 Feature、看板任务数量、正在运行的 Subagent、今日自动执行次数、失败任务、待审批任务、成本消耗、最近 PR 和风险提醒。
+
+Product Console 必须提供项目创建入口、项目列表和当前项目切换控件。切换项目后，所有页面、受控命令和反馈提示必须绑定到当前项目，避免跨项目读取或操作状态。
+
+### 8.2 Spec Workspace
+
+支持创建 Feature，查看 Spec、澄清记录、需求质量 checklist、技术计划、数据模型、契约、任务图和 Spec 版本 diff。
+
+Spec Workspace 必须将 Spec 操作流程拆为三个可见阶段：
+
+* 阶段 1 项目初始化：展示创建或导入项目、连接 Git 仓库、初始化 `.autobuild/` / Spec Protocol、导入或创建项目宪章、初始化 Project Memory 的状态、阻塞原因和事实来源。
+* 阶段 2 需求录入：将 Spec 来源扫描和上传合并为一个阶段内步骤，并在该步骤中显示“扫描”和“上传”两个动作；继续展示识别 PR/RP/PRD/EARS、生成 EARS 文档、完成关键澄清、执行需求质量检查的状态、阻塞原因和事实来源。
+* 阶段 3 设计规划与任务调度：展示 HLD、UI Spec、Feature Spec 拆分、Feature Spec 目录完整性、启动自动执行、状态检查和状态聚合的状态、阻塞原因和事实来源；不再展示独立“推入 Feature Spec Pool”步骤。
+
+Spec Workspace 的 Spec 操作流程不得把阶段 3 的 HLD 生成、Feature Spec 拆分、规划流水线入口混入阶段 2。阶段 1 / 阶段 2 / 阶段 3 流程在工作台头部默认折叠为状态标签，只展示阶段名称、状态、更新时间和压缩提示标签；用户点击阶段标签后才展开阶段事实、阻塞原因和阶段内步骤，避免项目初始化流程和后续大量 Feature 长期占用主要幅面。流程后方不得再展示独立提示信息栏，当前 Spec 来源、版本、扫描模式、最后扫描时间和阻塞数量应以标签形式显示在流程说明栏。阶段 3 操作可以作为选中 Feature 的受控操作展示，但必须与 Spec 需求录入流程视觉分离。没有 ready 项目时，Spec Workspace 仍必须展示阶段 1 阻塞状态和下一步动作；没有 Feature Spec 时，仍必须展示阶段 1 / 阶段 2 / 阶段 3 流程，让用户可以从 Spec 录入开始。
+
+### 8.3 Skill Center（已移除）
+
+Product Console 不再提供 Skill Center 页面。
+
+### 8.4 Subagent Console（已移除）
+
+Product Console 不再提供 Subagent Console 页面；Runner Console 仅展示外部执行队列、心跳、日志、证据和状态检测。
+
+### 8.5 Dashboard Board
+
+支持看板拖拽、批量排期、批量运行、查看依赖、查看 diff、查看测试结果、查看审批状态和失败恢复历史。
+
+### 8.6 Runner Console
+
+支持查看 Runner 在线状态、active CLI adapter、当前模型、当前 sandbox、当前 approval policy、当前 queue、最近日志和心跳状态，并支持暂停/恢复 Runner。
+
+Runner Console 展示当前 active CLI Adapter、最近 dry-run 状态和配置健康摘要，但不直接承载 CLI 配置编辑。用户需要修改 CLI Adapter 时，从 Runner Console 跳转到系统设置中的 CLI 配置页。
+
+### 8.7 Review Center
+
+支持待审批列表、风险筛选、diff 查看、执行结果查看、批准、拒绝、要求修改、写入项目规则和写入 Spec Evolution。
+
+### 8.8 语言切换
+
+Product Console 必须支持界面语言切换，并默认使用中文。用户切换语言后，导航、页面标题、操作按钮、状态标签、空态、错误态、反馈提示和确认信息必须使用所选语言展示；系统状态数据、执行结果、diff、日志、文件路径、命令输出和用户输入内容不得被错误翻译。
+
+### 8.9 系统设置
+
+Product Console 必须提供系统设置入口，用于管理跨页面、跨 Run 的系统级配置。MVP 系统设置至少包含 CLI Adapter 配置管理。
+
+Product Console 必须支持 VS Code、浅色、深色和高对比度主题；首次打开且没有已保存偏好时默认使用浅色主题，用户切换主题后必须保留偏好并在刷新后恢复。
+
+系统设置中的 CLI 配置页必须支持查看当前 active adapter、打开 JSON 配置、通过 JSON Schema 驱动的表单编辑命令参数、安全策略、输出映射和 session resume 设置，并在保存前执行 dry-run 校验。表单编辑和原始 JSON 编辑必须共享同一份配置事实源。
+
+### 8.10 Chat Interface 自然语言指令面板
+
+Product Console 在所有页面右下角提供可折叠的 Chat Interface 悬浮面板，允许用户通过自然语言提问和下达指令，系统识别意图后转换为受控命令执行。
+
+面板支持以下意图类型：查询任务状态、查询 Review 待审批项、新增需求、变更需求、触发调度（schedule_run）、暂停/恢复 Runner、批准/拒绝 Review、生成 EARS 需求、生成 HLD、帮助说明、取消和确认。
+
+高风险意图（schedule_run、pause_runner、resume_runner、approve_review、reject_review）在执行前必须向用户展示操作预览，等待用户发送确认指令后才通过受控命令执行。低风险和中等风险意图立即执行。
+
+意图分类优先调用 Codex CLI，Codex 不可用时退回规则关键词分类。对话历史和命令回执持久化到 SQLite chat_sessions 和 chat_messages 表，按 project_id 关联，支持会话重连时恢复历史记录。
+
+### 8.11 VSCode IDE 入口
+
+SpecDrive IDE 是 VSCode 原生交互层。它承担日常 Spec 阅读、澄清、需求新增/变更、任务队列管理、执行观察、质量证据审查和 app-server 审批；Product Console 保留为系统设置、adapter 配置、队列调试和全局状态总览的历史兼容面。VSCode 插件必须提供独立 Execution Workbench Webview，作为任务调度、自动执行和质量闭环主界面，不复用当前 Product Console Web UI。
+
+VSCode 插件能力包括：
+
+* 识别 `docs/agentic-spec/<language>/PRD.md`、`requirements.md`、`hld.md`、`docs/agentic-spec/features/README.md`、`feature-pool-queue.json` 和各 Feature `spec-state.json`。
+* 在 Activity Bar / Explorer 中展示 Spec Explorer，包括 PRD、EARS Requirements、HLD、Feature Specs、Task Queue、Execution Record 和最近 Codex 会话。
+* 在插件 Webview 中展示独立 Execution Workbench，默认聚焦 Job 队列、当前运行、下一步动作、阻塞原因、自动执行控制、审批待办和执行结果观察。
+* 在 Execution Workbench 和 Feature Spec 详情中展示质量证据，包括 requirement coverage、acceptance evidence、journey evidence、runtime evidence、Delivery Fidelity、Git delivery、Workpad、日志、截图/trace、PR/check 和 ReviewItem 状态。
+* 在 System Settings 中按项目保存系统级执行默认值，包括 `cli` / `rpc` run mode 和对应 Execution Adapter provider；在 Execution Workbench 创建新 Job 前允许用户选择 Job 级 run mode 与 provider 覆盖项目默认。
+* 在 Feature Spec Webview 顶部提供 New Feature 弹出输入框；用户提交自然语言内容后，插件只提交受控需求输入，由模型判定进入需求新增流程或需求变更流程。
+* Feature Spec 和 Execution Workbench 的详情区域必须展示 Feature Spec 标题和描述信息，不得只显示 Feature 编号作为任务意图说明。
+* 需求新增、需求变更和澄清输入在 Webview 中以聊天对话框形态展示；Webview 自动刷新或手动刷新不得清空尚未提交的输入草稿。
+* 刷新 Feature Spec Webview 时同时读取 `docs/agentic-spec/features/README.md` 和 `docs/agentic-spec/features/*` 目录，发现需求新增流程未同步 index 时补齐 Feature index 或展示同步阻塞原因。
+* 点击 Feature 后在详情面板解析对应 `tasks.md`，展示任务列表、任务状态、描述和验证命令。
+* 在 PRD、requirements、HLD 和 Feature Spec 中提供 Hover、CodeLens、Comments 和 Diagnostics。
+* 将用户在行级或段落级提交的澄清、需求新增、需求变更、EARS 生成、设计更新和 Feature 拆分意图转换为 `SpecChangeRequestV1`。
+* 通过 Control Plane command API 提交 `submit_spec_change_request`、`enqueue_feature`、`run_feature_now`、`run_task_now`、`pause_job`、`resume_job`、`retry_execution`、`cancel_execution`、`skip_feature`、`reprioritize_job` 和 `approve_app_server_request`。
+* 订阅 scheduler job、Execution Record、raw logs、approval pending 和 `spec-state.json` 投影，实时刷新 Task Queue、状态面板和 Diagnostics。
+
+边界规则：
+
+* 插件不得直接写 `spec-state.json`、`execution_records` 或 `scheduler_job_records`。
+* 插件不得直接调用 Codex `turn/start`；Runner 是唯一连接 Codex RPC 并调用 thread/turn API 的组件。
+* 查询类动作可以直接读取文件或调用 query API；凡是落盘、调度、取消、重试、审批或修改配置的动作必须走受控命令。
+* Job 级执行偏好只影响新建 Job；已 queued Job 不在前端直接改写，retry 默认继承 previous execution 的 run mode 与 provider。
+* Execution Workbench 可以复用 shared contract、TypeScript 类型和 Control Plane query/command API；不得复用 Product Console 的页面、路由、导航、App Shell、组件实现或 ViewModel 作为插件 UI 的事实源。
+* Product Console 不承载新增主质量 UI；除非历史接口或兼容测试依赖，不得把新增质量展示优先实现到 Product Console。
+* 新需求没有目标 requirement id 时走 requirement intake；已有 requirement id 的修改走 spec evolution；源文本变化时返回 `stale_source` 并要求用户重新确认。
+
+---
+
+## 9. 非功能需求
+
+### 9.1 安全
+
+* 开发阶段 Runner 默认使用 `danger-full-access`。
+* 开发阶段 Runner 默认使用 `approval=never`，不触发编码 CLI 人工确认。
+* 高风险文件保护。
+* `.env`、密钥、支付、认证配置需特殊保护。
+* 写入边界通过任务图、Workspace Isolation、Runner policy 和 CLI 自身沙箱策略共同约束。
+* 所有命令记录审计日志。
+* 所有审批可追踪。
+* 所有自动修改可回滚。
+
+### 9.2 稳定性
+
+* 调度器崩溃后可恢复。
+* Runner 掉线后任务不丢失。
+* Run 幂等。
+* Execution Result 持久化。
+* 同一文件写操作串行。
+* 失败任务可重放。
+
+### 9.3 可观测性
+
+* 每个 Run 有唯一 ID。
+* 每个状态变化有时间线。
+* 每个 Subagent 有输入输出记录。
+* 每个任务有完成证据。
+* 支持日志搜索。
+* 支持成本统计。
+* 支持成功率统计。
+
+### 9.4 性能
+
+* 看板 1000 任务以内加载 < 2 秒。
+* 任务状态刷新 < 5 秒。
+* Runner 心跳 10-30 秒。
+* Execution Result 写入 < 3 秒。
+* 支持至少 10 个并发只读 Subagent。
+* MVP 写任务默认单仓库单分支串行。
+
+MVP 阶段记录看板加载、状态刷新和 Execution Result 写入耗时作为性能优化基线；上述性能阈值不作为阻塞验收门槛。
+
+---
+
+## 10. 成功指标
+
+| 指标                   | MVP 目标 |
+| -------------------- | ------ |
+| Feature Spec 自动生成成功率 | >= 90% |
+| PR/EARS 需求拆解准确率       | >= 85% |
+| 澄清问题有效率              | >= 80% |
+| 任务图可执行率              | >= 85% |
+| 低风险任务自动完成率           | >= 60% |
+| 自动状态判断准确率            | >= 85% |
+| 失败任务可恢复率             | >= 50% |
+| PR 交付报告生成率           | 100%   |
+| 任务可追踪覆盖率             | 100%   |
+
+---
+
+## 11. MVP 版本规划
+
+### M1：Spec Protocol + CLI Skill Discovery
+
+* 项目创建
+* 项目列表与项目切换
+* Git 仓库连接
+* Spec Protocol 数据结构
+* Requirement Intake Skill
+* PR/EARS Requirement Decomposition Skill
+* Clarification Skill
+* Checklist Skill
+* Constitution Skill
+
+### M2：Plan + Task Graph + Feature 选择器
+
+* Technical Context Skill
+* Architecture Plan Skill
+* Research Decision Skill
+* Task Slicing Skill
+* 任务依赖图
+* 看板基础版
+* Feature 状态机
+* Feature Spec 自动选择器
+* Feature 计划流水线自动驱动
+
+### M3：CLI Subagent Observation + Project Memory
+
+* CLI Subagent event 记录
+* Execution Result
+* Status Check 结果判定
+* 只读 Subagent 并行
+* Project Memory 初始化与注入
+* Project Memory 自动更新（Run 结束后）
+* Project Memory 大小控制与压缩
+
+### M4：Codex Runner
+
+* Codex exec 集成
+* JSON event stream
+* output schema
+* sandbox/approval 配置
+* Git diff 采集
+* 测试命令执行
+
+### M5：状态检测与恢复
+
+* Build/test/lint/type check
+* Spec alignment check
+* Failure Recovery Skill
+* 自动重试
+* Blocked/Failed 判断
+
+### M6：审批与交付
+
+* Review Center
+* PR 生成
+* Delivery Report
+* Spec Evolution
+
+### M7：Product Console
+
+* Dashboard、Dashboard Board、Spec Workspace、Runner Console、System Settings 和 Chat Interface。
+* 项目创建、项目切换、Spec Sources 扫描状态、CLI Adapter JSON 表单配置和默认中文界面。
+* Product Console 保留为系统设置、adapter 配置、队列调试和全局状态总览。
+
+### M8：SpecDrive IDE
+
+* VSCode 插件骨架、工作区识别、Control Plane client 和 Spec Explorer 只读树。
+* 文档 Hover、CodeLens、Comments、`SpecChangeRequestV1` 和 `stale_source` 校验。
+* Codex RPC Adapter，支持 initialize、thread/start、thread/resume、turn/start、turn/interrupt 和事件流落 raw logs。
+* Feature/Task 执行闭环、Execution Record 状态面板、approval pending 恢复、取消/重试/恢复、`SkillOutputContractV1` 校验和 `spec-state.json` 投影。
+* Diagnostics、日志增量渲染、diff 摘要、状态过滤、Product Console 跳转、插件重载恢复和多语言 UI 预留。
+* 独立 Execution Workbench Webview，不复用 Product Console Web UI，围绕任务调度和自动执行提供 Job 队列、自动执行控制、审批/中断、阻塞恢复和执行结果观察。
+
+### M9：Delivery Fidelity
+
+* Delivery Lifecycle OS：Define、Plan、Build、Verify、Review、Ship。
+* `use-specdrive-lifecycle` 元技能和 agent persona registry。
+* `skill-contract/v2` 与 `result.deliveryFidelity`。
+* Delivery Fidelity Gate、test semantics review、evidence completeness review 和 quality loss ReviewItem 投影。
+* Runtime Evidence Gate、Invocation Context Manifest、Run Workpad 和 VSCode Webview Quality Evidence 展示。
+
+---
+
+## 12. 关键风险与对策
+
+| 风险                | 对策                                             |
+| ----------------- | ---------------------------------------------- |
+| CLI 长时间运行后丢失项目上下文 | 使用 Project Memory 在每次会话前注入持久记忆，确保 CLI 恢复目标和状态 |
+| Project Memory 过期或失真 | 每次 Run 后强制更新，压缩时保留当前任务和阻塞，支持版本回滚            |
+| Project Memory 中候选队列滞后 | Feature 选择每次从 Feature Spec Pool 动态计算，Memory 仅保存最近选择结果和候选快照 |
+| Feature 选择器选错优先级 | FR-055 优先级规则明确，支持人工覆盖选择结果，写入审计日志 |
+| Subagent 并行修改冲突   | 只读任务优先并行，所有写入型并行必须使用独立 worktree，合并前执行冲突检测和 Spec Alignment Check |
+| 并行任务污染数据库或缓存 | 共享运行时资源必须 mock、命名空间隔离、临时容器化或串行执行 |
+| Skill 太多导致触发混乱    | Skill 必须有清晰 description、phase、trigger、schema   |
+| Spec 过重导致上下文爆炸    | 使用 Spec 切片和 Execution Result，上下文管理由编码 CLI 能力承担 |
+| Agent 偏离需求        | 使用 Spec Alignment Check 和 Acceptance Map         |
+| 自动修复反复失败          | 使用失败指纹、禁止重复策略和最大重试次数                         |
+| Codex 权限过高        | 开发阶段默认 danger-full-access / never，通过 Safety Gate、审计日志和回滚约束兜底 |
+| 用户不知道系统在做什么       | 使用看板、Run Timeline、执行结果 和 Delivery Report 展示 |
+
+---
+
+## 13. 最终结论
+
+SpecDrive AutoBuild V2.0 的核心不是单个 Codex Agent，而是：
+
+```text
+以 Spec Protocol 管理目标和验收，
+以 Skill System 固化工程方法，
+以 Subagent Runtime 隔离上下文，
+以 Project Memory 为 CLI 提供跨会话持久记忆，
+以 Codex Runner 执行代码变更，
+以内部任务状态机管理长时间自主交付，
+并通过 Dashboard 呈现进度和状态。
+```
+
+最终产品原则：
+
+> Spec 负责不跑偏，Skill 负责会做事，Subagent 负责不撑爆，Memory 负责不失忆，Runner 负责真执行，看板负责可管理。

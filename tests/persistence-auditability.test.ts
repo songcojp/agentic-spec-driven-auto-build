@@ -311,7 +311,7 @@ function sampleCoreEntityInput(): CoreEntityInput {
     requirement: {
       id: "REQ-058",
       featureId: "FEAT-014",
-      sourceId: "docs/zh-CN/requirements.md#REQ-058",
+      sourceId: "docs/agentic-spec/zh-CN/requirements.md#REQ-058",
       body: "Persistent control-plane state is recoverable.",
       acceptanceCriteria: "Core entities can be read after restart.",
       priority: "must",

@@ -1162,7 +1162,7 @@ test("product console approve_review restores scheduled task reviews", () => {
 test("product console approve_review resolves feature-scoped reviews", () => {
   const dbPath = seedReviewData();
   const workspaceRoot = mkdtempSync(join(tmpdir(), "feat-011-review-workspace-"));
-  const featureDir = join(workspaceRoot, "docs", "features", "feat-011-review-center");
+  const featureDir = join(workspaceRoot, "docs", "agentic-spec", "features", "feat-011-review-center");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
@@ -1803,7 +1803,7 @@ test("feature review approval resolves linked execution queue status", () => {
 test("product console approve_review without input completes linked run and Feature spec state", () => {
   const dbPath = seedReviewData();
   const workspaceRoot = mkdtempSync(join(tmpdir(), "feat-011-review-complete-"));
-  const featureDir = join(workspaceRoot, "docs", "features", "feat-011-review-center");
+  const featureDir = join(workspaceRoot, "docs", "agentic-spec", "features", "feat-011-review-center");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
@@ -1867,7 +1867,7 @@ test("product console approve_review with input requeues linked adapter job", ()
   const dbPath = seedReviewData();
   const scheduler = createMemoryScheduler(dbPath);
   const workspaceRoot = mkdtempSync(join(tmpdir(), "feat-011-review-continue-"));
-  const featureDir = join(workspaceRoot, "docs", "features", "feat-011-review-center");
+  const featureDir = join(workspaceRoot, "docs", "agentic-spec", "features", "feat-011-review-center");
   mkdirSync(featureDir, { recursive: true });
   writeFileSync(join(featureDir, "requirements.md"), "# Requirements\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
@@ -1886,7 +1886,7 @@ test("product console approve_review with input requeues linked adapter job", ()
     executionId: "RUN-APPROVE-WITH-INPUT",
     operation: "feature_execution",
     projectId: "project-1",
-    context: { featureId: "FEAT-011", featureSpecPath: "docs/features/feat-011-review-center" },
+    context: { featureId: "FEAT-011", featureSpecPath: "docs/agentic-spec/features/feat-011-review-center" },
   };
   runSqlite(dbPath, [
     { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [workspaceRoot] },
@@ -1900,7 +1900,7 @@ test("product console approve_review with input requeues linked adapter job", ()
           id, scheduler_job_id, executor_type, operation, project_id, context_json,
           status, started_at, completed_at, summary, metadata_json, updated_at
         ) VALUES ('RUN-APPROVE-WITH-INPUT', 'JOB-APPROVE-WITH-INPUT', 'codex-cli', 'feature_execution', 'project-1',
-          '{"featureId":"FEAT-011","featureSpecPath":"docs/features/feat-011-review-center"}',
+          '{"featureId":"FEAT-011","featureSpecPath":"docs/agentic-spec/features/feat-011-review-center"}',
           'review_needed', '2026-04-28T11:58:00.000Z', '2026-04-28T12:00:00.000Z', 'Feature execution needs review.', '{}', '2026-04-28T12:00:00.000Z')`,
     },
   ]);

@@ -20,7 +20,7 @@ Produce UI system design, not a decorative page list. Describe real user workflo
 
 When generating or updating the UI system:
 
-- Treat `docs/ui/ui-spec.md` as the compatibility path for the project-level UI System Design artifact unless the invocation supplies another path.
+- Treat `docs/agentic-spec/ui/ui-spec.md` as the compatibility path for the project-level UI System Design artifact unless the invocation supplies another path.
 - Cover every page, Webview, modal, drawer, panel, table/detail pair, settings surface, approval/review surface, empty/loading/error/permission state, and important responsive breakpoint implied by PRD, requirements, HLD, page/surface inventory, and Feature Specs.
 - Include an interaction matrix for each workflow: entry point, actors, controls/fields, user action, validation, save/cancel behavior, state feedback, persisted/reload/revisit assertion, error path, requirement IDs, and browser/evidence expectation.
 - Include UI system foundations: information architecture, navigation model, layout grid/density, typography, color tokens, semantic status tokens, spacing, component rules, accessibility rules, motion rules, data-binding rules, and verification obligations.
@@ -30,9 +30,9 @@ When generating or updating the UI system:
 When generating optional concept images:
 
 - Do not generate concept images when high-fidelity static HTML is the requested/default prototype output and no concrete image artifact is expected.
-- Only generate or repair concept images when the invocation explicitly lists concrete `docs/ui/concepts/<page-id>.png` artifacts, supplies image inputs to transform, or requests legacy concept-image compatibility.
+- Only generate or repair concept images when the invocation explicitly lists concrete `docs/agentic-spec/ui/concepts/<page-id>.png` artifacts, supplies image inputs to transform, or requests legacy concept-image compatibility.
 - When image artifacts are explicitly expected, derive the page/surface list from the PRD, requirements, HLD primary page/surface inventory, existing UI System Design, and Feature Specs when present.
-- Produce one distinct raster image for every concrete expected `docs/ui/concepts/<page-id>.png` artifact; do not collapse multiple pages into one overview image.
+- Produce one distinct raster image for every concrete expected `docs/agentic-spec/ui/concepts/<page-id>.png` artifact; do not collapse multiple pages into one overview image.
 - Use stable page IDs that match the artifact paths supplied by the invocation.
 - If an expected concept image already exists and does not need repair, keep it unchanged and list it as `unchanged`; do not regenerate or overwrite the same path just to refresh the run.
 - If replacing an existing concept image is necessary, record the path and replacement reason in `result.details` or `result.items`.
@@ -40,8 +40,8 @@ When generating optional concept images:
 
 When generating high-fidelity static HTML:
 
-- Produce a browsable prototype index at `docs/ui/prototype/index.html` for project-level work, or `<feature-spec>/prototype/index.html` for feature-scoped work, unless the invocation supplies different expected artifacts.
-- Produce one concrete page HTML artifact for every expected `docs/ui/prototype/<page-id>.html` artifact; feature-scoped output uses `<feature-spec>/prototype/<page-id>.html`.
+- Produce a browsable prototype index at `docs/agentic-spec/ui/prototype/index.html` for project-level work, or `<feature-spec>/prototype/index.html` for feature-scoped work, unless the invocation supplies different expected artifacts.
+- Produce one concrete page HTML artifact for every expected `docs/agentic-spec/ui/prototype/<page-id>.html` artifact; feature-scoped output uses `<feature-spec>/prototype/<page-id>.html`.
 - Make the HTML WYSIWYG enough for design review: realistic layout, tokens, component states, representative data, visible validation/error/empty/loading states, responsive behavior, keyboard focus styling, and stateful interactions implemented with local static JavaScript where needed.
 - Keep prototypes backend-free and static. They may simulate interactions locally but must not call Control Plane APIs, mutate real workspace state, or claim to be production UI.
 - Preserve factual text such as paths, logs, evidence snippets, command names, requirement IDs, and status values exactly when they come from source artifacts.

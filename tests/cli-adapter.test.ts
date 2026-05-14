@@ -79,8 +79,8 @@ function executionInvocation(overrides: Partial<{
     skillInstruction: {
       skillName: overrides.skillName ?? "convert-ears-requirements",
       requestedAction: overrides.requestedAction ?? "generate_ears",
-      sourcePaths: overrides.sourcePaths ?? ["docs/PRD.md"],
-      expectedArtifacts: overrides.expectedArtifacts ?? [{ path: "docs/requirements.md", kind: "markdown", required: true }],
+      sourcePaths: overrides.sourcePaths ?? ["docs/agentic-spec/PRD.md"],
+      expectedArtifacts: overrides.expectedArtifacts ?? [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: true }],
       operatorInput: overrides.operatorInput,
     },
   };
@@ -105,7 +105,7 @@ function skillOutputEvent(overrides: Partial<{
     status: overrides.status ?? "completed",
     summary: overrides.summary ?? "Skill completed.",
     nextAction: "Update spec-state.json and continue.",
-    producedArtifacts: overrides.producedArtifacts ?? [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+    producedArtifacts: overrides.producedArtifacts ?? [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
     traceability: { featureId: null },
     result: overrides.result ?? { resultSummary: overrides.resultSummary ?? "Skill result details." },
   };
@@ -139,7 +139,7 @@ function featureExecutionResult(): Record<string, unknown> {
 
 function validDeliveryFidelity(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    sourceIntent: [{ id: "INTENT-001", summary: "User can complete the primary flow.", sourceRef: "docs/features/FEAT-008/requirements.md", status: "preserved" }],
+    sourceIntent: [{ id: "INTENT-001", summary: "User can complete the primary flow.", sourceRef: "docs/agentic-spec/features/FEAT-008/requirements.md", status: "preserved" }],
     journeys: [{ id: "US-001", summary: "Primary flow", status: "verified", obligations: ["BO-001"] }],
     behaviorObligations: [{ id: "BO-001", sourceRef: "AC-001", description: "Complete and persist the primary flow.", status: "verified", evidenceRefs: ["EV-001"] }],
     handoffs: [
@@ -527,7 +527,7 @@ test("SkillOutputContract validation requires common fields but allows skill-spe
     status: "completed",
     summary: "Generated requirements.",
     nextAction: null,
-    producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+    producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
     traceability: { featureId: "FEAT-008" },
     result: { requirements: ["REQ-001"], openQuestions: [], nested: { allowed: true } },
   } as const;
@@ -749,7 +749,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
     result: {
       deliveryFidelity: validDeliveryFidelity({
         journeys: [],
-        sourceIntent: [{ id: "INTENT-FOUNDATION", summary: "Adapter foundation enables downstream user journeys.", sourceRef: "docs/features/FEAT-008/requirements.md", status: "preserved" }],
+        sourceIntent: [{ id: "INTENT-FOUNDATION", summary: "Adapter foundation enables downstream user journeys.", sourceRef: "docs/agentic-spec/features/FEAT-008/requirements.md", status: "preserved" }],
       }),
       foundationExemption: {
         exempt: true,
@@ -1078,7 +1078,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     executionInvocation: executionInvocation({
       skillName: "implement-feature",
       operation: "task_execution",
-      sourcePaths: ["docs/features/FEAT-001/tasks.md"],
+      sourcePaths: ["docs/agentic-spec/features/FEAT-001/tasks.md"],
       expectedArtifacts: [{ path: ".autobuild/reports/cli-adapter.json", kind: "json", required: true }],
       requirementIds: ["REQ-001"],
       requestedAction: "task_execution",
@@ -1093,7 +1093,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     executionInvocation: executionInvocation({
       skillName: "implement-feature",
       operation: "task_execution",
-      sourcePaths: ["docs/features/FEAT-001/tasks.md"],
+      sourcePaths: ["docs/agentic-spec/features/FEAT-001/tasks.md"],
       expectedArtifacts: [{ path: ".autobuild/reports/cli-adapter.json", kind: "json", required: true }],
       requirementIds: ["REQ-001"],
       requestedAction: "task_execution",
@@ -1133,7 +1133,7 @@ test("execution invocation prompt does not inline workspace context bundles", ()
     executionInvocation(),
     [
       ["Workspace", "Context", "Bundle:"].join(" "),
-      "### docs/PRD.md",
+      "### docs/agentic-spec/PRD.md",
       "MVP 不接入支付，不处理 auth token，不做 permission system.",
     ].join("\n"),
   );
@@ -1169,9 +1169,9 @@ test("feature-level coding prompt requires Feature Spec execution instead of rep
       skillName: "implement-feature",
       requestedAction: "feature_execution",
       sourcePaths: [
-        "docs/features/FEAT-001/requirements.md",
-        "docs/features/FEAT-001/design.md",
-        "docs/features/FEAT-001/tasks.md",
+        "docs/agentic-spec/features/FEAT-001/requirements.md",
+        "docs/agentic-spec/features/FEAT-001/design.md",
+        "docs/agentic-spec/features/FEAT-001/tasks.md",
       ],
       expectedArtifacts: [{ path: ".autobuild/runs/RUN-FEAT/report.json", kind: "json", required: true }],
       featureId: "FEAT-001",
@@ -1193,10 +1193,10 @@ test("task-slicing prompt requires the full SkillOutputContract result", () => {
       operation: "split_feature_specs",
       skillName: "decompose-feature-specs",
       requestedAction: "split_feature_specs",
-      sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
+      sourcePaths: ["docs/agentic-spec/zh-CN/PRD.md", "docs/agentic-spec/zh-CN/requirements.md", "docs/agentic-spec/zh-CN/hld.md"],
       expectedArtifacts: [
-        { path: "docs/features/README.md", kind: "markdown", required: true },
-        { path: "docs/features/feature-pool-queue.json", kind: "json", required: true },
+        { path: "docs/agentic-spec/features/README.md", kind: "markdown", required: true },
+        { path: "docs/agentic-spec/features/feature-pool-queue.json", kind: "json", required: true },
       ],
     }),
     "Context",
@@ -1215,11 +1215,11 @@ test("generic skill invocation prompt does not include Codex CLI image generatio
       operation: "generate_ui_spec",
       skillName: "design-ui-spec",
       requestedAction: "generate_ui_spec",
-      sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
+      sourcePaths: ["docs/agentic-spec/zh-CN/PRD.md", "docs/agentic-spec/zh-CN/requirements.md", "docs/agentic-spec/zh-CN/hld.md"],
       expectedArtifacts: [
-        { path: "docs/ui/ui-spec.md", kind: "markdown", required: true },
-        { path: "docs/ui/prototype/index.html", kind: "html", required: true },
-        { path: "docs/ui/prototype/<page-id>.html", kind: "html", required: true },
+        { path: "docs/agentic-spec/ui/ui-spec.md", kind: "markdown", required: true },
+        { path: "docs/agentic-spec/ui/prototype/index.html", kind: "html", required: true },
+        { path: "docs/agentic-spec/ui/prototype/<page-id>.html", kind: "html", required: true },
       ],
     }),
     "Context",
@@ -1252,10 +1252,10 @@ test("task-slicing runs receive a strict specialized result output schema", asyn
       operation: "split_feature_specs",
       skillName: "decompose-feature-specs",
       requestedAction: "split_feature_specs",
-      sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
+      sourcePaths: ["docs/agentic-spec/zh-CN/PRD.md", "docs/agentic-spec/zh-CN/requirements.md", "docs/agentic-spec/zh-CN/hld.md"],
       expectedArtifacts: [
-        { path: "docs/features/README.md", kind: "markdown", required: false },
-        { path: "docs/features/feature-pool-queue.json", kind: "json", required: false },
+        { path: "docs/agentic-spec/features/README.md", kind: "markdown", required: false },
+        { path: "docs/agentic-spec/features/feature-pool-queue.json", kind: "json", required: false },
       ],
     }),
     runner: (_command, args) => {
@@ -1286,11 +1286,11 @@ test("Codex CLI adapter augments image artifact prompts with imagegen rules", as
     operation: "generate_ui_spec",
     skillName: "design-ui-spec",
     requestedAction: "generate_ui_spec",
-    sourcePaths: ["docs/zh-CN/PRD.md", "docs/zh-CN/requirements.md", "docs/zh-CN/hld.md"],
+    sourcePaths: ["docs/agentic-spec/zh-CN/PRD.md", "docs/agentic-spec/zh-CN/requirements.md", "docs/agentic-spec/zh-CN/hld.md"],
     expectedArtifacts: [
-      { path: "docs/ui/ui-spec.md", kind: "markdown", required: true },
-      { path: "docs/ui/prototype/index.html", kind: "html", required: true },
-      { path: "docs/ui/concepts/<page-id>.png", kind: "image", required: true },
+      { path: "docs/agentic-spec/ui/ui-spec.md", kind: "markdown", required: true },
+      { path: "docs/agentic-spec/ui/prototype/index.html", kind: "html", required: true },
+      { path: "docs/agentic-spec/ui/concepts/<page-id>.png", kind: "image", required: true },
     ],
   });
 
@@ -1317,8 +1317,8 @@ test("Codex CLI adapter augments image artifact prompts with imagegen rules", as
             requestedAction: "generate_ui_spec",
             summary: "UI Spec image prompt rules applied.",
             producedArtifacts: [
-              { path: "docs/ui/ui-spec.md", kind: "markdown", status: "created" },
-              { path: "docs/ui/concepts/spec-workspace.png", kind: "image", status: "created" },
+              { path: "docs/agentic-spec/ui/ui-spec.md", kind: "markdown", status: "created" },
+              { path: "docs/agentic-spec/ui/concepts/spec-workspace.png", kind: "image", status: "created" },
             ],
           }),
         ].join("\n"),
@@ -1338,8 +1338,8 @@ test("clarification skill prompt treats operator input as an answer to apply", (
       operation: "resolve_clarification",
       skillName: "manage-spec-change",
       requestedAction: "resolve_clarification",
-      sourcePaths: ["docs/zh-CN/requirements.md"],
-      expectedArtifacts: [{ path: "docs/zh-CN/requirements.md", kind: "markdown", required: true }],
+      sourcePaths: ["docs/agentic-spec/zh-CN/requirements.md"],
+      expectedArtifacts: [{ path: "docs/agentic-spec/zh-CN/requirements.md", kind: "markdown", required: true }],
       operatorInput: {
         clarificationText: "彩票类型支持大乐透和双色球",
         comment: "彩票类型支持大乐透和双色球",
@@ -1361,13 +1361,13 @@ test("spec change prompts require Feature Spec ready output for UI scheduling", 
       operation: "evolve_spec",
       skillName: "manage-spec-change",
       requestedAction: "evolve_spec",
-      sourcePaths: ["docs/requirements.md"],
+      sourcePaths: ["docs/agentic-spec/requirements.md"],
       expectedArtifacts: [
-        { path: "docs/features/FEAT-021/requirements.md", kind: "markdown", required: true },
-        { path: "docs/features/FEAT-021/design.md", kind: "markdown", required: true },
-        { path: "docs/features/FEAT-021/tasks.md", kind: "markdown", required: true },
-        { path: "docs/features/FEAT-021/spec-state.json", kind: "json", required: true },
-        { path: "docs/features/feature-pool-queue.json", kind: "json", required: true },
+        { path: "docs/agentic-spec/features/FEAT-021/requirements.md", kind: "markdown", required: true },
+        { path: "docs/agentic-spec/features/FEAT-021/design.md", kind: "markdown", required: true },
+        { path: "docs/agentic-spec/features/FEAT-021/tasks.md", kind: "markdown", required: true },
+        { path: "docs/agentic-spec/features/FEAT-021/spec-state.json", kind: "json", required: true },
+        { path: "docs/agentic-spec/features/feature-pool-queue.json", kind: "json", required: true },
       ],
       operatorInput: {
         comment: "Update existing requirement and make it executable.",
@@ -1382,7 +1382,7 @@ test("spec change prompts require Feature Spec ready output for UI scheduling", 
 
   assert.match(prompt, /feature_spec_ready_for_execution/);
   assert.match(prompt, /do not stop after updating only PRD, requirements, or HLD/);
-  assert.match(prompt, /docs\/features\/feature-pool-queue\.json contains a runnable queue entry/);
+  assert.match(prompt, /docs\/agentic-spec\/features\/feature-pool-queue\.json contains a runnable queue entry/);
   assert.match(prompt, /spec-state\.json records status ready/);
 });
 
@@ -1510,7 +1510,7 @@ test("Gemini CLI adapter extracts session, usage, and SkillOutputContract from s
   const invocation = executionInvocation({
     executionId: "RUN-GEMINI",
     workspaceRoot,
-    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+    expectedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: false }],
   });
   const output = {
     contractVersion: "skill-contract/v1",
@@ -1520,7 +1520,7 @@ test("Gemini CLI adapter extracts session, usage, and SkillOutputContract from s
     status: "completed",
     summary: "Gemini completed.",
     nextAction: "Continue.",
-    producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+    producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
     traceability: { featureId: null },
     result: { userStories: ["US-001"], openQuestions: [] },
   };
@@ -1569,7 +1569,7 @@ test("Claude Code CLI adapter extracts session and SkillOutputContract from stru
   const invocation = executionInvocation({
     executionId: "RUN-CLAUDE",
     workspaceRoot,
-    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+    expectedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: false }],
   });
   const output = {
     contractVersion: "skill-contract/v1",
@@ -1579,7 +1579,7 @@ test("Claude Code CLI adapter extracts session and SkillOutputContract from stru
     status: "completed",
     summary: "Claude completed.",
     nextAction: "Continue.",
-    producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+    producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
     traceability: { featureId: null },
     result: { userStories: ["US-CLAUDE"], openQuestions: [] },
   };
@@ -1632,7 +1632,7 @@ test("CLI adapter uses the last SkillOutputContract when progress contracts prec
   const invocation = executionInvocation({
     executionId: "RUN-MULTI-CONTRACT",
     workspaceRoot,
-    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+    expectedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: false }],
   });
 
   const result = await runCliAdapter({
@@ -1649,7 +1649,7 @@ test("CLI adapter uses the last SkillOutputContract when progress contracts prec
           executionId: "RUN-MULTI-CONTRACT",
           status: "completed",
           summary: "Requirements generated.",
-          producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+          producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
         }),
       ].join("\n"),
       stderr: "",
@@ -1659,7 +1659,7 @@ test("CLI adapter uses the last SkillOutputContract when progress contracts prec
   assert.equal(result.executionAdapterResult?.status, "completed");
   assert.equal(result.result.skillOutput?.summary, "Requirements generated.");
   assert.deepEqual(result.result.skillOutput?.producedArtifacts, [{
-    path: "docs/requirements.md",
+    path: "docs/agentic-spec/requirements.md",
     kind: "markdown",
     status: "created",
     checksum: undefined,
@@ -1680,7 +1680,7 @@ test("CLI adapter preserves a final review_needed contract as a real review gate
   const invocation = executionInvocation({
     executionId: "RUN-FINAL-REVIEW",
     workspaceRoot,
-    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+    expectedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: false }],
   });
 
   const result = await runCliAdapter({
@@ -1696,7 +1696,7 @@ test("CLI adapter preserves a final review_needed contract as a real review gate
           executionId: "RUN-FINAL-REVIEW",
           status: "review_needed",
           summary: "Review needed: requirements conflict with HLD boundary.",
-          producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "created" }],
+          producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
         }),
       ].join("\n"),
       stderr: "",
@@ -1718,7 +1718,7 @@ test("CLI adapter does not regress terminal SkillOutputContract to later running
   const invocation = executionInvocation({
     executionId: "RUN-TERMINAL-THEN-RUNNING",
     workspaceRoot,
-    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+    expectedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: false }],
   });
 
   const result = await runCliAdapter({
@@ -1734,7 +1734,7 @@ test("CLI adapter does not regress terminal SkillOutputContract to later running
           executionId: "RUN-TERMINAL-THEN-RUNNING",
           status: "review_needed",
           summary: "Review needed: delivery evidence is incomplete.",
-          producedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", status: "updated" }],
+          producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "updated" }],
         }),
         skillOutputEvent({ executionId: "RUN-TERMINAL-THEN-RUNNING", status: "running", summary: "Late stale progress event.", producedArtifacts: [] }),
       ].join("\n"),
@@ -1760,7 +1760,7 @@ test("CLI adapter routes ended non-terminal SkillOutputContract to review", asyn
   const invocation = executionInvocation({
     executionId: "RUN-NONTERMINAL",
     workspaceRoot,
-    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+    expectedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: false }],
   });
 
   const result = await runCliAdapter({
@@ -1802,7 +1802,7 @@ test("Gemini CLI adapter routes successful runs with missing SkillOutputContract
   const invocation = executionInvocation({
     executionId: "RUN-GEMINI-MISSING",
     workspaceRoot,
-    expectedArtifacts: [{ path: "docs/requirements.md", kind: "markdown", required: false }],
+    expectedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: false }],
   });
 
   const result = await processRunnerQueueItem({
@@ -1875,11 +1875,11 @@ test("Codex CLI adapter terminates variadic image arguments before prompt", () =
     policy,
     prompt: "Generate UI Spec from the attached concept image",
     outputSchemaPath: "/tmp/runner-output.schema.json",
-    imagePaths: ["docs/ui/spec-workspace-prd-flow-concept.png"],
+    imagePaths: ["docs/agentic-spec/ui/spec-workspace-prd-flow-concept.png"],
   });
 
   const imageIndex = rendered.args.indexOf("-i");
-  assert.equal(rendered.args[imageIndex + 1], "docs/ui/spec-workspace-prd-flow-concept.png");
+  assert.equal(rendered.args[imageIndex + 1], "docs/agentic-spec/ui/spec-workspace-prd-flow-concept.png");
   assert.equal(rendered.args[imageIndex + 2], "--");
   assert.equal(rendered.args[imageIndex + 3], "Generate UI Spec from the attached concept image");
 });
