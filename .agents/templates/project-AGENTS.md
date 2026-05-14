@@ -145,7 +145,6 @@ old dotted phase names are not valid for new routing.
 - Use controlled commands or approved code paths for writes to runtime state, Feature state, Review/Approval facts, and delivery records.
 - Keep UI and reports as projections of source facts. If a UI value looks wrong, inspect the fact source before patching the view.
 - Preserve execution evidence for verification, review, recovery, and delivery. Do not replace real run history with synthetic success.
-- Do not commit unless the user asks for a commit or delivery action.
 - Report commands run, failures, skipped checks, and residual risks.
 
 ## Verification And Delivery

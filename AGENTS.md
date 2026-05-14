@@ -78,7 +78,6 @@ When a new requirement or capability is proposed, evaluate **before writing any 
 
 ## Delivery Rules
 
-- Do not commit unless the user asks for a commit or delivery action.
 - Use narrow Conventional Commit messages when committing.
 - Keep commit-time verification proportional to the staged diff; do not escalate to `npm test` or other full-suite commands by default.
 - Do not include unrelated modified files in commits or PRs.
