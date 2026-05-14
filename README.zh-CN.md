@@ -37,7 +37,8 @@ Spec Protocol
 + Status Checker
 + Evidence Pack
 + Review / Recovery / Delivery Workflow
-+ Product Console / IDE Surfaces
++ VSCode IDE Webview
++ Product Console compatibility surface
 ```
 
 在本项目中，**Agentic Spec** 定义为：
@@ -74,25 +75,25 @@ SpecDrive AutoBuild 是一个面向自主软件交付的控制平面。它可以
 7. 通过 Status Checker 判断任务是否真正完成，而不是信任 Agent 自报。
 8. 将失败、阻塞、高风险、歧义和规格漂移路由到恢复流程或人工评审。
 9. 生成可审计的交付记录、PR 摘要、验证证据和规格演进说明。
-10. 通过 Product Console 和 VSCode IDE Workbench 展示项目状态、执行队列、Feature 状态和评审入口。
+10. 通过 VSCode IDE Webview 承载日常执行、Feature Spec、质量证据和评审闭环，并保留 Product Console 作为历史兼容、系统设置、队列调试和全局状态入口。
 
 它不替代 Git、CI/CD、Issue Tracker 或完整项目管理系统，而是在它们之上提供 Spec-first 的 AI 自主开发编排层。
 
 ---
 
-## 软件截图
+## 当前 IDE Workbench 截图
 
 | Spec Workspace | Feature Spec |
 | --- | --- |
-| ![Spec Workspace](docs/screens/spec-workspace.png) | ![Feature Spec](docs/screens/feature-spec.png) |
+| ![Spec Workspace](docs/ui-v2/spec-workspace.png) | ![Feature Spec](docs/ui-v2/feature-spec-project-home.png) |
 
 | Execution Workbench | 系统设置 |
 | --- | --- |
-| ![Execution Workbench](docs/screens/execution-workbench.png) | ![系统设置](docs/screens/Setting.png) |
+| ![Execution Workbench](docs/ui-v2/execution-workbench-runner.png) | ![系统设置](docs/ui-v2/system-settings.png) |
 
-| Feature Spec Web 视图 |
+| 审计与评审 |
 | --- |
-| ![Feature Spec Web 视图](docs/screens/feature-spec-web.png) |
+| ![审计与评审](docs/ui-v2/audit-review.png) |
 
 ---
 
@@ -102,7 +103,7 @@ SpecDrive AutoBuild 是一个面向自主软件交付的控制平面。它可以
 用户 / 产品经理 / 开发者
         |
         v
-Product Console / IDE Workbench
+VSCode IDE Webview / Product Console 兼容面
         |
         v
 Control Plane API
@@ -178,14 +179,14 @@ Spec 始终是事实源。
 
 ### 1. 创建主线文档
 
-输入可以是自然语言需求、现有 PRD、产品 brief、Pull Request、Issue、业务文档或已有代码仓库。系统首先将这些输入转换为主线文档：
+输入可以是自然语言需求、现有 PRD、产品 brief、Pull Request、Issue、业务文档或已有代码仓库。系统首先将这些输入转换为主线文档。当前仓库的 MVP 规划事实源主要在中文主线文档，英文和日文入口用于产品级导航：
 
 ```text
 docs/<language>/PRD.md
 docs/<language>/requirements.md
 docs/<language>/hld.md
-docs/<language>/ui-spec.md
-docs/<language>/prototype-spec.md
+docs/features/README.md
+docs/features/<feature-id>/
 ```
 
 主线文档负责定义产品范围、验收行为、架构边界、用户流程和变更规则。
@@ -245,8 +246,8 @@ state transition proposal
 .
 ├── .agents/                  # 项目级 Agent 模板和 Skills
 ├── apps/
-│   ├── product-console/       # React / Vite Product Console
-│   └── vscode-extension/      # VSCode 插件和 IDE Workbench
+│   ├── product-console/       # React / Vite 兼容控制台，用于设置和调试
+│   └── vscode-extension/      # 主要 VSCode 插件和 IDE Webview Workbench
 ├── docs/
 │   ├── en/                    # 英文产品与规格文档
 │   ├── zh-CN/                 # 中文产品、规格和协议文档
@@ -264,14 +265,17 @@ state transition proposal
 - [产品需求文档](docs/zh-CN/PRD.md)
 - [文档索引](docs/README.md)
 - [Feature Spec 索引](docs/features/README.md)
-- [Agentic Spec Protocol](docs/zh-CN/agentic-spec-protocol.md)
+- [项目高层设计文档](docs/zh-CN/hld.md)
+- [Agentic Spec Standard](docs/zh-CN/agentic-spec-standard.md)
 - [项目级 Skill 说明](docs/zh-CN/skills.md)
 
 ---
 
 ## 当前实现状态
 
-SpecDrive AutoBuild 处于活跃实现阶段。当前仓库已经包含 Control Plane Runtime、Scheduler、持久化与审计基础、Execution Adapter、Product Console、VSCode IDE 表面、Feature Specs 和核心工作流测试。
+SpecDrive AutoBuild 处于活跃实现阶段。当前仓库已经包含 Control Plane Runtime、Scheduler、持久化与审计基础、CLI / RPC Execution Adapter、Product Console 兼容面、VSCode IDE Webview、Feature Specs 和核心工作流测试。
+
+当前产品方向以 VSCode IDE Webview 作为日常主界面，承载执行、Feature Spec、质量证据、ReviewItem 和系统设置。Product Console 保留为历史兼容、系统设置、adapter 配置、队列调试和全局状态总览入口。
 
 最准确的实现状态以 Feature Spec 索引为准：
 
@@ -348,6 +352,12 @@ npm run console:build
 
 ```bash
 npm run ide:build
+```
+
+运行 VSCode 插件测试：
+
+```bash
+npm run ide:test
 ```
 
 打包 VSCode 插件：
@@ -432,9 +442,10 @@ SpecDrive 遵循以下 Agentic Development 规则：
 理解产品与架构：
 
 1. [docs/zh-CN/PRD.md](docs/zh-CN/PRD.md)
-2. [docs/zh-CN/agentic-spec-protocol.md](docs/zh-CN/agentic-spec-protocol.md)
+2. [docs/zh-CN/hld.md](docs/zh-CN/hld.md)
 3. [docs/features/README.md](docs/features/README.md)
-4. [docs/zh-CN/skills.md](docs/zh-CN/skills.md)
+4. [docs/zh-CN/agentic-spec-standard.md](docs/zh-CN/agentic-spec-standard.md)
+5. [docs/zh-CN/skills.md](docs/zh-CN/skills.md)
 
 参与实现开发：
 

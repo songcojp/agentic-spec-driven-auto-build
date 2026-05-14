@@ -41,7 +41,8 @@ Spec Protocol
 + Status Checker
 + Evidence Pack
 + Review / Recovery / Delivery Workflow
-+ Product Console / IDE Surfaces
++ VSCode IDE Webview
++ Product Console compatibility surface
 ```
 
 In this repository, **Agentic Spec** means:
@@ -78,25 +79,25 @@ SpecDrive AutoBuild is a control plane for autonomous software delivery. It can:
 7. Judge task outcomes through Status Checker logic instead of trusting agent self-reporting.
 8. Route failed, blocked, risky, or ambiguous work into recovery or human review.
 9. Produce auditable delivery records, PR-ready summaries, and spec evolution notes.
-10. Present project state through a Product Console and IDE-oriented workbench surfaces.
+10. Present daily execution and quality review through VSCode IDE Webviews, while keeping Product Console as a compatibility, settings, queue-debugging, and global-state surface.
 
 This is not a replacement for Git, CI, or issue trackers. It is a spec-first orchestration layer that makes AI-driven implementation safer and more inspectable.
 
 ---
 
-## Product Screenshots
+## Current IDE Workbench Screenshots
 
 | Spec Workspace | Feature Spec |
 | --- | --- |
-| ![Spec Workspace](docs/screens/spec-workspace.png) | ![Feature Spec](docs/screens/feature-spec.png) |
+| ![Spec Workspace](docs/ui-v2/spec-workspace.png) | ![Feature Spec](docs/ui-v2/feature-spec-project-home.png) |
 
 | Execution Workbench | System Settings |
 | --- | --- |
-| ![Execution Workbench](docs/screens/execution-workbench.png) | ![System Settings](docs/screens/Setting.png) |
+| ![Execution Workbench](docs/ui-v2/execution-workbench-runner.png) | ![System Settings](docs/ui-v2/system-settings.png) |
 
-| Feature Spec Web View |
+| Audit and Review |
 | --- |
-| ![Feature Spec Web View](docs/screens/feature-spec-web.png) |
+| ![Audit and Review](docs/ui-v2/audit-review.png) |
 
 ---
 
@@ -106,7 +107,7 @@ This is not a replacement for Git, CI, or issue trackers. It is a spec-first orc
 User / PM / Developer
         |
         v
-Product Console / IDE Workbench
+VSCode IDE Webview / Product Console compatibility surface
         |
         v
 Control Plane API
@@ -182,14 +183,14 @@ Spec remains the source of truth.
 
 ### 1. Mainline spec creation
 
-Inputs can be natural language, an existing PRD, a product brief, a pull request, an issue, or an existing codebase. The system first turns them into mainline documents:
+Inputs can be natural language, an existing PRD, a product brief, a pull request, an issue, or an existing codebase. The system first turns them into mainline documents. In the current repository, the active MVP planning source is primarily the Chinese mainline lane, with English and Japanese entry documents kept for product-facing navigation:
 
 ```text
 docs/<language>/PRD.md
 docs/<language>/requirements.md
 docs/<language>/hld.md
-docs/<language>/ui-spec.md
-docs/<language>/prototype-spec.md
+docs/features/README.md
+docs/features/<feature-id>/
 ```
 
 Mainline specs define product scope, acceptance behavior, architecture boundaries, user-facing flows, and change rules.
@@ -249,8 +250,8 @@ Delivery is considered complete only when evidence, status, review, and spec tra
 .
 ├── .agents/                  # Project-local agent templates and skills
 ├── apps/
-│   ├── product-console/       # React/Vite Product Console
-│   └── vscode-extension/      # VSCode extension and IDE workbench surfaces
+│   ├── product-console/       # React/Vite compatibility console for settings and debugging
+│   └── vscode-extension/      # Primary VSCode extension and IDE Webview workbench
 ├── docs/
 │   ├── en/                    # English product/spec documents
 │   ├── zh-CN/                 # Chinese product/spec documents and protocol docs
@@ -268,14 +269,17 @@ Key documents:
 - [Product Requirements Document](docs/en/PRD.md)
 - [Documentation Index](docs/README.md)
 - [Feature Spec Index](docs/features/README.md)
-- [Agentic Spec Protocol](docs/zh-CN/agentic-spec-protocol.md)
+- [Project HLD](docs/zh-CN/hld.md)
+- [Agentic Spec Standard](docs/zh-CN/agentic-spec-standard.md)
 - [Project Skill Guide](docs/zh-CN/skills.md)
 
 ---
 
 ## Current implementation status
 
-SpecDrive AutoBuild is under active implementation. The repository already contains the control-plane runtime, scheduler, persistence/audit foundations, execution adapter work, Product Console work, VSCode IDE surfaces, feature specs, and test coverage for core workflows.
+SpecDrive AutoBuild is under active implementation. The repository already contains the control-plane runtime, scheduler, persistence/audit foundations, CLI and RPC execution adapter work, Product Console compatibility work, VSCode IDE Webview surfaces, feature specs, and test coverage for core workflows.
+
+The current product direction uses the VSCode IDE Webview as the primary daily UI for execution, Feature Specs, quality evidence, review, and settings. Product Console is retained for historical compatibility, system settings, adapter configuration, queue debugging, and global state inspection.
 
 For the most precise status, use the Feature Spec index:
 
@@ -352,6 +356,12 @@ Build the VSCode extension:
 
 ```bash
 npm run ide:build
+```
+
+Run the VSCode extension tests:
+
+```bash
+npm run ide:test
 ```
 
 Package the VSCode extension:
@@ -436,9 +446,10 @@ SpecDrive follows several strict rules for agentic development:
 For product and architecture understanding:
 
 1. [docs/en/PRD.md](docs/en/PRD.md)
-2. [docs/zh-CN/agentic-spec-protocol.md](docs/zh-CN/agentic-spec-protocol.md)
+2. [docs/zh-CN/hld.md](docs/zh-CN/hld.md)
 3. [docs/features/README.md](docs/features/README.md)
-4. [docs/zh-CN/skills.md](docs/zh-CN/skills.md)
+4. [docs/zh-CN/agentic-spec-standard.md](docs/zh-CN/agentic-spec-standard.md)
+5. [docs/zh-CN/skills.md](docs/zh-CN/skills.md)
 
 For implementation work:
 
