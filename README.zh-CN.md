@@ -80,6 +80,22 @@ SpecDrive AutoBuild 是一个面向自主软件交付的控制平面。它可以
 
 ---
 
+## 软件截图
+
+| Spec Workspace | Feature Spec |
+| --- | --- |
+| ![Spec Workspace](docs/screens/spec-workspace.png) | ![Feature Spec](docs/screens/feature-spec.png) |
+
+| Execution Workbench | 系统设置 |
+| --- | --- |
+| ![Execution Workbench](docs/screens/execution-workbench.png) | ![系统设置](docs/screens/Setting.png) |
+
+| Feature Spec Web 视图 |
+| --- |
+| ![Feature Spec Web 视图](docs/screens/feature-spec-web.png) |
+
+---
+
 ## 系统架构
 
 ```text
