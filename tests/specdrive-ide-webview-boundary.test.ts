@@ -218,13 +218,16 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
   assert.match(webviewSource, /renderStateFlow\(selectedItem\)/);
   assert.match(webviewSource, /state-flow state-flow-compact/);
+  assert.match(webviewSource, /rows\.map\(renderStateFlowEntry\)/);
+  assert.match(webviewSource, /function renderStateFlowEntry\(row: \[string, string\]\): string/);
+  assert.match(webviewSource, /row\[0\] === "Review Message" \? renderStateFlowRow\(row\) : renderStateFlowItem\(row\)/);
   assert.match(webviewSource, /function renderStateFlowItem\(\[label, value\]: \[string, string\]\): string/);
   assert.match(sharedWebviewSource, /\.state-flow-compact\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(sharedWebviewSource, /@media \(max-width:1100px\).*\.state-flow-compact,\.feature-state-flow-compact\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(sharedWebviewSource, /\.state-flow-reason\{grid-column:1\/-1\}/);
   assert.match(webviewSource, /function renderStateFlowRow\(\[label, value\]: \[string, string\]\): string/);
   assert.match(webviewSource, /renderStateFlowRow\(\["Next Step", stateFlowNextAction\(item\)\]\)/);
-  assert.match(webviewSource, /const gridSpan = label === "Next Step" \? ` style="grid-column:1\/-1"` : ""/);
+  assert.match(webviewSource, /const gridSpan = label === "Next Step" \|\| label === "Review Message" \? ` style="grid-column:1\/-1"` : ""/);
   assert.match(webviewSource, /"Message", "References", "Next Step"\]\.includes\(label\)/);
   assert.match(webviewSource, /Resume Target/);
   assert.match(webviewSource, /Review Reason/);
@@ -537,6 +540,9 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(webviewSource, /<h3>State Flow<\/h3>/);
   assert.match(webviewSource, /renderFeatureStateFlow\(feature\)/);
   assert.match(webviewSource, /state-flow feature-state-flow-compact/);
+  assert.match(webviewSource, /rows\.map\(renderFeatureStateEntry\)/);
+  assert.match(webviewSource, /function renderFeatureStateEntry\(row: \[string, string\]\): string/);
+  assert.match(webviewSource, /row\[0\] === "Review Message" \? renderFeatureStateRow\(row\) : renderFeatureStateItem\(row\)/);
   assert.match(webviewSource, /function renderFeatureStateItem\(\[label, value\]: \[string, string\]\): string/);
   assert.match(webviewSource, /\["Current", feature\.status\]/);
   assert.match(webviewSource, /\["Execution", featureExecutionLabel\(feature\)\]/);
@@ -600,7 +606,7 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
 
 test("VSCode Feature Spec category panels keep their own scroll containers", () => {
   assert.match(webviewSource, /renderFeatureGroupedPanels\(groups, selected\?\.id\)/);
-  assert.match(webviewSource, /\.feature-board\{[^}]*grid-template-rows:minmax\(0,1fr\) auto[^}]*overflow:hidden/);
+  assert.match(webviewSource, /\.feature-board\{height:100%;display:flex;flex-direction:column;gap:8px;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable\}/);
   assert.match(webviewSource, /function renderFeatureGroupedPanels\(groups: FeaturePanelGroup\[], selectedFeatureId: string \| undefined\): string/);
   assert.match(webviewSource, /groups\.map\(\(group\) =>/);
   assert.match(webviewSource, /renderFeatureGroupPanel\(group\.title, group\.statuses, group\.features, selectedFeatureId, group\.open\)/);
@@ -611,9 +617,9 @@ test("VSCode Feature Spec category panels keep their own scroll containers", () 
   assert.match(webviewSource, /@media\(max-width:1300px\)[\s\S]*\.feature-panel-items\{grid-template-columns:repeat\(auto-fill,minmax\(170px,1fr\)\)\}/);
   assert.doesNotMatch(webviewSource, /grid-template-columns:minmax\(200px,1fr\) repeat\(2,minmax\(160px,\.78fr\)\)/);
   assert.doesNotMatch(webviewSource, /function renderFeaturePanel/);
-  assert.match(webviewSource, /\.feature-panel\[open\]\{height:100%;min-height:0\}/);
-  assert.match(webviewSource, /\.feature-panel:not\(\[open\]\)\{display:block;height:auto;min-height:0\}/);
-  assert.match(webviewSource, /\.feature-panel-body\{min-height:0;overflow-y:auto;overflow-x:hidden[^}]*scrollbar-gutter:stable/);
+  assert.match(webviewSource, /\.feature-panel\[open\]\{height:auto\}/);
+  assert.match(webviewSource, /\.feature-panel:not\(\[open\]\)\{height:auto\}/);
+  assert.match(webviewSource, /\.feature-panel-body\{height:auto;overflow:visible\}/);
   assert.match(webviewSource, /\.feature-card::before\{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var\(--feature-status-color,var\(--muted\)\)\}/);
   assert.match(webviewSource, /\.feature-card\[data-status="blocked"\]\{--feature-status-color:var\(--bad\)\}/);
   assert.match(webviewSource, /\.feature-card\[data-status="ready"\]\{--feature-status-color:#a266ff\}/);

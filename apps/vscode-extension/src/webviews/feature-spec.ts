@@ -323,7 +323,11 @@ function renderFeatureStateFlow(feature: SpecDriveIdeFeatureNode): string {
     ["Resume Evidence", resume ? [resume.executionId, resume.schedulerJobId, resume.at].filter(Boolean).join(" · ") : "none"],
   ];
   const nextStep = renderFeatureStateRow(["Next Step", featureStateNextAction(feature)]);
-  return `<div class="result-group state-flow feature-state-flow-compact">${rows.map(renderFeatureStateItem).join("")}${nextStep}</div>`;
+  return `<div class="result-group state-flow feature-state-flow-compact">${rows.map(renderFeatureStateEntry).join("")}${nextStep}</div>`;
+}
+
+function renderFeatureStateEntry(row: [string, string]): string {
+  return row[0] === "Review Message" ? renderFeatureStateRow(row) : renderFeatureStateItem(row);
 }
 
 function renderFeatureStateItem([label, value]: [string, string]): string {
