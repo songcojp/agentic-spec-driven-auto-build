@@ -21,11 +21,17 @@ Produce UI system design, not a decorative page list. Describe real user workflo
 When generating or updating the UI system:
 
 - Treat `docs/agentic-spec/ui/ui-spec.md` as the compatibility path for the project-level UI System Design artifact unless the invocation supplies another path.
-- Cover every page, Webview, modal, drawer, panel, table/detail pair, settings surface, approval/review surface, empty/loading/error/permission state, and important responsive breakpoint implied by PRD, requirements, HLD, page/surface inventory, and Feature Specs.
+- Treat UI Spec as a required mainline design artifact, not a concept-image folder or a page list. If the path is missing, create it; if it exists but lacks concrete workflow matrices, repair it before downstream Feature split.
+- Cover every page, app view, IDE panel, desktop/mobile view, terminal UI, modal, drawer, panel, table/detail pair, settings surface, approval/review surface, empty/loading/error/permission state, and important responsive breakpoint implied by PRD, requirements, HLD, page/surface inventory, and Feature Specs.
 - Include an interaction matrix for each workflow: entry point, actors, controls/fields, user action, validation, save/cancel behavior, state feedback, persisted/reload/revisit assertion, error path, requirement IDs, and browser/evidence expectation.
 - Include UI system foundations: information architecture, navigation model, layout grid/density, typography, color tokens, semantic status tokens, spacing, component rules, accessibility rules, motion rules, data-binding rules, and verification obligations.
+- Include a state matrix for each primary surface: empty, loading, ready, dirty, saving, running, blocked, failed, completed, permission/read-only, and the fact source that drives each state.
+- Include data-binding contracts for every editable or action-driving field: query/file/db/event read source, command/state-transition write target, schema constraints, failure feedback, and reload/revisit assertion.
+- Include a UI ready gate that downstream Feature Specs must reference. A UI/App Feature is not ready if it only has a page name, route, screenshot, concept image, static layout, happy path, API test, or entry/text assertion.
+- Do not assume a specific UI host such as web app, IDE panel, desktop app, mobile app, terminal UI, or console. Use the primary and compatibility surfaces declared by the project PRD/HLD/UI Spec.
 - For operational SaaS, IDE, dashboard, review, settings, or scheduler surfaces, favor dense, readable, work-focused UI over marketing layout patterns.
-- If external UI/UX design-intelligence skills are available, they may inform style, palette, typography, accessibility, and stack-specific heuristics. Keep SpecDrive PRD/requirements/HLD as the authority; do not let external style recommendations override product workflows, state facts, controlled-command boundaries, or IDE Webview direction.
+- If external UI/UX design-intelligence skills are available, they may inform style, palette, typography, accessibility, and stack-specific heuristics. Keep the project PRD/requirements/HLD as the authority; do not let external style recommendations override product workflows, state facts, controlled-command boundaries, or declared UI-surface direction.
+- If required product or architecture facts are missing, return `clarification_needed` or `review_needed` with the exact missing workflow/state/data decisions instead of inventing UI behavior.
 
 When generating optional concept images:
 
@@ -46,6 +52,7 @@ When generating high-fidelity static HTML:
 - Keep prototypes backend-free and static. They may simulate interactions locally but must not call Control Plane APIs, mutate real workspace state, or claim to be production UI.
 - Preserve factual text such as paths, logs, evidence snippets, command names, requirement IDs, and status values exactly when they come from source artifacts.
 - Run or document practical visual checks for the generated HTML when possible, including desktop and mobile viewport review, nonblank rendering, interaction reachability, and no incoherent overlap.
+- Do not treat prototype generation as complete until every page listed in the UI Spec workflow inventory has either a concrete page artifact or an explicit `review_needed` gap explaining why it cannot be produced from current source artifacts.
 
 ## References
 

@@ -72,6 +72,8 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 | UI Spec | 页面/视图/弹窗、状态、用户动作、interaction matrix、数据绑定、保存/校验/reload 断言、浏览器验收。 | 只有概念图、截图、入口或 happy path。 |
 | Feature Spec | 垂直 journey、Feature-scoped design、parser-compatible tasks、Journey Checkpoint、evidence plan。 | P1 journey 没有 requirement row、design path、task block 或 evidence plan。 |
 
+`docs/agentic-spec/ui/ui-spec.md` 是通用 UI System Design 主线 artifact。该文件必须明确项目声明的 primary / secondary / compatibility surface、surface inventory、workflow-level interaction matrix、state matrix、data-binding contract、prototype artifact index 和 UI ready gate。缺少该文件、缺少 workflow 矩阵，或只存在概念图 / 截图 / 页面清单时，UI 相关 Feature 不得进入 `ready`。
+
 `result.specGranularity` 必须包含 `decision`、`artifactLevelFindings`、`missingUserScenarios`、`missingBehaviorRequirements`、`missingStateDataContracts`、`missingInteractionMatrix`、`missingAcceptanceEvidence` 和 `requiredRefinements`。失败原因使用 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
 
 ## 5.1 Spec Document Quality Repair Loop

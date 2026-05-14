@@ -96,6 +96,14 @@ Rules:
 | Source Requirement | Feature Requirement | Design Section | Task | Verification |
 |---|---|---|---|---|
 | REQ-<NNN> | FEAT-<NNN>-REQ-001 | design.md#<section-anchor> | TASK-001 | <command or evidence> |
+
+## UI Traceability
+
+Required when this Feature creates, changes, or verifies UI behavior. Use `N/A - non-UI Feature` only when no user-facing UI, UI host, prototype, view model, settings surface, browser/runtime flow, or interaction evidence is affected.
+
+| UI Surface / Workflow | UI Spec Reference | Feature Requirement | Required Interaction Evidence |
+|---|---|---|---|
+| <surface/workflow id> | docs/agentic-spec/ui/ui-spec.md#<anchor> | FEAT-<NNN>-REQ-001 | <browser action, state change, reload/revisit, negative path> |
 ```
 
 ## design.md
@@ -124,6 +132,20 @@ Rules:
 - Input: <contract/path/command>
 - Output: <contract/path/artifact>
 
+## UI Interaction Contract
+
+Use this section when the Feature affects any UI. If the Feature is non-UI, write `N/A - non-UI Feature` and explain why.
+
+| Workflow | Entry | Actor | Controls / Fields | User Action | Validation | Save / Cancel | State Feedback | Persisted / Revisit Assertion | Error Path | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| <workflow id> | <command/view/button> | <user role> | <field/control list> | <observable action> | <validation rule> | <save/cancel behavior> | <loading/success/failure feedback> | <reload/reopen assertion> | <negative path> | <browser/runtime evidence> |
+
+Rules:
+
+- UI/App Features must reference `docs/agentic-spec/ui/ui-spec.md` or a feature-scoped UI Spec/prototype.
+- Page names, routes, headings, screenshots, concept images, API tests, or entry/text assertions are not enough for UI readiness.
+- The interaction contract must include real user action, state change, persistence or reload/revisit behavior, and at least one negative or blocked path.
+
 ## Implementation Plan
 
 - <Concrete module/path change.>
@@ -136,6 +158,7 @@ Rules:
 ## Verification Design
 
 - <Test/evidence strategy mapped to requirements.>
+- For UI/App Features, include browser-visible evidence for user action, state change, reload/revisit assertion, negative path, and screenshot/trace/log references.
 ```
 
 ## tasks.md

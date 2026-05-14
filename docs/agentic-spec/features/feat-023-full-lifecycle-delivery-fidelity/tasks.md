@@ -37,12 +37,12 @@ Feature ID: FEAT-023
 验证: `node --test tests/cli-adapter.test.ts tests/scheduler.test.ts`
 
 ### T-023-07 Mainline artifact granularity specs
-状态: todo
-描述: 更新 PRD、requirements、HLD、Feature index 和 FEAT-023，定义 PRD / requirements / HLD / UI Spec / Feature Spec 的逐层颗粒度门禁和 Kiro-style requirements-first 同步规则。
+状态: in-progress
+描述: 更新 PRD、requirements、HLD、UI Spec、Feature index 和 FEAT-023，定义 PRD / requirements / HLD / UI Spec / Feature Spec 的逐层颗粒度门禁和 Kiro-style requirements-first 同步规则。
 关联需求: REQ-092, US-023-04
-范围: `docs/agentic-spec/zh-CN/PRD.md`, `docs/agentic-spec/zh-CN/requirements.md`, `docs/agentic-spec/zh-CN/hld.md`, `docs/agentic-spec/features/README.md`, `docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/*`
+范围: `docs/agentic-spec/zh-CN/PRD.md`, `docs/agentic-spec/zh-CN/requirements.md`, `docs/agentic-spec/zh-CN/hld.md`, `docs/agentic-spec/ui/ui-spec.md`, `docs/agentic-spec/features/README.md`, `docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/*`
 验证: `git diff --check`
-完成标准: `REQ-092` 进入主线追踪矩阵和 M9 映射，FEAT-023 明确承载 Spec Artifact Granularity Gate。
+完成标准: `REQ-092` 进入主线追踪矩阵和 M9 映射，FEAT-023 明确承载 Spec Artifact Granularity Gate，UI Spec 以 `docs/agentic-spec/ui/ui-spec.md` 作为主线 artifact，并声明 interaction matrix、state matrix、data-binding、prototype 和 UI ready gate。
 
 ### T-023-08 Spec granularity review skill
 状态: todo
