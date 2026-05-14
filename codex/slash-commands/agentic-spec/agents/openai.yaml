@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agentic Spec"
+  short_description: "Run the Agentic Spec workflow."
+  default_prompt: "Use $agentic-spec to run the Agentic Spec workflow for this request."
+policy:
+  allow_implicit_invocation: false
