@@ -15,7 +15,9 @@ description: "Implement bounded Feature Spec work. Use when a scheduled Feature 
 
 ## Guidance
 
-Read the Feature Spec, preserve unrelated changes, implement the smallest complete behavior slice, collect Delivery Fidelity and Git delivery evidence, and avoid self-approving completion.
+Read the Feature Spec, preserve unrelated changes, honor its declared `Worktree Mode`, implement the smallest complete behavior slice, collect Delivery Fidelity and Git delivery evidence, and avoid self-approving completion.
+
+When `Worktree Mode` is missing, return `review_needed` or `clarification_needed` for write-capable work instead of silently writing in the owner workspace. Use `shared-readonly` only for tasks that do not modify files. Use `serial-owner` for high-conflict writes, `feature-worktree` for the default one-Feature-one-PR lifecycle, `worker-worktree` for Feature-internal parallel write tasks that merge back to the Feature branch, and `manual-gated` when Git lifecycle side effects require explicit approval.
 
 ## References
 

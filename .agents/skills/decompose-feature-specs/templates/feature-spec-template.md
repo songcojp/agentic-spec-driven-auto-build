@@ -27,8 +27,17 @@ Rules:
 - Do not generate alternate file names such as `requirement.md`, `task.md`, `taskes.md`, `plan.md`, `implementation.md`, `feature.md`, or nested task files.
 - `requirements.md`, `design.md`, and `tasks.md` are mandatory before a Feature can be marked `ready`.
 - `tasks.md` must contain at least one parser-compatible task heading matching `### TASK-<nnn>: <title>` or `### T-<feature-nnn>-<task-nn>: <title>`.
+- `tasks.md` must declare a Feature-level `Worktree Mode` and every write-capable task must either inherit it or override it explicitly.
 - `docs/features/README.md` must use a parser-compatible index table whose first column is `Feature ID`; do not put `Order`, `#`, or any other column before `Feature ID`.
 - The index table `Folder` column must contain only the folder basename, such as `feat-001-example`, not `docs/features/feat-001-example`.
+
+## Worktree Mode Values
+
+- `feature-worktree`: default for implementation Features; `implement-feature` owns one Feature worktree, branch, PR, merge, and cleanup lifecycle.
+- `worker-worktree`: Feature-internal parallel write task or task group; worker branches merge back to the Feature branch before the Feature PR is delivered.
+- `serial-owner`: high-conflict writes run serially in the Feature owner worktree; use for lockfiles, migrations, shared configuration, broad refactors, or other merge-sensitive areas.
+- `shared-readonly`: read-only planning, review, analysis, or verification that must not write files.
+- `manual-gated`: Git lifecycle or write execution requires explicit human approval before worktree creation, merge, cleanup, or other side effects.
 
 ## docs/features/README.md
 
@@ -142,12 +151,14 @@ Rules:
 - Depends On:
   - FEAT-<NNN> | none
 - Adapter: codex-cli | cli | rpc | mcp | sandbox | manual
+- Worktree Mode: feature-worktree | worker-worktree | serial-owner | shared-readonly | manual-gated
 - Approval Required: true | false
 
 ## Tasks
 
 ### TASK-001: <Imperative task title>
 Status: todo
+Worktree Mode: inherit | feature-worktree | worker-worktree | serial-owner | shared-readonly | manual-gated
 Description: <One concrete implementation or spec task.>
 Requirements:
 - FEAT-<NNN>-REQ-001
@@ -164,6 +175,7 @@ Acceptance:
 
 ### TASK-002: <Imperative task title>
 Status: todo
+Worktree Mode: inherit | feature-worktree | worker-worktree | serial-owner | shared-readonly | manual-gated
 Description: <One concrete implementation or verification task.>
 Requirements:
 - FEAT-<NNN>-REQ-001
@@ -182,7 +194,8 @@ Acceptance:
 
 - [ ] Primary user journey has a requirement row, design path, task block, and evidence plan.
 - [ ] Failure or edge path has a requirement row, design path, task block, and evidence plan.
-- [ ] Every `TASK-*` has Requirements, Spec Refs, Allowed Paths, Verification, and Acceptance fields.
+- [ ] Every `TASK-*` has Requirements, Spec Refs, Allowed Paths, Worktree Mode, Verification, and Acceptance fields.
+- [ ] Write-capable tasks use `feature-worktree`, `worker-worktree`, `serial-owner`, or `manual-gated`; read-only tasks use `shared-readonly`.
 ```
 
 ## spec-state.json
@@ -191,6 +204,7 @@ Acceptance:
 {
   "featureId": "FEAT-<NNN>",
   "status": "ready",
+  "worktreeMode": "feature-worktree",
   "executionStatus": null,
   "blockedReasons": [],
   "nextAction": "Schedule feature execution.",

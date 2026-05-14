@@ -83,7 +83,8 @@
 - [ ] `docs/features/README.md` 是否需要更新 Primary Requirements、依赖或状态。
 - [ ] 受影响 Feature Spec 的 `requirements.md` 是否同步 scope、requirements 和 acceptance。
 - [ ] 受影响 Feature Spec 的 `design.md` 是否同步组件、数据、流程、依赖和证据。
-- [ ] 受影响 Feature Spec 的 `tasks.md` 是否需要新增、重开或标记后续任务。
+- [ ] 受影响 Feature Spec 的 `tasks.md` 是否需要新增、重开、标记后续任务或更新 Worktree Mode。
+- [ ] 写入型 Feature / Task 是否明确使用 `feature-worktree`、`worker-worktree`、`serial-owner` 或 `manual-gated`，只读任务是否明确使用 `shared-readonly`。
 - [ ] active/done Feature 是否需要标记 stale、needs-sync、follow-up 或 reopening。
 - [ ] 开放问题是否新增、关闭或改为 review routing。
 
@@ -98,7 +99,21 @@
 | `done` | 不直接改实现结论；新增 follow-up、Spec Evolution 或重新打开任务，并记录为什么 done 结果受影响。 |
 | `delivered` | 通过 Spec Evolution 记录新版本，并生成后续 Feature 或 patch 需求。 |
 
-## 6. 审查与阻塞规则
+## 6. Worktree 模式
+
+当新增或变更会进入 Feature 实现、验证写入、Git delivery 或并行执行时，必须在 Feature Spec `tasks.md` 中声明 Worktree Mode：
+
+| Worktree Mode | 使用场景 |
+|---|---|
+| `feature-worktree` | 默认实现模式；一个 Feature 对应一个隔离 worktree、分支和 PR，由 `implement-feature` 管理提交、检查、合并和清理。 |
+| `worker-worktree` | Feature 内部并行写任务或任务组；worker 分支先合回 Feature 分支，最终仍通过同一个 Feature PR 交付。 |
+| `serial-owner` | 高冲突范围串行执行，例如 lockfile、数据库迁移、共享配置、跨目录重构或难以自动合并的修改。 |
+| `shared-readonly` | 只读分析、规划、审查或验证；不得写文件、提交、合并或清理 worktree。 |
+| `manual-gated` | worktree 创建、合并、清理或其他 Git 副作用需要人工审批。 |
+
+缺少 Worktree Mode 的写入型 Feature Spec 不得进入 `ready` 或 `feature_execution`；应退回 `review_needed`、`clarification_needed` 或 `approval_needed`。如果 active / done Feature 新增 worktree 要求，必须同步 `docs/features/README.md`、Feature `spec-state.json` 和受影响 Feature 的 `tasks.md`，并记录是否需要 follow-up、reopen 或仅作为后续交付约束。
+
+## 7. 审查与阻塞规则
 
 以下情况不得直接进入 `ready_to_commit`：
 
@@ -107,14 +122,15 @@
 - 新需求缺少来源证据或无法追踪到 PRD/用户指令/实现证据。
 - 变更使已完成 Feature 的验收结论失效，但没有下游处理记录。
 - PRD、requirements、HLD 和 Feature Spec 对同一行为描述冲突。
+- 写入型 Feature Spec 缺少 Worktree Mode，或声明的 Worktree Mode 与并行、审批、Git delivery 边界冲突。
 
 路由规则：
 
 - 意图或验收不清楚：`clarification_needed`。
 - 扩大范围、影响架构/依赖/实现证据：`risk_review_needed`。
-- 涉及权限、安全、项目宪章、审批规则或高风险操作：`approval_needed`。
+- 涉及权限、安全、项目宪章、审批规则、高风险操作或 `manual-gated` Git 副作用：`approval_needed`。
 
-## 7. 提交与记录
+## 8. 提交与记录
 
 建议把提交按职责拆分：
 
@@ -128,10 +144,11 @@
 - [ ] `git diff --check`
 - [ ] 搜索 `CHG-*`，确认全局变更记录、主线文档和下游 Feature Spec 的引用一致。
 - [ ] 搜索新增/变更 ID，确认主线文档和下游 Feature Spec 都能被找到。
+- [ ] 搜索 `Worktree Mode`，确认受影响 Feature Spec、模板或技能协议中的 worktree 模式一致。
 - [ ] 检查工作区是否有用户或其他任务留下的无关修改。
 - [ ] 在提交说明中写明变更类型、影响 ID 和是否包含下游同步。
 
-## 8. 最小行动清单
+## 9. 最小行动清单
 
 处理每个新增或变更项时，至少完成以下步骤：
 

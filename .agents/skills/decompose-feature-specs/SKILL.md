@@ -23,6 +23,7 @@ Use `templates/feature-spec-template.md` as the required output contract for eve
 - mandatory file names as `requirements.md`, `design.md`, `tasks.md`, and `spec-state.json`
 - index and queue updates as `docs/features/README.md` and `docs/features/feature-pool-queue.json`; the index table must start with `Feature ID` and its `Folder` column must use only the folder basename
 - `tasks.md` task blocks as parseable `### TASK-<nnn>: <title>` or `### T-<feature-nnn>-<task-nn>: <title>` headings with `Status`, `Description`, `Requirements`, `Spec Refs`, `Allowed Paths`, `Forbidden Paths`, `Verification`, and `Acceptance`
+- explicit `Worktree Mode` metadata and per-task mode when the Feature performs implementation, verification writes, Git delivery, or read-only analysis
 
 Do not emit alternate spellings such as `taskes`, `task.md`, `plan.md`, or `implementation.md`. Do not mark a Feature `ready` unless all mandatory files exist and `tasks.md` contains at least one parser-compatible task block.
 
