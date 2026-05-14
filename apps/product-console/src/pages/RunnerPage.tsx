@@ -99,7 +99,7 @@ function friendlyWork(job: RunnerSchedulerJob, invocation: { skillName?: string;
   const operation = job.operation ?? phase;
   if (skillName === "implement-feature" || phase === "task_execution") return text.workTaskExecution;
   if (skillName === "design-architecture" || operation === "generate_hld") return text.workGenerateHld;
-  if (skillName === "convert-ears-requirements" || operation === "generate_ears") return text.workGenerateEars;
+  if (skillName === "generate-user-stories" || operation === "generate_user_stories") return text.workGenerateUserStories;
   if (skillName === "decompose-feature-specs" || operation === "split_feature_specs") return text.workSplitFeatures;
   if (skillName === "design-ui-spec" || operation === "generate_ui_spec") return text.workGenerateUiSpec;
   if (skillName === "collect-project-context") return text.workCollectContext;

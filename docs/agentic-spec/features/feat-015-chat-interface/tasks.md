@@ -91,5 +91,5 @@ T-015-09 → T-015-10
 
 ## 已知风险
 
-- `add_requirement` / `change_requirement` / `generate_ears` / `generate_hld` 等中等风险意图需要 `submitConsoleCommand()` 有对应 action 支持；若不支持，`executeIntent` 返回错误消息，不影响系统稳定性，但功能不完整。
+- `add_requirement` / `change_requirement` / `generate_user_stories` / `generate_hld` 等中等风险意图需要 `submitConsoleCommand()` 有对应 action 支持；若不支持，`executeIntent` 返回错误消息，不影响系统稳定性，但功能不完整。
 - Codex CLI 意图分类的 prompt 质量影响识别准确率；规则兜底仅覆盖主流关键词。

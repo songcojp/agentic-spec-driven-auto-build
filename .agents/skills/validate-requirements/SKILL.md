@@ -17,6 +17,18 @@ description: "Validate requirements for quality and readiness. Use before planni
 
 Review requirements against source intent and downstream planning needs. Classify gaps as repairable, clarification-needed, risk-review-needed, or blocking.
 
+When validating user stories:
+
+- Use `docs/agentic-spec/requirements/user-stories-standard.md` or the invocation-supplied requirements standard as the content validation contract.
+- Check story depth first. Each Must `US-*` needs actor, context, goal, reason/value, trigger, main scenario, alternate/negative scenarios, done signal, source refs, and priority before downstream design can proceed.
+- Classify shallow, feature-area, or slogan-like user stories as `story_gap`; examples include "manage settings", "configure provider", "publish app", or "improve UI" without concrete context, scenario, and done signal.
+- Check every `REQ-*`, `NFR-*`, and `EDGE-*` row for stable ID, source refs, `US-*` mapping or explicit system-invariant reason, atomic statement, acceptance, evidence, priority, status, and downstream refs when known.
+- Classify non-atomic rows as `atomicity_gap`; unobservable or ambiguous behavior as `behavior_gap`; missing acceptance/evidence as `evidence_gap`; missing source/story/downstream links as `traceability_gap`; missing decisions as `clarification_gap`; conflicting source facts as `conflict_gap`.
+- Reject syntactically structured rows that still hide broad behavior behind verbs such as "support", "provide", "handle", "manage", "optimize", "improve", "integrate", "allow", or "ensure" without an observable system response.
+- Ensure edge, boundary, permission, empty, conflict, invalid input, and negative-path behavior is represented as `EDGE-*` rows or explicitly out of scope with source rationale.
+- Ensure UI-facing requirements name browser/runtime evidence needs when user action, state change, persistence, reload/revisit, or negative path is part of the behavior.
+- Requirements with any open Must-scope `story_gap`, `atomicity_gap`, `behavior_gap`, `evidence_gap`, `traceability_gap`, `clarification_gap`, or `conflict_gap` must remain `review_needed` and must not advance to HLD, UI Spec, Feature Spec, task planning, ready, or execution.
+
 ## References
 
 - Read `references/specdrive-output.md` when invoked by an adapter that requires structured execution output.

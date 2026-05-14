@@ -724,9 +724,9 @@ test("VSCode Spec Workspace keeps global skill input at top and document actions
   assert.match(extensionSource, /label: "Feature Split"/);
   assert.match(extensionSource, /action: "scan_spec_sources"/);
   assert.match(extensionSource, /action: "upload_prd_source"/);
-  assert.match(extensionSource, /action: "generate_ears"/);
+  assert.match(extensionSource, /action: "generate_user_stories"/);
   assert.match(extensionSource, /label: "PRD"/);
-  assert.match(extensionSource, /label: "EARS Requirements"/);
+  assert.match(extensionSource, /label: "User Stories"/);
   assert.match(extensionSource, /label: "HLD"/);
   assert.match(extensionSource, /label: "UI Spec"/);
   assert.doesNotMatch(extensionSource, /label: "UI Spec document and concept images"/);

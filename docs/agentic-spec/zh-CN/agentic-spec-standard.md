@@ -185,7 +185,7 @@ L5. Product Implementation Layer
 
 1. Project Intake。
 2. PRD。
-3. EARS Requirements。
+3. User Stories。
 4. HLD。
 5. UI Specification。
 6. High-fidelity Concept / Prototype。
@@ -514,7 +514,7 @@ evidence:
 │   ├── mainline/
 │   │   ├── 00-project-intake.md
 │   │   ├── 01-prd.md
-│   │   ├── 02-ears-requirements.md
+│   │   ├── 02-user-stories.md
 │   │   ├── 03-hld.md
 │   │   ├── 04-ui-specification.md
 │   │   ├── 05-high-fidelity-prototype/
@@ -704,18 +704,18 @@ Version: V1.0
 
 ---
 
-## 6.3 EARS Requirements
+## 6.3 User Stories
 
 文件：
 
 ```text
-specs/mainline/02-ears-requirements.md
+specs/mainline/02-user-stories.md
 ```
 
 文档必须以标题和版本号开头：
 
 ```markdown
-# EARS Requirements
+# User Stories
 
 Version: V1.0
 ```
@@ -730,7 +730,7 @@ Requirement 模板：
 - Priority: Must | Should | Could
 - Status: Draft | Review | Approved | Changed | Deprecated
 
-### EARS
+### 用户故事
 
 When <trigger>,
 the system shall <response>.
@@ -1120,7 +1120,7 @@ specs/features/FEAT-001-example-feature/
 | Source Type | Source ID | Description |
 |---|---|---|
 | PRD | Section 8.1 | ... |
-| EARS | REQ-001 | ... |
+| 用户故事 | REQ-001 | ... |
 | HLD | Module X | ... |
 | UI Spec | Screen X | ... |
 | Prototype | dashboard-default.png | ... |
@@ -1239,7 +1239,7 @@ requirements-first 顺序：
 
 ```text
 PRD intent
-  -> EARS requirements
+  -> user stories
   -> HLD / UI Spec
   -> Feature requirements / design
   -> tasks
@@ -1255,7 +1255,7 @@ sync。
 | Artifact | Minimum granularity | Review failure |
 |---|---|---|
 | PRD | 用户、目标、业务流程、大模块子能力、成功样例、失败样例、非目标、优先级。 | 只写模块名、页面名、愿景句或没有失败样例。 |
-| requirements | `REQ-*` / `NFR-*` / `EDGE-*` 原子 EARS 行为、`US-*` 映射、验收、边界/错误路径、证据类型。 | 需求需要解释才能测试。 |
+| requirements | `REQ-*` / `NFR-*` / `EDGE-*` 原子 用户故事 行为、`US-*` 映射、验收、边界/错误路径、证据类型。 | 需求需要解释才能测试。 |
 | HLD | 系统级子系统、事实源数据、状态流、接口/事件策略、运行拓扑、恢复和测试策略。 | 只有组件名、页面名或技术名。 |
 | UI System Design | 全部页面、视图、弹窗、工作台面板、状态、端到端交互流程、interaction matrix、设计 token、组件语义、数据绑定、保存/校验/reload 断言、静态 HTML prototype 和浏览器验收。 | 只有文字说明、概念图、截图、入口或 happy path。 |
 | Feature Spec | 垂直用户旅程、Feature-scoped design、parser-compatible tasks、Journey Checkpoints、验收证据计划。 | P1 journey 没有 requirement row、design path、task block 或 evidence plan。 |
@@ -1345,7 +1345,7 @@ Project Intake
   ↓
 PRD Draft
   ↓
-EARS Requirements Draft
+User Stories Draft
   ↓
 HLD Draft
   ↓
@@ -1800,7 +1800,7 @@ Requirement Intake
   ↓
 PRD Update
   ↓
-EARS Update
+用户故事 Update
   ↓
 HLD / UI Spec Impact Check
   ↓
@@ -2403,7 +2403,7 @@ Agentic Spec Skill 必须采用 OpenAI / Agent Skills 目录规范：
 
 ```text
 refine-product-intent
-convert-ears-requirements
+generate-user-stories
 decompose-feature-specs
 implement-feature
 recover-execution
@@ -2420,7 +2420,7 @@ recover-execution
 | `use-specdrive-lifecycle` | 路由 Define、Plan、Build、Verify、Review、Ship 生命周期和专业 agent 职责。 |
 | `collect-project-context` | 只读收集项目、仓库、命令、约束、宪法和实现上下文。 |
 | `refine-product-intent` | 整理 PRD、目标、非目标、用户旅程、验收标准和开放问题。 |
-| `convert-ears-requirements` | 将 PRD、PR/RP、产品 brief 或自然语言输入转换为 EARS 需求。 |
+| `generate-user-stories` | 将 PRD、PR/RP、产品 brief 或自然语言输入转换为 用户故事。 |
 | `validate-requirements` | 检查需求原子性、可测试性、冲突、追踪和下游可消费性。 |
 | `manage-spec-change` | 治理新增、修订、澄清、废弃、影响分析和重规划入口。 |
 | `design-architecture` | 生成或更新 HLD、ADR、数据流、状态流、Adapter/API/事件/文件契约。 |
@@ -2470,7 +2470,7 @@ recover-execution
 
 ### PRD Impact
 
-### EARS Impact
+### 用户故事 Impact
 
 ### HLD Impact
 
@@ -2491,7 +2491,7 @@ recover-execution
 ## 7. Required Updates
 
 - [ ] Update PRD
-- [ ] Update EARS Requirements
+- [ ] Update User Stories
 - [ ] Update HLD
 - [ ] Update UI Specification
 - [ ] Update Prototype
@@ -2514,7 +2514,7 @@ recover-execution
 
 ## 14.2 全局变更记录
 
-Agentic Spec 项目必须维护一个全局变更记录，用于串联所有新增、变更、澄清、废弃、证据失效和恢复动作。全局变更记录是变更过程的索引和流水账，不替代 PRD、EARS Requirements、HLD、UI Spec、Feature Spec、tasks 或 Evidence 中的事实内容。
+Agentic Spec 项目必须维护一个全局变更记录，用于串联所有新增、变更、澄清、废弃、证据失效和恢复动作。全局变更记录是变更过程的索引和流水账，不替代 PRD、User Stories、HLD、UI Spec、Feature Spec、tasks 或 Evidence 中的事实内容。
 
 文件：
 
@@ -2540,7 +2540,7 @@ Version: V1.0
 
 | Change ID | Date | Type | Source | Summary | Related CR | Affected Specs | Affected Requirements | Affected Features | Affected Evidence | Decision | Status | Next Action |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CHG-001 | 2026-01-01 | Requirement Change | User request | Adjust approval boundary | CR-001 | PRD, EARS, HLD | REQ-001 | FEAT-001 | evidence.md | Approved | Applied | Re-run affected tests |
+| CHG-001 | 2026-01-01 | Requirement Change | User request | Adjust approval boundary | CR-001 | PRD, 用户故事, HLD | REQ-001 | FEAT-001 | evidence.md | Approved | Applied | Re-run affected tests |
 ```
 
 字段说明：
@@ -2728,7 +2728,7 @@ Update Evidence
 
 | Change ID | Related CR | Type | Affected Specs | Affected Features | Affected Tasks | Status |
 |---|---|---|---|---|---|---|
-| CHG-001 | CR-001 | Requirement Change | PRD, EARS | FEAT-001 | TASK-001 | Applied |
+| CHG-001 | CR-001 | Requirement Change | PRD, 用户故事 | FEAT-001 | TASK-001 | Applied |
 ```
 
 ---
@@ -2881,7 +2881,7 @@ agentic-spec-driven-auto-build 的 PRD / HLD / UI Spec / Feature Spec
 ```text
 specs/mainline/00-project-intake.md
 specs/mainline/01-prd.md
-specs/mainline/02-ears-requirements.md
+specs/mainline/02-user-stories.md
 specs/mainline/03-hld.md
 specs/mainline/06-feature-index.md
 specs/changes/change-log.md

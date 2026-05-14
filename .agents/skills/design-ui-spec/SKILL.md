@@ -10,7 +10,7 @@ description: "Design UI system specifications and high-fidelity prototypes. Use 
 1. Confirm the requested outcome, source artifacts, workspace root, and allowed scope.
 2. Read referenced files from disk and pass paths, IDs, and section anchors instead of pasted document bodies.
 3. Apply this skill's workflow only to its declared responsibility; route adjacent lifecycle work to another project skill.
-4. Derive the UI system from PRD intent, EARS requirements, HLD architecture/data/state constraints, existing UI Spec, Feature Specs, and implementation reality when present.
+4. Derive the UI system from PRD intent, user stories, HLD architecture/data/state constraints, existing UI Spec, Feature Specs, and implementation reality when present.
 5. Produce or review the requested artifacts with traceability to PRD, requirements, HLD, Feature Spec, execution records, tests, or evidence as applicable.
 6. Return the runtime-supplied structured output shape exactly. Echo `executionId`, `skillName`, `requestedAction`, produced artifacts, next action, and Feature-level traceability when the adapter provides them.
 

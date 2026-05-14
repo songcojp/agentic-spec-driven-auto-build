@@ -8,7 +8,7 @@ const skillsRoot = join(root, ".agents/skills");
 
 const required = [
   "collect-project-context",
-  "convert-ears-requirements",
+  "generate-user-stories",
   "decompose-feature-specs",
   "design-architecture",
   "design-ui-spec",

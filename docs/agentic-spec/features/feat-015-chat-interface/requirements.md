@@ -71,7 +71,7 @@ REQ-073 验收：
 | unknown | low | — | 否 |
 | add_requirement | medium | add_requirement | 否 |
 | change_requirement | medium | change_requirement | 否 |
-| generate_ears | medium | generate_ears | 否 |
+| generate_user_stories | medium | generate_user_stories | 否 |
 | generate_hld | medium | generate_hld | 否 |
 | schedule_run | high | schedule_run | 是 |
 | pause_runner | high | pause_runner | 是 |
@@ -82,4 +82,4 @@ REQ-073 验收：
 ## 开放问题
 
 - [ ] `add_requirement` / `change_requirement` 中等风险意图的受控命令在 `submitConsoleCommand` 中是否已支持？如未支持，需在 FEAT-002/FEAT-013 添加。
-- [ ] `generate_ears` / `generate_hld` 意图是否在当前 product-console.ts 中已有对应 action？需在实现时核查。
+- [ ] `generate_user_stories` / `generate_hld` 意图是否在当前 product-console.ts 中已有对应 action？需在实现时核查。

@@ -18,7 +18,7 @@
 | 路由 | `use-specdrive-lifecycle` | 选择 Define、Plan、Build、Verify、Review、Ship 生命周期、专业 agent 职责和交付保真要求。 |
 | 上下文 | `collect-project-context` | 收集项目、仓库、命令、约束、宪法、依赖和现有实现模式。 |
 | 产品意图 | `refine-product-intent` | 整理 PRD、目标、非目标、用户旅程、验收标准和开放问题。 |
-| 需求 | `convert-ears-requirements`, `validate-requirements` | 生成 EARS 需求，并检查原子性、可测试性、冲突和追踪。 |
+| 需求 | `generate-user-stories`, `validate-requirements` | 生成用户故事，并检查原子性、可测试性、冲突和追踪。 |
 | 变更 | `manage-spec-change` | 治理新增需求、已有需求修订、澄清、废弃、影响分析和重规划入口。 |
 | 设计 | `design-architecture`, `design-ui-spec` | 生成 HLD、ADR、数据/状态/Adapter 契约、UI Spec、交互状态和 prototype 映射。 |
 | Feature | `decompose-feature-specs`, `plan-feature-execution` | 拆分 Feature Specs，维护 requirements/design/tasks/index/status，并完成执行计划、风险、依赖和可启动性判断。 |
@@ -44,7 +44,7 @@ Skill 输出必须符合调用端传入的 `SkillOutputContractV1` 或 `SkillOut
 | `use-specdrive-lifecycle` | 任务跨越需求、规划、实现、验证、评审或交付，需要生命周期路由时。 | 生命周期计划、agent 分工、必须保留的行为义务和证据。 |
 | `collect-project-context` | 需要只读探索仓库事实、命令、约束、依赖、项目章程或实现模式时。 | 有证据的仓库事实、相关路径、命令、风险和未知项。 |
 | `refine-product-intent` | PRD、产品 brief 或用户输入需要整理成可下游消费的产品意图时。 | 目标、非目标、用户旅程、验收标准、开放问题和补充建议。 |
-| `convert-ears-requirements` | PRD、PR/RP、产品 brief 或自然语言输入需要转为 EARS 需求时。 | `REQ-*`、`NFR-*`、`EDGE-*`、追踪关系、验收标准和开放问题。 |
+| `generate-user-stories` | PRD、PR/RP、产品 brief 或自然语言输入需要转为用户故事时。 | `US-*`、`REQ-*`、`NFR-*`、`EDGE-*`、追踪关系、验收标准和开放问题。 |
 | `validate-requirements` | Feature Spec 进入 ready 或规划消费需求前。 | 质量结论、冲突、不可测试项、追踪缺口和修复建议。 |
 | `manage-spec-change` | 新增、修订、澄清、废弃或重规划需求和规格时。 | 变更分类、受影响文档、更新结果、阻塞项和恢复目标。 |
 | `design-architecture` | 需要项目 HLD、ADR、数据/状态/Adapter/API/事件/文件契约时。 | 架构计划、契约、决策记录、风险和需求映射。 |
@@ -64,7 +64,7 @@ Skill 输出必须符合调用端传入的 `SkillOutputContractV1` 或 `SkillOut
 新产品需求进入系统：
 
 1. `refine-product-intent`
-2. `convert-ears-requirements`
+2. `generate-user-stories`
 3. `validate-requirements`
 4. `design-architecture`
 5. `design-ui-spec`

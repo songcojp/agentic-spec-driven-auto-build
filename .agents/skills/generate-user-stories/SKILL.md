@@ -1,0 +1,44 @@
+---
+name: generate-user-stories
+description: "Use when PRDs, product briefs, PR/RP text, or natural-language requirements must become detailed user stories, testable requirement rows, acceptance criteria, traceability, and open questions."
+---
+
+# User Story Generation
+
+## Workflow
+
+1. Confirm the requested outcome, source artifacts, workspace root, and allowed scope.
+2. Read referenced files from disk and pass paths, IDs, and section anchors instead of pasted document bodies.
+3. Apply this skill's workflow only to its declared responsibility; route adjacent lifecycle work to another project skill.
+4. Produce or review the requested artifacts with traceability to PRD, requirements, HLD, Feature Spec, execution records, tests, or evidence as applicable.
+5. Return the runtime-supplied structured output shape exactly. Echo `executionId`, `skillName`, `requestedAction`, produced artifacts, next action, and Feature-level traceability when the adapter provides them.
+
+## Guidance
+
+Generate stable, detailed user stories and derived atomic requirements. Preserve source traceability, surface ambiguity, and keep Feature Spec splitting out of this skill.
+
+When generating or updating requirements:
+
+- Treat `docs/agentic-spec/requirements/user-stories-standard.md` as the generic user story content-generation contract unless the invocation supplies another project-approved standard path.
+- Produce or repair requirements content, not a Feature Spec, design document, task plan, backlog, or implementation checklist.
+- Generate detailed `US-*` stories before or alongside `REQ-*` rows. Each Must story needs actor, context, goal, reason/value, trigger, main scenario, alternate/negative scenarios, done signal, source refs, and priority.
+- Use stable `US-*`, `REQ-*`, `NFR-*`, `EDGE-*`, and `CQ-*` IDs. Do not renumber existing published IDs to improve ordering.
+- Split shallow stories such as "manage settings", "configure provider", "publish app", or "improve UI" into concrete user goals and scenarios before deriving requirements.
+- Convert each detailed story into atomic requirement rows. Each row must have one trigger or invariant, one observable system response, source refs, story mapping or explicit system-invariant reason, acceptance, evidence, priority, and status.
+- Derive separate rows for main behavior, state/persistence, permission, validation/error, edge/boundary, and measurable non-functional behavior when those obligations can fail independently.
+- Split coarse verbs such as "support", "provide", "handle", "manage", "optimize", "improve", "integrate", "allow", or "ensure" into observable behavior rows before marking the output ready.
+- Represent edge, boundary, permission, empty, conflict, invalid input, and negative-path behavior as `EDGE-*` rows unless the source explicitly marks them out of scope.
+- Use `CQ-*` rows for missing decisions instead of inventing actors, thresholds, state facts, UI hosts, persistence behavior, security rules, or runtime topology.
+- Keep HLD, UI Spec, Feature Spec decomposition, task slicing, and execution planning out of this skill. The correct next action after a requirements-ready output is validation or downstream design, not implementation.
+- Return `review_needed` or `clarification_needed` when Must-scope stories are too shallow or rows cannot be made atomic, testable, or traceable from the available source artifacts.
+
+## References
+
+- Read `references/specdrive-output.md` when invoked by an adapter that requires structured execution output.
+- Read `references/quality-loop.md` when this skill creates or updates Spec documents that must pass a review and repair loop before downstream use.
+
+## Boundaries
+
+- Do not rely on old dotted Skill names or compatibility aliases.
+- Do not hardcode product-specific UI, database, scheduler, or adapter behavior unless the invocation supplies it as a source constraint.
+- Surface missing decisions as `clarification_needed`, `review_needed`, `risk_review_needed`, or `blocked` instead of inventing facts.

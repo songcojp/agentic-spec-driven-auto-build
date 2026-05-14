@@ -38,11 +38,11 @@ Feature ID: FEAT-023
 
 ### T-023-07 Mainline artifact granularity specs
 状态: in-progress
-描述: 更新 PRD、requirements、HLD、UI Spec、Feature index 和 FEAT-023，定义 PRD / requirements / HLD / UI Spec / Feature Spec 的逐层颗粒度门禁和 Kiro-style requirements-first 同步规则。
+描述: 更新 PRD、requirements、User Stories Standard、HLD、UI Spec、Feature index 和 FEAT-023，定义 PRD / requirements / HLD / UI Spec / Feature Spec 的逐层颗粒度门禁和 Kiro-style requirements-first 同步规则。
 关联需求: REQ-092, US-023-04
-范围: `docs/agentic-spec/zh-CN/PRD.md`, `docs/agentic-spec/zh-CN/requirements.md`, `docs/agentic-spec/zh-CN/hld.md`, `docs/agentic-spec/ui/ui-spec.md`, `docs/agentic-spec/features/README.md`, `docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/*`
+范围: `docs/agentic-spec/zh-CN/PRD.md`, `docs/agentic-spec/zh-CN/requirements.md`, `docs/agentic-spec/requirements/user-stories-standard.md`, `docs/agentic-spec/zh-CN/hld.md`, `docs/agentic-spec/ui/ui-spec.md`, `docs/agentic-spec/features/README.md`, `docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/*`
 验证: `git diff --check`
-完成标准: `REQ-092` 进入主线追踪矩阵和 M9 映射，FEAT-023 明确承载 Spec Artifact Granularity Gate，UI Spec 以 `docs/agentic-spec/ui/ui-spec.md` 作为主线 artifact，并声明 interaction matrix、state matrix、data-binding、prototype 和 UI ready gate。
+完成标准: `REQ-092` 进入主线追踪矩阵和 M9 映射，FEAT-023 明确承载 Spec Artifact Granularity Gate；requirements 以 `docs/agentic-spec/requirements/user-stories-standard.md` 作为主线 artifact，并声明 detailed user stories、stable IDs、EDGE/CQ、acceptance/evidence 和 traceability；UI Spec 以 `docs/agentic-spec/ui/ui-spec.md` 作为主线 artifact，并声明 interaction matrix、state matrix、data-binding、prototype 和 UI ready gate。
 
 ### T-023-08 Spec granularity review skill
 状态: todo
@@ -54,9 +54,9 @@ Feature ID: FEAT-023
 
 ### T-023-09 Generation and consistency skill upgrades
 状态: in-progress
-描述: 更新 PRD、requirements、HLD、UI、Feature 生成 Skill 和 spec-consistency，使每层产物在进入下游前检查颗粒度、interaction matrix、state/data contract、Journey Checkpoint、evidence plan 和文档质量修复循环。
+描述: 更新 PRD、requirements、HLD、UI、Feature 生成 Skill 和 spec-consistency，使每层产物在进入下游前检查颗粒度、detailed user stories、stable IDs、EDGE/CQ、traceability、interaction matrix、state/data contract、Journey Checkpoint、evidence plan 和文档质量修复循环。
 关联需求: REQ-092, REQ-094
-范围: `.agents/skills/refine-product-intent`, `.agents/skills/convert-ears-requirements and .agents/skills/validate-requirements`, `.agents/skills/design-architecture`, `.agents/skills/design-ui-spec`, `.agents/skills/decompose-feature-specs`, `.agents/skills/review-code-spec`
+范围: `.agents/skills/refine-product-intent`, `.agents/skills/generate-user-stories and .agents/skills/validate-requirements`, `.agents/skills/design-architecture`, `.agents/skills/design-ui-spec`, `.agents/skills/decompose-feature-specs`, `.agents/skills/review-code-spec`
 验证: `npm run skills:validate`; `git diff --check`
 完成标准: Skill 文档不再允许“文档存在即可”的 ready 判定。
 
@@ -64,7 +64,7 @@ Feature ID: FEAT-023
 状态: in-progress
 描述: 新增共享 Spec 文档质量检测/修复循环协议，并同步所有核心文档生成 Skill，要求调用方 Skill 选择 Quality Review Skill / Repair Owner，再由 Quality Review Subagent 和 Repair Subagent 在预先声明的 `qualityLoopPlan` 内最多执行 10 轮。
 关联需求: REQ-094, US-023-07
-范围: `skill-local references/quality-loop.md`, `caller-provided output schema and skill-local references/specdrive-output.md`, `.agents/skills/collect-project-context`, `.agents/skills/refine-product-intent`, `.agents/skills/convert-ears-requirements and .agents/skills/validate-requirements`, `.agents/skills/design-architecture`, `.agents/skills/design-ui-spec`, `.agents/skills/decompose-feature-specs`, `.agents/skills/review-delivery-evidence`, `docs/agentic-spec/zh-CN/*`, `docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/*`
+范围: `skill-local references/quality-loop.md`, `caller-provided output schema and skill-local references/specdrive-output.md`, `.agents/skills/collect-project-context`, `.agents/skills/refine-product-intent`, `.agents/skills/generate-user-stories and .agents/skills/validate-requirements`, `.agents/skills/design-architecture`, `.agents/skills/design-ui-spec`, `.agents/skills/decompose-feature-specs`, `.agents/skills/review-delivery-evidence`, `docs/agentic-spec/zh-CN/*`, `docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/*`
 验证: `npm run skills:validate`; `git diff --check`
 完成标准: 文档生成 Skill 的结果包含 `qualityRepairLoop` 和调用方选择的 `qualityLoopPlan`；共享 loop 不维护中央路由表；最新质量检测失败时不能返回 completed，也不能继续推进下游。
 

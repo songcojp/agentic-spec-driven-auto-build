@@ -67,14 +67,16 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 | Artifact | Owns | Fails When |
 |---|---|---|
 | PRD | 用户、目标、业务流程、大模块子能力、成功/失败样例、非目标、优先级。 | 只写模块名、页面名、愿景句或没有失败样例。 |
-| requirements | EARS 行为单元、`US-*` 映射、验收、边界/错误路径、证据类型。 | 需求需要解释才能测试，或只写“支持配置”。 |
+| requirements | 详细 `US-*`、原子 `REQ-*` / `NFR-*` / `EDGE-*`、`CQ-*`、验收、证据类型和来源追踪。 | 用户故事只有功能区/模块名/愿望句，需求需要解释才能测试、缺故事/证据映射、缺 EDGE 负向路径、缺 CQ 决策，或只写“支持配置”。 |
 | HLD | 系统级子系统、数据事实源、状态流、接口/事件、运行拓扑、质量策略和 Feature 拆分指导。 | 只有组件列表、页面列表或技术名。 |
 | UI Spec | 页面/视图/弹窗、状态、用户动作、interaction matrix、数据绑定、保存/校验/reload 断言、浏览器验收。 | 只有概念图、截图、入口或 happy path。 |
 | Feature Spec | 垂直 journey、Feature-scoped design、parser-compatible tasks、Journey Checkpoint、evidence plan。 | P1 journey 没有 requirement row、design path、task block 或 evidence plan。 |
 
+`docs/agentic-spec/requirements/user-stories-standard.md` 是通用用户故事内容生成主线 artifact。该文件不要求固定 Markdown 结构，而是要求 Must `US-*` 具备 actor、context、goal、reason/value、trigger、main scenario、alternate/negative scenarios、done signal、source refs 和 priority，并要求 `REQ-*` / `NFR-*` / `EDGE-*` 从详细故事派生为原子、可测、可追踪的行为义务。缺少该文件、用户故事过粗、缺少 EDGE/CQ/traceability，或只有形式看似结构化但行为仍不可观察时，requirements 不得进入 HLD、UI Spec、Feature Spec、tasks 或 execution。
+
 `docs/agentic-spec/ui/ui-spec.md` 是通用 UI System Design 主线 artifact。该文件必须明确项目声明的 primary / secondary / compatibility surface、surface inventory、workflow-level interaction matrix、state matrix、data-binding contract、prototype artifact index 和 UI ready gate。缺少该文件、缺少 workflow 矩阵，或只存在概念图 / 截图 / 页面清单时，UI 相关 Feature 不得进入 `ready`。
 
-`result.specGranularity` 必须包含 `decision`、`artifactLevelFindings`、`missingUserScenarios`、`missingBehaviorRequirements`、`missingStateDataContracts`、`missingInteractionMatrix`、`missingAcceptanceEvidence` 和 `requiredRefinements`。失败原因使用 `intent_gap`、`behavior_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
+`result.specGranularity` 必须包含 `decision`、`artifactLevelFindings`、`missingUserScenarios`、`missingBehaviorRequirements`、`missingStateDataContracts`、`missingInteractionMatrix`、`missingAcceptanceEvidence` 和 `requiredRefinements`。失败原因使用 `intent_gap`、`story_gap`、`atomicity_gap`、`behavior_gap`、`traceability_gap`、`clarification_gap`、`conflict_gap`、`architecture_gap`、`interaction_gap`、`state_data_gap`、`task_gap`、`evidence_gap`。
 
 ## 5.1 Spec Document Quality Repair Loop
 

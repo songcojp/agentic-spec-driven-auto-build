@@ -14,7 +14,7 @@ Spec Evolution:
 - ADD-005：用户要求支持项目创建、导入现有项目和多个项目切换。该需求由 FEAT-001 提供项目目录与当前项目上下文，Product Console 必须提供导入/新建表单、项目列表、项目切换控件和项目级查询隔离反馈。
 - CHG-010：用户确认原一级“看板 / Board”页面正式命名为“项目主页 / Project Home”。该页面是单个当前项目的概览入口；任务看板保留为页面内的 Task Board 分区和底层状态机能力。
 - CHG-011：用户确认项目创建或导入后应自动完成阶段 1 初始化操作。Product Console 只展示阶段 1 自动初始化状态、事实来源和阻塞原因，不把这些子步骤设计成用户逐步手动操作。
-- CHG-012：用户确认阶段 2 需要自动扫描 PRD、EARS、HLD、Feature Spec 等。Product Console 必须展示 Spec Sources 自动扫描状态和结果；阶段 2 只扫描已有 HLD / Feature Spec 事实源，不展示 HLD 生成、Feature Spec 拆分或规划流水线入口。
+- CHG-012：用户确认阶段 2 需要自动扫描 PRD、用户故事、HLD、Feature Spec 等。Product Console 必须展示 Spec Sources 自动扫描状态和结果；阶段 2 只扫描已有 HLD / Feature Spec 事实源，不展示 HLD 生成、Feature Spec 拆分或规划流水线入口。
 - CHG-014：用户确认阶段 2 的 Spec 扫描和上传必须合并为一个步骤；Product Console 在该步骤内显示“扫描”和“上传”两个按钮，不再把扫描和上传渲染为两个独立阶段步骤。
 - CHG-013：2026-04-29 平台边界收缩为调度和状态维护，移除 Skill Center、Subagent Console 和规划流水线入口；Runner 页面仅展示外部执行状态、心跳、日志、证据和状态检测。
 - ADD-006：用户要求优化 CLI 调用并升级为 adapter；CLI 配置通过 JSON 管理，支持 JSON 表单并可通过 UI 直接编辑修改。Product Console 必须提供系统设置，并将 CLI Adapter 配置管理放到系统设置下；Runner Console 只展示配置健康摘要和跳转入口。
@@ -34,7 +34,7 @@ Spec Evolution:
 - Project Home 是当前单个项目的概览入口，展示项目身份、仓库/分支、活跃 Feature、运行摘要、风险、最近 PR、Evidence / 审计事件，并在页面内提供 Task Board 分区。
 - Task Board 分区支持受状态机约束的兼容看板拖拽、批量排期、批量运行，以及查看任务依赖、diff、测试结果、审批状态和失败恢复历史；编码执行的主路径以 Feature Spec 目录为输入，不依赖 Task Board 任务表。
 - Spec Workspace 支持创建 Feature，并查看 Spec、澄清记录、需求质量 checklist、技术计划、数据模型、契约、Feature Spec `tasks.md` 覆盖情况和 Spec 版本 diff。
-- Spec Workspace 的 Spec 操作流程必须拆为“阶段 1 项目初始化”、“阶段 2 需求录入”和“阶段 3 设计规划与任务调度”：阶段 1 展示自动项目创建/导入、Git 仓库、`.autobuild/` / Spec Protocol、项目宪章、Project Memory、健康检查和当前项目上下文状态；阶段 2 将 Spec Sources 自动扫描和 PRD 上传合并为一个“Spec 扫描与上传”步骤，并在该步骤中显示“扫描”和“上传”两个按钮，同时展示 PR/RP/PRD/EARS 识别、已有 HLD / Feature Spec / tasks 事实源盘点、EARS 文档生成、澄清和质量检查状态；阶段 3 展示 HLD、UI Spec、Feature Spec 拆分、Feature Spec 目录完整性、启动自动执行、调度、状态检查和状态聚合。
+- Spec Workspace 的 Spec 操作流程必须拆为“阶段 1 项目初始化”、“阶段 2 需求录入”和“阶段 3 设计规划与任务调度”：阶段 1 展示自动项目创建/导入、Git 仓库、`.autobuild/` / Spec Protocol、项目宪章、Project Memory、健康检查和当前项目上下文状态；阶段 2 将 Spec Sources 自动扫描和 PRD 上传合并为一个“Spec 扫描与上传”步骤，并在该步骤中显示“扫描”和“上传”两个按钮，同时展示 PR/RP/PRD/用户故事 识别、已有 HLD / Feature Spec / tasks 事实源盘点、用户故事文档生成、澄清和质量检查状态；阶段 3 展示 HLD、UI Spec、Feature Spec 拆分、Feature Spec 目录完整性、启动自动执行、调度、状态检查和状态聚合。
 - Spec Workspace 头部的阶段流程必须默认折叠为可点击状态标签，只展示阶段名称、状态和更新时间；点击阶段标签后展开阶段事实、阻塞原因和阶段内步骤。
 - Spec Workflow 的来源、版本、扫描模式、最后扫描时间、运行耗时和阻塞数量必须以标签形式显示在流程说明栏；流程后方不得保留独立提示信息栏。
 - 阶段 2 不得展示 HLD 生成、Feature Spec 拆分或规划流水线入口；Feature Spec 拆分是独立受控操作，拆分后不再展示“推入 Feature Spec Pool”步骤，项目级任务调度直接读取已拆分 Feature Spec 和 Skill 产出的队列规划，并按规划结果创建调度队列。
@@ -78,7 +78,7 @@ Spec Evolution:
 - `schedule_board_tasks` 只执行兼容排期状态迁移；`run_board_tasks` 只入队 `cli.run`，不得由 Console 请求直接执行 CLI。Feature 级编码调度不需要先生成或读取平台 task 表。
 - 用户可以从 Spec Workspace 追踪需求到 Feature Spec 目录和 `tasks.md`。
 - 用户可以从 Spec Workspace 看到阶段 1 自动项目初始化是否阻塞阶段 2 需求录入，也可以看到阶段 3 设计规划与任务调度状态；没有 Feature Spec 时仍能看到阶段 1 / 阶段 2 / 阶段 3 Spec 流程。
-- 用户可以从 Spec Workspace 查看 PRD、EARS、requirements、HLD、design、Feature Spec、tasks 和 README / 索引等 Spec Sources 的自动扫描状态、发现数量、缺失项、冲突和需要澄清的问题。
+- 用户可以从 Spec Workspace 查看 PRD、用户故事、requirements、HLD、design、Feature Spec、tasks 和 README / 索引等 Spec Sources 的自动扫描状态、发现数量、缺失项、冲突和需要澄清的问题。
 - 用户可以判断 Runner 是否可执行新任务。
 - 用户可以通过系统设置查看 active CLI Adapter，并通过原始 JSON 或 JSON Schema 表单编辑 adapter 配置。
 - 用户可以通过系统设置维护 CLI / RPC Adapter 的模型 token 价格表，用于 token 消费明细成本计算；费率必须写入对应 adapter JSON 的 `defaults.costRates`。
@@ -119,7 +119,7 @@ Spec Evolution:
 - [ ] 切换项目后 Dashboard、Project Home、Spec Workspace、Runner Console 和 Review Center 只展示当前项目数据。
 - [ ] 浏览器级验证覆盖创建项目、切换项目、刷新后保持当前项目上下文，以及 `project_id` 缺失/不匹配时的阻塞反馈。
 - [ ] Spec Workspace 浏览器级验证覆盖阶段 1 自动项目初始化、阶段 2 需求录入、Spec Sources 自动扫描和 PRD 上传合并为一个步骤、该步骤内“扫描”和“上传”两个按钮的命令回执、项目切换后的数据隔离，以及阶段 2 不出现 HLD 生成、Feature Spec 拆分或规划流水线入口。
-- [ ] 阶段 2 扫描结果展示 PRD、EARS、requirements、HLD、design、Feature Spec、tasks 和 README / 索引等来源类型，并标记缺失项、冲突项和需要澄清的问题。
+- [ ] 阶段 2 扫描结果展示 PRD、用户故事、requirements、HLD、design、Feature Spec、tasks 和 README / 索引等来源类型，并标记缺失项、冲突项和需要澄清的问题。
 - [ ] Spec Workspace 阶段流程默认不展开阶段内步骤；用户点击阶段状态标签后才展开对应阶段详情，且头部流程只以标签承载状态和提示信息。
 - [ ] Product Console 提供系统设置入口，系统设置至少包含 CLI 配置页。
 - [ ] 系统设置提供 CLI Adapter 配置管理 UI，覆盖 Codex/Gemini preset、原始 JSON 编辑、JSON Schema 表单编辑、token 价格表编辑、dry-run 校验、保存草稿、启用/禁用和字段级错误展示。

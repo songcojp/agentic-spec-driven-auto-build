@@ -271,7 +271,7 @@ function ownerForDocument(kind: string): string {
 
 function specLifecycleStages(view: SpecDriveIdeView | undefined): SpecLifecycleStage[] {
   const docs = new Set((view?.documents ?? []).filter((document) => document.exists).map((document) => document.kind));
-  const hasRequirementDocs = docs.has("prd") || docs.has("requirements") || docs.has("ears") || docs.has("feature-requirements");
+  const hasRequirementDocs = docs.has("prd") || docs.has("requirements") || docs.has("user-stories") || docs.has("feature-requirements");
   const hasFeatureSpecs = (view?.features.length ?? 0) > 0;
   const projectInitialization = view?.projectInitialization;
   const projectInitializationReady = projectInitialization?.ready ?? Boolean(view?.project?.id && view?.workspaceRoot && view?.recognized);
@@ -319,12 +319,12 @@ function specLifecycleStages(view: SpecDriveIdeView | undefined): SpecLifecycleS
       label: "Requirement Intake",
       status: stageStatus("requirement-intake", hasRequirementDocs),
       active: activeId === "requirement-intake",
-      description: "Scan PR, RP, PRD, EARS, requirements, HLD, design, UI Spec, Feature Spec, tasks, and index documents as the source pool for requirement flow.",
-      documentKinds: ["prd", "requirements", "ears", "hld", "design", "ui-spec", "feature-requirements", "tasks", "readme"],
+      description: "Scan PR, RP, PRD, User Stories, requirements, HLD, design, UI Spec, Feature Spec, tasks, and index documents as the source pool for requirement flow.",
+      documentKinds: ["prd", "requirements", "user-stories", "hld", "design", "ui-spec", "feature-requirements", "tasks", "readme"],
       steps: [
         { label: "Spec source scan", status: (view?.documents.length ?? 0) > 0 ? "Ready" : "Not Started" },
         { label: "PRD", status: docs.has("prd") ? "Ready" : "Draft" },
-        { label: "EARS Requirements", status: docs.has("requirements") || docs.has("ears") ? "Ready" : "Draft" },
+        { label: "User Stories", status: docs.has("requirements") || docs.has("user-stories") ? "Ready" : "Draft" },
         { label: "HLD", status: docs.has("hld") ? "Ready" : "Draft" },
         { label: "UI Spec", status: docs.has("ui-spec") ? "Ready" : "Draft" },
         { label: "Clarification and quality check", status: (view?.diagnostics.length ?? 0) === 0 ? "Ready" : "Active" },
@@ -332,7 +332,7 @@ function specLifecycleStages(view: SpecDriveIdeView | undefined): SpecLifecycleS
       actions: [
         { label: "Scan Sources", action: "scan_spec_sources", reason: "Scan Spec sources from Requirement Intake lifecycle." },
         { label: "Upload PRD", action: "upload_prd_source", reason: "Upload PRD source from Requirement Intake lifecycle." },
-        { label: "Generate EARS", action: "generate_ears", reason: "Generate EARS requirements from Requirement Intake lifecycle." },
+        { label: "Generate User Stories", action: "generate_user_stories", reason: "Generate user stories from Requirement Intake lifecycle." },
         { label: "Generate HLD", action: "generate_hld", reason: "Generate HLD from Requirement Intake lifecycle." },
         { label: "Generate UI Spec", action: "generate_ui_spec", reason: "Generate UI Spec from Requirement Intake lifecycle." },
       ],

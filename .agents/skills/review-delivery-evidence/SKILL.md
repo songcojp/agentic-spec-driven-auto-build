@@ -17,6 +17,16 @@ description: "Review delivery evidence and release readiness. Use for journey cl
 
 Decide whether behavior, evidence, quality gates, approvals, and release readiness are sufficient. Do not let implementation evidence alone close delivery.
 
+When reviewing Spec Artifact Granularity for requirements work:
+
+- Treat `docs/agentic-spec/requirements/user-stories-standard.md` or the invocation-supplied requirements standard as the requirements content-generation contract.
+- Fail with `review_needed` and `story_gap` when Must-scope `US-*` entries are broad feature-area statements instead of concrete stories with actor, context, goal, value, trigger, main scenario, alternate/negative scenarios, done signal, source refs, and priority.
+- Fail with `review_needed` and `atomicity_gap` when a `REQ-*`, `NFR-*`, or `EDGE-*` row combines multiple actors, triggers, outcomes, happy/error paths, independent UI/API/persistence behavior, or unrelated NFR thresholds.
+- Fail with `review_needed` and `behavior_gap` when a row looks syntactically structured but still hides behavior behind broad verbs such as "support", "provide", "handle", "manage", "optimize", "improve", "integrate", "allow", or "ensure" without an observable system response.
+- Fail with `review_needed` and `traceability_gap` when rows lack source refs, `US-*` mapping or explicit system-invariant reason, acceptance mapping, evidence mapping, or downstream traceability.
+- Fail with `review_needed` and `clarification_gap` when a Must-scope row needs actor, trigger, state, threshold, permission, data, UI, runtime, or evidence decisions that are not present in source artifacts.
+- Require edge, boundary, permission, empty, conflict, invalid input, and negative paths as `EDGE-*` rows or explicit out-of-scope rationale.
+
 When reviewing Spec Artifact Granularity for UI work:
 
 - Treat `docs/agentic-spec/ui/ui-spec.md` or the invocation-supplied UI System Design path as the UI source of truth. Concept images, screenshots, page names, routes, visible headings, API tests, or single-surface-only references do not satisfy UI Spec readiness by themselves.

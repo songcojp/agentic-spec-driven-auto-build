@@ -234,7 +234,7 @@ test("renders the Spec workspace workbench and submits controlled spec commands"
       "initialize_project_memory",
       "scan_prd_source",
       "upload_prd_source",
-      "generate_ears",
+      "generate_user_stories",
       "generate_hld",
       "generate_ui_spec",
       "split_feature_specs",
@@ -280,14 +280,14 @@ test("renders the Spec workspace workbench and submits controlled spec commands"
   await expect(page.getByText("Spec 扫描与上传")).toBeVisible();
   await expect(page.getByRole("button", { name: "扫描", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "上传", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "生成 EARS" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "生成用户故事" })).toBeVisible();
   await expect(page.getByRole("button", { name: "生成 HLD" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "拆分 Feature Spec" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "进入规划流水线" })).toHaveCount(0);
   // TASK-027: Stage 2 shows Spec Sources Discovery table
   await expect(page.getByText("Spec 来源盘点")).toBeVisible();
   await expect(page.getByText("PRD").first()).toBeVisible();
-  await expect(page.getByText("EARS").first()).toBeVisible();
+  await expect(page.getByText("User Stories").first()).toBeVisible();
   await expect(page.getByText("HLD").first()).toBeVisible();
   await expect(page.getByText("workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md").first()).toBeVisible();
   await page.getByRole("button", { name: /阶段 3 设计规划与任务调度/ }).click();
@@ -367,8 +367,8 @@ test("renders the Spec workspace workbench and submits controlled spec commands"
   });
   await expect(page.getByText("uploaded-prd.md")).toBeVisible();
   await expect(page.getByLabel("Notifications (F8)").getByText("upload_prd_source recorded")).toBeVisible();
-  await page.getByRole("button", { name: "生成 EARS" }).click();
-  await expect(page.getByLabel("Notifications (F8)").getByText("generate_ears recorded")).toBeVisible();
+  await page.getByRole("button", { name: "生成用户故事" }).click();
+  await expect(page.getByLabel("Notifications (F8)").getByText("generate_user_stories recorded")).toBeVisible();
 });
 
 test("creates projects and switches project-scoped console data", async ({ page }) => {
@@ -513,7 +513,7 @@ async function installConsoleRoutes(page: Page) {
       "initialize_project_memory",
       "scan_prd_source",
       "upload_prd_source",
-      "generate_ears",
+      "generate_user_stories",
       "generate_hld",
       "generate_ui_spec",
       "split_feature_specs",

@@ -1492,7 +1492,7 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
   const instruction = invocation.skillInstruction;
   const taskSlicingRules = instruction.skillName === "decompose-feature-specs"
     ? [
-        "- For split_feature_specs, decompose PRD, EARS requirements, and HLD into implementation-ready Feature Spec package directories.",
+        "- For split_feature_specs, decompose PRD, user stories, and HLD into implementation-ready Feature Spec package directories.",
         "- Do not treat .autobuild/specs/FEAT-INTAKE-*.json as a Feature Spec package; it is only an intake artifact.",
         "- Write Feature Spec packages under docs/agentic-spec/features/<feature-id>/ with requirements.md, design.md, tasks.md, and update docs/agentic-spec/features/README.md.",
         "- The final response must be the last full SkillOutputContractV1 object, not shorthand JSON with only summary/status/evidence.",

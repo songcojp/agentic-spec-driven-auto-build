@@ -73,7 +73,7 @@ Feature 名称: IDE Workbench Webviews
 - [x] `Execution Workbench` 第一屏以任务调度和自动执行为核心，默认展示 Job 队列、当前运行、下一步动作、阻塞原因、自动执行控制和审批待办。
 - [x] `Execution Workbench` 支持 enqueue、run now、auto run、pause automation、resume automation、retry、cancel、skip 和 reprioritize。
 - [x] `Execution Workbench` 展示 Execution Record、raw log refs、diff 摘要、`SkillOutputContractV1` 校验结果、`result.gitDelivery` 生命周期证据和 `spec-state.json` 投影摘要。
-- [x] `Spec Workspace` 展示 PRD、EARS Requirements、HLD、UI Spec、Architecture Plan、Data Model、Contracts、Tasks、Quickstart、Execution、Review、Delivery 的全流程状态，并为当前阶段提供受控推进操作。
+- [x] `Spec Workspace` 展示 PRD、User Stories、HLD、UI Spec、Architecture Plan、Data Model、Contracts、Tasks、Quickstart、Execution、Review、Delivery 的全流程状态，并为当前阶段提供受控推进操作。
 - [x] `Spec Workspace` 展示 guardrails、command approvals、safe action confirmations、spec consistency、evidence 和 traceability，所有推进动作都必须可审计。
 - [x] `Feature Spec` 通过卡片方式按 Planning、Ready、In Execution、Review、Delivered、Blocked 等状态直观展示 Feature 情况，包括需求覆盖、任务进度、执行状态、Review 状态、依赖、阻塞、下一步动作和最新运行。
 - [x] `Feature Spec` 右侧详情面板支持查看选中 Feature 的 artifacts、acceptance、latest run、blockers、traceability，并提供打开需求/设计/任务和调度执行等 VSCode 内操作。

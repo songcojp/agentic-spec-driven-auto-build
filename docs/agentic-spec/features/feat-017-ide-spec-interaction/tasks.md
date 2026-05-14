@@ -13,7 +13,7 @@ Feature ID: FEAT-017
 
 ### T-017-02 CodeLens Provider
 状态: done
-描述: 提供添加澄清、生成/更新 EARS、更新设计、拆分 Feature、执行任务等动作入口。
+描述: 提供添加澄清、生成/更新 用户故事、更新设计、拆分 Feature、执行任务等动作入口。
 验证: extension test。
 
 ### T-017-03 Comments 草稿与提交

@@ -17,7 +17,7 @@
 | `use-specdrive-lifecycle` | 生命周期路由、专业 agent 职责、Define/Plan/Build/Verify/Review/Ship handoff。 |
 | `collect-project-context` | Intake、约束识别、开放问题、项目章程、只读仓库探索和执行前上下文。 |
 | `refine-product-intent` | PRD 生成、完善、目标/非目标抽取、用户旅程、验收标准和完整性检查。 |
-| `convert-ears-requirements` | PRD、PR/RP、产品 brief 或自然语言输入到 EARS 需求，包含 normalize、ID 和 traceability。 |
+| `generate-user-stories` | 将 PRD、PR/RP、产品 brief 或自然语言输入转为用户故事，包含 normalize、ID 和 traceability。 |
 | `validate-requirements` | 需求可测试性、冲突、质量、可追踪性和下游消费检查。 |
 | `manage-spec-change` | 需求新增、修订、澄清、废弃、影响分析、证据失效和重规划触发。 |
 | `design-architecture` | HLD、ADR、模块、数据流、状态流、Adapter/API/事件/文件契约和架构评审。 |
@@ -38,7 +38,7 @@
 - Adapter prompt、RPC skill item path、Scheduler metadata、Product Console action mapping、IDE projection 和测试数据都使用 OpenAI-style skill name。
 - 新调度不会解析旧 dotted slug；历史执行记录中的旧字符串只作为历史事实保留，不参与新调用路由。
 - 硬编码 action 映射如下：
-  - `generate_ears` -> `convert-ears-requirements`
+  - `generate_user_stories` -> `generate-user-stories`
   - `generate_hld` -> `design-architecture`
   - `generate_ui_spec` -> `design-ui-spec`
   - `split_feature_specs` -> `decompose-feature-specs`

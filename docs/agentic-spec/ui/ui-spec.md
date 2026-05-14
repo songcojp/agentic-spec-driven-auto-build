@@ -5,7 +5,7 @@ Scope: generic Agentic Spec UI specification contract
 
 ## 1. Purpose
 
-This file defines the generic UI System Design contract for Agentic Spec managed products. It is not a concept-image index, screenshot folder, page list, or implementation-specific UI plan. It turns PRD, EARS requirements, and HLD constraints into user-operable, testable UI interaction contracts.
+This file defines the generic UI System Design contract for Agentic Spec managed products. It is not a concept-image index, screenshot folder, page list, or implementation-specific UI plan. It turns PRD, user stories, and HLD constraints into user-operable, testable UI interaction contracts.
 
 Any UI-related Feature must be able to trace from this UI Spec, or a project-supplied equivalent, to:
 

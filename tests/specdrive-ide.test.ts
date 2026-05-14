@@ -829,7 +829,7 @@ test("SpecDrive IDE view hides completed schedule-only rows from execution queue
         "specdrive:execution-adapter",
         "cli.run",
         "queued",
-        JSON.stringify({ projectId: "project-ide", requestedAction: "generate_ears" }),
+        JSON.stringify({ projectId: "project-ide", requestedAction: "generate_user_stories" }),
         "2026-05-02T12:06:00.000Z",
       ],
     },
@@ -839,7 +839,7 @@ test("SpecDrive IDE view hides completed schedule-only rows from execution queue
 
   assert.equal(JSON.stringify(view.queue.groups).includes("JOB-SCHEDULE-COMPLETED"), false);
   assert.equal(view.queue.groups.queued[0].schedulerJobId, "JOB-SCHEDULE-QUEUED");
-  assert.equal(view.queue.groups.queued[0].operation, "generate_ears");
+  assert.equal(view.queue.groups.queued[0].operation, "generate_user_stories");
 });
 
 test("SpecDrive IDE queue actions operate on schedule-only jobs", async () => {
@@ -1125,11 +1125,11 @@ test("SpecDrive IDE HTTP routes expose spec tree and controlled command receipts
     assert.equal(specTree.features[0].id, "FEAT-016");
 
     const receipt = await postJson(`http://127.0.0.1:${port}/ide/commands`, {
-      action: "generate_ears",
+      action: "generate_user_stories",
       entityType: "project",
       entityId: "project-ide",
       requestedBy: "vscode-extension",
-      reason: "Generate EARS from VSCode CodeLens.",
+      reason: "Generate User Stories from VSCode CodeLens.",
       payload: { sourcePath: "docs/agentic-spec/PRD.md" },
     });
 

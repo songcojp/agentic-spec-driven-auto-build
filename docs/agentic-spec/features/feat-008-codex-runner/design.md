@@ -30,7 +30,7 @@ CLI Adapter 不接收 Product Console 的直接 CLI 执行请求。Console、Spe
 
 ## State and Flow
 
-1. Scheduler Trigger 创建 Execution Record 并 enqueue `cli.run` job；payload `operation` 区分 `feature_execution`、`generate_ears`、`generate_hld`、`generate_ui_spec`、`split_feature_specs` 等操作。Feature 级 `feature_execution` 直接以当前项目 workspace 中完整 Feature Spec 目录作为执行输入，不依赖 `task_graph_tasks` / `tasks` 表。
+1. Scheduler Trigger 创建 Execution Record 并 enqueue `cli.run` job；payload `operation` 区分 `feature_execution`、`generate_user_stories`、`generate_hld`、`generate_ui_spec`、`split_feature_specs` 等操作。Feature 级 `feature_execution` 直接以当前项目 workspace 中完整 Feature Spec 目录作为执行输入，不依赖 `task_graph_tasks` / `tasks` 表。
 2. Execution Policy Resolver 从当前项目 repository `local_path` / `target_repo_path` 解析 workspace root 并生成执行配置。
 3. CLI Adapter Registry 读取 active adapter 配置并合并 Execution Policy 约束。
 4. Execution Invocation Builder 根据 payload context 生成 `ExecutionAdapterInvocationV1`；其中 `skillInstruction.expectedArtifacts` 为 `{ path, kind, required }` 对象，`constraints` 记录 allowed files、risk、sandbox 和 approval policy；开发阶段默认 sandbox 为 `danger-full-access`，approval policy 为 `never`。Feature 级 `implement-feature` 的 `skillInstruction.sourcePaths` 必须包含 Feature Spec `requirements.md`、`design.md`、`tasks.md`，provider prompt 只要求 agent 读取这些路径并执行 `tasks.md` 的具体实现任务。

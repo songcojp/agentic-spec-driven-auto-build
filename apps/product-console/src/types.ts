@@ -11,7 +11,7 @@ export type CommandAction =
   | "intake_requirement"
   | "evolve_spec"
   | "resolve_clarification"
-  | "generate_ears"
+  | "generate_user_stories"
   | "generate_hld"
   | "split_feature_specs"
   | "start_auto_run"
@@ -161,7 +161,7 @@ export type BoardModel = {
 };
 
 export type SpecSourceItem = {
-  type: "prd" | "ears" | "requirements" | "hld" | "design" | "feature_spec" | "tasks" | "readme" | string;
+  type: "prd" | "user-stories" | "requirements" | "hld" | "design" | "feature_spec" | "tasks" | "readme" | string;
   label: string;
   path?: string;
   status: "found" | "missing" | "conflict" | "clarification";
@@ -518,7 +518,7 @@ export type ChatIntentType =
   | "resume_runner"
   | "approve_review"
   | "reject_review"
-  | "generate_ears"
+  | "generate_user_stories"
   | "generate_hld"
   | "confirm"
   | "cancel"

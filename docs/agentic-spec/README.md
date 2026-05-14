@@ -9,9 +9,9 @@ Languages: English | [中文](zh-CN/README.md) | [日本語](ja/README.md)
 ## Documents
 
 * [Product Requirements Document](en/PRD.md)
-* [English EARS Requirements](en/requirements.md)
+* [English User Stories](en/requirements.md)
 * [Chinese Product Requirements Document](zh-CN/PRD.md)
-* [Chinese EARS Requirements](zh-CN/requirements.md)
+* [Chinese User Stories](zh-CN/requirements.md)
 * [Project HLD](zh-CN/hld.md)
 * [Feature Spec Index](features/README.md)
 * [Agentic Spec Standard](zh-CN/agentic-spec-standard.md)

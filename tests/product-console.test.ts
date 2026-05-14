@@ -447,14 +447,14 @@ test("console view models expose specs, scheduler state, runner, and reviews", (
   assert.equal(specWorkspace.selectedFeature?.versionDiffs.length, 2);
   assert.equal(specWorkspace.commands[0].action, "create_feature");
   assert.equal(specWorkspace.commands.some((command) => command.action === "scan_prd_source"), true);
-  assert.equal(specWorkspace.commands.some((command) => command.action === "generate_ears"), true);
+  assert.equal(specWorkspace.commands.some((command) => command.action === "generate_user_stories"), true);
   assert.equal(specWorkspace.prdWorkflow.sourcePath, "No Spec source selected");
   assert.deepEqual(specWorkspace.prdWorkflow.phases.map((phase) => phase.key), ["project_initialization", "requirement_intake", "feature_execution"]);
   assert.equal(specWorkspace.prdWorkflow.phases[0].stages.some((stage) => stage.key === "initialize_project_memory"), true);
   assert.equal(specWorkspace.prdWorkflow.phases[1].stages.some((stage) => stage.key === "spec_source_intake"), true);
   assert.equal(specWorkspace.prdWorkflow.phases[1].stages.some((stage) => stage.key === "scan_prd"), false);
   assert.equal(specWorkspace.prdWorkflow.phases[1].stages.some((stage) => stage.key === "upload_prd"), false);
-  assert.equal(specWorkspace.prdWorkflow.phases[1].stages.some((stage) => stage.key === "generate_ears"), true);
+  assert.equal(specWorkspace.prdWorkflow.phases[1].stages.some((stage) => stage.key === "generate_user_stories"), true);
   assert.equal(specWorkspace.prdWorkflow.phases[1].stages.some((stage) => stage.key === "feature_spec_pool"), false);
   assert.equal(specWorkspace.prdWorkflow.phases[2].stages.some((stage) => stage.key === "generate_hld"), true);
   assert.equal(specWorkspace.prdWorkflow.phases[2].stages.some((stage) => stage.key === "generate_ui_spec"), true);
@@ -1508,7 +1508,7 @@ test("register project repairs missing agent runtime for an existing project", (
   }
 });
 
-test("spec intake commands scan, upload, and enqueue EARS skill invocation", () => {
+test("spec intake commands scan, upload, and enqueue User Stories skill invocation", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
@@ -1517,7 +1517,7 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
   mkdirSync(join(projectPath, ".autobuild", "reports"), { recursive: true });
   writeFileSync(
     join(projectPath, "docs", "agentic-spec", "zh-CN", "PRD.md"),
-    "Feature: Intake Portal\nGoal: Capture requirements.\nPRD: The system shall scan spec sources. The system shall generate EARS requirements.",
+    "Feature: Intake Portal\nGoal: Capture requirements.\nPRD: The system shall scan spec sources. The system shall generate user stories.",
     "utf8",
   );
   runSqlite(dbPath, [
@@ -1549,18 +1549,18 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
     now: stableDate,
   });
   const generateReceipt = submitConsoleCommand(dbPath, {
-    action: "generate_ears",
+    action: "generate_user_stories",
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Generate EARS.",
+    reason: "Generate User Stories.",
     payload: { sourcePath: "docs/agentic-spec/zh-CN/PRD.md" },
     now: stableDate,
   }, { scheduler });
   const result = runSqlite(dbPath, [], [
     { name: "features", sql: "SELECT id, project_id, title, status FROM features WHERE id LIKE 'FEAT-INTAKE-%'" },
     { name: "requirements", sql: "SELECT id, feature_id, body FROM requirements WHERE feature_id LIKE 'FEAT-INTAKE-%' ORDER BY id" },
-    { name: "reports", sql: "SELECT kind, feature_id, path, summary FROM status_check_results WHERE kind IN ('spec_source_scan','spec_source_upload','ears_generation') ORDER BY created_at, rowid" },
+    { name: "reports", sql: "SELECT kind, feature_id, path, summary FROM status_check_results WHERE kind IN ('spec_source_scan','spec_source_upload','user_story_generation') ORDER BY created_at, rowid" },
     { name: "executions", sql: "SELECT id, project_id, status, metadata_json, context_json FROM execution_records WHERE project_id = 'project-1' ORDER BY rowid DESC LIMIT 1" },
     { name: "jobs", sql: "SELECT job_type, payload_json FROM scheduler_job_records WHERE job_type = 'cli.run' ORDER BY rowid DESC LIMIT 1" },
   ]);
@@ -1573,8 +1573,8 @@ test("spec intake commands scan, upload, and enqueue EARS skill invocation", () 
   assert.deepEqual(result.queries.reports.map((row) => row.kind), ["spec_source_scan", "spec_source_upload"]);
   assert.equal(generateReceipt.executionId, result.queries.executions[0].id);
   const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
-  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "convert-ears-requirements");
-  assert.equal(jobPayload.context.skillName, "convert-ears-requirements");
+  assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "generate-user-stories");
+  assert.equal(jobPayload.context.skillName, "generate-user-stories");
   assert.deepEqual(jobPayload.context.expectedArtifacts, ["docs/agentic-spec/requirements.md"]);
 });
 
@@ -1705,7 +1705,7 @@ test("IDE lifecycle commands scan spec sources and run project health through Co
   ]);
 });
 
-test("spec workspace records EARS generation as a CLI skill run instead of direct Feature creation", () => {
+test("spec workspace records User Stories generation as a CLI skill run instead of direct Feature creation", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
@@ -1717,7 +1717,7 @@ test("spec workspace records EARS generation as a CLI skill run instead of direc
       "Feature: Real Intake Flow",
       "Goal: Generate real requirements from a project PRD.",
       "PRD: The system shall generate requirements from the selected source file.",
-      "PRD: The system shall preserve source traceability for generated EARS.",
+      "PRD: The system shall preserve source traceability for generated User Stories.",
     ].join("\n"),
     "utf8",
   );
@@ -1727,11 +1727,11 @@ test("spec workspace records EARS generation as a CLI skill run instead of direc
   ]);
 
   const receipt = submitConsoleCommand(dbPath, {
-    action: "generate_ears",
+    action: "generate_user_stories",
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Generate EARS from real PRD.",
+    reason: "Generate User Stories from real PRD.",
     payload: { sourcePath: "docs/agentic-spec/zh-CN/PRD.md" },
     now: new Date("2026-04-28T12:03:00.000Z"),
   }, { scheduler });
@@ -1746,7 +1746,7 @@ test("spec workspace records EARS generation as a CLI skill run instead of direc
   assert.equal(receipt.featureId, undefined);
   assert.equal(Object.prototype.hasOwnProperty.call(payload.traceability, "changeIds"), false);
   const skillInvocation = runner.skillInvocations.find((entry) => entry.runId === receipt.executionId);
-  assert.equal(skillInvocation?.skillName, "convert-ears-requirements");
+  assert.equal(skillInvocation?.skillName, "generate-user-stories");
   assert.equal(workspace.features.some((feature) => feature.id.startsWith("FEAT-INTAKE-")), false);
 });
 
@@ -1847,7 +1847,7 @@ test("spec workspace builds Feature Spec List from docs features packages", () =
   assert.equal(workspace.features.some((feature) => feature.id.startsWith("FEAT-INTAKE-")), false);
 });
 
-test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs", () => {
+test("split Feature Specs dispatches task-slicing skill with PRD User Stories HLD inputs", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
@@ -1868,7 +1868,7 @@ test("split Feature Specs dispatches task-slicing skill with PRD EARS HLD inputs
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Split PRD/EARS/HLD into Feature Spec packages.",
+    reason: "Split PRD/User Stories/HLD into Feature Spec packages.",
     payload: {},
     now: stableDate,
   }, { scheduler });
@@ -2529,11 +2529,11 @@ test("spec intake workflow discovers docs PRD at the project docs root", () => {
   });
   const workspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
   const generateReceipt = submitConsoleCommand(dbPath, {
-    action: "generate_ears",
+    action: "generate_user_stories",
     entityType: "project",
     entityId: "project-1",
     requestedBy: "operator",
-    reason: "Generate EARS from root docs PRD.",
+    reason: "Generate User Stories from root docs PRD.",
     payload: { sourcePath: workspace.prdWorkflow.sourcePath },
     now: stableDate,
   }, { scheduler });

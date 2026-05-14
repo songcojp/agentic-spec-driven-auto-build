@@ -47,7 +47,7 @@ MVP 采用本地优先的控制面架构：
 使用受控命令的情况包括：
 
 - 创建或导入项目后触发初始化闭环、连接仓库、初始化 Spec Protocol、创建 Project Memory 或项目宪章。
-- Spec Sources 扫描、上传、EARS 生成、Feature Spec 拆分、需求质量检查、阶段 3 调度和状态检查等会产生写入或运行副作用的 Spec 操作。
+- Spec Sources 扫描、上传、用户故事生成、Feature Spec 拆分、需求质量检查、阶段 3 调度和状态检查等会产生写入或运行副作用的 Spec 操作。
 - Task Board 拖拽、批量排期、批量运行、Execution Adapter 暂停/恢复、Review 审批、规则写入、Spec Evolution 写入和 CLI Adapter 配置 validate/save/activate/disable。
 - 所有执行类命令必须携带当前 `project_id`，并在进入 Execution Adapter 前解析为当前项目 repository `local_path` 或 `target_repo_path`；缺失、不匹配或不可读时返回 blocked receipt。
 
@@ -59,7 +59,7 @@ MVP 采用本地优先的控制面架构：
 
 ### Goals
 
-- 从自然语言、PR、RP、PRD、EARS 或混合输入生成结构化 Feature Spec。
+- 从自然语言、PR、RP、PRD、用户故事 或混合输入生成结构化 Feature Spec。
 - 基于优先级、依赖、风险和就绪状态自动选择下一个可执行 Feature。
 - 自动推进 Feature 从需求、计划、Feature Spec `tasks.md`、执行队列、检测、恢复、审批到交付。
 - 用 Skill 约束不同工程阶段的输入、输出、风险等级、适用阶段和失败处理。
@@ -84,7 +84,7 @@ MVP 采用本地优先的控制面架构：
 | Requirement ID | HLD Section | Coverage Notes |
 |---|---|---|
 | REQ-001, REQ-002, REQ-003, REQ-059, REQ-063 | 4, 5, 7.1, 8, 12, 13 | Project、Repository、Project Constitution、Project Selection、Health Check 属于项目管理和仓库适配边界。 |
-| REQ-004, REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, REQ-064 | 7.2, 8, 9, 10, 14, 15 | Spec Protocol Engine 负责 Feature Spec、EARS、Spec Sources 扫描、切片、澄清、Checklist 和版本化。 |
+| REQ-004, REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, REQ-064 | 7.2, 8, 9, 10, 14, 15 | Spec Protocol Engine 负责 Feature Spec、用户故事、Spec Sources 扫描、切片、澄清、Checklist 和版本化。 |
 | REQ-010, REQ-011, REQ-012, REQ-013 | 7.3, 8, 9, 11, 14, 15 | Skill System 管理注册、内置 Skill、schema 校验、版本治理和项目级覆盖。 |
 | REQ-014, REQ-015, REQ-016, REQ-017, REQ-018 | 7.5, 7.7, 8, 9, 10, 11, 13 | Subagent Runtime、Context Broker、Workspace Manager 和 Result Merger 保证边界、并行隔离和结果合并。 |
 | REQ-019, REQ-020, REQ-021, REQ-022, REQ-023 | 7.6, 8, 9, 10, 11, 12, 13 | Project Memory Service 负责初始化、注入、更新、压缩、版本和回滚。 |
@@ -223,9 +223,9 @@ Collaborates With:
 
 Responsibilities:
 
-- 从自然语言、PR、RP、PRD、EARS 或混合输入创建 Feature Spec。
-- 拆解原子化、可测试、可追踪的 EARS Requirement。
-- 自动扫描 PRD、EARS、requirements、HLD、design、已有 Feature Spec、tasks 和 README / 索引等 Spec Sources，并识别已有规格产物、来源追踪、缺失项和冲突。
+- 从自然语言、PR、RP、PRD、用户故事 或混合输入创建 Feature Spec。
+- 拆解原子化、可测试、可追踪的 User Story。
+- 自动扫描 PRD、用户故事、requirements、HLD、design、已有 Feature Spec、tasks 和 README / 索引等 Spec Sources，并识别已有规格产物、来源追踪、缺失项和冲突。
 - 拆分 Feature Spec 时固化通用规格约束：如果拆分结果包含项目初始化作为第一个 Feature Spec，必须在该 Feature Spec 的 requirements/design/tasks 中包含项目根目录 `.gitignore` 创建或安全更新要求。
 - 维护 Clarification Log、Requirement Checklist、Spec Version、Spec Slice 和来源追踪。
 - 为计划流水线提供 Feature Spec、需求、验收、数据域、契约和 `tasks.md` 输入。
@@ -530,7 +530,7 @@ Responsibilities:
 - 提供项目级执行偏好设置，保存默认 run mode (`cli` / `rpc`) 与对应 Execution Adapter provider；Execution Workbench 在新建 Job 前可提交 Job 级执行偏好覆盖项目默认。
 - 提供 Feature Spec Webview 的 New Feature 受控输入、Feature index 与 Feature 文件夹同步刷新、Feature 详情 `tasks.md` 解析和任务状态展示。
 - Feature Spec Webview 对 need review / review_needed Feature 提供与 Product Console 一致的 ReviewItem 审批入口，审批通过后由 Review Center 恢复继续执行；`Pass` 仅作为隐藏的临时状态重置命令保留，由 Control Plane 同步 Feature `spec-state.json`、Execution Record 和 Scheduler Job 完成状态；Webview 不直接写运行事实源。
-- 在 Spec 文档中提供 Hover、CodeLens、Comments 和 Diagnostics，支持行级/段落级澄清、需求新增、需求变更、EARS 生成、设计更新和 Feature 拆分意图。
+- 在 Spec 文档中提供 Hover、CodeLens、Comments 和 Diagnostics，支持行级/段落级澄清、需求新增、需求变更、用户故事生成、设计更新和 Feature 拆分意图。
 - 将所有有副作用的 IDE action 转换为 Control Plane command API 请求，接收 `IdeCommandReceiptV1` 并刷新 UI。
 - 展示 app-server 事件流、diff 摘要、raw logs、approval pending 和 `SkillOutputContractV1/V2` 校验结果。
 - 展示结构化 Skill 输出的摘要视图：状态、summary、nextAction、traceability、产物表格、常见 result 分组和完整 JSON 审计视图。
@@ -656,8 +656,8 @@ sequenceDiagram
 ```mermaid
 flowchart TD
   Input[Source requirement] --> Intake[Requirement Intake Skill]
-  Intake --> EARS[PR/EARS Decomposition]
-  EARS --> Feature[Feature Spec]
+  Intake --> 用户故事[PR/User Story Decomposition]
+  用户故事 --> Feature[Feature Spec]
   Feature --> Checklist[Requirement Checklist]
   Checklist -->|Passed| Ready[Feature ready]
   Checklist -->|Ambiguous| Clarify[Clarification Log]
@@ -704,8 +704,8 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  PRD[PRD / 自然语言需求源] --> EARS["[Skill] convert-ears-requirements\nEARS 需求拆解"]
-  EARS --> HLD["[Skill] design-architecture\nHLD：系统架构 + 一级页面清单"]
+  PRD[PRD / 自然语言需求源] --> 用户故事["[Skill] generate-user-stories\n用户故事拆解"]
+  用户故事 --> HLD["[Skill] design-architecture\nHLD：系统架构 + 一级页面清单"]
   HLD --> UISpec["[Skill] design-ui-spec\nUI System Design + HTML prototype"]
   UISpec --> Split["[Skill] decompose-feature-specs（Feature 级）\n+ [Code] Feature 记录写入 SQLite\nFeature Spec 拆分"]
   Split --> Pool[Feature Spec Pool\nN 个 Feature 候选]
@@ -733,10 +733,10 @@ flowchart TD
 
 | 阶段 | 触发方式 | 实现归因 | 输入产物 | 输出产物 | 关联 Skill |
 |---|---|---|---|---|---|
-| EARS 需求拆解 | 用户上传 PRD / Spec Sources 扫描 | **Skill** | PRD / 自然语言需求 | EARS Requirements（`requirements.md`） | `convert-ears-requirements` |
-| HLD 生成 | EARS 完成后手动或受控命令触发 | **Skill**（内容）+ **Code**（artifact 落地） | PRD + EARS Requirements | HLD 文档（`docs/agentic-spec/zh-CN/hld.md`）+ **一级页面清单** | `design-architecture` |
-| UI System Design + 高保真静态 HTML | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + EARS Requirements + HLD + 一级页面清单 | UI System Design 文档（兼容路径 `docs/agentic-spec/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ WYSIWYG 静态 HTML 原型（`docs/agentic-spec/ui/prototype/index.html`、`docs/agentic-spec/ui/prototype/<page-id>.html` 或 Feature 级 `prototype/*.html`）；概念图仅在显式请求或 legacy 兼容时生成 | `design-ui-spec` |
-| Spec Artifact Granularity Gate | 每个主线产物生成或变更后、进入下游前触发 | **Skill** | PRD + EARS Requirements + HLD + UI System Design + 目标 Feature Spec | `specGranularity` 决策；通过 → 允许生成 design/tasks 或 ready；失败 → `review_needed` 并列出 required refinements | `review-delivery-evidence` |
+| 用户故事拆解 | 用户上传 PRD / Spec Sources 扫描 | **Skill** | PRD / 自然语言需求 | User Stories（`requirements.md`） | `generate-user-stories` |
+| HLD 生成 | 用户故事完成后手动或受控命令触发 | **Skill**（内容）+ **Code**（artifact 落地） | PRD + User Stories | HLD 文档（`docs/agentic-spec/zh-CN/hld.md`）+ **一级页面清单** | `design-architecture` |
+| UI System Design + 高保真静态 HTML | HLD 完成后触发（含 UI 的产品） | **Skill** | PRD + User Stories + HLD + 一级页面清单 | UI System Design 文档（兼容路径 `docs/agentic-spec/ui/ui-spec.md` 或 Feature 级 `ui-spec.md`）+ WYSIWYG 静态 HTML 原型（`docs/agentic-spec/ui/prototype/index.html`、`docs/agentic-spec/ui/prototype/<page-id>.html` 或 Feature 级 `prototype/*.html`）；概念图仅在显式请求或 legacy 兼容时生成 | `design-ui-spec` |
+| Spec Artifact Granularity Gate | 每个主线产物生成或变更后、进入下游前触发 | **Skill** | PRD + User Stories + HLD + UI System Design + 目标 Feature Spec | `specGranularity` 决策；通过 → 允许生成 design/tasks 或 ready；失败 → `review_needed` 并列出 required refinements | `review-delivery-evidence` |
 | Spec 文档质量修复循环 | 每个 Spec 文档生成或更新 Skill 返回 completed 前触发 | **调用方 Skill + Subagent** | 生成产物、source artifacts、调用方选择的 `qualityReviewSkill` / `repairOwner`、`qualityLoopPlan`、质量门结果 | `qualityRepairLoop`；通过 → completed；无可修复/超范围/10 轮上限 → clarification/review/risk/block 路由 | 调用方生成 Skill + `skill-local references/quality-loop.md` + 由调用方选择的 Quality Review Subagent / Repair Subagent |
 | Feature Spec 拆分 | UI System Design 完成（或 HLD 完成）后触发 | **Skill** | HLD + UI System Design | Feature Spec 候选集（`docs/agentic-spec/features/<feat-id>/`） | `decompose-feature-specs`（Feature 级） |
 | 启动项目级任务调度 | `schedule_run(project)` 或 `start_auto_run` 触发 | **Code + Skill** | 已生成的 `docs/agentic-spec/features/*` + Skill 产出的 `docs/agentic-spec/features/feature-pool-queue.json` + Feature `spec-state.json` | SQLite Feature 候选记录 + BullMQ `<executor>.run` Job + Execution Record；Job payload 指向 Feature Spec 目录 | `plan-feature-execution` |
@@ -752,7 +752,7 @@ flowchart TD
 
 | 阶段 | 触发 | 实现归因 | 状态迁移 | 产出物 |
 |---|---|---|---|---|
-| **intake** | Feature Spec 创建（手动 / Skill 拆分） | Skill（EARS 内容 + Checklist + 澄清）+ Code（Feature 记录写入、状态迁移） | `draft` → `ready`（或 `review_needed`） | EARS Requirements、ClarificationLog、RequirementChecklist |
+| **intake** | Feature Spec 创建（手动 / Skill 拆分） | Skill（用户故事 内容 + Checklist + 澄清）+ Code（Feature 记录写入、状态迁移） | `draft` → `ready`（或 `review_needed`） | User Stories、ClarificationLog、RequirementChecklist |
 | **execution** | `<executor>.run` job 被 Worker 消费 | Code（BullMQ Worker、Project Memory 注入、CLI/native executor、心跳、Execution Record、`gitDelivery` / `deliveryFidelity` 校验）+ Skill（按 Feature Spec 执行并管理 worktree/branch/commit/PR/merge/cleanup） | `ready` → `implementing`；Execution Record：`running` → `completed/review_needed/failed/blocked` | 代码/测试/配置/文档变更、Execution Record、ExecutionHeartbeat、RawExecutionLog、Execution Result、`result.deliveryFidelity`、`result.gitDelivery` |
 | **checking** | 每次 Execution Record 结束后 Status Checker 触发 | Code（diff/build/test/lint/security 命令执行）+ Skill（Spec Alignment / Test Coverage / Evidence Completeness 语义比对） | `running` → `done` / `review_needed` / `blocked` / `failed` | StatusCheckResult、SpecAlignmentResult、DeliveryFidelityResult、ExecutionResult（更新） |
 | **closing** | Feature Aggregator 判断所有任务完成且验收通过 | Code（Delivery Record、状态投影）+ Skill（PR 内容、PR merge/cleanup、Spec Evolution 建议） | `in-progress` → `done` → `delivered`；未通过 → `review_needed` / `approval_needed` / `blocked` | PullRequestRecord、Delivery Report、SpecEvolutionSuggestion、Git delivery lifecycle evidence、Delivery Fidelity completion decision |
@@ -847,7 +847,7 @@ Runtime decisions:
 
 Testing strategy:
 
-- Requirement-level：每条 EARS Requirement 应可映射到验收标准和测试场景。
+- Requirement-level：每条 User Story 应可映射到验收标准和测试场景。
 - Skill-level：校验每个 Skill 的 input/output schema、失败处理和 execution result 生成。
 - State-machine-level：覆盖 Feature 与 Task 的合法状态迁移、Review Needed reason、Blocked/Failed 路径。
 - Execution Adapter-level：覆盖 Execution Policy、sandbox/approval、心跳、CLI session、输出 schema 和命令失败。
@@ -873,7 +873,7 @@ Quality gates:
 |---|---|---|
 | AutoBuild System Bootstrap | Control Plane 进程引導配置、`.autobuild/` artifact root 目录创建、SQLite schema 初始化与迁移、内置 Skill 种子化触发、系统就绪状态暴露。 | REQ-058（schema 创建是持久化的前置条件）、REQ-011（内置 Skill 种子化在系统初始化完成后触发，联动 feat-003）、NFR-004（崩溃恢复依赖应用正确完成初始化）；是 feat-001 至 feat-014 所有 Feature Spec 的基础先决条件。 |
 | Project and Repository Foundation | 项目创建、项目目录与切换上下文、仓库连接、项目宪章、健康检查、项目配置。 | REQ-001 至 REQ-003、REQ-059、REQ-063 |
-| Spec Protocol Foundation | Feature Spec、EARS 拆解、Spec Sources 扫描、澄清、Checklist、版本和切片。 | REQ-004 至 REQ-009、REQ-064 |
+| Spec Protocol Foundation | Feature Spec、用户故事拆解、Spec Sources 扫描、澄清、Checklist、版本和切片。 | REQ-004 至 REQ-009、REQ-064 |
 | Skill Center and Schema Governance | Skill 注册、内置 Skill、schema 校验、版本管理。 | REQ-010 至 REQ-013 |
 | Orchestration and State Machine | Feature/Execution 状态机、Feature Spec `tasks.md` 覆盖、Feature 选择、计划流水线、调度触发模式、兼容看板列。 | REQ-024 至 REQ-034、REQ-060 |
 | Subagent Runtime and Context Broker | Agent 类型、Run Contract、最小上下文、Subagent Console 后端数据层。 | REQ-014 至 REQ-018（REQ-017 写入隔离实现于 feat-007，feat-005 依赖其结果）、REQ-055（后端数据层主导实现于此，UI 由 feat-013 交付）。 |
@@ -930,8 +930,8 @@ Decomposition rules:
 | 用户流程步骤 | 实现方式 | 理由 |
 |---|---|---|
 | Spec 来源扫描与上传 | **Skill** | `collect-project-context`；CLI 已提供文件读取机制。Product Console 在同一个阶段内步骤中显示“扫描”和“上传”两个动作。 |
-| 识别需求格式 | **Skill** | LLM 分类推理，是 `convert-ears-requirements` 前置步骤 |
-| 生成 EARS | **Skill** | `convert-ears-requirements` 只生成 EARS requirements 文档，不拆分 Feature Spec、不启动调度 |
+| 识别需求格式 | **Skill** | LLM 分类推理，是 `generate-user-stories` 前置步骤 |
+| 生成用户故事 | **Skill** | `generate-user-stories` 只生成用户故事文档，不拆分 Feature Spec、不启动调度 |
 | Feature Spec 拆分 | **Skill** | `decompose-feature-specs` 只负责生成或更新 `docs/agentic-spec/features/*` Feature Spec 文档和 `feature-pool-queue.json`，不负责启动调度 |
 | 启动项目级任务调度 | **Code + Skill** | Product Console / VSCode 通过 `schedule_run(project)` 或 `start_auto_run` 触发；Control Plane 调用 `plan-feature-execution`，校验后创建 `<executor>.run` Job 和 Execution Record |
 | 完成关键澄清 | **Skill** | `manage-spec-change` |
@@ -983,7 +983,7 @@ invocation contract 至少包含 `projectId`、`workspaceRoot`、`skillName`、`
 
 1. 项目宪章生成 → `collect-project-context`
 2. PRD 扫描 / 格式识别 → `collect-project-context`
-3. EARS 生成 → `convert-ears-requirements`
+3. 用户故事生成 → `generate-user-stories`
 4. Feature Spec 拆分 → `decompose-feature-specs`
 5. 澄清 → `manage-spec-change`
 6. 需求质量检查 → `validate-requirements`

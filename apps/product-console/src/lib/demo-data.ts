@@ -384,7 +384,7 @@ const returnsPortalData: ConsoleProjectData = {
           stages: [
             { key: "spec_source_intake", status: "completed", updatedAt: "05-19 09:14" },
             { key: "recognize_requirement_format", status: "completed", updatedAt: "05-19 09:15" },
-            { key: "generate_ears", action: "generate_ears", status: "completed", updatedAt: "05-19 09:16", auditEventId: "AUD-PRD-003", resultPath: "ears/FEAT-013.md" },
+            { key: "generate_user_stories", action: "generate_user_stories", status: "completed", updatedAt: "05-19 09:16", auditEventId: "AUD-PRD-003", resultPath: "user-stories/FEAT-013.md" },
             { key: "complete_clarifications", status: "completed", updatedAt: "05-19 09:17" },
             { key: "run_requirement_quality_check", status: "completed", updatedAt: "05-19 09:18" },
           ],
@@ -412,11 +412,11 @@ const returnsPortalData: ConsoleProjectData = {
       stages: [
         { key: "scan_prd", action: "scan_prd_source", status: "completed", updatedAt: "05-19 09:12", auditEventId: "AUD-PRD-001", resultPath: "reports/FEAT-013-scan.md" },
         { key: "upload_prd", action: "upload_prd_source", status: "completed", updatedAt: "05-19 09:14", auditEventId: "AUD-PRD-002", resultPath: "reports/FEAT-013-upload.md" },
-        { key: "generate_ears", action: "generate_ears", status: "completed", updatedAt: "05-19 09:16", auditEventId: "AUD-PRD-003", resultPath: "ears/FEAT-013.md" },
+        { key: "generate_user_stories", action: "generate_user_stories", status: "completed", updatedAt: "05-19 09:16", auditEventId: "AUD-PRD-003", resultPath: "user-stories/FEAT-013.md" },
       ],
       specSources: [
         { type: "prd", label: "PRD", path: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/PRD.md", status: "found" },
-        { type: "ears", label: "EARS", path: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/requirements.md", status: "found" },
+        { type: "user-stories", label: "User Stories", path: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/requirements.md", status: "found" },
         { type: "requirements", label: "Requirements", path: "workspace/acme-returns-portal/docs/agentic-spec/en/requirements.md", status: "found" },
         { type: "hld", label: "HLD", path: "workspace/acme-returns-portal/docs/agentic-spec/zh-CN/hld.md", status: "found" },
         { type: "design", label: "Design", status: "missing", detail: "No design.md found in docs/agentic-spec/" },

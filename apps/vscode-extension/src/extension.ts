@@ -474,7 +474,7 @@ class SpecHoverProvider implements vscode.HoverProvider {
       if (feature.nextAction) contents.appendMarkdown(`Next action: ${feature.nextAction}\n\n`);
       if (feature.blockedReasons.length > 0) contents.appendMarkdown(`Blocked: ${feature.blockedReasons.join("; ")}\n\n`);
     }
-    contents.appendMarkdown(`Actions: Add clarification, generate/update EARS, update design, split Feature, execute task.\n\n`);
+    contents.appendMarkdown(`Actions: Add clarification, generate/update User Stories, update design, split Feature, execute task.\n\n`);
     if (!requirementId && !feature) return undefined;
     return new vscode.Hover(contents);
   }
@@ -493,10 +493,10 @@ class SpecCodeLensProvider implements vscode.CodeLensProvider {
     if (projectId && /(^|\/)PRD\.md$/.test(relativePath)) {
       lenses.push(new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
         command: "specdrive.submitSpecChangeRequest",
-        title: "SpecDrive: Generate / Update EARS",
+        title: "SpecDrive: Generate / Update User Stories",
         arguments: [{
-          intent: "generate_ears",
-          comment: "Generate or update EARS requirements from VSCode PRD CodeLens.",
+          intent: "generate_user_stories",
+          comment: "Generate or update user stories from VSCode PRD CodeLens.",
           line: 0,
         }],
       }));
@@ -2000,7 +2000,7 @@ function isSpecChangeRequestIntent(value: unknown): value is SpecChangeRequestIn
     || value === "requirement_intake"
     || value === "requirement_change_or_intake"
     || value === "spec_evolution"
-    || value === "generate_ears"
+    || value === "generate_user_stories"
     || value === "update_design"
     || value === "split_feature";
 }

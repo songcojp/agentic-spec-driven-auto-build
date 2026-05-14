@@ -140,24 +140,24 @@ test("scheduler worker startup can recover transient queued jobs created while w
         VALUES ('JOB-OFF', 'BULL-OFF', 'specdrive:execution-adapter', 'cli.run', 'blocked', 'Scheduler worker mode is off.', ?)`,
       params: [JSON.stringify({
         executionId: "RUN-OFF",
-        operation: "generate_ears",
+        operation: "generate_user_stories",
         projectId: "project-1",
-        requestedAction: "generate_ears",
+        requestedAction: "generate_user_stories",
       })],
     },
     {
       sql: `INSERT INTO execution_records (id, scheduler_job_id, executor_type, operation, project_id, context_json, status)
-        VALUES ('RUN-OFF', 'JOB-OFF', 'cli', 'generate_ears', 'project-1', '{}', 'queued')`,
+        VALUES ('RUN-OFF', 'JOB-OFF', 'cli', 'generate_user_stories', 'project-1', '{}', 'queued')`,
     },
     {
       sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, error, payload_json)
         VALUES ('JOB-REAL-BLOCKED', 'BULL-REAL-BLOCKED', 'specdrive:execution-adapter', 'cli.run', 'blocked', 'Project workspace root is required.', ?)`,
-      params: [JSON.stringify({ executionId: "RUN-REAL-BLOCKED", operation: "generate_ears" })],
+      params: [JSON.stringify({ executionId: "RUN-REAL-BLOCKED", operation: "generate_user_stories" })],
     },
   ]);
 
   assert.deepEqual(listRecoverableSchedulerJobs(dbPath).map((job) => [job.schedulerJobId, job.bullmqJobId, job.jobType, job.payload.operation]), [
-    ["JOB-OFF", "BULL-OFF", "cli.run", "generate_ears"],
+    ["JOB-OFF", "BULL-OFF", "cli.run", "generate_user_stories"],
   ]);
 });
 
@@ -447,8 +447,8 @@ test("cli.run passes clarification operator input into the skill invocation prom
 test("cli.run uses danger-full-access for trusted direct-write runs with bounded scope", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-"));
   prepareSkillWorkspace(root);
-  mkdirSync(join(root, ".agents", "skills", "convert-ears-requirements"), { recursive: true });
-  writeFileSync(join(root, ".agents", "skills", "convert-ears-requirements", "SKILL.md"), "# PR EARS skill\n");
+  mkdirSync(join(root, ".agents", "skills", "generate-user-stories"), { recursive: true });
+  writeFileSync(join(root, ".agents", "skills", "generate-user-stories", "SKILL.md"), "# PR user stories skill\n");
   mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
   writeFileSync(join(root, "docs", "agentic-spec", "PRD.md"), "# PRD\n");
   const dbPath = makeDbPath();
@@ -459,13 +459,13 @@ test("cli.run uses danger-full-access for trusted direct-write runs with bounded
     dbPath,
     {
       projectId: "project-1",
-      executionId: "RUN-EARS-DIRECT",
-      operation: "generate_ears",
-      requestedAction: "generate_ears",
+      executionId: "RUN-USER-STORIES-DIRECT",
+      operation: "generate_user_stories",
+      requestedAction: "generate_user_stories",
       traceability: { requirementIds: [] },
       context: {
-        skillName: "convert-ears-requirements",
-        skillPhase: "generate_ears",
+        skillName: "generate-user-stories",
+        skillPhase: "generate_user_stories",
         sourcePaths: ["docs/agentic-spec/PRD.md"],
         expectedArtifacts: ["docs/agentic-spec/requirements.md"],
       },
@@ -475,9 +475,9 @@ test("cli.run uses danger-full-access for trusted direct-write runs with bounded
       writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"), "# Requirements\n");
       return {
         status: 0,
-        stdout: `{"type":"session","session_id":"SESSION-EARS"}\n${skillOutputEvent("RUN-EARS-DIRECT", {
-          skillName: "convert-ears-requirements",
-          requestedAction: "generate_ears",
+        stdout: `{"type":"session","session_id":"SESSION-USER-STORIES"}\n${skillOutputEvent("RUN-USER-STORIES-DIRECT", {
+          skillName: "generate-user-stories",
+          requestedAction: "generate_user_stories",
           producedArtifacts: [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", status: "created" }],
         })}`,
         stderr: "",
@@ -485,7 +485,7 @@ test("cli.run uses danger-full-access for trusted direct-write runs with bounded
     },
   );
   const rows = runSqlite(dbPath, [], [
-    { name: "policy", sql: "SELECT sandbox_mode FROM runner_policies WHERE run_id = 'RUN-EARS-DIRECT'" },
+    { name: "policy", sql: "SELECT sandbox_mode FROM runner_policies WHERE run_id = 'RUN-USER-STORIES-DIRECT'" },
   ]).queries;
 
   assert.equal(result.status, "completed");

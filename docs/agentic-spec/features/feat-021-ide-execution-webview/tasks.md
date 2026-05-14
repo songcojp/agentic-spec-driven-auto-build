@@ -34,7 +34,7 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 
 ### T-021-06 Spec Workspace 全流程控制
 状态: done
-描述: 实现 Spec Workspace Webview，展示 PRD、EARS Requirements、HLD、UI Spec、Architecture Plan、Data Model、Contracts、Tasks、Quickstart、Execution、Review、Delivery 的阶段状态，并通过受控命令推进当前阶段。
+描述: 实现 Spec Workspace Webview，展示 PRD、User Stories、HLD、UI Spec、Architecture Plan、Data Model、Contracts、Tasks、Quickstart、Execution、Review、Delivery 的阶段状态，并通过受控命令推进当前阶段。
 验证: `npm run ide:build`，手动打开 `SpecDrive: Open Spec Workspace`。
 
 ### T-021-07 Feature Spec 卡片总览

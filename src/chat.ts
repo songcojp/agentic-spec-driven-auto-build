@@ -39,7 +39,7 @@ const INTENT_RISK: Record<ChatIntentType, ChatRiskLevel> = {
   unknown: "low",
   add_requirement: "medium",
   change_requirement: "medium",
-  generate_ears: "medium",
+  generate_user_stories: "medium",
   generate_hld: "medium",
   schedule_run: "high",
   pause_runner: "high",
@@ -164,7 +164,7 @@ function buildClassificationPrompt(
           enum: [
             "query_status", "query_review", "add_requirement", "change_requirement",
             "schedule_run", "pause_runner", "resume_runner", "approve_review", "reject_review",
-            "generate_ears", "generate_hld", "confirm", "cancel", "help", "unknown",
+            "generate_user_stories", "generate_hld", "confirm", "cancel", "help", "unknown",
           ],
         },
         confidence: { type: "number", minimum: 0, maximum: 1 },
@@ -195,7 +195,7 @@ function buildClassificationPrompt(
     "- resume_runner: wants to resume the runner",
     "- approve_review: wants to approve a review item",
     "- reject_review: wants to reject a review item",
-    "- generate_ears: wants to generate EARS requirements for a feature",
+    "- generate_user_stories: wants to generate user stories for a feature",
     "- generate_hld: wants to generate the project HLD",
     "- confirm: user is confirming a previously proposed action",
     "- cancel: user is cancelling a previously proposed action",
@@ -314,9 +314,9 @@ function ruleBasedClassification(message: string): ChatIntentResult {
     return makeResult("reject_review", "high", message);
   }
 
-  // EARS / HLD generation
-  if (lower.includes("ears") || lower.includes("需求生成") || lower.includes("生成需求")) {
-    return makeResult("generate_ears", "medium", message);
+  // User Stories / HLD generation
+  if (lower.includes("需求生成") || lower.includes("生成需求")) {
+    return makeResult("generate_user_stories", "medium", message);
   }
   if (lower.includes("hld") || lower.includes("架构") || lower.includes("设计文档")) {
     return makeResult("generate_hld", "medium", message);
@@ -363,11 +363,11 @@ function getDefaultResponseText(intent: ChatIntentType): string {
     resume_runner: "⚠️ 即将恢复 Runner，请确认后执行。",
     approve_review: "⚠️ 即将批准审查项，请确认后执行。",
     reject_review: "⚠️ 即将拒绝审查项，请确认后执行。",
-    generate_ears: "正在为该 Feature 生成 EARS 需求...",
+    generate_user_stories: "正在为该 Feature 生成用户故事...",
     generate_hld: "正在生成项目 HLD...",
     confirm: "正在执行已确认的操作...",
     cancel: "已取消操作。",
-    help: "我能帮您：查询任务/Feature 状态、新增或变更需求、调度运行、暂停/恢复 Runner、批准或拒绝审查、生成 EARS 需求和 HLD。",
+    help: "我能帮您：查询任务/Feature 状态、新增或变更需求、调度运行、暂停/恢复 Runner、批准或拒绝审查、生成用户故事和 HLD。",
     unknown: "抱歉，我没有理解您的意图。请尝试更具体的描述，例如：「查看任务板状态」或「为 feat-001 新增需求」。",
   };
   return map[intent];
@@ -516,7 +516,7 @@ function executeMediumRiskIntent(
       return {
         messageId,
         state: "answered",
-        text: `无法识别操作目标。请指定 Feature ID，例如：「为 feat-001 生成 EARS 需求」。`,
+        text: `无法识别操作目标。请指定 Feature ID，例如：「为 feat-001 生成用户故事」。`,
         intent: intent.intent,
       };
     }
@@ -655,15 +655,15 @@ function buildCommandInput(
         payload: { projectId, decision: "reject" },
       };
     }
-    case "generate_ears": {
+    case "generate_user_stories": {
       const featureId = entities.featureId ?? context.features.find((f) => f.status === "ready")?.id ?? context.features[0]?.id;
       if (!featureId) return undefined;
       return {
-        action: "generate_ears",
+        action: "generate_user_stories",
         entityType: "feature",
         entityId: featureId,
         requestedBy: "chat",
-        reason: "Generate EARS requirements via chat",
+        reason: "Generate user stories via chat",
         payload: { projectId, featureId },
       };
     }

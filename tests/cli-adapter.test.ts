@@ -63,7 +63,7 @@ function executionInvocation(overrides: Partial<{
     executionId: overrides.executionId ?? "RUN-SKILL",
     projectId: overrides.projectId ?? "project-1",
     workspaceRoot: overrides.workspaceRoot ?? "/workspace/project",
-    operation: overrides.operation ?? overrides.requestedAction ?? "generate_ears",
+    operation: overrides.operation ?? overrides.requestedAction ?? "generate_user_stories",
     featureId,
     specState: {},
     traceability: {
@@ -77,8 +77,8 @@ function executionInvocation(overrides: Partial<{
     },
     outputSchema: {},
     skillInstruction: {
-      skillName: overrides.skillName ?? "convert-ears-requirements",
-      requestedAction: overrides.requestedAction ?? "generate_ears",
+      skillName: overrides.skillName ?? "generate-user-stories",
+      requestedAction: overrides.requestedAction ?? "generate_user_stories",
       sourcePaths: overrides.sourcePaths ?? ["docs/agentic-spec/PRD.md"],
       expectedArtifacts: overrides.expectedArtifacts ?? [{ path: "docs/agentic-spec/requirements.md", kind: "markdown", required: true }],
       operatorInput: overrides.operatorInput,
@@ -100,8 +100,8 @@ function skillOutputEvent(overrides: Partial<{
   const output = {
     contractVersion: "skill-contract/v2",
     executionId: overrides.executionId ?? "RUN-SKILL",
-    skillName: overrides.skillName ?? "convert-ears-requirements",
-    requestedAction: overrides.requestedAction ?? "generate_ears",
+    skillName: overrides.skillName ?? "generate-user-stories",
+    requestedAction: overrides.requestedAction ?? "generate_user_stories",
     status: overrides.status ?? "completed",
     summary: overrides.summary ?? "Skill completed.",
     nextAction: "Update spec-state.json and continue.",
@@ -522,8 +522,8 @@ test("SkillOutputContract validation requires common fields but allows skill-spe
   const valid = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-VALIDATE",
-    skillName: "convert-ears-requirements",
-    requestedAction: "generate_ears",
+    skillName: "generate-user-stories",
+    requestedAction: "generate_user_stories",
     status: "completed",
     summary: "Generated requirements.",
     nextAction: null,
@@ -1065,7 +1065,7 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
   });
   const docsDirectWrite = evaluateRunnerSafety({
     policy: docsDirectWritePolicy,
-    prompt: "Generate EARS requirements.",
+    prompt: "Generate user stories.",
     executionInvocation: executionInvocation(),
   });
   assert.equal(docsDirectWrite.allowed, true);
@@ -1141,7 +1141,7 @@ test("execution invocation prompt does not inline workspace context bundles", ()
   const result = evaluateRunnerSafety({
     policy,
     prompt,
-    taskText: "Generate EARS requirements from PRD.",
+    taskText: "Generate user stories from PRD.",
   });
 
   assert.doesNotMatch(prompt, /Workspace Context/);
@@ -1515,8 +1515,8 @@ test("Gemini CLI adapter extracts session, usage, and SkillOutputContract from s
   const output = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-GEMINI",
-    skillName: "convert-ears-requirements",
-    requestedAction: "generate_ears",
+    skillName: "generate-user-stories",
+    requestedAction: "generate_user_stories",
     status: "completed",
     summary: "Gemini completed.",
     nextAction: "Continue.",
@@ -1574,8 +1574,8 @@ test("Claude Code CLI adapter extracts session and SkillOutputContract from stru
   const output = {
     contractVersion: "skill-contract/v1",
     executionId: "RUN-CLAUDE",
-    skillName: "convert-ears-requirements",
-    requestedAction: "generate_ears",
+    skillName: "generate-user-stories",
+    requestedAction: "generate_user_stories",
     status: "completed",
     summary: "Claude completed.",
     nextAction: "Continue.",

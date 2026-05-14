@@ -143,7 +143,7 @@ The system continuously routes through scheduling, planning, implementing, and d
 
 ### 6.2 Spec Protocol Engine
 * **FR-010**: Create Feature Spec.
-* **FR-011**: PR/EARS Requirement Decomposition.
+* **FR-011**: PR/User Story Decomposition.
 * **FR-012**: Spec Slicing.
 * **FR-013**: Clarification Log.
 * **FR-014**: Requirement Checklist.

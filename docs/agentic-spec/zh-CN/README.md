@@ -7,7 +7,7 @@
 ## 文档
 
 * [产品需求文档](PRD.md)
-* [EARS 需求文档](requirements.md)
+* [用户故事文档](requirements.md)
 * [项目高层设计文档](hld.md)
 * [历史设计快照（已作废）](design.md)
 * [项目级 Skill 说明](skills.md)

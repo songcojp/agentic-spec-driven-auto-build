@@ -36,7 +36,7 @@ type WorkflowPhaseKey = WorkflowPhase["key"];
 
 const workflowStageFallbacks = [
   { key: "spec_source_intake", status: "pending" as const },
-  { key: "generate_ears", action: "generate_ears", status: "pending" as const },
+  { key: "generate_user_stories", action: "generate_user_stories", status: "pending" as const },
 ] satisfies NonNullable<ConsoleData["spec"]["prdWorkflow"]>["phases"][number]["stages"];
 
 const workflowStageIcons: Record<string, typeof Search> = {
@@ -49,7 +49,7 @@ const workflowStageIcons: Record<string, typeof Search> = {
   scan_prd: Search,
   upload_prd: Upload,
   recognize_requirement_format: FileText,
-  generate_ears: FileText,
+  generate_user_stories: FileText,
   complete_clarifications: MessageSquare,
   run_requirement_quality_check: CheckCircle2,
   task_scheduling: GitBranch,
@@ -71,7 +71,7 @@ function workflowStageLabel(key: string, text: UiStrings): string {
     scan_prd: text.scanPrd,
     upload_prd: text.uploadPrd,
     recognize_requirement_format: text.recognizeRequirementFormat,
-    generate_ears: text.generateEars,
+    generate_user_stories: text.generateUserStories,
     complete_clarifications: text.completeClarifications,
     run_requirement_quality_check: text.runRequirementQualityCheck,
     task_scheduling: text.startAutoRun,

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 
-export type InputSourceType = "natural-language" | "PR" | "RP" | "PRD" | "EARS" | "mixed";
+export type InputSourceType = "natural-language" | "PR" | "RP" | "PRD" | "user-stories" | "mixed";
 export type FeatureStatus = "draft" | "review_needed" | "ready";
 export type FileSpecLifecycleStatus =
   | "draft"
@@ -227,7 +227,7 @@ export type SpecSlice = {
 
 export type SpecSourceFileType =
   | "PRD"
-  | "EARS"
+  | "user-stories"
   | "HLD"
   | "design"
   | "feature-requirements"
@@ -382,7 +382,7 @@ export function decomposeRequirements(featureId: string, sources: SourceContext[
   );
 
   return candidates.map(({ text, source }, index) => {
-    const statement = normalizeEarsStatement(text);
+    const statement = normalizeStructuredRequirementStatement(text);
     const behavior = statement.replace(/^WHEN .+?, THE SYSTEM SHALL /i, "").replace(/^THE SYSTEM SHALL /i, "");
     const atomic = isAtomicBehavior(behavior);
     const observable = isObservableBehavior(behavior);
@@ -611,14 +611,14 @@ export function scanSpecSources(projectPath: string, now = new Date()): SpecSour
     ["README.md", "README"],
     ["docs/agentic-spec/README.md", "README"],
     ["docs/agentic-spec/PRD.md", "PRD"],
-    ["docs/agentic-spec/requirements.md", "EARS"],
+    ["docs/agentic-spec/requirements.md", "user-stories"],
     ["docs/agentic-spec/hld.md", "HLD"],
     ["docs/agentic-spec/design.md", "design"],
   ];
   const localizedCandidates: Array<[string, SpecSourceFileType]> = hasMultilingualSpecSupport(root)
     ? preferredSpecLanguages(root).flatMap((language): Array<[string, SpecSourceFileType]> => [
       [`docs/agentic-spec/${language}/PRD.md`, "PRD"],
-      [`docs/agentic-spec/${language}/requirements.md`, "EARS"],
+      [`docs/agentic-spec/${language}/requirements.md`, "user-stories"],
       [`docs/agentic-spec/${language}/hld.md`, "HLD"],
       [`docs/agentic-spec/${language}/design.md`, "design"],
     ])
@@ -1146,7 +1146,7 @@ function splitRequirementText(text: string): string[] {
     return [];
   }
 
-  const withoutHeading = stripped.replace(/^(requirements?|acceptance criteria|scenario|prd|pr|rp|ears)\s*:\s*/i, "");
+  const withoutHeading = stripped.replace(/^(requirements?|acceptance criteria|scenario|prd|pr|rp|user stories?|stories)\s*:\s*/i, "");
   const pieces = withoutHeading
     .split(/(?:;\s+|\.\s+|\n+)/)
     .map((piece) => piece.trim())
@@ -1171,7 +1171,7 @@ function splitCompoundBehavior(text: string): string[] {
   return pieces.map((piece) => `${prefix}${piece}`);
 }
 
-function normalizeEarsStatement(text: string): string {
+function normalizeStructuredRequirementStatement(text: string): string {
   const trimmed = stripKnownPrefix(text).replace(/\.$/, "").trim();
   if (/^(when|while|where|if)\b.+\b(the system|system)\s+shall\b/i.test(trimmed)) {
     return `${upperFirst(trimmed)}.`;
@@ -1288,8 +1288,11 @@ function firstNonEmptyLine(text: string): string | undefined {
 }
 
 function detectSourceType(text: string, defaultType: InputSourceType): InputSourceType {
-  const typeMatch = text.match(/^\s*(PRD|EARS|PR|RP)\s*:/i);
-  return typeMatch ? (typeMatch[1].toUpperCase() as InputSourceType) : defaultType;
+  const typeMatch = text.match(/^\s*(PRD|USER STORIES?|STORIES|PR|RP)\s*:/i);
+  if (!typeMatch) return defaultType;
+  const raw = typeMatch[1].toLowerCase();
+  if (raw.startsWith("user") || raw === "stories") return "user-stories";
+  return typeMatch[1].toUpperCase() as InputSourceType;
 }
 
 function cleanLine(line: string): string {
@@ -1299,7 +1302,7 @@ function cleanLine(line: string): string {
 function stripKnownPrefix(text: string): string {
   return text
     .trim()
-    .replace(/^(PRD|EARS|PR|RP|Requirement|Acceptance Criteria|Scenario)\s*:\s*/i, "")
+    .replace(/^(PRD|User Stories?|Stories|PR|RP|Requirement|Acceptance Criteria|Scenario)\s*:\s*/i, "")
     .replace(/^REQ-\d+\s*:\s*/i, "")
     .trim();
 }
@@ -1392,19 +1395,19 @@ function detectOrphanedTraceability(
   missingItems: SpecMissingItem[],
   clarificationItems: SpecSourceClarificationItem[],
 ): void {
-  const earsSources = sources.filter((s) => s.fileType === "EARS");
+  const userStorySources = sources.filter((s) => s.fileType === "user-stories");
   const featureReqSources = sources.filter((s) => s.fileType === "feature-requirements");
 
-  const allEarsReqIds = new Set(earsSources.flatMap((s) => s.traceIds.filter((id) => id.startsWith("REQ-"))));
+  const allUserStoryReqIds = new Set(userStorySources.flatMap((s) => s.traceIds.filter((id) => id.startsWith("REQ-"))));
   const allFeatureReqIds = new Set(featureReqSources.flatMap((s) => s.traceIds.filter((id) => id.startsWith("REQ-"))));
 
-  for (const reqId of allEarsReqIds) {
+  for (const reqId of allUserStoryReqIds) {
     if (!allFeatureReqIds.has(reqId)) {
       missingItems.push({
         id: missingItemId(missingItems.length + 1),
         kind: "orphaned_traceability",
         relatedPath: "docs/agentic-spec/features/",
-        description: `${reqId} appears in EARS requirements but is not referenced by any Feature Spec`,
+        description: `${reqId} appears in user stories but is not referenced by any Feature Spec`,
       });
       clarificationItems.push({
         id: scanClarId(clarificationItems.length + 1),

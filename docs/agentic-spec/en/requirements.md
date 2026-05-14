@@ -91,12 +91,12 @@ THE SYSTEM SHALL generate a structured Feature Spec from the submitted requireme
 Acceptance:
 - [ ] A submitted product request produces a Feature Spec with goals, requirements, acceptance criteria, and traceable source references.
 
-### REQ-005: Decompose PRD Into EARS Requirements
+### REQ-005: Decompose PRD Into User Stories
 Source: PRD Section 6.2 FR-011
 Priority: Must
 
 WHEN a PRD or product brief is processed by the Spec Protocol Engine
-THE SYSTEM SHALL decompose its behavior into atomic, testable EARS-format requirements.
+THE SYSTEM SHALL decompose its behavior into atomic, testable User Stories-format requirements.
 
 Acceptance:
 - [ ] Each generated requirement contains one observable behavior and can be mapped back to a source section.

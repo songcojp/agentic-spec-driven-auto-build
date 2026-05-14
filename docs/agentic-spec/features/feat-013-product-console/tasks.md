@@ -27,7 +27,7 @@
 - [x] TASK-025: 更新 Product Console 单测和浏览器验证，覆盖阶段 1、阶段 2、PRD 扫描/上传回执、项目级隔离，以及阶段 2 不显示阶段 3 操作。
 - [x] TASK-025A: 将阶段 2 的 Spec 扫描和上传合并为一个“Spec 扫描与上传”步骤，并在该步骤内保留“扫描”和“上传”两个按钮及命令回执验证。
 - [ ] TASK-026: 将 Spec Workspace 阶段 1 改为展示 FEAT-001 自动初始化闭环状态，覆盖项目创建/导入、Git 仓库、Spec Protocol、项目宪章、Project Memory、健康检查和当前项目上下文，不提供逐步手动执行子步骤入口。
-- [ ] TASK-027: 增加阶段 2 Spec Sources 自动扫描 ViewModel 和 UI，展示 PRD、EARS、requirements、HLD、design、Feature Spec、tasks 和 README / 索引的发现路径、类型、缺失项、冲突项和澄清项。
+- [ ] TASK-027: 增加阶段 2 Spec Sources 自动扫描 ViewModel 和 UI，展示 PRD、用户故事、requirements、HLD、design、Feature Spec、tasks 和 README / 索引的发现路径、类型、缺失项、冲突项和澄清项。
 - [ ] TASK-028: 更新 Product Console 单测和浏览器验证，覆盖 Spec Sources 自动扫描、阶段 1 自动初始化阻塞反馈、项目切换后的扫描结果隔离，以及阶段 2 不显示 HLD 生成、Feature Spec 拆分或规划流水线入口。
 - [x] TASK-029: 在 Product Console App Shell 增加系统设置入口和 System Settings 页面框架，支持加载态、空态、错误态、真实数据态、项目上下文和语言切换。
 - [x] TASK-030: 在系统设置中增加 CLI 配置页，展示 active adapter、配置状态、schema 版本、最近 dry-run 和审计反馈；Runner Console 仅展示配置健康摘要和跳转入口。

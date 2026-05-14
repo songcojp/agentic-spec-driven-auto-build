@@ -84,7 +84,7 @@ export type ConsoleCommandAction =
   | "intake_requirement"
   | "evolve_spec"
   | "resolve_clarification"
-  | "generate_ears"
+  | "generate_user_stories"
   | "generate_hld"
   | "generate_ui_spec"
   | "split_feature_specs"
@@ -130,7 +130,7 @@ const CONSOLE_COMMAND_ACTIONS = new Set<ConsoleCommandAction>([
   "intake_requirement",
   "evolve_spec",
   "resolve_clarification",
-  "generate_ears",
+  "generate_user_stories",
   "generate_hld",
   "generate_ui_spec",
   "split_feature_specs",
@@ -1642,7 +1642,7 @@ export function buildSpecWorkspaceView(dbPath: string, featureId?: string, proje
           'console_command_initialize_project_memory',
           'console_command_scan_prd_source',
           'console_command_upload_prd_source',
-          'console_command_generate_ears',
+          'console_command_generate_user_stories',
           'console_command_generate_hld',
           'console_command_generate_ui_spec',
           'console_command_split_feature_specs',
@@ -1740,7 +1740,7 @@ export function buildSpecWorkspaceView(dbPath: string, featureId?: string, proje
       { action: "create_feature", entityType: "project" },
       { action: "scan_prd_source", entityType: "project" },
       { action: "upload_prd_source", entityType: "project" },
-      { action: "generate_ears", entityType: "project" },
+      { action: "generate_user_stories", entityType: "project" },
       { action: "update_spec", entityType: "spec" },
       { action: "start_auto_run", entityType: "project" },
       { action: "schedule_run", entityType: "project" },
@@ -1764,7 +1764,7 @@ function buildPrdWorkflow(input: {
   const stages: SpecWorkspaceViewModel["prdWorkflow"]["stages"] = [
     { key: "scan_prd", action: "scan_prd_source", status: "pending" },
     { key: "upload_prd", action: "upload_prd_source", status: "pending" },
-    { key: "generate_ears", action: "generate_ears", status: "pending" },
+    { key: "generate_user_stories", action: "generate_user_stories", status: "pending" },
   ];
   const latestByAction = new Map<ConsoleCommandAction, Record<string, unknown>>();
   for (const row of input.auditRows) {
@@ -4055,7 +4055,7 @@ function executeSpecSkillCommand(
   scheduler: SchedulerClient,
   specIntakeResult?: ({ blockedReasons: string[] } & Record<string, unknown>),
 ): { executionId: string; schedulerJobId: string; skillName: string; workspaceRoot?: string } | undefined {
-  if (!["intake_requirement", "evolve_spec", "resolve_clarification", "generate_ears", "generate_hld", "generate_ui_spec", "split_feature_specs"].includes(input.action)) {
+  if (!["intake_requirement", "evolve_spec", "resolve_clarification", "generate_user_stories", "generate_hld", "generate_ui_spec", "split_feature_specs"].includes(input.action)) {
     return undefined;
   }
   const payload = parseJsonObject(input.payload);
@@ -4152,7 +4152,7 @@ function skillNameForSpecAction(action: ConsoleCommandAction): string {
   if (action === "intake_requirement") return "manage-spec-change";
   if (action === "evolve_spec") return "manage-spec-change";
   if (action === "resolve_clarification") return "manage-spec-change";
-  if (action === "generate_ears") return "convert-ears-requirements";
+  if (action === "generate_user_stories") return "generate-user-stories";
   if (action === "generate_hld") return "design-architecture";
   if (action === "generate_ui_spec") return "design-ui-spec";
   return "decompose-feature-specs";
@@ -4171,7 +4171,7 @@ function sourcePathsForSpecAction(
     optionalString(payload.resolvedSourcePath),
     workspaceRoot,
   );
-  if (action === "intake_requirement" || action === "evolve_spec" || action === "resolve_clarification" || action === "generate_ears") {
+  if (action === "intake_requirement" || action === "evolve_spec" || action === "resolve_clarification" || action === "generate_user_stories") {
     return [payloadSourcePath ?? projectSpecPaths(workspaceRoot).prd];
   }
   if (action === "split_feature_specs") {
@@ -4326,7 +4326,7 @@ function expectedArtifactsForSpecAction(
       "docs/agentic-spec/features/feature-pool-queue.json",
     ];
   }
-  if (action === "generate_ears") {
+  if (action === "generate_user_stories") {
     return [requirementsArtifactForSource(sourcePaths[0], workspaceRoot)];
   }
   if (action === "split_feature_specs") {
@@ -4509,7 +4509,7 @@ function selectSpecSource(
   const requestedSource = scan.sources.find((source) => source.relativePath === requestedSourcePath);
   const source = requestedSource
     ?? scan.sources.find((entry) => entry.fileType === "PRD")
-    ?? scan.sources.find((entry) => entry.fileType === "EARS")
+    ?? scan.sources.find((entry) => entry.fileType === "user-stories")
     ?? scan.sources.find((entry) => entry.fileType === "README")
     ?? scan.sources[0];
   if (!source) {
@@ -4541,7 +4541,7 @@ function resolveSpecInput(
   const candidates = [
     requestedSourcePath,
     scan.sources.find((source) => source.fileType === "PRD")?.relativePath,
-    scan.sources.find((source) => source.fileType === "EARS")?.relativePath,
+    scan.sources.find((source) => source.fileType === "user-stories")?.relativePath,
     scan.sources[0]?.relativePath,
   ].filter((value): value is string => Boolean(value));
 
@@ -4617,10 +4617,10 @@ function nextGeneratedFeatureId(dbPath: string): string {
   return `FEAT-INTAKE-${String(Number.isFinite(nextNumber) ? nextNumber : 1).padStart(3, "0")}`;
 }
 
-function detectSpecSourceType(sourcePath?: string): "PRD" | "EARS" | "mixed" {
+function detectSpecSourceType(sourcePath?: string): "PRD" | "user-stories" | "mixed" {
   const normalized = sourcePath?.toLowerCase() ?? "";
-  if (normalized.includes("requirements") || normalized.includes("ears")) {
-    return "EARS";
+  if (normalized.includes("requirements") || normalized.includes("user-stories") || normalized.includes("user_stories") || normalized.includes("stories")) {
+    return "user-stories";
   }
   if (normalized.includes("prd") || normalized.includes("pr.md") || normalized.includes("rp.md")) {
     return "PRD";
@@ -5986,7 +5986,7 @@ function schedulerOperationName(operation?: string, skillName?: string, skillPha
   if (skillName === "manage-spec-change" || operation === "intake_requirement") return "Intake requirement";
   if (skillName === "manage-spec-change" || operation === "evolve_spec") return "Update Spec and Feature Specs";
   if (skillName === "manage-spec-change" || operation === "resolve_clarification") return "Resolve clarification";
-  if (skillName === "convert-ears-requirements" || operation === "generate_ears") return "Generate EARS requirements";
+  if (skillName === "generate-user-stories" || operation === "generate_user_stories") return "Generate user stories";
   if (skillName === "decompose-feature-specs" || operation === "split_feature_specs") return "Split Feature Specs";
   if (skillName === "design-ui-spec" || operation === "generate_ui_spec") return "Generate UI Spec";
   if (skillName === "implement-feature") return "Collect technical context";

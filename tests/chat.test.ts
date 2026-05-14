@@ -148,13 +148,13 @@ test("classifyIntent uses provided codexRunner for classification", async () => 
   const context = buildChatContext(dbPath, undefined);
 
   const mockIntentResult = {
-    intent: "generate_ears",
+    intent: "generate_user_stories",
     confidence: 0.95,
     entities: { featureId: "feat-001" },
-    commandAction: "generate_ears",
+    commandAction: "generate_user_stories",
     riskLevel: "medium",
     confirmationRequired: false,
-    responseText: "正在生成 EARS 需求...",
+    responseText: "正在生成用户故事...",
   };
 
   const mockRunner = async (_prompt: string, _schemaPath: string) => ({
@@ -163,8 +163,8 @@ test("classifyIntent uses provided codexRunner for classification", async () => 
     exitCode: 0,
   });
 
-  const result = await classifyIntent(dbPath, "为 feat-001 生成 EARS 需求", context, [], mockRunner);
-  assert.equal(result.intent, "generate_ears");
+  const result = await classifyIntent(dbPath, "为 feat-001 生成用户故事", context, [], mockRunner);
+  assert.equal(result.intent, "generate_user_stories");
   assert.equal(result.entities.featureId, "feat-001");
   assert.equal(result.riskLevel, "medium");
   assert.equal(result.confirmationRequired, false);

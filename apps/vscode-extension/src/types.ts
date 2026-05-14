@@ -287,7 +287,7 @@ export type SpecChangeRequestIntent =
   | "requirement_intake"
   | "requirement_change_or_intake"
   | "spec_evolution"
-  | "generate_ears"
+  | "generate_user_stories"
   | "update_design"
   | "split_feature";
 

@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-本设计覆盖 SpecDrive AutoBuild MVP 的产品级系统边界，对应 `docs/agentic-spec/zh-CN/PRD.md` 和 `docs/agentic-spec/zh-CN/requirements.md`。系统目标是把自然语言、PRD、EARS 或混合需求输入转化为可执行 Feature Spec，并通过 Scheduler、Project Memory、Codex Runner 外部运行观测、内部状态机、Evidence Pack、Review Center 和 Dashboard 形成可控、可恢复、可审计的长时间自主编程闭环。
+本设计覆盖 SpecDrive AutoBuild MVP 的产品级系统边界，对应 `docs/agentic-spec/zh-CN/PRD.md` 和 `docs/agentic-spec/zh-CN/requirements.md`。系统目标是把自然语言、PRD、用户故事 或混合需求输入转化为可执行 Feature Spec，并通过 Scheduler、Project Memory、Codex Runner 外部运行观测、内部状态机、Evidence Pack、Review Center 和 Dashboard 形成可控、可恢复、可审计的长时间自主编程闭环。
 
 2026-04-29 边界更新：平台不再提供 Skill System、Subagent Runtime、Agent Run Contract、Context Broker、Planning Pipeline、Skill Center 或 Subagent Console。控制面只维护调度、任务图、状态机、状态聚合、审计、证据和 Console 状态展示；Runner 仅展示外部执行队列、心跳、日志、证据和状态检测。
 
@@ -28,7 +28,7 @@ MVP 采用本地优先的控制面架构：
 | REQ-002 | 3, 4.2, 5, 6.1 | Repository Adapter 连接 Git，并读取分支、commit、PR、CI、worktree 状态。 |
 | REQ-003 | 4.3, 7.1, 9 | Project Health Checker 生成 ready、blocked、failed 和原因。 |
 | REQ-004 | 4.4, 5, 6.2, 7.2 | Spec Protocol Engine 创建 Feature Spec 并保留来源追踪。 |
-| REQ-005 | 4.4, 6.2, 7.2, 12 | EARS Decomposer 生成原子需求、验收和测试场景。 |
+| REQ-005 | 4.4, 6.2, 7.2, 12 | 用户故事 Decomposer 生成原子需求、验收和测试场景。 |
 | REQ-006 | 4.4, 4.9, 6.7 | Spec Slicer 为任务和 Subagent 提供最小上下文。 |
 | REQ-007 | 4.4, 5, 6.2, 9 | Clarification Log 记录歧义、答案和影响范围。 |
 | REQ-008 | 4.4, 6.2, 12 | Requirement Checklist 阻止不合格 Feature 进入 ready。 |
@@ -261,14 +261,14 @@ Dependencies:
 Responsibilities:
 
 - 创建 Feature Spec。
-- 拆解 PR、RP、PRD、EARS 或混合输入为原子 EARS 需求。
-- 扫描 PRD、EARS、requirements、HLD、design、已有 Feature Spec、tasks 和 README / 索引等 Spec Sources，识别已有规格产物、来源追踪、缺失项和冲突。
+- 拆解 PR、RP、PRD、用户故事 或混合输入为原子 用户故事。
+- 扫描 PRD、用户故事、requirements、HLD、design、已有 Feature Spec、tasks 和 README / 索引等 Spec Sources，识别已有规格产物、来源追踪、缺失项和冲突。
 - 维护 Clarification Log、Requirement Checklist、Spec Version 和 Spec 切片。
 - 生成和读取 Technical Plan、Research Decision、Data Model、Contract、Quickstart、Task Graph。
 
 Inputs:
 
-- 自然语言、PRD、EARS 或混合格式需求。
+- 自然语言、PRD、用户故事 或混合格式需求。
 - PRD、requirements、HLD、design、Feature Spec、tasks 和 README / 索引等 Spec Sources。
 - 已有 Feature Spec。
 - 用户澄清答案。
@@ -725,8 +725,8 @@ Dependencies:
 | id | string | yes | REQ、NFR 或约束 ID。 |
 | feature_id | string | yes | 所属 Feature。 |
 | type | enum | yes | functional、non_functional、constraint。 |
-| condition | string | yes | EARS 触发条件。 |
-| expected_behavior | string | yes | EARS 行为。 |
+| condition | string | yes | 用户故事 触发条件。 |
+| expected_behavior | string | yes | 用户故事 行为。 |
 | acceptance_criteria | object[] | yes | 验收标准。 |
 | test_scenarios | object[] | no | 测试场景。 |
 | source_trace | object[] | yes | 源文本和位置。 |
@@ -1146,8 +1146,8 @@ sequenceDiagram
   U->>S: submit source requirement
   S->>K: manage-spec-change
   K-->>S: Feature candidate
-  S->>K: convert-ears-requirements
-  K-->>S: EARS requirements + traceability
+  S->>K: generate-user-stories
+  K-->>S: user stories + traceability
   S->>C: run requirement checklist
   alt checklist passed
     C-->>S: passed
@@ -1554,7 +1554,7 @@ MVP 不实现企业级复杂权限矩阵，但保留角色级操作边界：
 | Metric | Source | Purpose |
 |---|---|---|
 | feature_spec_generation_success_rate | SkillRun + Checklist | MVP 成功指标。 |
-| pr_ears_decomposition_accuracy | Review feedback + acceptance | MVP 成功指标。 |
+| pr_user_stories_decomposition_accuracy | Review feedback + acceptance | MVP 成功指标。 |
 | clarification_effectiveness_rate | Clarification Log | MVP 成功指标。 |
 | task_graph_executable_rate | TaskGraph + Status Checker | MVP 成功指标。 |
 | low_risk_task_auto_completion_rate | Task + Run | MVP 成功指标。 |
@@ -1584,7 +1584,7 @@ Evidence Pack 必须可被以下模块直接引用：
 
 覆盖：
 
-- EARS 需求拆解输出 schema 校验。
+- 用户故事拆解输出 schema 校验。
 - Requirement Checklist 判定。
 - Spec Version MAJOR、MINOR、PATCH 规则。
 - Skill input/output schema 校验。
@@ -1615,8 +1615,8 @@ Evidence Pack 必须可被以下模块直接引用：
 
 1. 创建项目、连接本地 Git 仓库、健康检查 ready。
 2. 阶段 1 自动完成 Spec Protocol、项目宪章、Project Memory 和当前项目上下文初始化。
-3. 阶段 2 在同一个 Spec 来源录入步骤中提供“扫描”和“上传”两个动作；扫描动作读取 PRD、EARS、requirements、HLD、design、Feature Spec、tasks 和 README / 索引等 Spec Sources，上传动作接收用户提供的 Spec 文件。
-4. 提交或复用 PRD 片段，生成 Feature Spec、EARS 需求、Checklist 和 ready 状态。
+3. 阶段 2 在同一个 Spec 来源录入步骤中提供“扫描”和“上传”两个动作；扫描动作读取 PRD、用户故事、requirements、HLD、design、Feature Spec、tasks 和 README / 索引等 Spec Sources，上传动作接收用户提供的 Spec 文件。
+4. 提交或复用 PRD 片段，生成 Feature Spec、用户故事、Checklist 和 ready 状态。
 5. Scheduler 自动选择 Feature 并完成 planning。
 6. 生成任务图，看板显示 Ready 任务。
 7. 调度低风险编码任务，Runner mock 或真实 Codex CLI 生成 Evidence。

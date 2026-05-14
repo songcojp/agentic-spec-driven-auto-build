@@ -16,13 +16,13 @@ Use this file as the target project's SpecDrive operating contract.
 ## Spec Standard
 
 - PRD captures product intent, scope, non-goals, milestones, risks, page surfaces, and source decisions.
-- `requirements.md` captures stable `REQ-*`, `NFR-*`, and `EDGE-*` IDs with source trace, priority, EARS-style behavior, and testable acceptance.
+- `requirements.md` captures stable `REQ-*`, `NFR-*`, and `EDGE-*` IDs with source trace, priority, user-story-based behavior, and testable acceptance.
 - `hld.md` captures architecture, subsystem responsibility, data ownership, state machines, interfaces, security, scheduling, and technology constraints.
 - `docs/agentic-spec/ui/ui-spec.md` and `docs/agentic-spec/ui/prototype/*.html` guide UI system design, page layout, visual hierarchy, state messaging, interaction flow, and browser verification when UI exists.
 - Each `docs/agentic-spec/features/<feature-id>/` folder should contain feature-local `requirements.md`, `design.md`, `tasks.md`, and optional `spec-state.json`.
 - Treat artifact granularity as part of source truth: PRD must carry users,
   workflows, sub-capabilities, success/failure examples, non-goals and
-  priority; requirements must be atomic EARS behaviors with evidence
+  priority; requirements must be user-story-based atomic behaviors with evidence
   expectations; HLD must name source-of-truth data, state flow, interfaces,
   runtime and test strategy; UI Spec must include interaction matrices and static HTML prototypes; Feature
   Specs must close vertical journeys with design paths, task blocks, Journey
@@ -65,7 +65,7 @@ State fact ownership:
 
 - Requirement addition or change: follow `.agents/skills/manage-spec-change/SKILL.md`.
 - PRD and product intent refinement: use `refine-product-intent`.
-- PRD to EARS: use `convert-ears-requirements`.
+- PRD to 用户故事: use `generate-user-stories`.
 - Requirement quality checks: use `validate-requirements`.
 - HLD, ADR, data, state, and adapter contract generation: use `design-architecture`.
 - UI Spec, interaction, state, and prototype artifact generation: use `design-ui-spec`.
@@ -120,7 +120,7 @@ old dotted phase names are not valid for new routing.
 - `use-specdrive-lifecycle`: Route broad work through Define/Plan/Build/Verify/Review/Ship, local skills, and specialist agent responsibilities.
 - `collect-project-context`: Gather project governance, repository facts, commands, constraints, and implementation context.
 - `refine-product-intent`: Refine PRD, product brief, goals, non-goals, user journeys, acceptance criteria, and open questions.
-- `convert-ears-requirements`: Convert PRD, PR/RP, product prose, or natural-language input into EARS requirements.
+- `generate-user-stories`: Generate detailed user stories from PRD, PR/RP, product prose, or natural-language input.
 - `validate-requirements`: Check requirement quality, readiness, conflicts, testability, and traceability.
 - `manage-spec-change`: Triage and apply requirement additions, changes, deprecations, clarifications, traceability fixes, coverage gaps, and replan triggers.
 - `design-architecture`: Produce HLD, ADR, feature architecture plans, data/state flow, and adapter/API/event/file contracts.

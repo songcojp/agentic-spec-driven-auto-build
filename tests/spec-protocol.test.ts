@@ -31,7 +31,7 @@ Roles: product manager, developer
 Assumptions: Source documents are available.
 Related Files: src/spec-protocol.ts, tests/spec-protocol.test.ts
 PRD: When raw input is provided, the system shall create a feature spec.
-EARS: When requirements are decomposed, the system shall record source traceability.
+User Stories: When requirements are decomposed, the system shall record source traceability.
 PR: When invalid input is provided, the system shall block ready status.
 RP: When projection is requested, the system shall write deterministic artifact JSON.
 `,
@@ -71,7 +71,7 @@ Goal: Maybe support imports later.
 Roles: user
 Assumptions: Input owners will clarify.
 PRD: When imports run, the system shall maybe create a spec.
-EARS: When imports run, the system must create a spec and must not create a spec.
+User Stories: When imports run, the system must create a spec and must not create a spec.
 `,
   });
 
@@ -165,7 +165,7 @@ Roles: developer
 Assumptions: Source docs are stable.
 Related Files: src/spec-protocol.ts, src/schema.ts
 PRD: When raw input is provided, the system shall create a feature spec.
-EARS: When a coding task asks for REQ-002, the system shall return related source traceability.
+User Stories: When a coding task asks for REQ-002, the system shall return related source traceability.
 PR: When invalid input is provided, the system shall block ready status.
 RP: When projection is requested, the system shall write deterministic artifact JSON.
 `,
@@ -210,7 +210,7 @@ Roles: reviewer
 Assumptions: Artifact root exists or can be created.
 PRD: When projection is requested, the system shall write deterministic artifact JSON.
 PR: When invalid input is provided, the system shall block ready status.
-EARS: When source context is present, the system shall record source traceability.
+User Stories: When source context is present, the system shall record source traceability.
 RP: When review starts, the system shall return spec JSON for inspection.
 `,
   });
@@ -288,7 +288,7 @@ Roles: reviewer
 Assumptions: Artifact root exists or can be created.
 PRD: When projection is requested, the system shall write deterministic artifact JSON.
 PR: When invalid input is provided, the system shall block ready status.
-EARS: When source context is present, the system shall record source traceability.
+User Stories: When source context is present, the system shall record source traceability.
 RP: When review starts, the system shall return spec JSON for inspection.
 `,
   });
@@ -327,7 +327,7 @@ test("scanSpecSources returns scan results for existing project spec files", () 
   const fileTypes = summary.sources.map((s) => s.fileType);
   assert.ok(fileTypes.includes("README"), "README should be scanned");
   assert.ok(fileTypes.includes("PRD"), "PRD should be scanned");
-  assert.ok(fileTypes.includes("EARS"), "requirements.md should be scanned as EARS");
+  assert.ok(fileTypes.includes("user-stories"), "requirements.md should be scanned as user stories");
   assert.ok(fileTypes.includes("HLD"), "hld.md should be scanned");
   assert.ok(fileTypes.includes("feature-requirements"), "feature requirements should be scanned");
   assert.ok(fileTypes.includes("design"), "feature design should be scanned");
@@ -363,12 +363,12 @@ test("scanSpecSources detects trace IDs in spec files", () => {
 
   const summary = scanSpecSources(root);
 
-  const earsSrc = summary.sources.find((s) => s.fileType === "EARS");
-  assert.ok(earsSrc, "Should find EARS source");
-  assert.ok(earsSrc.traceIds.includes("REQ-001"));
-  assert.ok(earsSrc.traceIds.includes("REQ-002"));
-  assert.ok(earsSrc.traceIds.includes("NFR-001"));
-  assert.ok(earsSrc.traceIds.includes("EDGE-001"));
+  const userStorySource = summary.sources.find((s) => s.fileType === "user-stories");
+  assert.ok(userStorySource, "Should find user stories source");
+  assert.ok(userStorySource.traceIds.includes("REQ-001"));
+  assert.ok(userStorySource.traceIds.includes("REQ-002"));
+  assert.ok(userStorySource.traceIds.includes("NFR-001"));
+  assert.ok(userStorySource.traceIds.includes("EDGE-001"));
 });
 
 test("scanSpecSources detects missing design file when tasks exist", () => {
@@ -407,7 +407,7 @@ test("scanSpecSources detects orphaned traceability (REQ not in any feature spec
   mkdirSync(join(root, "docs", "agentic-spec"), { recursive: true });
   mkdirSync(join(root, "docs", "agentic-spec", "features", "feat-001"), { recursive: true });
 
-  // REQ-001 and REQ-002 in EARS, only REQ-001 in feature spec
+  // REQ-001 and REQ-002 in User Stories, only REQ-001 in feature spec
   writeFileSync(join(root, "docs", "agentic-spec", "requirements.md"), "REQ-001: feature one.\nREQ-002: unassigned requirement.");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "requirements.md"), "REQ-001");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-001", "design.md"), "REQ-001 design.");

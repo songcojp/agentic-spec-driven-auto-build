@@ -265,7 +265,7 @@ export type SpecChangeRequestIntent =
   | "requirement_intake"
   | "requirement_change_or_intake"
   | "spec_evolution"
-  | "generate_ears"
+  | "generate_user_stories"
   | "update_design"
   | "split_feature";
 
@@ -1105,9 +1105,9 @@ function commandForSpecChangeRequest(
       now: new Date(acceptedAt),
     };
   }
-  if (routedIntent === "generate_ears") {
+  if (routedIntent === "generate_user_stories") {
     return {
-      action: "generate_ears",
+      action: "generate_user_stories",
       entityType: "project",
       entityId: request.projectId,
       requestedBy: "vscode-extension",
@@ -1254,7 +1254,7 @@ function isSpecChangeRequestIntent(value: unknown): value is SpecChangeRequestIn
     || value === "requirement_intake"
     || value === "requirement_change_or_intake"
     || value === "spec_evolution"
-    || value === "generate_ears"
+    || value === "generate_user_stories"
     || value === "update_design"
     || value === "split_feature";
 }
@@ -1348,7 +1348,7 @@ function buildTopLevelDocuments(workspaceRoot: string, specRoot?: string): SpecD
   const root = specRoot ?? "docs/agentic-spec";
   const docs = [
     document("prd", "PRD", `${root}/PRD.md`, workspaceRoot),
-    document("requirements", "EARS Requirements", `${root}/requirements.md`, workspaceRoot),
+    document("requirements", "User Stories", `${root}/requirements.md`, workspaceRoot),
     document("hld", "HLD", `${root}/hld.md`, workspaceRoot),
     document("ui-spec", "UI Spec", "docs/agentic-spec/ui/ui-spec.md", workspaceRoot),
     document("feature-index", "Feature Spec Index", "docs/agentic-spec/features/README.md", workspaceRoot),

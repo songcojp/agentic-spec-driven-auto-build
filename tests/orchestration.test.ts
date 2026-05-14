@@ -479,7 +479,7 @@ Roles: orchestrator, developer
 Assumptions: Feature Spec Pool is available.
 Related Files: src/orchestration.ts, tests/orchestration.test.ts
 PRD: When a feature is ready, the system shall build tasks traceable to requirements.
-EARS: When a task runs, the system shall restrict state to known board columns.
+User Stories: When a task runs, the system shall restrict state to known board columns.
 PR: When planning fails, the system shall put the feature into review needed with evidence.
 RP: When all work is complete, the system shall require acceptance, spec alignment, and tests before done.
 `,

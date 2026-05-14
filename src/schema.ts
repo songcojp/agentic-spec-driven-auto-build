@@ -1184,7 +1184,7 @@ export type ChatIntentType =
   | "resume_runner"
   | "approve_review"
   | "reject_review"
-  | "generate_ears"
+  | "generate_user_stories"
   | "generate_hld"
   | "confirm"
   | "cancel"
