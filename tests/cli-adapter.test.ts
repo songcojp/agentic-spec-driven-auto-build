@@ -210,7 +210,8 @@ function validRuntimeEvidence(): Record<string, unknown> {
 function assertStrictSchemaObjects(schema: unknown, path = "$"): void {
   if (!schema || typeof schema !== "object" || Array.isArray(schema)) return;
   const record = schema as Record<string, unknown>;
-  if (record.type === "object") {
+  const isObjectSchema = record.type === "object" || (Array.isArray(record.type) && record.type.includes("object"));
+  if (isObjectSchema) {
     assert.equal(record.additionalProperties, false, `${path} should reject additional properties`);
     const properties = record.properties && typeof record.properties === "object" && !Array.isArray(record.properties)
       ? record.properties as Record<string, unknown>

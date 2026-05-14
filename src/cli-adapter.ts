@@ -806,6 +806,7 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
     runtimeEvidence: {
       type: ["object", "null"],
       additionalProperties: false,
+      required: ["appLaunch", "journeys", "stateAssertions", "negativePaths"],
       properties: {
         appLaunch: {
           type: "object",
