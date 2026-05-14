@@ -62,11 +62,11 @@ Feature ID: FEAT-023
 
 ### T-023-15 Spec document quality repair loop
 状态: in-progress
-描述: 新增共享 Spec 文档质量检测/修复循环协议，并同步所有核心文档生成 Skill，要求调用方 Skill 选择 Quality Review Skill / Repair Owner，再由 Quality Review Subagent 和 Repair Subagent 在预先声明的 `qualityLoopPlan` 内最多执行 10 轮。
+描述: 新增共享 Spec 文档质量检测/修复循环协议，并同步所有核心文档生成 Skill，要求调用方 Skill 选择 Quality Review Skill / Repair Owner，为 review / repair dispatch 设置可见 subagent 名称和 description，并在运行时支持时显式调用平台 subagent/Task 工具，由 Quality Review Subagent 和 Repair Subagent 在预先声明的 `qualityLoopPlan` 内最多执行 10 轮。
 关联需求: REQ-094, US-023-07
 范围: `skill-local references/quality-loop.md`, `caller-provided output schema and skill-local references/specdrive-output.md`, `.agents/skills/collect-project-context`, `.agents/skills/refine-product-intent`, `.agents/skills/generate-user-stories and .agents/skills/validate-requirements`, `.agents/skills/design-architecture`, `.agents/skills/design-ui-spec`, `.agents/skills/decompose-feature-specs`, `.agents/skills/review-delivery-evidence`, `docs/agentic-spec/zh-CN/*`, `docs/agentic-spec/features/feat-023-full-lifecycle-delivery-fidelity/*`
 验证: `npm run skills:validate`; `git diff --check`
-完成标准: 文档生成 Skill 的结果包含 `qualityRepairLoop` 和调用方选择的 `qualityLoopPlan`；共享 loop 不维护中央路由表；最新质量检测失败时不能返回 completed，也不能继续推进下游。
+完成标准: 文档生成 Skill 的结果包含 `qualityRepairLoop`、调用方选择的 `qualityLoopPlan` 和带 `displayName` / `dispatchDescription` / `activationEvidence` 的 `subagents[]`；共享 loop 不维护中央路由表；最新质量检测失败时不能返回 completed，也不能继续推进下游。
 
 ### T-023-10 Rapid FEAT-016 downstream review repair sample
 状态: todo

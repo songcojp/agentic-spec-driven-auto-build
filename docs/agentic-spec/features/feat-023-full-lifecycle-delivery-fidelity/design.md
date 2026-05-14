@@ -13,7 +13,7 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 - Control Plane 不接管 prompt 推理，但必须校验结构性不变式：v2 契约、未关闭损失、独立审查、fixture 旁路、证据 artifact refs 和完成决策。
 - Review Center 将 Delivery Fidelity / Runtime Evidence 失败投影为可查询 ReviewItem trigger，使用户能看到损失发生阶段而不是只看到“证据不足”。
 - VSCode Execution Workbench 与 Feature Spec Webview 是新增质量证据主界面；Product Console 只保留历史兼容入口，不新增主质量 UI。
-- Spec 文档生成 Skill 的完成语义增加 `qualityRepairLoop`：调用方 Skill 选择本次 Quality Review Skill / Repair Owner，owner thread 定义 `qualityLoopPlan`，Quality Review Subagent 判断 gap，Repair Subagent 只修复范围内且来源可证明的 gap，最多 10 轮。
+- Spec 文档生成 Skill 的完成语义增加 `qualityRepairLoop`：调用方 Skill 选择本次 Quality Review Skill / Repair Owner，owner thread 定义 `qualityLoopPlan` 和可见 subagent dispatch 名称，并在运行时支持时显式调用平台 subagent/Task 工具；Quality Review Subagent 判断 gap，Repair Subagent 只修复范围内且来源可证明的 gap，最多 10 轮。
 
 ## 2. Delivery Fidelity Ledger
 
@@ -84,7 +84,7 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 
 运行职责：
 
-- Owner thread：由调用方 Skill 选择 `qualityReviewSkill` / `repairOwner`，定义 `qualityLoopPlan`、调度 subagent、合并 compact result，并决定继续或退出。
+- Owner thread：由调用方 Skill 选择 `qualityReviewSkill` / `repairOwner`，定义 `qualityLoopPlan`，为每个 review / repair dispatch 设置可见 `displayName` 和 `dispatchDescription`，通过平台 subagent/Task 工具调度 subagent、合并 compact result，并决定继续或退出。
 - Quality Review Subagent：读取引用文件，执行调用方选择的质量门，按 `in_scope_repairable`、`in_scope_not_repairable`、`out_of_scope` 分类 gap。
 - Repair Subagent：只修改 `qualityLoopPlan.allowedArtifacts`，只处理来源文件足以证明的 `in_scope_repairable` gap，不新增产品意图、架构决策或跨范围同步。
 
@@ -112,4 +112,4 @@ Rapid 的 FEAT-016 是本门禁的下游样例。审计规则必须能判断：
 - VSCode Webview tests 覆盖质量证据分组、Workpad refs、ReviewItem 可读性和不复用 Product Console。
 - Skill validation 覆盖新增元技能和更新后的 Skill 文档。
 - Golden samples 覆盖模块名式 PRD、不可测试 requirement、只有组件列表的 HLD、无 interaction matrix UI Spec、只有任务标题的 Feature Spec，以及 Rapid FEAT-016 下游审查样例。
-- Spec 文档生成 Skill 覆盖 `qualityRepairLoop`：调用方选择质检/修复 owner、subagent 质检、subagent 修复、10 轮上限、无可修复项退出和 scope 越界退出。
+- Spec 文档生成 Skill 覆盖 `qualityRepairLoop`：调用方选择质检/修复 owner、带可见名称的 subagent 质检、带可见名称的 subagent 修复、10 轮上限、无可修复项退出和 scope 越界退出。

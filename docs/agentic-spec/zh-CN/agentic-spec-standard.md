@@ -1279,13 +1279,17 @@ Skill 必须选择本次 Quality Review Skill 和 Repair Owner。
 
 1. owner thread 先定义 `qualityLoopPlan`：允许产物、来源事实、禁止文件、
    允许 gap 类型、风险上限、ID 策略、是否允许下游同步、调用方选择的
-   `qualityReviewSkill` / `repairOwner` 及选择理由。
-2. 调用方选择的 Quality Review Subagent 读取引用文件并输出 compact gap 结果，按
+   `qualityReviewSkill` / `repairOwner` 及选择理由，以及每个 review / repair
+   dispatch 的可见 `displayName` 和 `dispatchDescription`。
+2. 当平台支持 subagent / Task 工具时，owner thread 必须显式调用该工具，并把
+   可见名称放入 dispatch description 或 prompt 首行，使聊天记录能显示实际激活的
+   subagent；仅写入计划或 JSON 记录不得视为 subagent 已激活。
+3. 调用方选择的 Quality Review Subagent 读取引用文件并输出 compact gap 结果，按
    `in_scope_repairable`、`in_scope_not_repairable`、`out_of_scope` 分类。
-3. 调用方选择的 Repair Subagent / Repair Owner 只处理
+4. 调用方选择的 Repair Subagent / Repair Owner 只处理
    `in_scope_repairable` gap，只能修改允许产物，并必须给出证据引用。
-4. 再次调用 Quality Review Subagent 复查。
-5. 最多循环 10 轮。
+5. 再次调用 Quality Review Subagent 复查。
+6. 最多循环 10 轮。
 
 通过最新质量检测后才允许返回 `completed`。没有可修复项、剩余项超出
 `qualityLoopPlan`、需要新产品意图/架构决策、同一 gap 指纹重复或达到 10 轮时，
@@ -1294,7 +1298,10 @@ Skill 必须选择本次 Quality Review Skill 和 Repair Owner。
 Feature 拆分、任务生成、ready、planning 或 execution。
 
 生成 Skill 的结果应包含 `result.qualityRepairLoop`，记录最大轮次、已用
-轮次、最终决策、`qualityLoopPlan`、subagent 使用情况、剩余 gap 和退出原因。
+轮次、最终决策、`qualityLoopPlan`、`subagents[]`、剩余 gap 和退出原因。
+`subagents[]` 必须至少包含 `role`、`displayName`、`skillName`、
+`dispatchDescription`、`activationEvidence`、`round`、`status` 和证据引用；
+如果平台无法创建真实 subagent，owner-thread 等价 pass 也必须使用同样的显示字段并记录 fallback 原因。
 
 ---
 
