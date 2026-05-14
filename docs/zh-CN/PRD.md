@@ -1,9 +1,6 @@
 # PR：Spec-Driven Autonomous Coding System
 
 版本：V2.0
-状态：正式草案
-产品名称：SpecDrive AutoBuild
-产品方向：Spec + Scheduler + State Maintenance 驱动的长时间自主编程系统
 
 2026-04-29 边界更新：平台能力收缩为项目/Feature/Task 的调度、状态机、状态聚合、审计、Project Memory 和 Product Console 状态展示。平台不再提供 Skill 注册/发现/调用/schema 校验/Skill Center，不再提供 Subagent Runtime/Context Broker/Agent Run Contract/Subagent Console，不再提供 Planning Pipeline 主动编排执行。历史章节中涉及 Skill、Subagent 或 Planning Pipeline 的平台能力均按“已废弃”理解；Runner 仅作为外部执行队列、心跳、日志、证据和状态检测来源。
 

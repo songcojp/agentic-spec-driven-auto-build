@@ -1300,7 +1300,7 @@ test("SpecDrive IDE SpecChangeRequest routes existing requirement changes to spe
   assert.equal(payload.context.skillName, "manage-spec-change");
   assert.equal(payload.context.targetRequirementId, "REQ-076");
   assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-017/spec-state.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feat-017/spec-state.json"), true);
 });
 
 test("SpecDrive IDE New Feature intent lets model-facing intake handle unknown add-or-change routing", () => {
@@ -1381,7 +1381,7 @@ test("SpecDrive IDE clarification requests enqueue ambiguity clarification skill
   assert.equal(payload.context.targetRequirementId, "REQ-074");
   assert.equal(payload.context.desiredOutcome, "feature_spec_ready_for_execution");
   assert.equal(payload.context.targetFeatureStatus, "ready");
-  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-016/spec-state.json"), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/feat-016-specdrive-ide-foundation/spec-state.json"), true);
   assert.equal(payload.context.expectedArtifacts.includes("docs/features/feature-pool-queue.json"), true);
 });
 

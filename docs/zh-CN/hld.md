@@ -1,10 +1,8 @@
 # HLD: SpecDrive AutoBuild
 
-版本：V2.0  
-状态：项目级高层设计  
-来源：`docs/zh-CN/PRD.md`、`docs/zh-CN/requirements.md`、`docs/zh-CN/spec-ref.md`
+版本：V2.0
 
-说明：`docs/zh-CN/design.md` 已作废并仅作为历史快照保留；项目级架构规则、受控命令边界、接口边界和代码职责边界均以本文为准。
+说明：本文来源于 `docs/zh-CN/PRD.md`、`docs/zh-CN/requirements.md`、`docs/zh-CN/spec-ref.md`。`docs/zh-CN/design.md` 已作废并仅作为历史快照保留；项目级架构规则、受控命令边界、接口边界和代码职责边界均以本文为准。
 
 ---
 

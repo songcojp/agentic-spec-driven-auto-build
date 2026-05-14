@@ -253,6 +253,44 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(rows.statusChecks.length, 0);
 });
 
+test("cli.run default Feature paths use context Feature Spec folder", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-feature-folder-"));
+  prepareSkillWorkspace(root);
+  mkdirSync(join(root, "docs", "features", "feat-cli"), { recursive: true });
+  writeFileSync(join(root, "docs", "features", "feat-cli", "requirements.md"), "# Requirements\n");
+  writeFileSync(join(root, "docs", "features", "feat-cli", "design.md"), "# Design\n");
+  writeFileSync(join(root, "docs", "features", "feat-cli", "tasks.md"), "# Tasks\n");
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const calls: Array<{ args: string[] }> = [];
+  const payload = cliRunPayload("RUN-FEATURE-FOLDER");
+
+  const result = await runCliRunJob(
+    dbPath,
+    {
+      ...payload,
+      context: {
+        ...payload.context,
+        featureSpecPath: "docs/features/feat-cli",
+      },
+    },
+    (_command, args) => {
+      calls.push({ args });
+      return {
+        status: 0,
+        stdout: `{"type":"session","session_id":"SESSION-FEATURE-FOLDER"}\n${skillOutputEvent("RUN-FEATURE-FOLDER")}`,
+        stderr: "",
+      };
+    },
+  );
+  const prompt = calls[0].args.join("\n");
+
+  assert.equal(result.status, "completed");
+  assert.match(prompt, /docs\/features\/feat-cli\/requirements\.md/);
+  assert.match(prompt, /docs\/features\/feat-cli\/tasks\.md/);
+  assert.doesNotMatch(prompt, /docs\/features\/FEAT-CLI\/tasks\.md/);
+});
+
 test("cli.run creates a ReviewItem when feature execution returns review_needed", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-review-"));
   prepareSkillWorkspace(root);

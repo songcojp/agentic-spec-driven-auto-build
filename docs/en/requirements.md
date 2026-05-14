@@ -1,5 +1,7 @@
 # Requirements: SpecDrive AutoBuild
 
+Version: V2.0
+
 ## 1. Background
 
 SpecDrive AutoBuild is a spec-driven autonomous coding system for software teams. It coordinates structured product specs, reusable skills, context-isolated subagents, project memory, Codex Runner execution, dashboard state, review, recovery, and delivery reporting so AI can continuously deliver code in a controllable and auditable workflow.

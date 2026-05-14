@@ -1,9 +1,6 @@
 # PRD: Spec-Driven Autonomous Coding System
 
 Version: V2.0
-Status: Official Draft
-Product Name: SpecDrive AutoBuild
-Product Direction: Spec + CLI Skill + CLI Subagent Driven Long-Running Autonomous Coding System
 
 ---
 

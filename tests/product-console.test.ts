@@ -1617,6 +1617,48 @@ test("intake requirement from feature index writes back to mainline requirements
   assert.equal(jobPayload.context.targetFeatureStatus, "ready");
 });
 
+test("requirement changes target existing docs Feature Spec folder artifacts", () => {
+  const dbPath = makeDbPath();
+  seedConsoleData(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "evolve-feature-folder-"));
+  const featureFolder = "feat-016-app-studio-navigation";
+  mkdirSync(join(projectPath, "docs", "features", featureFolder), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "PRD.md"), "# PRD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "requirements.md"), "# Requirements\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "README.md"), "# Feature Specs\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", featureFolder, "requirements.md"), "# Feature Spec: FEAT-016 App Studio Navigation\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", featureFolder, "design.md"), "# Design\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", featureFolder, "tasks.md"), "# Tasks\n", "utf8");
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+    { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
+  ]);
+
+  const receipt = submitConsoleCommand(dbPath, {
+    action: "evolve_spec",
+    entityType: "feature",
+    entityId: "FEAT-016",
+    requestedBy: "vscode-extension",
+    reason: "Update an existing App Studio requirement.",
+    payload: {
+      projectId: "project-1",
+      featureId: "FEAT-016",
+      sourcePath: "docs/requirements.md",
+      targetRequirementId: "REQ-016",
+      requirementText: "Update App Studio navigation behavior.",
+    },
+    now: stableDate,
+  }, { scheduler: createMemoryScheduler(dbPath) });
+  const result = runSqlite(dbPath, [], [
+    { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [receipt.schedulerJobId] },
+  ]);
+  const jobPayload = JSON.parse(String(result.queries.jobs[0].payload_json));
+
+  assert.equal(jobPayload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/requirements.md`), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/spec-state.json`), true);
+  assert.equal(jobPayload.context.expectedArtifacts.includes("docs/features/FEAT-016/spec-state.json"), false);
+});
+
 test("IDE lifecycle commands scan spec sources and run project health through Console gateway", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
@@ -2376,6 +2418,40 @@ test("generate UI Spec dispatches the UI spec skill from project-level Spec Work
   assert.equal(payload.context.expectedArtifacts.includes("docs/ui/concepts/<page-id>.png"), false);
   assert.equal(JSON.parse(String(result.queries.executions[0].context_json)).featureId, undefined);
   assert.equal(JSON.parse(String(result.queries.executions[0].metadata_json)).skillName, "design-ui-spec");
+});
+
+test("feature-scoped UI Spec uses existing docs Feature Spec folder paths", () => {
+  const dbPath = makeDbPath();
+  seedConsoleData(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "ui-spec-feature-folder-"));
+  const featureFolder = "feat-016-app-studio-navigation";
+  mkdirSync(join(projectPath, "docs", "features", featureFolder), { recursive: true });
+  writeFileSync(join(projectPath, "docs", "PRD.md"), "# PRD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "requirements.md"), "# Requirements\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "hld.md"), "# HLD\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", "README.md"), "# Feature Specs\n", "utf8");
+  writeFileSync(join(projectPath, "docs", "features", featureFolder, "requirements.md"), "# Feature Spec: FEAT-016 App Studio Navigation\n", "utf8");
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+  ]);
+
+  const receipt = submitConsoleCommand(dbPath, {
+    action: "generate_ui_spec",
+    entityType: "feature",
+    entityId: "FEAT-016",
+    requestedBy: "operator",
+    reason: "Generate a feature scoped UI Spec.",
+    payload: { projectId: "project-1" },
+    now: stableDate,
+  }, { scheduler: createMemoryScheduler(dbPath) });
+  const result = runSqlite(dbPath, [], [
+    { name: "jobs", sql: "SELECT payload_json FROM scheduler_job_records WHERE id = ?", params: [receipt.schedulerJobId] },
+  ]);
+  const payload = JSON.parse(String(result.queries.jobs[0].payload_json));
+
+  assert.equal(payload.context.sourcePaths.includes(`docs/features/${featureFolder}/requirements.md`), true);
+  assert.equal(payload.context.expectedArtifacts.includes(`docs/features/${featureFolder}/ui-spec.md`), true);
+  assert.equal(payload.context.expectedArtifacts.includes("docs/features/FEAT-016/ui-spec.md"), false);
 });
 
 test("spec intake workflow displays the actual discovered source instead of a default PRD path", () => {

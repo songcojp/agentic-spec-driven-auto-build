@@ -3303,7 +3303,7 @@ function featureSpecPathForScheduleRun(dbPath: string, targetRepoPath?: string, 
     { name: "features", sql: "SELECT folder FROM features WHERE id = ? LIMIT 1", params: [featureId] },
   ]);
   const folder = optionalString(result.queries.features[0]?.folder);
-  return `docs/features/${folder ?? featureId}`;
+  return `docs/features/${folder ?? featureId.toLowerCase()}`;
 }
 
 function scheduleRunSourcePaths(payload: Record<string, unknown>, featureSpecPath?: string, workspaceRoot?: string): string[] {
@@ -4191,7 +4191,7 @@ function sourcePathsForSpecAction(
       projectDocs.requirements,
       projectDocs.hld,
       "docs/features/README.md",
-      ...(featureId ? [`docs/features/${featureId}/requirements.md`] : []),
+      ...(featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/requirements.md`] : []),
     ];
   }
   const projectDocs = projectSpecPaths(workspaceRoot);
@@ -4199,7 +4199,7 @@ function sourcePathsForSpecAction(
     projectDocs.prd,
     projectDocs.requirements,
     projectDocs.hld,
-    ...(featureId ? [`docs/features/${featureId}/requirements.md`] : []),
+    ...(featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/requirements.md`] : []),
   ];
 }
 
@@ -4304,12 +4304,13 @@ function expectedArtifactsForSpecAction(
 ): string[] {
   if (action === "intake_requirement" || action === "evolve_spec" || action === "resolve_clarification") {
     const projectDocs = projectSpecPaths(workspaceRoot);
+    const featureSpecPath = featureSpecArtifactPath(featureId, workspaceRoot);
     const featureArtifacts = featureId
       ? [
-          `docs/features/${featureId}/requirements.md`,
-          `docs/features/${featureId}/design.md`,
-          `docs/features/${featureId}/tasks.md`,
-          `docs/features/${featureId}/spec-state.json`,
+          `${featureSpecPath}/requirements.md`,
+          `${featureSpecPath}/design.md`,
+          `${featureSpecPath}/tasks.md`,
+          `${featureSpecPath}/spec-state.json`,
         ]
       : [
           "docs/features/<feature-id>/requirements.md",
@@ -4342,11 +4343,19 @@ function expectedArtifactsForSpecAction(
   }
   if (action === "generate_ui_spec") {
     return [
-      ...(featureId ? [`docs/features/${featureId}/ui-spec.md`] : ["docs/ui/ui-spec.md"]),
+      ...(featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/ui-spec.md`] : ["docs/ui/ui-spec.md"]),
       ...uiConceptExpectedArtifacts(sourcePaths, workspaceRoot),
     ];
   }
-  return featureId ? [`docs/features/${featureId}/tasks.md`] : ["docs/features/README.md"];
+  return featureId ? [`${featureSpecArtifactPath(featureId, workspaceRoot)}/tasks.md`] : ["docs/features/README.md"];
+}
+
+function featureSpecArtifactPath(featureId?: string, workspaceRoot?: string): string {
+  if (!featureId) return "docs/features/<feature-id>";
+  const docsFeature = workspaceRoot
+    ? listFeatureSpecsFromDocs(workspaceRoot, []).find((feature) => feature.id.toUpperCase() === featureId.toUpperCase())
+    : undefined;
+  return `docs/features/${docsFeature?.folder ?? featureId.toLowerCase()}`;
 }
 
 function uiConceptExpectedArtifacts(sourcePaths: string[], workspaceRoot?: string): string[] {

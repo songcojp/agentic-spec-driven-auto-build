@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { readdirSync } from "node:fs";
 import { join, normalize } from "node:path";
 import { Queue, Worker, type Job, type WorkerOptions } from "bullmq";
 import IORedis from "ioredis";
@@ -1946,21 +1947,22 @@ function buildExecutionInvocation(input: {
   const contextSourcePaths = optionalStringArray(context.sourcePaths);
   const contextImagePaths = optionalStringArray(context.imagePaths);
   const contextExpectedArtifacts = normalizeArtifactContracts(context.expectedArtifacts);
+  const featureSpecPath = defaultFeatureSpecPath(input.featureId, context, input.workspaceRoot);
   const sourcePaths = contextSourcePaths.length
     ? contextSourcePaths
     : [
         "AGENTS.md",
         ".agents/skills",
-        ...(input.featureId ? [
-          `docs/features/${input.featureId}/requirements.md`,
-          `docs/features/${input.featureId}/design.md`,
-          `docs/features/${input.featureId}/tasks.md`,
+        ...(featureSpecPath ? [
+          `${featureSpecPath}/requirements.md`,
+          `${featureSpecPath}/design.md`,
+          `${featureSpecPath}/tasks.md`,
         ] : []),
       ];
   const expectedArtifacts = contextExpectedArtifacts.length
     ? contextExpectedArtifacts
-    : input.featureId
-        ? normalizeArtifactContracts([`docs/features/${input.featureId}/design.md`, `docs/features/${input.featureId}/tasks.md`])
+    : featureSpecPath
+        ? normalizeArtifactContracts([`${featureSpecPath}/design.md`, `${featureSpecPath}/tasks.md`])
         : normalizeArtifactContracts([".autobuild/reports/spec-intake.json"]);
   return {
     contractVersion: "execution-adapter/v1",
@@ -2011,6 +2013,30 @@ function buildSkillOperatorInput(context: ExecutorJobContext): ExecutionAdapterI
     targetFeatureStatus,
     nextUserAction,
   };
+}
+
+function defaultFeatureSpecPath(featureId: string | undefined, context: ExecutorJobContext, workspaceRoot: string): string | undefined {
+  const contextPath = optionalString(context.featureSpecPath);
+  if (contextPath) return contextPath.replaceAll("\\", "/").replace(/\/+$/, "");
+  if (!featureId) return undefined;
+  const docsFolder = findFeatureSpecFolder(workspaceRoot, featureId);
+  return `docs/features/${docsFolder ?? featureId.toLowerCase()}`;
+}
+
+function findFeatureSpecFolder(workspaceRoot: string, featureId: string): string | undefined {
+  try {
+    return readdirSync(join(workspaceRoot, "docs", "features"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .find((folder) => featureIdFromFolder(folder).toUpperCase() === featureId.toUpperCase());
+  } catch {
+    return undefined;
+  }
+}
+
+function featureIdFromFolder(folder: string): string {
+  const match = folder.match(/^feat-(\d+)/i);
+  return match ? `FEAT-${match[1]}` : folder.toUpperCase();
 }
 
 function normalizeArtifactContracts(value: unknown): SkillArtifactContract[] {

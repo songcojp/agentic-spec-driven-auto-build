@@ -104,6 +104,13 @@ OpenAI 对 Skills 的定义是可复用、可共享的工作流，可包含 inst
 
 ---
 
+## 0.6 主线文档头部简化
+
+v1.2 明确主线文档头部只保留文档标题和版本号，不放置状态跟踪字段。
+文档状态、废弃说明、审批结论、变更历史和里程碑变化应写入正文中的变更记录、说明、决策记录或对应章节，避免头部元数据与正文事实漂移。
+
+---
+
 # 1. 规范定位
 
 ## 1.1 名称
@@ -185,7 +192,8 @@ L5. Product Implementation Layer
 7. Feature Spec。
 8. Task Spec。
 9. Change Request。
-10. ADR。
+10. Global Change Log。
+11. ADR。
 
 ---
 
@@ -530,6 +538,7 @@ evidence:
 │   │       └── evidence.md
 │   │
 │   ├── changes/
+│   │   ├── change-log.md
 │   │   └── CR-001.md
 │   │
 │   ├── adr/
@@ -579,6 +588,26 @@ user-management/
 
 # 6. 主线文档规范
 
+## 6.0 头部元数据规则
+
+主线文档头部只记录标题和版本号：
+
+```markdown
+# Document Title
+
+Version: V1.0
+```
+
+中文文档可使用：
+
+```markdown
+# 文档标题
+
+版本：V1.0
+```
+
+不得在主线文档头部加入 `Status`、`状态`、`审批状态`、`流程状态`、`当前阶段` 等状态跟踪字段。文档状态、废弃说明、审批结论、变更原因和版本变化应写在正文中的 `Revision History`、`变更记录`、`说明`、`Decision Log` 或对应业务章节中。
+
 ## 6.1 Project Intake
 
 文件：
@@ -595,6 +624,8 @@ specs/mainline/00-project-intake.md
 
 ```markdown
 # Project Intake
+
+Version: V1.0
 
 ## 1. Project Name
 
@@ -631,6 +662,8 @@ specs/mainline/01-prd.md
 
 ```markdown
 # Product Requirements Document
+
+Version: V1.0
 
 ## 1. Overview
 
@@ -677,6 +710,14 @@ specs/mainline/01-prd.md
 
 ```text
 specs/mainline/02-ears-requirements.md
+```
+
+文档必须以标题和版本号开头：
+
+```markdown
+# EARS Requirements
+
+Version: V1.0
 ```
 
 Requirement 模板：
@@ -799,6 +840,8 @@ specs/mainline/03-hld.md
 ```markdown
 # High Level Design
 
+Version: V1.0
+
 ## 1. Architecture Overview
 
 ## 2. System Context
@@ -876,6 +919,8 @@ specs/mainline/04-ui-specification.md
 
 ```markdown
 # UI Specification
+
+Version: V1.0
 
 ## 1. Design Goals
 
@@ -998,6 +1043,8 @@ html/
 ```markdown
 # High-fidelity Prototype Index
 
+Version: V1.0
+
 ## 1. Overview
 
 ## 2. Prototype Type
@@ -1022,6 +1069,26 @@ html/
 
 ## 6. Notes
 ```
+
+---
+
+## 6.7 Feature Index
+
+文件：
+
+```text
+specs/mainline/06-feature-index.md
+```
+
+必须以标题和版本号开头：
+
+```markdown
+# Feature Spec Index
+
+Version: V1.0
+```
+
+Feature Index 可以在正文表格中记录每个 Feature 的 `Status`、依赖和里程碑，因为这些是 Feature 事实，不属于文档头部状态跟踪。
 
 ---
 
@@ -2444,6 +2511,52 @@ recover-execution
 
 ---
 
+## 14.2 全局变更记录
+
+Agentic Spec 项目必须维护一个全局变更记录，用于串联所有新增、变更、澄清、废弃、证据失效和恢复动作。全局变更记录是变更过程的索引和流水账，不替代 PRD、EARS Requirements、HLD、UI Spec、Feature Spec、tasks 或 Evidence 中的事实内容。
+
+文件：
+
+```text
+specs/changes/change-log.md
+```
+
+规则：
+
+1. 每个会影响 Spec、Feature、Task、Test、Evidence 或 Release 的变更都必须登记一条 `CHG-*`。
+2. 影响已批准 Spec 的变更还必须关联一个 `CR-*` Change Request。
+3. `CHG-*` 是变更过程追踪 ID，不能替代 `REQ-*`、`NFR-*`、`EDGE-*`、`FEAT-*` 或 `TASK-*`。
+4. 主线文档头部不得放置 `CHG-*`、状态跟踪或审批状态；需要追踪时只在正文的变更记录、来源说明、决策记录或全局变更记录中引用。
+5. Change Log 必须按时间追加，不得删除历史记录；错误记录应追加修正项或 superseded 关系。
+6. 当变更导致证据、测试、Feature 状态或发布结论失效时，Change Log 必须记录失效对象和重新验证结论。
+
+模板：
+
+```markdown
+# Global Change Log
+
+Version: V1.0
+
+| Change ID | Date | Type | Source | Summary | Related CR | Affected Specs | Affected Requirements | Affected Features | Affected Evidence | Decision | Status | Next Action |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| CHG-001 | 2026-01-01 | Requirement Change | User request | Adjust approval boundary | CR-001 | PRD, EARS, HLD | REQ-001 | FEAT-001 | evidence.md | Approved | Applied | Re-run affected tests |
+```
+
+字段说明：
+
+- `Change ID`：全局唯一 `CHG-*`，由变更管理流程分配。
+- `Type`：`New Requirement`、`Requirement Change`、`Clarification`、`Deprecation`、`Traceability Fix`、`Evidence Invalidation`、`Recovery`、`Release Change` 等。
+- `Source`：用户指令、PR/RP、review finding、test failure、runtime evidence、approval decision、release gate 等。
+- `Related CR`：影响已批准 Spec 时必填；普通澄清或纯追踪修复可为空。
+- `Affected Specs` / `Affected Requirements` / `Affected Features` / `Affected Evidence`：列出被触碰或被失效的事实源。
+- `Decision`：`Proposed`、`Approved`、`Rejected`、`Superseded`、`Deferred`、`Blocked`。
+- `Status`：`triaged`、`documenting`、`downstream_sync`、`reviewing`、`applied`、`verified`、`blocked`。
+- `Next Action`：下一步同步、审批、重新验证或恢复动作。
+
+全局变更记录完成后，仍必须把最终事实同步回对应文档。Change Log 只回答“为什么变、何时变、影响哪里、现在处理到哪一步”，不作为需求或设计事实源。
+
+---
+
 # 15. Checkpoint 恢复机制
 
 ## 15.1 Checkpoint 内容
@@ -2612,9 +2725,9 @@ Update Evidence
 ```markdown
 # Change Traceability Matrix
 
-| Change ID | Type | Affected Specs | Affected Features | Affected Tasks | Status |
-|---|---|---|---|---|---|
-| CR-001 | Requirement Change | PRD, EARS | FEAT-001 | TASK-001 | Applied |
+| Change ID | Related CR | Type | Affected Specs | Affected Features | Affected Tasks | Status |
+|---|---|---|---|---|---|---|
+| CHG-001 | CR-001 | Requirement Change | PRD, EARS | FEAT-001 | TASK-001 | Applied |
 ```
 
 ---
@@ -2657,6 +2770,7 @@ Feature 完成必须满足：
 - [ ] Evidence Pack 完整
 - [ ] Audit Log 完整
 - [ ] Traceability Matrix 已更新
+- [ ] Global Change Log 已更新，且无未处理高风险变更
 - [ ] Prototype 证据已更新，若适用
 - [ ] 无 forbidden paths 违规
 - [ ] 无未处理 Change Request
@@ -2769,6 +2883,7 @@ specs/mainline/01-prd.md
 specs/mainline/02-ears-requirements.md
 specs/mainline/03-hld.md
 specs/mainline/06-feature-index.md
+specs/changes/change-log.md
 specs/features/<FEATURE-ID>/requirements.md
 specs/features/<FEATURE-ID>/design.md
 specs/features/<FEATURE-ID>/tasks.md
