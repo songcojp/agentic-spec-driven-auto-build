@@ -507,12 +507,16 @@ function renderDeliveryFidelityEntry(value: unknown): string {
 function productUsabilityCount(detail: SpecDriveIdeExecutionDetail | undefined): number {
   const usability = detail?.productUsability;
   return [
-    ...(usability?.decisionLog ?? []),
-    ...(usability?.protocolGaps ?? []),
-    ...(usability?.usabilityEvidence ?? []),
-    ...(usability?.lifecycleHandoffs ?? []),
-    ...(usability?.referencePatternMap ?? []),
-  ].length;
+    productUsabilityEntries(usability?.decisionLog),
+    productUsabilityEntries(usability?.protocolGaps),
+    productUsabilityEntries(usability?.usabilityEvidence),
+    productUsabilityEntries(usability?.lifecycleHandoffs),
+    productUsabilityEntries(usability?.referencePatternMap),
+  ].reduce((count, entries) => count + entries.length, 0);
+}
+
+function productUsabilityEntries(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 function renderProductUsabilityEvidence(detail: SpecDriveIdeExecutionDetail | undefined): string {

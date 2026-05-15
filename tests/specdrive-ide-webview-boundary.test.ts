@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
+import ts from "typescript";
 
 function readSourceTree(dir: string): string {
   return readdirSync(dir, { withFileTypes: true })
@@ -14,6 +17,23 @@ function readSourceTree(dir: string): string {
     })
     .filter(Boolean)
     .join("\n");
+}
+
+function requireExecutionWebviewModule(): { renderExecutionWorkbenchWebview: (view: unknown, detail: unknown, selectedKey?: string) => string } {
+  const outDir = mkdtempSync(join(tmpdir(), "specdrive-execution-webview-"));
+  const compilerOptions: ts.TranspileOptions["compilerOptions"] = {
+    module: ts.ModuleKind.CommonJS,
+    target: ts.ScriptTarget.ES2022,
+    esModuleInterop: true,
+  };
+  for (const file of ["execution.ts", "shared.ts", "i18n.ts", "i18n.zh-CN.ts", "i18n.ja.ts"]) {
+    const source = readFileSync(join("apps/vscode-extension/src/webviews", file), "utf8");
+    const output = ts.transpileModule(source, { compilerOptions }).outputText;
+    writeFileSync(join(outDir, file.replace(/\.ts$/, ".js")), output);
+  }
+  writeFileSync(join(outDir, "package.json"), JSON.stringify({ type: "commonjs" }));
+  const require = createRequire(join(outDir, "execution.js"));
+  return require(join(outDir, "execution.js")) as { renderExecutionWorkbenchWebview: (view: unknown, detail: unknown, selectedKey?: string) => string };
 }
 
 const extensionSource = readSourceTree("apps/vscode-extension/src");
@@ -297,6 +317,43 @@ test("Execution Workbench renders Product Usability evidence groups", () => {
   assert.match(executionWebviewSource, /Lifecycle Handoffs/);
   assert.match(executionWebviewSource, /Reference Pattern Map/);
   assert.match(executionWebviewSource, /renderProductUsabilityEvidence/);
+});
+
+test("Execution Workbench tolerates malformed Product Usability evidence payloads", () => {
+  const { renderExecutionWorkbenchWebview } = requireExecutionWebviewModule();
+  const detail = {
+    metadata: {},
+    status: "completed",
+    executionId: "exec-product-usability",
+    schedulerJobId: "job-product-usability",
+    featureId: "FEAT-024",
+    operation: "implement",
+    approvalRequests: [],
+    rawLogRefs: [],
+    producedArtifacts: [],
+    productUsability: {
+      priorityStories: "US-024-04",
+      decisionLog: { id: "DL-BAD" },
+      protocolGaps: "not-an-array",
+      usabilityEvidence: [{ id: "UE-1", summary: "Observed golden journey." }],
+      lifecycleHandoffs: null,
+      referencePatternMap: [{ id: "RPM-1", summary: "Execution Workbench pattern retained." }],
+      gate: { passed: true },
+    },
+  };
+  const view = {
+    queue: { groups: { completed: [detail] } },
+    project: { id: "specdrive", name: "SpecDrive" },
+    projectInitialization: { blocked: false },
+  };
+
+  const html = renderExecutionWorkbenchWebview(view, detail, "exec-product-usability");
+
+  assert.match(html, /Product Usability/);
+  assert.match(html, /Usability Evidence/);
+  assert.match(html, /Observed golden journey\./);
+  assert.match(html, /Reference Pattern Map/);
+  assert.match(html, /Execution Workbench pattern retained\./);
 });
 
 test("VSCode Webview disabled buttons are visually distinct", () => {
