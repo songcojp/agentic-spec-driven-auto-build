@@ -289,6 +289,16 @@ test("VSCode Execution Workbench renders execution result sections from durable 
   assert.equal(webviewSource.includes('<h3>SkillOutputContractV1</h3>\n        ${compactJsonBlock(executionDetail?.contractValidation'), false);
 });
 
+test("Execution Workbench renders Product Usability evidence groups", () => {
+  assert.match(executionWebviewSource, /Product Usability/);
+  assert.match(executionWebviewSource, /Decision Log/);
+  assert.match(executionWebviewSource, /Protocol Gaps/);
+  assert.match(executionWebviewSource, /Usability Evidence/);
+  assert.match(executionWebviewSource, /Lifecycle Handoffs/);
+  assert.match(executionWebviewSource, /Reference Pattern Map/);
+  assert.match(executionWebviewSource, /renderProductUsabilityEvidence/);
+});
+
 test("VSCode Webview disabled buttons are visually distinct", () => {
   assert.match(extensionSource, /button:disabled,button:disabled:hover/);
   assert.match(extensionSource, /workbench-button is-disabled/);
