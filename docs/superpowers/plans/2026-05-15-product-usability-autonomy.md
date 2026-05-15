@@ -274,7 +274,7 @@ Create `docs/agentic-spec/features/feat-024-product-usability-autonomy/spec-stat
   "featureId": "FEAT-024",
   "status": "ready",
   "executionStatus": "ready",
-  "lastUpdated": "2026-05-15T00:00:00.000Z",
+  "updatedAt": "2026-05-15T00:00:00.000Z",
   "reason": "Feature Spec approved for Product Usability Autonomy implementation.",
   "dependencies": [
     "FEAT-002",
@@ -1601,7 +1601,7 @@ After all checks pass, update `docs/agentic-spec/features/feat-024-product-usabi
   "featureId": "FEAT-024",
   "status": "completed",
   "executionStatus": "completed",
-  "lastUpdated": "2026-05-15T00:00:00.000Z",
+  "updatedAt": "2026-05-15T00:00:00.000Z",
   "reason": "Product Usability Autonomy protocol structures, gates, ReviewItem projection, IDE evidence display, skill wrappers, and hybrid golden journey are implemented and verified.",
   "dependencies": [
     "FEAT-002",

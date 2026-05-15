@@ -3,7 +3,7 @@
   "featureId": "FEAT-024",
   "status": "ready",
   "executionStatus": "ready",
-  "lastUpdated": "2026-05-15T00:00:00.000Z",
+  "updatedAt": "2026-05-15T00:00:00.000Z",
   "reason": "Feature Spec approved for Product Usability Autonomy implementation.",
   "dependencies": [
     "FEAT-002",
