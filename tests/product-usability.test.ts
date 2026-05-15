@@ -294,3 +294,78 @@ for (const mode of ["fixture", "seed", "text"] as const) {
     assert.equal(result.gaps.some((gap) => gap.id === "missing-usability-evidence-US-024-04"), true);
   });
 }
+
+test("hybrid golden journey passes with source-backed decisions and browser usability evidence", () => {
+  const result = assessProductUsabilityGate({
+    priorityStories: ["US-024-04"],
+    decisionLog: [{
+      id: "DL-GOLDEN-1",
+      type: "auto_decided",
+      summary: "Use Execution Workbench as primary Product Usability evidence surface.",
+      sourceRefs: ["AGENTS.md", "docs/superpowers/specs/2026-05-15-product-usability-autonomy-design.md"],
+      rationale: "Repo guidance makes VSCode IDE Webview the primary current UI.",
+      rejectedAlternatives: ["Product Console primary display"],
+      risk: "low",
+      affectedArtifacts: ["apps/vscode-extension/src/webviews/execution.ts"],
+      verification: ["node --test tests/specdrive-ide-webview-boundary.test.ts", "npm run ide:build"],
+      status: "accepted",
+    }],
+    protocolGaps: [{
+      id: "GAP-GOLDEN-CLOSED",
+      category: "runtime_gap",
+      severity: "P1",
+      status: "closed",
+      message: "Execution Workbench usability evidence display implemented.",
+      affectedStories: ["US-024-04"],
+      affectedJourneys: ["JOURNEY-EXECUTION-WORKBENCH-EVIDENCE"],
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+      resumeStage: "Review",
+    }],
+    usabilityEvidence: [{
+      id: "UE-GOLDEN-1",
+      userStoryId: "US-024-04",
+      journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+      checkpointId: "CP-EVIDENCE-PANEL",
+      mode: "browser",
+      status: "passed",
+      assertion: "Execution Workbench displays Product Usability evidence groups.",
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts", "npm run ide:build"],
+    }],
+    lifecycleHandoffs: [{
+      id: "LH-GOLDEN-1",
+      from: "Verify",
+      to: "Review",
+      owner: "review-delivery-evidence",
+      inputRefs: ["tests/product-usability.test.ts", "tests/specdrive-ide.test.ts"],
+      outputRefs: ["review_items", "Execution Workbench"],
+      preservedObligations: ["US-024-04", "REQ-099"],
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+      status: "passed",
+    }],
+    referencePatternMap: [{
+      source: "superpowers",
+      workflow: "verification-before-completion",
+      specdriveStage: "Verify",
+      localRule: "Evidence must exist before completion.",
+      localSkill: "verify-behavior",
+      evidenceField: "UsabilityEvidence",
+    }, {
+      source: "agent-skills",
+      workflow: "verification-evidence",
+      specdriveStage: "Verify",
+      localRule: "Product usability requires concrete evidence refs.",
+      localSkill: "review-delivery-evidence",
+      evidenceField: "ProtocolGap",
+    }, {
+      source: "everything-claude-code",
+      workflow: "orchestration-status",
+      specdriveStage: "Review",
+      localRule: "Review blockers must be machine-queryable.",
+      localSkill: "use-specdrive-lifecycle",
+      evidenceField: "DecisionLog",
+    }],
+  });
+
+  assert.equal(result.passed, true);
+  assert.deepEqual(result.triggers, []);
+});
