@@ -14,7 +14,7 @@ The design has three equal goals:
 
 1. Product usability closure: P0/P1 user stories must trace to user journeys, Feature design, tasks, tests, runtime evidence, review, and final completion decisions.
 2. Autonomous discovery and repair: the system must find gaps across Define, Plan, Build, Verify, Review, and Ship; repair gaps when existing sources make the repair safe; and preserve Open Questions or Blocking Open Questions when a human decision is required.
-3. Mature skill pattern wrappers: external skill libraries are used as reference patterns for workflow, gates, checklists, and anti-rationalization behavior. They are not vendored and are not direct runtime dependencies.
+3. Mature skill and protocol convergence: external skill libraries are used as reference patterns for workflow, gates, checklists, and anti-rationalization behavior, while Agentic Spec is also upgraded so those practices become protocol-level primitives rather than scattered local prompts. The external libraries are not vendored and are not direct runtime dependencies.
 
 ## Reference Patterns
 
@@ -24,7 +24,41 @@ Phase 2 uses a pattern-and-wrapper strategy.
 - Everything Claude Code is a reference for skills as the primary workflow surface, continuous learning, memory persistence, verification loops, orchestration status, security scanning, and cross-harness compatibility.
 - Agent Skills is a reference for lifecycle skill anatomy, structured workflows, verification gates, anti-rationalization tables, specialist personas, and reference checklists.
 
-SpecDrive will absorb these patterns into local skills and references. It will not copy the upstream packages wholesale, create a runtime skill registry, or claim direct execution of external system skills in this Feature.
+SpecDrive will absorb these patterns into local skills, references, and protocol rules. It will not copy the upstream packages wholesale, create a runtime skill registry, or claim direct execution of external system skills in this Feature.
+
+## Bidirectional Alignment
+
+Phase 2 should not treat mature skill libraries as one-way templates. The target is convergence between mature skill practice and the Agentic Spec protocol.
+
+Mature skill libraries push SpecDrive toward:
+
+- conversational clarification before design;
+- explicit spec approval before implementation;
+- implementation plans with small verifiable tasks;
+- test-first and verification-before-completion habits;
+- subagent review and repair loops;
+- anti-rationalization checks that prevent agents from skipping hard steps;
+- evidence requirements that make "looks done" insufficient.
+
+Agentic Spec pushes mature skill practice toward:
+
+- durable lifecycle state instead of conversation-only workflow memory;
+- machine-queryable requirements, Feature state, ReviewItems, and evidence records;
+- explicit requirement, user story, journey, task, test, and runtime evidence traceability;
+- status projection that can block `ready`, `execution`, `completed`, and `done`;
+- IDE-visible decision logs, Open Questions, and human review resumability;
+- protocol-owned boundaries for what an agent may auto-decide, auto-repair, or must escalate.
+
+The design should therefore extract protocol primitives from mature practice:
+
+- `LifecycleHandoff`: Define, Plan, Build, Verify, Review, and Ship transitions with input, output, owner, loss, and evidence rows.
+- `SkillWrapperContract`: a local skill anatomy that includes purpose, triggers, required sources, process, anti-rationalization checks, output schema, handoff readiness, and verification evidence.
+- `DecisionLog`: a structured record for automatic decisions, rejected alternatives, autonomous repairs, Open Questions, Blocking Open Questions, human approvals, and deferred decisions.
+- `UsabilityEvidence`: story, journey, checkpoint, interaction, state/data, runtime, review, and ship proof tied to product usability.
+- `ProtocolGap`: a normalized gap object that can be shown in ReviewItems and IDE Webview, not only written into Markdown prose.
+- `ReferencePatternMap`: a source-backed map from mature library practices to local SpecDrive protocol rules and skill wrapper requirements.
+
+This convergence is the main improvement over the earlier Pattern-First proposal. Pattern-First improved selected upstream skills; Phase 2 improves both the skill surface and the Agentic Spec protocol that evaluates, persists, and presents their work.
 
 ## Positioning
 
@@ -54,16 +88,31 @@ This layer records source-backed research from mature skill libraries. It should
 - user journey testing patterns;
 - autonomous decision and repair boundaries.
 
+### Agentic Spec Protocol Convergence Layer
+
+This layer converts the reference patterns into protocol-level rules. It should define the shared vocabulary and machine-readable structures that make skill behavior durable across sessions and visible in the product.
+
+The first protocol upgrades should cover:
+
+- lifecycle handoff records for Define, Plan, Build, Verify, Review, and Ship;
+- a normalized decision log for auto decisions, autonomous repairs, Open Questions, Blocking Open Questions, and human approvals;
+- reusable Product Usability Gate result shape;
+- protocol gap categories that status checker, ReviewItems, and IDE Webview can all consume;
+- source-backed mapping from mature skill library patterns to SpecDrive rules;
+- explicit boundaries between prompt-owned reasoning and code-owned structural enforcement.
+
 ### SpecDrive Skill Wrapper Layer
 
-Local project skills should declare more than output headings. Each critical skill should define:
+Local project skills should declare more than output headings. Each critical skill should implement the protocol convergence layer through a local wrapper contract:
 
 - required input source refs;
+- lifecycle stage and handoff responsibilities;
 - allowed autonomous decision scope;
 - required decision log rows;
 - Open Question and Blocking Open Question conditions;
 - quality self-checks;
 - anti-rationalization checks;
+- Product Usability Gate obligations, when the skill affects P0/P1 journeys;
 - downstream handoff contract.
 
 The first skills in scope are:
@@ -157,8 +206,10 @@ The Feature Spec should include docs, skills, runtime gates, status projection, 
 In scope:
 
 - create `requirements.md`, `design.md`, and `tasks.md` for FEAT-024;
-- update mainline standard docs to reference Product Usability Autonomy;
+- update mainline standard docs to reference Product Usability Autonomy and the new protocol convergence primitives;
+- define a source-backed Reference Pattern Map from mature skill libraries to SpecDrive protocol rules;
 - update local skill contracts and shared references;
+- add or refine shared protocol shapes for decision logs, protocol gaps, usability evidence, and lifecycle handoffs;
 - add or extend Product Usability Gate logic;
 - project specific failures into ReviewItems and Feature status;
 - show Product Usability Gate evidence in the IDE Webview;
@@ -169,6 +220,8 @@ In scope:
 
 - Do not vendor `superpowers`, `everything-claude-code`, or `agent-skills`.
 - Do not implement runtime direct delegation to external skills.
+- Do not replace Agentic Spec with any one external skill library's command taxonomy.
+- Do not keep improvements as prompt-only advice when a protocol-level structure is needed for persistence, querying, status projection, or UI display.
 - Do not make Product Console the primary quality UI.
 - Do not retrofit every historical Feature Spec in one pass.
 - Do not let autonomous repair invent product requirements or change security, permissions, payment, or data deletion semantics.
@@ -290,8 +343,11 @@ The journey must prove both sides:
 ## Acceptance Criteria
 
 - FEAT-024 Feature Spec exists with complete requirements, design, and tasks.
-- Mainline standard and skill docs define Product Usability Autonomy.
+- Mainline standard and skill docs define Product Usability Autonomy and protocol convergence primitives.
+- Mature skill library practices are mapped to local SpecDrive protocol rules through a source-backed Reference Pattern Map.
 - Local skill wrappers do not claim direct execution of external skills.
+- Local skill wrappers implement the shared SkillWrapperContract instead of isolated prose-only instructions.
+- Decision logs, protocol gaps, lifecycle handoffs, and usability evidence are represented as durable structures where code or UI must consume them.
 - Product Usability Gate affects completed and done decisions.
 - ReviewItem and IDE Webview show concrete story, journey, checkpoint, and evidence gaps.
 - P0/P1 user stories require runtime or equivalent runtime evidence.
