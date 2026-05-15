@@ -44,6 +44,17 @@ export type DecisionLogEntry = {
   status: "accepted" | "open" | "blocked" | "closed" | "deferred";
 };
 
+export type SkillWrapperContract = {
+  skillName: string;
+  lifecycleStage: LifecycleStage;
+  requiredSourceRefs: string[];
+  allowedDecisionTypes: DecisionLogType[];
+  requiredOutputFields: ProductUsabilityProtocolStructure[];
+  handoffReadiness: string[];
+  antiRationalizationChecks: string[];
+  verificationEvidence: string[];
+};
+
 export type ProtocolGap = {
   id: string;
   category: ProtocolGapCategory;
@@ -91,6 +102,7 @@ export type ReferencePatternMapEntry = {
 export type ProductUsabilityGateInput = {
   priorityStories: string[];
   decisionLog?: DecisionLogEntry[];
+  skillWrapperContracts?: SkillWrapperContract[];
   protocolGaps?: ProtocolGap[];
   usabilityEvidence?: UsabilityEvidence[];
   lifecycleHandoffs?: LifecycleHandoff[];
@@ -116,6 +128,21 @@ export function validateDecisionLog(entries: DecisionLogEntry[] | undefined): Pr
     if (!nonEmptyArray(entry.sourceRefs)) reasons.push(`DecisionLog ${entry.id} requires sourceRefs.`);
     if (!nonEmptyArray(entry.affectedArtifacts)) reasons.push(`DecisionLog ${entry.id} requires affectedArtifacts.`);
     if (!nonEmptyArray(entry.verification)) reasons.push(`DecisionLog ${entry.id} requires verification.`);
+  }
+  return { valid: reasons.length === 0, reasons };
+}
+
+export function validateSkillWrapperContract(entries: SkillWrapperContract[] | SkillWrapperContract | undefined): ProductUsabilityValidationResult {
+  const reasons: string[] = [];
+  for (const entry of Array.isArray(entries) ? entries : entries ? [entries] : []) {
+    const label = nonEmptyString(entry.skillName) ? entry.skillName : "(unnamed skill)";
+    if (!nonEmptyString(entry.skillName)) reasons.push("SkillWrapperContract requires skillName.");
+    if (!nonEmptyArray(entry.requiredSourceRefs)) reasons.push(`SkillWrapperContract ${label} requires requiredSourceRefs.`);
+    if (!nonEmptyArray(entry.allowedDecisionTypes)) reasons.push(`SkillWrapperContract ${label} requires allowedDecisionTypes.`);
+    if (!nonEmptyArray(entry.requiredOutputFields)) reasons.push(`SkillWrapperContract ${label} requires requiredOutputFields.`);
+    if (!nonEmptyArray(entry.handoffReadiness)) reasons.push(`SkillWrapperContract ${label} requires handoffReadiness.`);
+    if (!nonEmptyArray(entry.antiRationalizationChecks)) reasons.push(`SkillWrapperContract ${label} requires antiRationalizationChecks.`);
+    if (!nonEmptyArray(entry.verificationEvidence)) reasons.push(`SkillWrapperContract ${label} requires verificationEvidence.`);
   }
   return { valid: reasons.length === 0, reasons };
 }
@@ -169,6 +196,7 @@ export function assessProductUsabilityGate(input: ProductUsabilityGateInput | un
 
   const validationReasons = [
     ...validateDecisionLog(input.decisionLog).reasons,
+    ...validateSkillWrapperContract(input.skillWrapperContracts).reasons,
     ...validateProtocolGaps(input.protocolGaps).reasons,
     ...validateUsabilityEvidence(input.usabilityEvidence).reasons,
     ...validateLifecycleHandoffs(input.lifecycleHandoffs).reasons,
@@ -214,4 +242,8 @@ const fixtureOnlyEvidenceModes: ProductUsabilityEvidenceMode[] = ["fixture", "se
 
 function nonEmptyArray(value: unknown): boolean {
   return Array.isArray(value) && value.length > 0;
+}
+
+function nonEmptyString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
 }

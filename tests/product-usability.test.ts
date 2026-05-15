@@ -8,6 +8,7 @@ import {
   validateLifecycleHandoffs,
   validateProtocolGaps,
   validateReferencePatternMap,
+  validateSkillWrapperContract,
   validateUsabilityEvidence,
   type ProductUsabilityGateInput,
 } from "../src/product-usability.ts";
@@ -43,6 +44,30 @@ test("decision log validation rejects missing source refs", () => {
 
   assert.equal(result.valid, false);
   assert.deepEqual(result.reasons, ["DecisionLog DL-1 requires sourceRefs."]);
+});
+
+test("skill wrapper contract validation rejects missing required sections", () => {
+  const result = validateSkillWrapperContract({
+    skillName: "",
+    lifecycleStage: "Build",
+    requiredSourceRefs: [],
+    allowedDecisionTypes: [],
+    requiredOutputFields: [],
+    handoffReadiness: [],
+    antiRationalizationChecks: [],
+    verificationEvidence: [],
+  });
+
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.reasons, [
+    "SkillWrapperContract requires skillName.",
+    "SkillWrapperContract (unnamed skill) requires requiredSourceRefs.",
+    "SkillWrapperContract (unnamed skill) requires allowedDecisionTypes.",
+    "SkillWrapperContract (unnamed skill) requires requiredOutputFields.",
+    "SkillWrapperContract (unnamed skill) requires handoffReadiness.",
+    "SkillWrapperContract (unnamed skill) requires antiRationalizationChecks.",
+    "SkillWrapperContract (unnamed skill) requires verificationEvidence.",
+  ]);
 });
 
 test("protocol gap validation accepts concrete product usability gap", () => {
@@ -160,4 +185,56 @@ test("product usability gate blocks open P1 runtime gaps", () => {
   assert.equal(result.reason, "product_usability_gap");
   assert.equal(result.triggers.includes("product_usability_gap"), true);
   assert.equal(result.gaps[0]?.id, "GAP-1");
+});
+
+test("product usability gate blocks open P0 runtime gaps", () => {
+  const input: ProductUsabilityGateInput = {
+    priorityStories: ["US-024-04"],
+    protocolGaps: [
+      {
+        id: "GAP-P0",
+        category: "runtime_gap",
+        severity: "P0",
+        status: "open",
+        message: "No runtime proof for the primary user journey.",
+        affectedStories: ["US-024-04"],
+        affectedJourneys: ["JOURNEY-EXECUTION-WORKBENCH-EVIDENCE"],
+        evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+        resumeStage: "Verify",
+      },
+    ],
+    usabilityEvidence: [
+      {
+        id: "UE-REAL",
+        userStoryId: "US-024-04",
+        journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+        checkpointId: "CP-1",
+        mode: "browser",
+        status: "passed",
+        assertion: "Workbench shows evidence.",
+        evidenceRefs: ["trace.zip"],
+      },
+    ],
+  };
+
+  const result = assessProductUsabilityGate(input);
+
+  assert.equal(result.passed, false);
+  assert.equal(result.reason, "product_usability_gap");
+  assert.equal(result.gaps[0]?.id, "GAP-P0");
+});
+
+test("product usability gate creates synthetic gap for missing priority story evidence", () => {
+  const input: ProductUsabilityGateInput = {
+    priorityStories: ["US-024-04"],
+    protocolGaps: [],
+    usabilityEvidence: [],
+  };
+
+  const result = assessProductUsabilityGate(input);
+
+  assert.equal(result.passed, false);
+  assert.equal(result.reason, "product_usability_gap");
+  assert.equal(result.gaps[0]?.id, "missing-usability-evidence-US-024-04");
+  assert.equal(result.gaps[0]?.message, "P0/P1 story US-024-04 lacks runtime or equivalent usability evidence.");
 });
