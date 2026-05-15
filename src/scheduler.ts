@@ -672,6 +672,7 @@ function ensureExecutionReviewItem(
     item.status !== "approved" &&
     item.status !== "closed"
   );
+  const productUsability = executionReviewProductUsability(input.metadata);
   createReviewItem(dbPath, {
     id: existing?.id ?? `execution-review-${input.executionId}`,
     projectId: input.projectId,
@@ -688,6 +689,7 @@ function ensureExecutionReviewItem(
         contractValidation: input.metadata?.contractValidation,
         producedArtifacts: input.metadata?.producedArtifacts,
       },
+      productUsability,
     },
     evidenceRefs: Array.isArray(input.metadata?.rawLogRefs) ? input.metadata.rawLogRefs.map(String) : [],
     now: input.now,
@@ -700,6 +702,7 @@ function executionReviewNeededReason(
 ): "approval_needed" | "clarification_needed" | "risk_review_needed" {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
   if (
+    hasProductUsabilityReviewRisk(summary, metadata) ||
     hasDeliveryFidelityReviewRisk(metadata) ||
     text.includes("journey closure gate") ||
     text.includes("delivery fidelity gate") ||
@@ -726,6 +729,7 @@ function executionReviewNeededReason(
 
 function executionReviewTriggers(summary: string, metadata?: Record<string, unknown>): ReviewTrigger[] {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (hasProductUsabilityReviewRisk(summary, metadata)) return ["product_usability_gap"];
   if (hasDeliveryFidelityReviewRisk(metadata)) return ["quality_evidence_gap"];
   if (/\bevidence_missing\b/.test(text) || text.includes("journey closure gate")) return ["evidence_missing"];
   if (text.includes("journey_not_closed")) return ["journey_not_closed"];
@@ -752,6 +756,31 @@ function executionReviewTriggers(summary: string, metadata?: Record<string, unkn
   if (text.includes("constitution")) return ["constitution_change"];
   if (text.includes("architecture")) return ["architecture_change"];
   return ["failed_tests_continue"];
+}
+
+function hasProductUsabilityReviewRisk(summary: string, metadata?: Record<string, unknown>): boolean {
+  const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (text.includes("product usability gate failed") || text.includes("product_usability_gap")) return true;
+  const productUsability = asRecord(executionReviewProductUsability(metadata));
+  if (!productUsability) return false;
+  const gaps = [
+    ...(Array.isArray(productUsability.gaps) ? productUsability.gaps : []),
+    ...(Array.isArray(productUsability.protocolGaps) ? productUsability.protocolGaps : []),
+  ];
+  return gaps.some((gap) => {
+    const item = asRecord(gap);
+    const status = optionalString(item?.status)?.toLowerCase();
+    const severity = optionalString(item?.severity)?.toLowerCase();
+    return status !== "closed" && (severity === "p0" || severity === "p1" || severity === "critical" || severity === "high");
+  });
+}
+
+function executionReviewProductUsability(metadata?: Record<string, unknown>): unknown {
+  const direct = metadata?.productUsability;
+  if (direct !== undefined) return direct;
+  const skillOutput = asRecord(metadata?.skillOutputContract);
+  const result = asRecord(skillOutput?.result);
+  return result?.productUsability;
 }
 
 function hasDeliveryFidelityReviewRisk(metadata?: Record<string, unknown>): boolean {

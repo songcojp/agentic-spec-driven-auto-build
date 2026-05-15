@@ -366,6 +366,47 @@ test("cli.run classifies review_needed delivery fidelity losses as risk review b
   assert.match(String(rows.reviews[0].body), /behavior-obligation gaps/);
 });
 
+test("cli.run projects product usability gate failures into risk review items", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-product-usability-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const productUsability = {
+    protocolGaps: [{
+      id: "GAP-PUA-1",
+      category: "runtime_gap",
+      severity: "P1",
+      status: "open",
+      message: "Execution Workbench lacks product evidence for the priority story.",
+      affectedStories: ["US-CLI"],
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+    }],
+  };
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-CLI-PRODUCT-USABILITY"), () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-CLI-PRODUCT-USABILITY"}\n${skillOutputEvent("RUN-CLI-PRODUCT-USABILITY", {
+      status: "review_needed",
+      summary: "Product Usability Gate failed: priority user story lacks runtime evidence.",
+      result: {
+        ...validJourneyResult(),
+        productUsability,
+      },
+    })}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "reviews", sql: "SELECT status, review_needed_reason, trigger_reasons_json, body FROM review_items WHERE run_id = 'RUN-CLI-PRODUCT-USABILITY'" },
+  ]).queries;
+  const body = JSON.parse(String(rows.reviews[0].body));
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(rows.reviews[0].status, "review_needed");
+  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
+  assert.deepEqual(JSON.parse(String(rows.reviews[0].trigger_reasons_json)), ["product_usability_gap"]);
+  assert.deepEqual(body.productUsability, productUsability);
+});
+
 test("cli.run keeps large source documents out of the provider prompt", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-compact-prompt-"));
   prepareSkillWorkspace(root);
