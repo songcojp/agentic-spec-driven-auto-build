@@ -187,6 +187,33 @@ test("product usability gate blocks open P1 runtime gaps", () => {
   assert.equal(result.gaps[0]?.id, "GAP-1");
 });
 
+test("product usability gate accepts browser evidence without reference pattern map", () => {
+  const input: ProductUsabilityGateInput = {
+    priorityStories: ["US-024-04"],
+    decisionLog: [],
+    protocolGaps: [],
+    usabilityEvidence: [
+      {
+        id: "UE-BROWSER",
+        userStoryId: "US-024-04",
+        journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+        checkpointId: "CP-1",
+        mode: "browser",
+        status: "passed",
+        assertion: "Workbench shows runtime evidence for the story.",
+        evidenceRefs: ["trace.zip"],
+      },
+    ],
+    lifecycleHandoffs: [],
+  };
+
+  const result = assessProductUsabilityGate(input);
+
+  assert.equal(result.passed, true);
+  assert.deepEqual(result.triggers, []);
+  assert.deepEqual(result.gaps, []);
+});
+
 test("product usability gate blocks open P0 runtime gaps", () => {
   const input: ProductUsabilityGateInput = {
     priorityStories: ["US-024-04"],
@@ -236,5 +263,32 @@ test("product usability gate creates synthetic gap for missing priority story ev
   assert.equal(result.passed, false);
   assert.equal(result.reason, "product_usability_gap");
   assert.equal(result.gaps[0]?.id, "missing-usability-evidence-US-024-04");
+  assert.deepEqual(result.gaps[0]?.affectedJourneys, ["missing-journey-US-024-04"]);
+  assert.deepEqual(result.gaps[0]?.evidenceRefs, ["missing-usability-evidence-US-024-04"]);
   assert.equal(result.gaps[0]?.message, "P0/P1 story US-024-04 lacks runtime or equivalent usability evidence.");
+});
+
+test("product usability gate does not close priority story with fixture-only evidence", () => {
+  const input: ProductUsabilityGateInput = {
+    priorityStories: ["US-024-04"],
+    protocolGaps: [],
+    usabilityEvidence: [
+      {
+        id: "UE-FIXTURE",
+        userStoryId: "US-024-04",
+        journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+        checkpointId: "CP-1",
+        mode: "fixture",
+        status: "passed",
+        assertion: "Seeded text exists.",
+        evidenceRefs: ["seed.json"],
+      },
+    ],
+  };
+
+  const result = assessProductUsabilityGate(input);
+
+  assert.equal(result.passed, false);
+  assert.equal(result.reason, "product_usability_gap");
+  assert.equal(result.gaps.some((gap) => gap.id === "missing-usability-evidence-US-024-04"), true);
 });

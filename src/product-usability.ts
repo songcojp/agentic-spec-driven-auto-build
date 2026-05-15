@@ -200,7 +200,6 @@ export function assessProductUsabilityGate(input: ProductUsabilityGateInput | un
     ...validateProtocolGaps(input.protocolGaps).reasons,
     ...validateUsabilityEvidence(input.usabilityEvidence).reasons,
     ...validateLifecycleHandoffs(input.lifecycleHandoffs).reasons,
-    ...validateReferencePatternMap(input.referencePatternMap).reasons,
   ];
   const openCriticalGaps = (input.protocolGaps ?? []).filter((gap) =>
     gap.status === "open" && (gap.severity === "P0" || gap.severity === "P1")
@@ -217,8 +216,8 @@ export function assessProductUsabilityGate(input: ProductUsabilityGateInput | un
     status: "open",
     message: `P0/P1 story ${story} lacks runtime or equivalent usability evidence.`,
     affectedStories: [story],
-    affectedJourneys: [],
-    evidenceRefs: [],
+    affectedJourneys: [`missing-journey-${story}`],
+    evidenceRefs: [`missing-usability-evidence-${story}`],
     resumeStage: "Verify",
   }));
   const gaps = [...openCriticalGaps, ...syntheticGaps];
