@@ -26,7 +26,7 @@ Phase 2 uses a pattern-and-wrapper strategy.
 
 SpecDrive will absorb these patterns into local skills, references, and protocol rules. It will not copy the upstream packages wholesale, create a runtime skill registry, or claim direct execution of external system skills in this Feature.
 
-## Bidirectional Alignment
+## Protocol Convergence Requirements
 
 Phase 2 should not treat mature skill libraries as one-way templates. The target is convergence between mature skill practice and the Agentic Spec protocol.
 
@@ -49,14 +49,18 @@ Agentic Spec pushes mature skill practice toward:
 - IDE-visible decision logs, Open Questions, and human review resumability;
 - protocol-owned boundaries for what an agent may auto-decide, auto-repair, or must escalate.
 
-The design should therefore extract protocol primitives from mature practice:
+The Feature must define these protocol structures as implementation objects, not only design principles:
 
-- `LifecycleHandoff`: Define, Plan, Build, Verify, Review, and Ship transitions with input, output, owner, loss, and evidence rows.
-- `SkillWrapperContract`: a local skill anatomy that includes purpose, triggers, required sources, process, anti-rationalization checks, output schema, handoff readiness, and verification evidence.
-- `DecisionLog`: a structured record for automatic decisions, rejected alternatives, autonomous repairs, Open Questions, Blocking Open Questions, human approvals, and deferred decisions.
-- `UsabilityEvidence`: story, journey, checkpoint, interaction, state/data, runtime, review, and ship proof tied to product usability.
-- `ProtocolGap`: a normalized gap object that can be shown in ReviewItems and IDE Webview, not only written into Markdown prose.
-- `ReferencePatternMap`: a source-backed map from mature library practices to local SpecDrive protocol rules and skill wrapper requirements.
+| Structure | Purpose | Required Source Of Truth |
+|---|---|---|
+| `LifecycleHandoff` | Define, Plan, Build, Verify, Review, and Ship transitions with input, output, owner, loss, and evidence rows. | Docs define lifecycle semantics; `src/` defines TypeScript contract and validators. |
+| `SkillWrapperContract` | Local skill anatomy: purpose, triggers, required sources, process, anti-rationalization checks, output schema, handoff readiness, and verification evidence. | Docs define required sections; `src/` or validation scripts enforce required wrapper fields where machine-readable. |
+| `DecisionLog` | Automatic decisions, rejected alternatives, autonomous repairs, Open Questions, Blocking Open Questions, human approvals, and deferred decisions. | Docs define decision policy; `src/` defines result shape consumed by gates, ReviewItems, and IDE. |
+| `ProtocolGap` | Normalized gap object for source, story, journey, interaction, state/data, test, runtime, review, and ship failures. | Docs define taxonomy; `src/` defines status projection and ReviewItem payload shape. |
+| `UsabilityEvidence` | Story, journey, checkpoint, interaction, state/data, runtime, review, and ship proof tied to product usability. | Docs define evidence semantics; `src/` defines gate input and UI projection shape. |
+| `ReferencePatternMap` | Skill/workflow-level mapping from mature library practices to local SpecDrive protocol rules and skill wrapper requirements. | Docs define source-backed mapping; tests confirm required mappings exist for the selected critical workflows. |
+
+Docs and `src/` are both required sources of truth. Docs define human-readable semantics and protocol boundaries. `src/` defines machine-readable contracts, validators, status projection, ReviewItem payloads, and IDE-consumable structures. Drift tests must fail when the implementation omits protocol structures or critical fields declared by the docs.
 
 This convergence is the main improvement over the earlier Pattern-First proposal. Pattern-First improved selected upstream skills; Phase 2 improves both the skill surface and the Agentic Spec protocol that evaluates, persists, and presents their work.
 
@@ -80,7 +84,7 @@ FEAT-024 uses and extends those mechanisms to make real product usability enforc
 
 This layer records source-backed research from mature skill libraries. It should become local reference material, not runtime code. The first references should cover:
 
-- spec-to-plan-to-implementation workflow;
+- skill/workflow-level mappings for spec-to-plan-to-implementation workflow;
 - skill wrapper anatomy;
 - quality checklist and exit criteria patterns;
 - anti-rationalization gates;
@@ -88,17 +92,19 @@ This layer records source-backed research from mature skill libraries. It should
 - user journey testing patterns;
 - autonomous decision and repair boundaries.
 
+The `ReferencePatternMap` should stay at skill/workflow granularity for the first version. It should map selected mature workflows to SpecDrive lifecycle stages, local skill wrappers, gates, and evidence. It should not attempt full checklist-level copying of upstream libraries, except for critical path checks that directly protect product usability.
+
 ### Agentic Spec Protocol Convergence Layer
 
-This layer converts the reference patterns into protocol-level rules. It should define the shared vocabulary and machine-readable structures that make skill behavior durable across sessions and visible in the product.
+This layer converts mature reference patterns into protocol-level rules. It defines shared vocabulary and machine-readable structures that make skill behavior durable across sessions and visible in the product.
 
-The first protocol upgrades should cover:
+The first protocol upgrades must cover:
 
 - lifecycle handoff records for Define, Plan, Build, Verify, Review, and Ship;
-- a normalized decision log for auto decisions, autonomous repairs, Open Questions, Blocking Open Questions, and human approvals;
+- normalized decision logs for auto decisions, autonomous repairs, Open Questions, Blocking Open Questions, and human approvals;
 - reusable Product Usability Gate result shape;
 - protocol gap categories that status checker, ReviewItems, and IDE Webview can all consume;
-- source-backed mapping from mature skill library patterns to SpecDrive rules;
+- source-backed `ReferencePatternMap` from mature skill library workflows to SpecDrive rules;
 - explicit boundaries between prompt-owned reasoning and code-owned structural enforcement.
 
 ### SpecDrive Skill Wrapper Layer
@@ -154,6 +160,8 @@ FEAT-024 adds a Product Usability Gate on top of Delivery Fidelity.
 
 The gate checks whether P0/P1 user stories close through real or equivalent runtime evidence. It should reject completion when evidence is missing, fixture-only, API-seeded without user interaction proof, text-only, self-reviewed only, or missing negative/reload/persistence coverage where the story requires it.
 
+The first runtime depth is full gate/status/IDE integration, not only types. The implementation package must define TypeScript contracts and validators, connect Product Usability Gate to `completed`, `done`, and `review_needed` decisions, project failures into ReviewItems, and expose the structures to VSCode IDE Webview.
+
 Gap categories should include:
 
 - `source_gap`
@@ -172,10 +180,11 @@ Failures must project to `review_needed` or `blocked` with concrete story, journ
 
 VSCode IDE Webview remains the primary UI surface.
 
-The IDE should show:
+The first IDE golden journey is Execution Workbench quality evidence display. The IDE should show:
 
 - which `US-*` or `REQ-*` failed closure;
 - which journey checkpoint lacks evidence;
+- relevant `LifecycleHandoff`, `DecisionLog`, `ProtocolGap`, and `UsabilityEvidence` rows;
 - which decisions were automatic;
 - which gaps were autonomously repaired;
 - which Open Questions remain visible;
@@ -207,14 +216,15 @@ In scope:
 
 - create `requirements.md`, `design.md`, and `tasks.md` for FEAT-024;
 - update mainline standard docs to reference Product Usability Autonomy and the new protocol convergence primitives;
-- define a source-backed Reference Pattern Map from mature skill libraries to SpecDrive protocol rules;
+- define docs semantics and `src/` TypeScript contracts for `LifecycleHandoff`, `SkillWrapperContract`, `DecisionLog`, `ProtocolGap`, `UsabilityEvidence`, and `ReferencePatternMap`;
+- define a source-backed, skill/workflow-level `ReferencePatternMap` from mature skill libraries to SpecDrive protocol rules;
 - update local skill contracts and shared references;
-- add or refine shared protocol shapes for decision logs, protocol gaps, usability evidence, and lifecycle handoffs;
-- add or extend Product Usability Gate logic;
+- add or refine validators, status projection, ReviewItem payloads, and IDE-consumable shapes for the protocol structures;
+- add or extend Product Usability Gate logic so it affects `completed`, `done`, and `review_needed`;
 - project specific failures into ReviewItems and Feature status;
-- show Product Usability Gate evidence in the IDE Webview;
+- show Product Usability Gate evidence in the Execution Workbench IDE Webview;
 - add targeted unit, integration, and Webview tests;
-- add one end-to-end golden journey that starts at spec input and ends in a product usable or correctly blocked decision.
+- add a hybrid golden journey: one spec-document generation path and one Execution Workbench quality evidence display path.
 
 ## Non-Goals
 
@@ -222,6 +232,7 @@ In scope:
 - Do not implement runtime direct delegation to external skills.
 - Do not replace Agentic Spec with any one external skill library's command taxonomy.
 - Do not keep improvements as prompt-only advice when a protocol-level structure is needed for persistence, querying, status projection, or UI display.
+- Do not attempt full checklist-level copying of upstream skill libraries in the first version.
 - Do not make Product Console the primary quality UI.
 - Do not retrofit every historical Feature Spec in one pass.
 - Do not let autonomous repair invent product requirements or change security, permissions, payment, or data deletion semantics.
@@ -284,6 +295,18 @@ Use `blocking_open_question` with `blocked` or `review_needed` when:
 
 Critical skills must require source refs, decision log, Open Questions, Blocking Open Questions, handoff readiness, and quality checklist output. Weak input must not silently enter downstream planning or execution.
 
+### Protocol Contract And Drift Tests
+
+Tests must prove that docs and `src/` stay aligned for the six protocol structures. The implementation should fail validation when a required structure or critical field is documented but not represented in TypeScript contracts, validators, status projection, ReviewItem payloads, or IDE-consumable data.
+
+### Reference Pattern Map Tests
+
+Tests or static checks must prove that selected mature skill workflows are mapped at skill/workflow granularity:
+
+- Superpowers brainstorming, writing-plans, TDD, verification-before-completion, subagent-driven-development, and requesting-code-review;
+- Agent Skills Define, Plan, Build, Verify, Review lifecycle workflows, skill anatomy, anti-rationalization, and verification evidence;
+- Everything Claude Code memory persistence, continuous learning, verification loops, orchestration status, security scanning, and research-first workflow.
+
 ### Product Usability Gate Tests
 
 Tests should cover:
@@ -317,9 +340,11 @@ Tests should prove the IDE shows:
 - Open Questions and Blocking Open Questions;
 - ReviewItem resume guidance.
 
-### End-To-End Golden Journey
+### Hybrid Golden Journey
 
-The Feature must include one real golden journey:
+The Feature must include two connected golden paths.
+
+The spec-document path proves the protocol structures and autonomous repair behavior:
 
 ```text
 PRD / user input
@@ -331,29 +356,51 @@ PRD / user input
   -> implementation
   -> verification
   -> review
-  -> IDE evidence
   -> done or review_needed decision
 ```
 
-The journey must prove both sides:
+The Execution Workbench path proves product usability evidence is visible in the primary UI:
+
+```text
+completed or review_needed execution record
+  -> Product Usability Gate result
+  -> ReviewItem projection
+  -> Execution Workbench quality evidence display
+  -> user sees story, journey, DecisionLog, ProtocolGap, UsabilityEvidence, and resume guidance
+```
+
+The combined journey must prove both sides:
 
 - missing evidence blocks completion with actionable details;
-- complete evidence explains why the product is usable.
+- complete evidence explains why the product is usable;
+- the IDE shows enough structure for a user to continue without reading raw logs.
+
+The older single-path form remains a useful summary:
+
+```text
+spec input
+  -> protocol-backed skill output
+  -> Feature execution
+  -> Product Usability Gate
+  -> IDE evidence
+  -> done or review_needed decision
+```
 
 ## Acceptance Criteria
 
 - FEAT-024 Feature Spec exists with complete requirements, design, and tasks.
 - Mainline standard and skill docs define Product Usability Autonomy and protocol convergence primitives.
-- Mature skill library practices are mapped to local SpecDrive protocol rules through a source-backed Reference Pattern Map.
+- `LifecycleHandoff`, `SkillWrapperContract`, `DecisionLog`, `ProtocolGap`, `UsabilityEvidence`, and `ReferencePatternMap` are defined in docs and represented in `src/` contracts or validators.
+- Drift tests fail if docs-declared critical protocol fields are missing from runtime or IDE-consumable structures.
+- Mature skill library practices are mapped to local SpecDrive protocol rules through a source-backed, skill/workflow-level `ReferencePatternMap`.
 - Local skill wrappers do not claim direct execution of external skills.
-- Local skill wrappers implement the shared SkillWrapperContract instead of isolated prose-only instructions.
-- Decision logs, protocol gaps, lifecycle handoffs, and usability evidence are represented as durable structures where code or UI must consume them.
-- Product Usability Gate affects completed and done decisions.
-- ReviewItem and IDE Webview show concrete story, journey, checkpoint, and evidence gaps.
+- Local skill wrappers implement the shared `SkillWrapperContract` instead of isolated prose-only instructions.
+- Product Usability Gate affects `completed`, `done`, and `review_needed` decisions.
+- ReviewItem and Execution Workbench IDE Webview show concrete story, journey, checkpoint, decision, gap, evidence, and resume details.
 - P0/P1 user stories require runtime or equivalent runtime evidence.
 - Autonomous decisions and repairs create decision log rows.
 - Blocking Open Questions prevent execution or done.
-- One end-to-end golden journey proves spec-to-product usability closure.
+- A hybrid golden journey proves both spec-document generation closure and Execution Workbench quality evidence display.
 - `npm run skills:validate`, targeted tests, IDE build or relevant Webview tests, and `git diff --check` pass for the implementation package.
 
 ## Sources
