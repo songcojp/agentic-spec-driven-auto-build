@@ -268,27 +268,29 @@ test("product usability gate creates synthetic gap for missing priority story ev
   assert.equal(result.gaps[0]?.message, "P0/P1 story US-024-04 lacks runtime or equivalent usability evidence.");
 });
 
-test("product usability gate does not close priority story with fixture-only evidence", () => {
-  const input: ProductUsabilityGateInput = {
-    priorityStories: ["US-024-04"],
-    protocolGaps: [],
-    usabilityEvidence: [
-      {
-        id: "UE-FIXTURE",
-        userStoryId: "US-024-04",
-        journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
-        checkpointId: "CP-1",
-        mode: "fixture",
-        status: "passed",
-        assertion: "Seeded text exists.",
-        evidenceRefs: ["seed.json"],
-      },
-    ],
-  };
+for (const mode of ["fixture", "seed", "text"] as const) {
+  test(`product usability gate does not close priority story with ${mode} evidence`, () => {
+    const input: ProductUsabilityGateInput = {
+      priorityStories: ["US-024-04"],
+      protocolGaps: [],
+      usabilityEvidence: [
+        {
+          id: `UE-${mode.toUpperCase()}`,
+          userStoryId: "US-024-04",
+          journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+          checkpointId: "CP-1",
+          mode,
+          status: "passed",
+          assertion: "Seeded text exists.",
+          evidenceRefs: [`${mode}.json`],
+        },
+      ],
+    };
 
-  const result = assessProductUsabilityGate(input);
+    const result = assessProductUsabilityGate(input);
 
-  assert.equal(result.passed, false);
-  assert.equal(result.reason, "product_usability_gap");
-  assert.equal(result.gaps.some((gap) => gap.id === "missing-usability-evidence-US-024-04"), true);
-});
+    assert.equal(result.passed, false);
+    assert.equal(result.reason, "product_usability_gap");
+    assert.equal(result.gaps.some((gap) => gap.id === "missing-usability-evidence-US-024-04"), true);
+  });
+}
