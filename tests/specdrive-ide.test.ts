@@ -102,6 +102,105 @@ test("SpecDrive IDE queue and execution detail keep DB feature titles when docs 
   assert.equal(detail?.featureTitle, "Project and Repository Foundation");
 });
 
+test("SpecDrive IDE projects product usability evidence from execution metadata", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json)
+        VALUES ('FEAT-016', 'project-ide', 'SpecDrive IDE Foundation', 'ready', 10, 'feat-016-specdrive-ide-foundation', '["REQ-099"]')`,
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, summary, metadata_json, started_at, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        "RUN-PUA-IDE",
+        "JOB-PUA-IDE",
+        "cli",
+        "feature_execution",
+        "project-ide",
+        JSON.stringify({ featureId: "FEAT-016" }),
+        "review_needed",
+        "Product Usability Gate failed.",
+        JSON.stringify({
+          skillOutputContract: {
+            contractVersion: "skill-contract/v2",
+            executionId: "RUN-PUA-IDE",
+            skillName: "implement-feature",
+            requestedAction: "feature_execution",
+            status: "completed",
+            summary: "Feature implemented.",
+            nextAction: null,
+            producedArtifacts: [],
+            traceability: { featureId: "FEAT-016" },
+            result: {
+              productUsability: {
+                priorityStories: ["US-024-04"],
+                decisionLog: [{
+                  id: "DL-1",
+                  type: "auto_decided",
+                  summary: "Use IDE as primary UI.",
+                  sourceRefs: ["AGENTS.md"],
+                  rationale: "Repo guidance.",
+                  risk: "low",
+                  affectedArtifacts: ["apps/vscode-extension/src/webviews/execution.ts"],
+                  verification: ["npm run ide:build"],
+                  status: "accepted",
+                }],
+                protocolGaps: [{
+                  id: "GAP-1",
+                  category: "runtime_gap",
+                  severity: "P1",
+                  status: "open",
+                  message: "No evidence display.",
+                  affectedStories: ["US-024-04"],
+                  affectedJourneys: ["JOURNEY-1"],
+                  evidenceRefs: ["tests/specdrive-ide.test.ts"],
+                  resumeStage: "Verify",
+                }],
+                usabilityEvidence: [{
+                  id: "UE-1",
+                  userStoryId: "US-024-04",
+                  journeyId: "JOURNEY-1",
+                  checkpointId: "CP-1",
+                  mode: "browser",
+                  status: "passed",
+                  assertion: "Evidence panel visible.",
+                  evidenceRefs: ["screenshot.png"],
+                }],
+                lifecycleHandoffs: [{
+                  id: "LH-1",
+                  from: "Verify",
+                  to: "Review",
+                  owner: "review-delivery-evidence",
+                  inputRefs: ["tests/specdrive-ide.test.ts"],
+                  outputRefs: ["review_items"],
+                  preservedObligations: ["US-024-04"],
+                  evidenceRefs: ["screenshot.png"],
+                  status: "passed",
+                }],
+                referencePatternMap: [],
+              },
+            },
+          },
+        }),
+        "2026-05-15T00:00:00.000Z",
+        "2026-05-15T00:01:00.000Z",
+      ],
+    },
+  ]);
+
+  const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-PUA-IDE");
+
+  assert.equal(detail?.productUsability?.protocolGaps?.[0]?.id, "GAP-1");
+  assert.equal(detail?.productUsability?.usabilityEvidence?.[0]?.id, "UE-1");
+  assert.equal(detail?.productUsability?.decisionLog?.[0]?.id, "DL-1");
+});
+
 test("SpecDrive IDE feature dependencies come from feature-pool-queue.json", () => {
   const workspaceRoot = makeWorkspace();
   writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [

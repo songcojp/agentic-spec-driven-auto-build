@@ -212,6 +212,60 @@ test("completion evidence gaps route done candidates to readable ReviewItem", ()
   assert.equal(items[0].body.testResults.completionEvidence.requireRuntimeEvidence, true);
 });
 
+test("completion evidence reports product usability gaps", () => {
+  const root = mkdtempSync(join(tmpdir(), "feat-024-product-usability-"));
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+
+  const result = runStatusCheck({
+    ...baseInput(root, dbPath),
+    runId: "RUN-024",
+    taskId: "TASK-024-05",
+    featureId: "FEAT-024",
+    completionEvidence: {
+      requirementCoverage: [{ requirementId: "REQ-099", status: "passed", evidence: ["unit"] }],
+      acceptanceEvidence: [{ scenarioId: "AC-099", status: "passed", evidence: ["unit"] }],
+      journeyEvidence: [{ userStoryId: "US-024-04", status: "passed", evidence: ["trace"] }],
+      runtimeEvidence: { appLaunch: { status: "passed", evidence: ["launch.log"] } },
+      deliveryFidelity: { completionDecision: { status: "passed" }, losses: [] },
+      gitDelivery: {
+        prUrl: "https://github.com/example/specdrive/pull/24",
+        commitHash: "abc1234",
+        checks: "passed",
+        merge: "merged",
+        remoteBranchCleanup: "completed",
+        localBranchCleanup: "completed",
+        worktreeCleanup: "cleaned",
+      },
+      productUsability: {
+        priorityStories: ["US-024-04"],
+        protocolGaps: [{
+          id: "GAP-1",
+          category: "runtime_gap",
+          severity: "P1",
+          status: "open",
+          message: "No Execution Workbench evidence display.",
+          affectedStories: ["US-024-04"],
+          affectedJourneys: ["JOURNEY-EXECUTION-WORKBENCH-EVIDENCE"],
+          evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+          resumeStage: "Verify",
+        }],
+        usabilityEvidence: [],
+        decisionLog: [],
+        lifecycleHandoffs: [],
+        referencePatternMap: [],
+      },
+      requireRuntimeEvidence: true,
+    },
+  });
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(result.reasons.some((reason) => reason.includes("Product Usability Gate failed")), true);
+  const items = listReviewCenterItems(dbPath, { status: "review_needed" });
+  assert.equal(items[0].reviewNeededReason, "risk_review_needed");
+  assert.equal(items[0].triggerReasons.includes("product_usability_gap"), true);
+});
+
 test("persistence failure returns blocked diagnostic result instead of throwing", () => {
   const root = mkdtempSync(join(tmpdir(), "feat-009-persist-fail-"));
   const result = runStatusCheck({

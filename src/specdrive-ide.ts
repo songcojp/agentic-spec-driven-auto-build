@@ -19,6 +19,7 @@ import {
   type FileSpecLifecycleStatus,
   type ParsedFeatureTask,
 } from "./spec-protocol.ts";
+import type { ProductUsabilityGateInput } from "./product-usability.ts";
 
 export type SpecDriveIdeDocument = {
   kind:
@@ -125,6 +126,11 @@ export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {
   contractValidation?: unknown;
   outputSchema?: unknown;
   approvalRequests: unknown[];
+  productUsability?: SpecDriveIdeProductUsabilityProjection;
+};
+
+export type SpecDriveIdeProductUsabilityProjection = ProductUsabilityGateInput & {
+  gate?: unknown;
 };
 
 export type SpecDriveIdeReviewProjection = {
@@ -616,6 +622,7 @@ export function buildSpecDriveIdeExecutionDetail(
     createdAt: optionalString(entry.created_at),
   }));
   const metadataArtifacts = arrayValue(metadata.producedArtifacts);
+  const productUsability = productUsabilityFromExecutionMetadata(metadata);
   const resultArtifacts = executionResults.flatMap((entry) => arrayValue(entry.metadata.producedArtifacts));
   const eventRefs = arrayValue(metadata.eventRefs);
   const rawLogRefs = arrayValue(metadata.rawLogRefs).filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
@@ -670,6 +677,27 @@ export function buildSpecDriveIdeExecutionDetail(
     contractValidation: metadata.contractValidation,
     outputSchema: metadata.outputSchema,
     approvalRequests: approvalRequests.length > 0 ? approvalRequests : eventRefs.filter(isApprovalRequestEvent),
+    productUsability,
+  };
+}
+
+function productUsabilityFromExecutionMetadata(metadata: Record<string, unknown>): SpecDriveIdeProductUsabilityProjection | undefined {
+  const skillOutput = isRecord(metadata.skillOutputContract) ? metadata.skillOutputContract : undefined;
+  const result = isRecord(skillOutput?.result) ? skillOutput.result : undefined;
+  const productUsability = isRecord(result?.productUsability) ? result.productUsability : undefined;
+  if (!productUsability) return undefined;
+  return {
+    priorityStories: Array.isArray(productUsability.priorityStories) ? productUsability.priorityStories.map(String) : [],
+    decisionLog: Array.isArray(productUsability.decisionLog) ? productUsability.decisionLog as ProductUsabilityGateInput["decisionLog"] : [],
+    skillWrapperContracts: Array.isArray(productUsability.skillWrapperContracts)
+      ? productUsability.skillWrapperContracts as ProductUsabilityGateInput["skillWrapperContracts"]
+      : undefined,
+    protocolGaps: Array.isArray(productUsability.protocolGaps) ? productUsability.protocolGaps as ProductUsabilityGateInput["protocolGaps"] : [],
+    usabilityEvidence: Array.isArray(productUsability.usabilityEvidence) ? productUsability.usabilityEvidence as ProductUsabilityGateInput["usabilityEvidence"] : [],
+    lifecycleHandoffs: Array.isArray(productUsability.lifecycleHandoffs) ? productUsability.lifecycleHandoffs as ProductUsabilityGateInput["lifecycleHandoffs"] : [],
+    referencePatternMap: Array.isArray(productUsability.referencePatternMap) ? productUsability.referencePatternMap as ProductUsabilityGateInput["referencePatternMap"] : [],
+    invalidFields: Array.isArray(productUsability.invalidFields) ? productUsability.invalidFields.map(String) : undefined,
+    gate: productUsability.gate,
   };
 }
 
