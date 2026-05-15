@@ -1250,6 +1250,8 @@ PRD intent
 Quick Plan 或直接编码绕过 requirements analysis、design review 和 task
 sync。
 
+上游产品/需求链路采用 Pattern-First Skill 质量改造：成熟系统级 Skill 的澄清、默认假设、Open Question 分级和可测试性做法作为本地 Skill 的输出要求吸收，不作为当前 runtime 直接调用外部 Skill 的承诺。`refine-product-intent`、`generate-user-stories` 和 `validate-requirements` 必须先关闭或显式阻断高风险不确定项，再允许下游设计、Feature 拆分或执行。
+
 ### 7.4.1 Artifact 粒度责任
 
 | Artifact | Minimum granularity | Review failure |

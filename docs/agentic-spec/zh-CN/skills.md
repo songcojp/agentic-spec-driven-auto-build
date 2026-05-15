@@ -10,6 +10,7 @@
 4. Skill 产物必须保持可追踪：需求 ID、Feature Spec、任务、证据和交付记录之间要能互相定位。
 5. 当仓库事实与规格文档冲突时，先走 `manage-spec-change`，不要绕过规格直接编码。
 6. 共享输出 schema 由 Adapter/Runner 代码提供；Skill 只说明如何满足调用端传入的 schema，不在 `.agents/skills` 根目录维护全局合同文件。
+7. 上游产品/需求类 Skill 采用 Pattern-First 质量改造：成熟系统级 Skill 只作为参考模式，当前运行时仍调用项目本地 Skill。`refine-product-intent`、`generate-user-stories` 和 `validate-requirements` 必须记录默认假设、Open Questions、Blocking Open Questions、用户旅程、验收标准、证据路径和下游阻断条件；不得声称已直接 runtime delegation 到外部 Skill。
 
 ## 生命周期视图
 

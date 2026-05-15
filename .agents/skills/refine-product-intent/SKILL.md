@@ -17,6 +17,10 @@ description: "Create or refine product intent artifacts. Use for PRD generation,
 
 Preserve product language and source intent. Extract actors, goals, non-goals, journeys, acceptance signals, and open questions without inventing implementation detail.
 
+Apply Pattern-First quality rules from `docs/agentic-spec/zh-CN/skill-refact.md`: use mature system-skill behavior as reference patterns only, not as runtime dependencies. Compress low-risk clarification into explicit default assumptions, record medium-risk uncertainty as Open Questions, and record high-risk uncertainty as Blocking Open Questions with `blocked` or `review_needed` status.
+
+When creating or refining product intent, ensure the artifact names goals, non-goals, actors, user journeys, acceptance boundaries, source refs, default assumptions, Open Questions, Blocking Open Questions, and whether the output is ready for `generate-user-stories`. Do not invent product positioning, business rules, security policy, data deletion behavior, or Feature scope to keep the flow moving.
+
 ## References
 
 - Read `references/specdrive-output.md` when invoked by an adapter that requires structured execution output.
@@ -26,4 +30,4 @@ Preserve product language and source intent. Extract actors, goals, non-goals, j
 
 - Do not rely on old dotted Skill names or compatibility aliases.
 - Do not hardcode product-specific UI, database, scheduler, or adapter behavior unless the invocation supplies it as a source constraint.
-- Surface missing decisions as `clarification_needed`, `review_needed`, `risk_review_needed`, or `blocked` instead of inventing facts.
+- Surface missing decisions with `blocked` or `review_needed` status; record clarification-needed or risk-review-needed as the reason, nextAction, or result detail instead of inventing facts.

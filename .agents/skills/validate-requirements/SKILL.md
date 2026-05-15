@@ -20,6 +20,8 @@ Review requirements against source intent and downstream planning needs. Classif
 When validating user stories:
 
 - Use `docs/agentic-spec/requirements/user-stories-standard.md` or the invocation-supplied requirements standard as the content validation contract.
+- Enforce Pattern-First quality rules from `docs/agentic-spec/zh-CN/skill-refact.md`: external mature skills are reference patterns only, and validation must not claim runtime delegation to system skills.
+- Check that default assumptions, Open Questions, and Blocking Open Questions are present when the source contains ambiguity. Medium-risk Open Questions may continue only with a stated safe default and review visibility. Must-scope Blocking Open Questions require `blocked` or `review_needed` status, with clarification-needed or risk-review-needed recorded as the reason, next action, or result detail, and must not advance to HLD, UI Spec, Feature Spec, ready, planning, or execution.
 - Check story depth first. Each Must `US-*` needs actor, context, goal, reason/value, trigger, main scenario, alternate/negative scenarios, done signal, source refs, and priority before downstream design can proceed.
 - Classify shallow, feature-area, or slogan-like user stories as `story_gap`; examples include "manage settings", "configure provider", "publish app", or "improve UI" without concrete context, scenario, and done signal.
 - Check every `REQ-*`, `NFR-*`, and `EDGE-*` row for stable ID, source refs, `US-*` mapping or explicit system-invariant reason, atomic statement, acceptance, evidence, priority, status, and downstream refs when known.
@@ -38,4 +40,4 @@ When validating user stories:
 
 - Do not rely on old dotted Skill names or compatibility aliases.
 - Do not hardcode product-specific UI, database, scheduler, or adapter behavior unless the invocation supplies it as a source constraint.
-- Surface missing decisions as `clarification_needed`, `review_needed`, `risk_review_needed`, or `blocked` instead of inventing facts.
+- Surface missing decisions with `blocked` or `review_needed` status; record clarification-needed or risk-review-needed as the reason, nextAction, or result detail instead of inventing facts.
