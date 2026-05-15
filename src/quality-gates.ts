@@ -359,15 +359,25 @@ function arrayFromRecordField(record: Record<string, unknown>, field: string): u
 function asProductUsabilityGateInput(value: unknown): ProductUsabilityGateInput | undefined {
   const record = asRecord(value);
   if (!record) return undefined;
+  const invalidFields: string[] = [];
   return {
-    priorityStories: Array.isArray(record.priorityStories) ? record.priorityStories.map(String) : [],
-    decisionLog: Array.isArray(record.decisionLog) ? record.decisionLog as ProductUsabilityGateInput["decisionLog"] : [],
-    skillWrapperContracts: Array.isArray(record.skillWrapperContracts) ? record.skillWrapperContracts as ProductUsabilityGateInput["skillWrapperContracts"] : undefined,
-    protocolGaps: Array.isArray(record.protocolGaps) ? record.protocolGaps as ProductUsabilityGateInput["protocolGaps"] : [],
-    usabilityEvidence: Array.isArray(record.usabilityEvidence) ? record.usabilityEvidence as ProductUsabilityGateInput["usabilityEvidence"] : [],
-    lifecycleHandoffs: Array.isArray(record.lifecycleHandoffs) ? record.lifecycleHandoffs as ProductUsabilityGateInput["lifecycleHandoffs"] : [],
-    referencePatternMap: Array.isArray(record.referencePatternMap) ? record.referencePatternMap as ProductUsabilityGateInput["referencePatternMap"] : [],
+    priorityStories: productUsabilityArrayField(record, "priorityStories", invalidFields)?.map(String) ?? [],
+    decisionLog: (productUsabilityArrayField(record, "decisionLog", invalidFields) as ProductUsabilityGateInput["decisionLog"] | undefined) ?? [],
+    skillWrapperContracts: productUsabilityArrayField(record, "skillWrapperContracts", invalidFields) as ProductUsabilityGateInput["skillWrapperContracts"] | undefined,
+    protocolGaps: (productUsabilityArrayField(record, "protocolGaps", invalidFields) as ProductUsabilityGateInput["protocolGaps"] | undefined) ?? [],
+    usabilityEvidence: (productUsabilityArrayField(record, "usabilityEvidence", invalidFields) as ProductUsabilityGateInput["usabilityEvidence"] | undefined) ?? [],
+    lifecycleHandoffs: (productUsabilityArrayField(record, "lifecycleHandoffs", invalidFields) as ProductUsabilityGateInput["lifecycleHandoffs"] | undefined) ?? [],
+    referencePatternMap: (productUsabilityArrayField(record, "referencePatternMap", invalidFields) as ProductUsabilityGateInput["referencePatternMap"] | undefined) ?? [],
+    invalidFields,
   };
+}
+
+function productUsabilityArrayField(record: Record<string, unknown>, field: string, invalidFields: string[]): unknown[] | undefined {
+  if (!(field in record)) return undefined;
+  const value = record[field];
+  if (Array.isArray(value)) return value;
+  invalidFields.push(field);
+  return undefined;
 }
 
 function isValidFoundationExemption(value: unknown): boolean {

@@ -116,6 +116,36 @@ test("feature completion gate rejects and accepts product usability evidence", (
   assert.equal(passing.triggers.includes("product_usability_gap"), false);
 });
 
+test("feature completion gate rejects malformed product usability fields", () => {
+  const result = validateFeatureCompletion({
+    invocation: invocation(),
+    skillOutput: output({
+      productUsability: {
+        priorityStories: ["US-024-04"],
+        protocolGaps: { id: "GAP-BAD" },
+        usabilityEvidence: [
+          {
+            id: "UE-BROWSER",
+            userStoryId: "US-024-04",
+            journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+            checkpointId: "CP-1",
+            mode: "browser",
+            status: "passed",
+            assertion: "Execution Workbench displays usability evidence.",
+            evidenceRefs: ["trace.zip"],
+          },
+        ],
+      },
+    }),
+    changedFiles: ["apps/vscode-extension/src/webviews/execution.ts"],
+  });
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(result.triggers.includes("product_usability_gap"), true);
+  assert.equal(result.details.some((detail) => detail.startsWith("Product Usability Gate failed:")), true);
+  assert.equal(result.details.some((detail) => detail.includes("productUsability.protocolGaps must be an array")), true);
+});
+
 test("app touching file detection supports built-in and configured patterns", () => {
   assert.equal(isAppTouchingFile("src/components/FeaturePanel.tsx"), true);
   assert.equal(isAppTouchingFile("src/runtime.ts"), false);

@@ -107,6 +107,7 @@ export type ProductUsabilityGateInput = {
   usabilityEvidence?: UsabilityEvidence[];
   lifecycleHandoffs?: LifecycleHandoff[];
   referencePatternMap?: ReferencePatternMapEntry[];
+  invalidFields?: string[];
 };
 
 export type ProductUsabilityValidationResult = {
@@ -195,6 +196,7 @@ export function assessProductUsabilityGate(input: ProductUsabilityGateInput | un
   if (!input) return { passed: true, triggers: [], details: ["Product usability evidence not provided."], gaps: [] };
 
   const validationReasons = [
+    ...(input.invalidFields ?? []).map((field) => `productUsability.${field} must be an array when provided.`),
     ...validateDecisionLog(input.decisionLog).reasons,
     ...validateSkillWrapperContract(input.skillWrapperContracts).reasons,
     ...validateProtocolGaps(input.protocolGaps).reasons,
