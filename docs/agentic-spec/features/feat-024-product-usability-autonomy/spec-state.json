@@ -17,11 +17,26 @@
   "lastResult": {
     "status": "completed",
     "summary": "Hybrid golden journey passed with Product Usability Gate, status checker, and Execution Workbench evidence projection.",
-    "verification": [
-      "node --test tests/product-usability.test.ts tests/quality-gates.test.ts tests/status-checker.test.ts tests/review-center.test.ts tests/scheduler.test.ts tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts",
-      "npm run skills:validate",
-      "npm run ide:build",
-      "git diff --check"
-    ]
+    "producedArtifacts": [
+      {
+        "path": "tests/product-usability.test.ts",
+        "kind": "test",
+        "status": "passed",
+        "summary": "Hybrid golden journey covers mature-skill-derived evidence through Product Usability Gate."
+      },
+      {
+        "path": "tests/specdrive-ide.test.ts",
+        "kind": "test",
+        "status": "passed",
+        "summary": "IDE execution detail projection exposes Product Usability evidence for the golden journey."
+      },
+      {
+        "path": "docs/agentic-spec/features/feat-024-product-usability-autonomy/spec-state.json",
+        "kind": "state",
+        "status": "completed",
+        "summary": "FEAT-024 closed after targeted Product Usability, skill validation, IDE build, and diff hygiene checks passed."
+      }
+    ],
+    "completedAt": "2026-05-15T06:36:40.000Z"
   }
 }
