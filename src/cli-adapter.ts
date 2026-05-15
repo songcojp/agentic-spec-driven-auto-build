@@ -2002,15 +2002,17 @@ function completionEvidenceFromSkillOutput(output: SkillOutputContract | undefin
   const changedFiles = Array.isArray(result.changedFiles)
     ? result.changedFiles.map(String)
     : [...(inputFiles ?? []), ...output.producedArtifacts.map((artifact) => artifact.path)];
-  return {
+  const evidence: CompletionEvidenceInput & { productUsability?: unknown } = {
     requirementCoverage: Array.isArray(result.requirementCoverage) ? result.requirementCoverage : undefined,
     acceptanceEvidence: Array.isArray(result.acceptanceEvidence) ? result.acceptanceEvidence : undefined,
     journeyEvidence: Array.isArray(result.journeyEvidence) ? result.journeyEvidence : undefined,
     runtimeEvidence: result.runtimeEvidence,
     deliveryFidelity: result.deliveryFidelity,
     gitDelivery: result.gitDelivery,
+    productUsability: result.productUsability,
     requireRuntimeEvidence: changedFiles.some(isAppTouchingFile),
   };
+  return evidence;
 }
 
 export async function processRunnerQueueItem(

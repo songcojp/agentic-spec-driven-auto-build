@@ -6,6 +6,7 @@ import type {
   SkillArtifactContract,
   SkillOutputContract,
 } from "./cli-adapter.ts";
+import { assessProductUsabilityGate, type ProductUsabilityGateInput } from "./product-usability.ts";
 
 export type RuntimeEvidence = {
   appLaunch?: {
@@ -81,6 +82,13 @@ export function validateFeatureCompletion(input: {
   if (!runtimeEvidence.passed) {
     triggers.push(runtimeEvidence.reason);
     details.push(`Runtime Evidence Gate failed: ${runtimeEvidence.reason}${runtimeEvidence.details.length ? ` (${runtimeEvidence.details.join("; ")})` : ""}.`);
+  }
+
+  const productUsability = assessProductUsabilityGate(asProductUsabilityGateInput(output.result.productUsability));
+  if (!productUsability.passed) {
+    triggers.push(productUsability.reason ?? "product_usability_gap");
+    triggers.push(...productUsability.triggers);
+    details.push(`Product Usability Gate failed: ${productUsability.details.join("; ")}.`);
   }
 
   if (details.length === 0) {
@@ -346,6 +354,20 @@ function resultItemsMentionStructuredEvidence(result: Record<string, unknown>): 
 function arrayFromRecordField(record: Record<string, unknown>, field: string): unknown[] {
   const value = record[field];
   return Array.isArray(value) ? value : [];
+}
+
+function asProductUsabilityGateInput(value: unknown): ProductUsabilityGateInput | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  return {
+    priorityStories: Array.isArray(record.priorityStories) ? record.priorityStories.map(String) : [],
+    decisionLog: Array.isArray(record.decisionLog) ? record.decisionLog as ProductUsabilityGateInput["decisionLog"] : [],
+    skillWrapperContracts: Array.isArray(record.skillWrapperContracts) ? record.skillWrapperContracts as ProductUsabilityGateInput["skillWrapperContracts"] : undefined,
+    protocolGaps: Array.isArray(record.protocolGaps) ? record.protocolGaps as ProductUsabilityGateInput["protocolGaps"] : [],
+    usabilityEvidence: Array.isArray(record.usabilityEvidence) ? record.usabilityEvidence as ProductUsabilityGateInput["usabilityEvidence"] : [],
+    lifecycleHandoffs: Array.isArray(record.lifecycleHandoffs) ? record.lifecycleHandoffs as ProductUsabilityGateInput["lifecycleHandoffs"] : [],
+    referencePatternMap: Array.isArray(record.referencePatternMap) ? record.referencePatternMap as ProductUsabilityGateInput["referencePatternMap"] : [],
+  };
 }
 
 function isValidFoundationExemption(value: unknown): boolean {

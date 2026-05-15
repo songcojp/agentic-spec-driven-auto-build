@@ -53,6 +53,69 @@ test("feature completion gate centralizes closure failures", () => {
   assert.equal(result.details.some((detail) => detail.includes("Runtime Evidence Gate failed")), true);
 });
 
+test("feature completion gate rejects and accepts product usability evidence", () => {
+  const failing = validateFeatureCompletion({
+    invocation: invocation(),
+    skillOutput: output({
+      productUsability: {
+        priorityStories: ["US-024-04"],
+        protocolGaps: [
+          {
+            id: "GAP-EXECUTION-WORKBENCH",
+            category: "runtime_gap",
+            severity: "P1",
+            status: "open",
+            message: "Execution Workbench does not display usability evidence.",
+            affectedStories: ["US-024-04"],
+            affectedJourneys: ["JOURNEY-EXECUTION-WORKBENCH-EVIDENCE"],
+            evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+            resumeStage: "Verify",
+          },
+        ],
+        usabilityEvidence: [],
+        decisionLog: [],
+        lifecycleHandoffs: [],
+        referencePatternMap: [],
+      },
+    }),
+    changedFiles: ["apps/vscode-extension/src/webviews/execution.ts"],
+  });
+
+  assert.equal(failing.status, "review_needed");
+  assert.equal(failing.triggers.includes("product_usability_gap"), true);
+  assert.equal(failing.triggers.includes("runtime_gap"), true);
+  assert.equal(failing.details.some((detail) => detail.startsWith("Product Usability Gate failed:")), true);
+
+  const passing = validateFeatureCompletion({
+    invocation: invocation(),
+    skillOutput: output({
+      productUsability: {
+        priorityStories: ["US-024-04"],
+        protocolGaps: [],
+        usabilityEvidence: [
+          {
+            id: "UE-BROWSER",
+            userStoryId: "US-024-04",
+            journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+            checkpointId: "CP-1",
+            mode: "browser",
+            status: "passed",
+            assertion: "Execution Workbench displays usability evidence.",
+            evidenceRefs: ["trace.zip"],
+          },
+        ],
+        decisionLog: [],
+        lifecycleHandoffs: [],
+        referencePatternMap: [],
+      },
+    }),
+    changedFiles: ["apps/vscode-extension/src/webviews/execution.ts"],
+  });
+
+  assert.equal(passing.status, "completed");
+  assert.equal(passing.triggers.includes("product_usability_gap"), false);
+});
+
 test("app touching file detection supports built-in and configured patterns", () => {
   assert.equal(isAppTouchingFile("src/components/FeaturePanel.tsx"), true);
   assert.equal(isAppTouchingFile("src/runtime.ts"), false);
