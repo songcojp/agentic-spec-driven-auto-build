@@ -13,6 +13,20 @@ description: "Validate requirements for quality and readiness. Use before planni
 4. Produce or review the requested artifacts with traceability to PRD, requirements, HLD, Feature Spec, execution records, tests, or evidence as applicable.
 5. Return the runtime-supplied structured output shape exactly. Echo `executionId`, `skillName`, `requestedAction`, produced artifacts, next action, and Feature-level traceability when the adapter provides them.
 
+## Product Usability Autonomy Wrapper
+
+Apply FEAT-024 Product Usability Autonomy when this skill affects P0/P1 user stories, lifecycle handoffs, execution readiness, verification, review, or completion decisions.
+
+Required wrapper fields:
+
+- Source refs: list the PRD, requirements, HLD, UI Spec, Feature Spec, tasks, code, tests, or ReviewItems consumed.
+- Lifecycle stage: name Define, Plan, Build, Verify, Review, or Ship.
+- Decision policy: record safe automatic decisions as `DecisionLog`; record medium-risk ambiguity as Open Questions; record high-risk ambiguity as Blocking Open Questions.
+- Protocol gaps: classify missing source, story, journey, interaction, state/data, test, runtime, review, and ship evidence as `ProtocolGap`.
+- Usability evidence: preserve or produce `UsabilityEvidence` for P0/P1 stories affected by the skill.
+- Handoff readiness: state whether downstream work may continue and which `LifecycleHandoff` obligations are preserved.
+- Anti-rationalization: do not mark work ready or completed only because text, fixtures, API seeds, self-review, or command success exists.
+
 ## Guidance
 
 Review requirements against source intent and downstream planning needs. Classify gaps as repairable, clarification-needed, risk-review-needed, or blocking.
@@ -22,6 +36,7 @@ When validating user stories:
 - Use `docs/agentic-spec/requirements/user-stories-standard.md` or the invocation-supplied requirements standard as the content validation contract.
 - Enforce Pattern-First quality rules from `docs/agentic-spec/zh-CN/skill-refact.md`: external mature skills are reference patterns only, and validation must not claim runtime delegation to system skills.
 - Check that default assumptions, Open Questions, and Blocking Open Questions are present when the source contains ambiguity. Medium-risk Open Questions may continue only with a stated safe default and review visibility. Must-scope Blocking Open Questions require `blocked` or `review_needed` status, with clarification-needed or risk-review-needed recorded as the reason, next action, or result detail, and must not advance to HLD, UI Spec, Feature Spec, ready, planning, or execution.
+- Enforce Product Usability readiness for P0/P1 stories: missing journey, checkpoint, runtime evidence path, or downstream handoff evidence is a `ProtocolGap` and must block readiness until repaired or explicitly reviewed.
 - Check story depth first. Each Must `US-*` needs actor, context, goal, reason/value, trigger, main scenario, alternate/negative scenarios, done signal, source refs, and priority before downstream design can proceed.
 - Classify shallow, feature-area, or slogan-like user stories as `story_gap`; examples include "manage settings", "configure provider", "publish app", or "improve UI" without concrete context, scenario, and done signal.
 - Check every `REQ-*`, `NFR-*`, and `EDGE-*` row for stable ID, source refs, `US-*` mapping or explicit system-invariant reason, atomic statement, acceptance, evidence, priority, status, and downstream refs when known.

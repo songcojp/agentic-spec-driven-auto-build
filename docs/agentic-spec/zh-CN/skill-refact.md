@@ -22,17 +22,17 @@ PRD / 用户输入粒度不足
   -> 实现阶段反复澄清或交付不可用
 ```
 
-FEAT-023 已经定义 Delivery Fidelity、Spec Artifact Granularity Gate 和 Spec 文档质量修复循环。本文只补充一个更小的设计：如何把成熟 Skill 的好实践引入上游产品/需求链路。
+FEAT-023 已经定义 Delivery Fidelity、Spec Artifact Granularity Gate 和 Spec 文档质量修复循环。本文最初只补充一个更小的设计：如何把成熟 Skill 的好实践引入上游产品/需求链路。FEAT-024 在此基础上把 Pattern-First 扩展为 Product Usability Autonomy：成熟 Skill 实践仍是参考模式，但必须通过 Agentic Spec 自己的 `SkillWrapperContract`、`DecisionLog`、`ProtocolGap`、`UsabilityEvidence`、`LifecycleHandoff` 和 `ReferencePatternMap` 收敛为可治理、可审查、可投影的协议结构。
 
 ## 3. 本轮范围
 
-本轮只增强三个上游 Skill：
+Pattern-First Phase 1 只增强三个上游 Skill：
 
 1. `refine-product-intent`
 2. `generate-user-stories`
 3. `validate-requirements`
 
-本轮不修改：
+Pattern-First Phase 1 不修改：
 
 - VSCode Webview
 - Product Console
@@ -194,3 +194,15 @@ Golden sample 将在本 implementation package 中新增至 `docs/agentic-spec/z
 - 不创建项目级 skillpack registry、lock 文件、import/update 命令。
 - 不修改 UI、调度、Adapter 或 Feature Spec 结构。
 - 不把外部成熟 Skill 描述成当前 runtime dependency。
+
+## 12. FEAT-024 收敛方向
+
+FEAT-024 不改变本文的 runtime delegation 边界：外部成熟 Skill 库仍然不是当前运行时依赖，也不作为可直接调用的 adapter target。变化在于把参考模式从上游三项 Skill 扩展到关键生命周期 Skill，并用本地协议结构承接。
+
+新增收敛要求：
+
+- `docs/agentic-spec/references/mature-skill-pattern-map.md` 作为 `ReferencePatternMap`，按 Skill / workflow 粒度把 Superpowers、Agent Skills 和 Everything Claude Code 实践映射到 SpecDrive 本地规则。
+- 关键 `.agents/skills/*/SKILL.md` 必须声明 Product Usability Autonomy wrapper，说明 source refs、lifecycle stage、decision policy、protocol gaps、usability evidence、handoff readiness 和 anti-rationalization 要求。
+- `refine-product-intent`、`generate-user-stories`、`validate-requirements` 继续负责上游产品/需求质量，但其输出也要能被 `DecisionLog`、`ProtocolGap` 和 `UsabilityEvidence` 消费。
+- `decompose-feature-specs`、`implement-feature`、`verify-behavior`、`review-delivery-evidence` 和 `use-specdrive-lifecycle` 必须把成熟 Skill 实践投影到 Feature readiness、执行证据、用户旅程验证、评审结论和 lifecycle handoff。
+- 当 Product Usability Gate 发现 P0/P1 story、journey、interaction、state/data、test、runtime、review 或 ship 证据缺口时，下游状态应进入 `review_needed`、`risk_review_needed`、`clarification_needed` 或 `blocked`，而不是靠文本完整度继续推进。
