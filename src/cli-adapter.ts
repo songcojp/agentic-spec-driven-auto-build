@@ -2212,7 +2212,9 @@ export async function processRunnerQueueItem(
     }
   }
   const finalStatus = statusCheckResult ? queueStatusFromStatusCheck(statusCheckResult.status, status) : status;
-  const contractSummary = adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
+  const contractSummary = adapterResult.session.exitCode !== 0
+    ? `Codex CLI exited with ${adapterResult.session.exitCode ?? "unknown"}.`
+    : adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
     ? `Skill output contract review needed: ${adapterResult.result.contractValidation.reasons.join("; ")}`
     : adapterResult.result.skillOutput?.summary;
   return {

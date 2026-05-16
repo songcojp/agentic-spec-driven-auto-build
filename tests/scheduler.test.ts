@@ -132,6 +132,48 @@ test("local embedded scheduler preserves review_needed job status", async () => 
   assert.equal(rows.review[0].status, "review_needed");
 });
 
+test("cli.run failed exit overrides non-terminal SkillOutput in Feature spec-state", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-failed-running-state-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const scheduler = createLocalScheduler(dbPath, {
+    runner: () => ({
+      status: 1,
+      stdout: `{"type":"session","session_id":"SESSION-FAILED-RUNNING"}\n${skillOutputEvent("RUN-FAILED-RUNNING", {
+        status: "running",
+        summary: "Validation is still running.",
+      })}`,
+      stderr: "Reading additional input from stdin...",
+    }),
+  });
+
+  const payload = cliRunPayload("RUN-FAILED-RUNNING");
+  const job = scheduler.enqueueCliRun({
+    ...payload,
+    context: {
+      ...payload.context,
+      featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+    },
+  });
+  await scheduler.drain();
+  await scheduler.close();
+  const rows = runSqlite(dbPath, [], [
+    { name: "job", sql: "SELECT status FROM scheduler_job_records WHERE id = ?", params: [job.schedulerJobId] },
+    { name: "execution", sql: "SELECT status, summary FROM execution_records WHERE id = 'RUN-FAILED-RUNNING'" },
+  ]).queries;
+  const state = JSON.parse(readFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "spec-state.json"), "utf8"));
+
+  assert.equal(rows.job[0].status, "failed");
+  assert.equal(rows.execution[0].status, "failed");
+  assert.notEqual(rows.execution[0].summary, "Validation is still running.");
+  assert.equal(state.status, "failed");
+  assert.equal(state.executionStatus, "failed");
+  assert.equal(state.lastResult.status, "failed");
+  assert.deepEqual(state.blockedReasons, [rows.execution[0].summary]);
+  assert.notEqual(state.lastResult.summary, "Validation is still running.");
+});
+
 test("scheduler worker startup can recover transient queued jobs created while worker was unavailable", () => {
   const dbPath = makeDbPath();
   runSqlite(dbPath, [
@@ -1262,7 +1304,7 @@ function skillOutputEvent(executionId: string, overrides: {
   requestedAction?: string;
   producedArtifacts?: Array<{ path: string; kind: string; status: string }>;
   changeIds?: string[];
-  status?: "completed" | "review_needed" | "blocked" | "failed" | "cancelled";
+  status?: "queued" | "running" | "waiting_input" | "approval_needed" | "completed" | "review_needed" | "blocked" | "failed" | "cancelled";
   summary?: string;
   result?: Record<string, unknown>;
 } = {}): string {

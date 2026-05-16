@@ -1491,10 +1491,14 @@ function updateFeatureSpecFileState(input: {
   const featureFolder = featureSpecPath.slice("docs/agentic-spec/features/".length);
   try {
     const current = readFileSpecState(input.workspaceRoot, featureFolder, input.featureId);
-    const patch = input.skillOutput
-      ? skillOutputToSpecStatePatch(input.skillOutput)
+    const outputPatch = input.skillOutput ? skillOutputToSpecStatePatch(input.skillOutput) : undefined;
+    const useSkillOutputStatus = input.skillOutput?.status === input.status;
+    const runnerStatus = runnerStatusToFileSpecStatus(input.status);
+    const patch = useSkillOutputStatus && outputPatch
+      ? outputPatch
       : {
-          status: runnerStatusToFileSpecStatus(input.status),
+          status: runnerStatus,
+          executionStatus: runnerStatusToFileSpecExecutionStatus(input.status),
           blockedReasons: input.status === "blocked" || input.status === "failed" ? [input.summary] : [],
           nextAction: input.status === "running"
             ? "Runner is executing this Feature."
@@ -1503,6 +1507,14 @@ function updateFeatureSpecFileState(input: {
             : input.status === "completed"
               ? "Run status checks and prepare review."
               : "Review execution result and resume or skip.",
+          lastResult: input.status === "running"
+            ? outputPatch?.lastResult ?? current.lastResult
+            : {
+                status: runnerStatus,
+                summary: input.summary,
+                producedArtifacts: input.skillOutput?.producedArtifacts ?? current.lastResult?.producedArtifacts ?? [],
+                completedAt: new Date().toISOString(),
+              },
         };
     writeFileSpecState(input.workspaceRoot, featureFolder, mergeFileSpecState(current, {
       ...patch,
