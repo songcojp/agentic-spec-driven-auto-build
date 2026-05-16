@@ -55,6 +55,18 @@ Default to a delegated, checkpointed execution model for long-running or context
 7. After context compaction, resume by reading `AGENTS.md`, this skill, the Feature Spec files, and the checkpoint before continuing. Treat the checkpoint plus repository state as the execution memory.
 8. The owner thread must reconcile worker outputs, run required verification after integration, route independent review/fix work, and call `$clean-worktree` only after implementation, tests, review, Delivery Fidelity, and Journey Closure evidence are ready.
 
+## Live Task Status Writeback
+
+During `feature_execution`, this skill owns the primary live task status writeback. The scheduler, IDE, or status-checker may patch terminal state as a fallback, but they must not be the normal path for per-task progress.
+
+- Before starting a task slice from `tasks.md`, update that task block in the source Feature Spec `tasks.md` to `Status: running`.
+- When the task slice is complete and its required verification/evidence has passed, update that task block to `Status: done`.
+- If the task cannot continue, update it to the narrowest truthful status: `blocked`, `review_needed`, `approval_needed`, or `failed`.
+- For delegated worker slices, the owner thread writes the status when the worker starts and reconciles it after the worker result; workers may report suggested statuses but must not be the only source of truth.
+- Update `.autobuild/runs/<executionId>/checkpoint.json` after each status change when an `executionId` exists, but do not use the checkpoint as a substitute for the visible `tasks.md` status.
+- Preserve parser-compatible task headings and `Status:` lines. Do not place extra `TASK-*` tokens in checklist prose where the task parser could treat them as separate tasks.
+- Keep task status edits scoped to the active Feature Spec. Do not rewrite unrelated requirements, design, spec-state, or sibling Feature task files while reporting progress.
+
 ## Feature Execution Rules
 
 - Treat the Feature Spec directory in `sourcePaths` as the implementation scope.
