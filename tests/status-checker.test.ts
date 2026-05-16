@@ -32,6 +32,26 @@ test("status checker persists execution result and marks aligned successful run 
   const root = mkdtempSync(join(tmpdir(), "feat-009-done-"));
   const dbPath = makeDbPath();
   initializeSchema(dbPath);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO projects (id, name, goal, project_type, tech_preferences_json, environment, status)
+        VALUES ('project-1', 'SpecDrive', 'Automate specs', 'typescript-service', '[]', 'local', 'ready')`,
+    },
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json)
+        VALUES ('FEAT-009', 'project-1', 'Status Checker', 'implementing', 10, 'feat-009-status-checker', '["REQ-040"]')`,
+    },
+    {
+      sql: `INSERT INTO tasks (id, feature_id, title, status, recovery_state, allowed_files_json)
+        VALUES ('TASK-009', 'FEAT-009', 'Run checks', 'running', 'pending', '[]')`,
+    },
+    {
+      sql: `INSERT INTO task_graph_tasks (
+          id, graph_id, feature_id, title, status, source_requirements_json,
+          acceptance_criteria_json, allowed_files_json, dependencies_json, risk, estimated_effort
+        ) VALUES ('TASK-009', 'TG-009', 'FEAT-009', 'Run checks', 'running', '[]', '[]', '[]', '[]', 'low', 1)`,
+    },
+  ]);
 
   const result = runStatusCheck(baseInput(root, dbPath));
 
@@ -43,6 +63,14 @@ test("status checker persists execution result and marks aligned successful run 
   assert.equal(listSpecAlignmentResults(dbPath, "RUN-009")[0].aligned, true);
   assert.equal(listAuditEvents(dbPath, "run", "RUN-009")[0].eventType, "status_checked");
   assert.equal(listMetricSamples(dbPath).some((metric) => metric.name === "status_check_completed"), true);
+  const runtimeState = runSqlite(dbPath, [], [
+    { name: "task", sql: "SELECT status FROM tasks WHERE id = 'TASK-009'" },
+    { name: "graphTask", sql: "SELECT status FROM task_graph_tasks WHERE id = 'TASK-009'" },
+    { name: "feature", sql: "SELECT status FROM features WHERE id = 'FEAT-009'" },
+  ]).queries;
+  assert.equal(runtimeState.task[0].status, "done");
+  assert.equal(runtimeState.graphTask[0].status, "done");
+  assert.equal(runtimeState.feature[0].status, "done");
 });
 
 test("execution result is sanitized for synchronous and persisted consumers", () => {

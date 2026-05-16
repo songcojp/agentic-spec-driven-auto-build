@@ -1569,6 +1569,7 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
     .sort());
   const latestExecutions = readLatestExecutionsByFeature(dbPath, projectId);
   const latestReviews = readLatestReviewsByFeature(dbPath, projectId);
+  const runtimeTaskStatuses = readRuntimeTaskStatusesByFeature(dbPath, projectId);
   const indexedEntries = Array.from(indexById.values());
 
   return indexedEntries
@@ -1582,7 +1583,7 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
       const indexed = indexById.has(featureId);
       const folderExists = folders.has(folder);
       const baseBlockedReasons = stringArray(state.blockedReasons);
-      const taskProjection = folderExists ? readFeatureTasks(workspaceRoot, folder) : {
+      const taskProjection = folderExists ? readFeatureTasks(workspaceRoot, folder, runtimeTaskStatuses.get(featureId)) : {
         tasks: [],
         blockedReasons: [`Feature index references missing folder: docs/agentic-spec/features/${folder}`],
       };
@@ -1866,14 +1867,21 @@ function resolveFeatureFolder(featureId: string, indexedFolder: string | undefin
   return matchingFolder ?? lowercaseId;
 }
 
-function readFeatureTasks(workspaceRoot: string, folder: string): { tasks: SpecDriveIdeTaskProjection[]; blockedReasons: string[] } {
+function readFeatureTasks(
+  workspaceRoot: string,
+  folder: string,
+  runtimeStatuses?: Map<string, string>,
+): { tasks: SpecDriveIdeTaskProjection[]; blockedReasons: string[] } {
   const tasksPath = join(workspaceRoot, "docs/agentic-spec/features", folder, "tasks.md");
   if (!existsSync(tasksPath)) return {
     tasks: [],
     blockedReasons: [`Feature tasks file is missing: docs/agentic-spec/features/${folder}/tasks.md`],
   };
   const content = readFileSync(tasksPath, "utf8");
-  const tasks = parseFeatureTasksMarkdown(content);
+  const tasks = parseFeatureTasksMarkdown(content).map((task) => ({
+    ...task,
+    status: runtimeStatuses?.get(task.id) ?? task.status,
+  }));
   return {
     tasks,
     blockedReasons: tasks.length > 0 ? [] : [`Feature tasks file has no parseable tasks: docs/agentic-spec/features/${folder}/tasks.md`],
@@ -1893,6 +1901,57 @@ function projectParsedFeatureTask(task: ParsedFeatureTask): SpecDriveIdeTaskProj
     verification: task.verification,
     line: task.line,
   };
+}
+
+function readRuntimeTaskStatusesByFeature(dbPath: string, projectId?: string): Map<string, Map<string, string>> {
+  const params = projectId ? [projectId, projectId, projectId, projectId] : [];
+  const projectFilter = projectId
+    ? `AND (
+        f.project_id = ?
+        OR t.feature_id IN (SELECT id FROM features WHERE project_id = ?)
+      )`
+    : "";
+  const fallbackProjectFilter = projectId
+    ? `AND (
+        f.project_id = ?
+        OR t.feature_id IN (SELECT id FROM features WHERE project_id = ?)
+      )`
+    : "";
+  const result = runSqlite(dbPath, [], [
+    {
+      name: "graphTasks",
+      sql: `SELECT t.id, t.feature_id, t.status
+        FROM task_graph_tasks t
+        LEFT JOIN features f ON f.id = t.feature_id
+        WHERE t.feature_id IS NOT NULL ${projectFilter}
+        ORDER BY t.updated_at DESC, t.rowid DESC`,
+      params: projectId ? params.slice(0, 2) : [],
+    },
+    {
+      name: "tasks",
+      sql: `SELECT t.id, t.feature_id, t.status
+        FROM tasks t
+        LEFT JOIN features f ON f.id = t.feature_id
+        WHERE t.feature_id IS NOT NULL ${fallbackProjectFilter}
+        ORDER BY t.updated_at DESC, t.rowid DESC`,
+      params: projectId ? params.slice(2) : [],
+    },
+  ]);
+  const byFeature = new Map<string, Map<string, string>>();
+  const applyRow = (row: Record<string, unknown>, overwrite: boolean) => {
+    const featureId = optionalString(row.feature_id)?.toUpperCase();
+    const taskId = optionalString(row.id)?.toUpperCase();
+    const status = optionalString(row.status);
+    if (!featureId || !taskId || !status) return;
+    const featureTasks = byFeature.get(featureId) ?? new Map<string, string>();
+    if (overwrite || !featureTasks.has(taskId)) {
+      featureTasks.set(taskId, status);
+    }
+    byFeature.set(featureId, featureTasks);
+  };
+  for (const row of result.queries.tasks) applyRow(row, false);
+  for (const row of result.queries.graphTasks) applyRow(row, true);
+  return byFeature;
 }
 
 function readLatestExecutionsByFeature(

@@ -634,6 +634,11 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
       params: [result.status, new Date().toISOString(), result.summary, JSON.stringify(finalMetadata), payload.executionId],
     },
   ]);
+  updateRuntimeTaskStateForRun(dbPath, {
+    featureId: loaded.featureId ?? featureId,
+    taskId: optionalString(context.taskId),
+    status: result.status,
+  });
   ensureExecutionReviewItem(dbPath, {
     projectId: loaded.projectId ?? payload.projectId,
     featureId: loaded.featureId ?? featureId,
@@ -1221,6 +1226,11 @@ export async function runCodexAppServerRunJob(
       ],
     },
   ]);
+  updateRuntimeTaskStateForRun(dbPath, {
+    featureId: loaded.featureId ?? featureId,
+    taskId: optionalString(context.taskId),
+    status: finalStatus,
+  });
   ensureExecutionReviewItem(dbPath, {
     projectId: loaded.projectId ?? payload.projectId,
     featureId: loaded.featureId ?? featureId,
@@ -1530,6 +1540,11 @@ export async function runGeminiAcpRunJob(
       ],
     },
   ]);
+  updateRuntimeTaskStateForRun(dbPath, {
+    featureId: loaded.featureId ?? featureId,
+    taskId: optionalString(context.taskId),
+    status: finalStatus,
+  });
   ensureExecutionReviewItem(dbPath, {
     projectId: loaded.projectId ?? payload.projectId,
     featureId: loaded.featureId ?? featureId,
@@ -1564,6 +1579,106 @@ export async function runRpcRunJob(
     return runGeminiAcpRunJob(dbPath, payload, geminiAcpTransport);
   }
   return runCodexAppServerRunJob(dbPath, payload, appServerTransport);
+}
+
+function updateRuntimeTaskStateForRun(
+  dbPath: string,
+  input: { featureId?: string; taskId?: string; status: RunnerQueueStatus },
+): void {
+  if (!input.taskId) return;
+  const taskStatus = runtimeTaskStatusForRunnerStatus(input.status);
+  if (!taskStatus) return;
+  const now = new Date().toISOString();
+  const statements = [
+    { sql: "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ? AND status <> 'delivered'", params: [taskStatus, now, input.taskId] },
+    {
+      sql: `UPDATE task_graph_tasks
+        SET status = ?, updated_at = ?
+        WHERE status <> 'delivered'
+          AND (
+            id = ?
+            OR (
+              feature_id = ?
+              AND title = (SELECT title FROM tasks WHERE id = ?)
+              AND (
+                SELECT COUNT(*) FROM task_graph_tasks
+                WHERE feature_id = ?
+                  AND title = (SELECT title FROM tasks WHERE id = ?)
+              ) = 1
+            )
+          )`,
+      params: [taskStatus, now, input.taskId, input.featureId ?? "", input.taskId, input.featureId ?? "", input.taskId],
+    },
+  ];
+  if (taskStatus === "done" && input.featureId) {
+    statements.push({
+      sql: `UPDATE features
+        SET status = CASE
+            WHEN (
+              EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM task_graph_tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            ) OR (
+              NOT EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND EXISTS (SELECT 1 FROM tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            )
+            THEN 'done'
+            ELSE status
+          END,
+          updated_at = CASE
+            WHEN (
+              EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM task_graph_tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            ) OR (
+              NOT EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND EXISTS (SELECT 1 FROM tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            )
+            THEN ?
+            ELSE updated_at
+          END
+        WHERE id = ?`,
+      params: [
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        input.featureId,
+        now,
+        input.featureId,
+      ],
+    });
+  }
+  runSqlite(dbPath, statements);
+}
+
+function runtimeTaskStatusForRunnerStatus(status: RunnerQueueStatus): "done" | "review_needed" | "blocked" | "failed" | undefined {
+  if (status === "completed") return "done";
+  if (status === "review_needed" || status === "approval_needed") return "review_needed";
+  if (status === "blocked") return "blocked";
+  if (status === "failed") return "failed";
+  return undefined;
 }
 
 function updateFeatureSpecFileState(input: {

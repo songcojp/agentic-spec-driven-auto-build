@@ -319,7 +319,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.match(calls[0].args.join("\n"), /--sandbox\ndanger-full-access/);
   assert.equal(rows.runs[0].status, "completed");
   assert.equal(JSON.parse(String(rows.runs[0].metadata_json)).contractValidation.valid, true);
-  assert.equal(rows.task[0].status, "scheduled");
+  assert.equal(rows.task[0].status, "done");
   assert.deepEqual(rows.sessions.map((row) => [row.session_id, row.exit_code]), [["SESSION-CLI", 0]]);
   const cliLogIndex = JSON.parse(String(rows.logs[0].events_json));
   assert.equal(rows.logs[0].stdout, "");

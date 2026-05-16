@@ -657,7 +657,10 @@ function persistStatusCheck(dbPath: string, result: StatusCheckResult, input: St
     runSqlite(dbPath, repeatedFailureStateStatements(result, input));
   }
   if (result.status === "done") {
-    runSqlite(dbPath, closeRemediatedStatusReviewStatements(result));
+    runSqlite(dbPath, [
+      ...completedTaskStateStatements(result, input),
+      ...closeRemediatedStatusReviewStatements(result),
+    ]);
   }
   const shouldRouteToReview = result.status === "review_needed" || isRepeatedFailureEscalation(result);
   const existingReview = shouldRouteToReview ? findOpenStatusReview(dbPath, result) : undefined;
@@ -709,6 +712,95 @@ function persistStatusCheck(dbPath: string, result: StatusCheckResult, input: St
       status: result.status,
     },
   });
+}
+
+function completedTaskStateStatements(result: StatusCheckResult, input: StatusCheckerInput): SqlStatement[] {
+  const now = input.now?.toISOString() ?? result.executionResult.createdAt;
+  const statements: SqlStatement[] = [];
+  if (result.taskId) {
+    statements.push(
+      { sql: "UPDATE tasks SET status = 'done', updated_at = ? WHERE id = ? AND status <> 'delivered'", params: [now, result.taskId] },
+      {
+        sql: `UPDATE task_graph_tasks
+          SET status = 'done', updated_at = ?
+          WHERE status <> 'delivered'
+            AND (
+              id = ?
+              OR (
+                feature_id = ?
+                AND title = (SELECT title FROM tasks WHERE id = ?)
+                AND (
+                  SELECT COUNT(*) FROM task_graph_tasks
+                  WHERE feature_id = ?
+                    AND title = (SELECT title FROM tasks WHERE id = ?)
+                ) = 1
+              )
+            )`,
+        params: [now, result.taskId, result.featureId ?? "", result.taskId, result.featureId ?? "", result.taskId],
+      },
+    );
+  }
+  if (result.featureId) {
+    statements.push({
+      sql: `UPDATE features
+        SET status = CASE
+            WHEN (
+              EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM task_graph_tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            ) OR (
+              NOT EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND EXISTS (SELECT 1 FROM tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            )
+            THEN 'done'
+            ELSE status
+          END,
+          updated_at = CASE
+            WHEN (
+              EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM task_graph_tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            ) OR (
+              NOT EXISTS (SELECT 1 FROM task_graph_tasks WHERE feature_id = ?)
+              AND EXISTS (SELECT 1 FROM tasks WHERE feature_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM tasks
+                WHERE feature_id = ?
+                  AND status NOT IN ('done', 'delivered')
+              )
+            )
+            THEN ?
+            ELSE updated_at
+          END
+        WHERE id = ?`,
+      params: [
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        result.featureId,
+        now,
+        result.featureId,
+      ],
+    });
+  }
+  return statements;
 }
 
 function closeRemediatedStatusReviewStatements(result: StatusCheckResult): SqlStatement[] {

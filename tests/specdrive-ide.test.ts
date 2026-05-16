@@ -869,6 +869,31 @@ test("SpecDrive IDE view uses Feature index as identity source and projects task
   assert.equal(feature?.tasks[1].status, "todo");
 });
 
+test("SpecDrive IDE task projection prefers runtime task status over stale tasks.md status", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json)
+        VALUES ('FEAT-016', 'project-ide', 'SpecDrive IDE Foundation', 'implementing', 10, 'feat-016-specdrive-ide-foundation', '["REQ-074"]')`,
+    },
+    {
+      sql: `INSERT INTO task_graph_tasks (
+          id, graph_id, feature_id, title, status, source_requirements_json,
+          acceptance_criteria_json, allowed_files_json, dependencies_json, risk, estimated_effort
+        ) VALUES ('TASK-016-02', 'TG-016', 'FEAT-016', 'Verify IDE foundation', 'done', '[]', '[]', '[]', '[]', 'low', 1)`,
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+
+  assert.equal(feature?.tasks[0].status, "done");
+  assert.equal(feature?.tasks[1].status, "done");
+});
+
 test("SpecDrive IDE view promotes draft index status when task slices are complete", () => {
   const workspaceRoot = makeWorkspace();
   writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
