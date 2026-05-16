@@ -1499,25 +1499,6 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- In the task-slicing result, include features, queuePlan, dependencyGraph, userStoryMapping, verificationPlan, and openQuestions.",
       ]
     : [];
-  const featureCodingRules = instruction.skillName === "implement-feature" && invocation.operation === "feature_execution"
-    ? [
-        "- For feature_execution, treat the Feature Spec directory in sourcePaths as the implementation scope.",
-        "- Read requirements.md, design.md, and tasks.md from that Feature Spec directory, then implement the concrete tasks described there.",
-        "- Do not satisfy feature_execution by only creating a report JSON file or by only summarizing planned work.",
-        "- If the Feature Spec tasks cannot be implemented from the available source paths, return status blocked with the missing decision or file scope.",
-        "- producedArtifacts must list the actual code, test, config, or documentation files created or updated while executing the Feature Spec.",
-        "- Completed feature_execution outputs must use contractVersion skill-contract/v2. Use v1 only for legacy non-feature skill outputs.",
-        "- For completed feature_execution, result.deliveryFidelity must carry the Delivery Fidelity Ledger: sourceIntent, journeys, behaviorObligations, handoffs, losses, evidence, agentReviews, and completionDecision.",
-        "- Every handoff must preserve upstream behavior obligations. Any intent_loss, journey_loss, interaction_loss, state_loss, data_loss, task_loss, implementation_shortcut, test_bypass, review_gap, or delivery_gap must be recorded and closed or explicitly deferred.",
-        "- API fixtures may only prepare preconditions; they cannot satisfy the behavior under test. Entry/text/page-presence checks alone are insufficient acceptance evidence.",
-        "- The implementation agent cannot self-close delivery. Include independent Test/QA/Review/Release agent review evidence or return review_needed.",
-        "- For completed feature_execution, result must include requirementCoverage, acceptanceEvidence, and journeyEvidence, unless result.foundationExemption explicitly names downstream closure Features and integration evidence.",
-        "- For completed feature_execution that changes UI/app files, result.runtimeEvidence must prove app launch, route access, user interaction, state assertion, reload persistence or equivalent, a negative/boundary path, and screenshot/trace/log evidence. Use result.runtimeExemption only for explicit foundation or stateless cases with evidence.",
-        "- For completed feature_execution, result.gitDelivery must include ownerWorkspace, implementationWorkspace, worktree, branch, commitHash, prUrl, checks, merge, remoteBranchCleanup, localBranchCleanup, and worktreeCleanup evidence. If PR, merge, or cleanup cannot complete, return review_needed, approval_needed, or blocked instead of completed.",
-        "- Do not hide requirementCoverage, acceptanceEvidence, or journeyEvidence inside details, items, or other prose-only fields; they must be direct structured arrays on result.",
-        "- Passing tests or a commit alone is not sufficient for completed; close the Journey Checkpoint and Git delivery lifecycle or return review_needed with journey_not_closed, acceptance_gap, evidence_missing, or delivery_evidence_missing.",
-      ]
-    : [];
   const clarificationRules = instruction.skillName === "manage-spec-change" || instruction.requestedAction === "resolve_clarification"
     ? [
         "- For resolve_clarification, treat operatorInput.clarificationText or operatorInput.comment as an operator-provided answer/decision, not as a new question to ask back.",
@@ -1592,7 +1573,6 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     ...userStoriesRules,
     ...uiSpecRules,
     ...taskSlicingRules,
-    ...featureCodingRules,
     ...clarificationRules,
     ...featureReadyRules,
   ].join("\n");

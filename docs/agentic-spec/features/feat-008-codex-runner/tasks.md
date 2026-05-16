@@ -25,3 +25,4 @@
 - [x] TASK-019: 将执行输出 report 合并到 `.autobuild/runs/<executionId>/report.json`，让每次 run 对应一份独立 report。
 - [x] TASK-020: 实现 terminal contract watchdog；当编码 CLI 已输出最终有效 `SkillOutputContractV1` 但进程继续等待 stdin 或未退出时，自动终止孤立进程，按最终 contract 同步 Execution Record、Scheduler Job、ReviewItem 和 `spec-state.json`，并在日志/report/metadata 中记录 `stdin_wait_after_terminal_contract`。
 - [x] TASK-021: 增加 `codex-cli` Fast mode preset defaults，将 `serviceTier=fast` / `fastMode=true` 渲染为 `service_tier` 与 `features.fast_mode` Codex CLI 配置覆盖，并补充 dry-run、normalize 和 System Settings 编辑投影。
+- [x] TASK-022: 移除 CLI Adapter prompt 中固化的 `implement-feature` Feature 执行流程细则，改由项目本地 `implement-feature`、`setup-worktree` 和 `clean-worktree` 技能声明。

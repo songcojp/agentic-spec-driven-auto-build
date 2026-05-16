@@ -1175,7 +1175,7 @@ test("User Stories prompt keeps user-stories artifact naming and title explicit"
   assert.match(prompt, /Do not create or update docs\/agentic-spec\/requirements\.md/);
 });
 
-test("feature-level coding prompt requires Feature Spec execution instead of report-only completion", () => {
+test("feature-level coding prompt delegates implementation workflow to project skills instead of hardcoding it", () => {
   const prompt = buildExecutionInvocationPrompt(
     executionInvocation({
       operation: "feature_execution",
@@ -1193,11 +1193,14 @@ test("feature-level coding prompt requires Feature Spec execution instead of rep
     "Context",
   );
 
-  assert.match(prompt, /Feature Spec directory/);
-  assert.match(prompt, /requirements\.md, design\.md, and tasks\.md/);
-  assert.match(prompt, /Do not satisfy feature_execution by only creating a report JSON file/);
-  assert.match(prompt, /actual code, test, config, or documentation files/);
-  assert.match(prompt, /requirementCoverage, acceptanceEvidence, and journeyEvidence/);
+  assert.match(prompt, /Skill: implement-feature/);
+  assert.match(prompt, /docs\/agentic-spec\/features\/FEAT-001\/requirements\.md/);
+  assert.match(prompt, /docs\/agentic-spec\/features\/FEAT-001\/design\.md/);
+  assert.match(prompt, /docs\/agentic-spec\/features\/FEAT-001\/tasks\.md/);
+  assert.doesNotMatch(prompt, /Feature Spec directory/);
+  assert.doesNotMatch(prompt, /Do not satisfy feature_execution by only creating a report JSON file/);
+  assert.doesNotMatch(prompt, /result\.gitDelivery must include ownerWorkspace/);
+  assert.doesNotMatch(prompt, /Passing tests or a commit alone is not sufficient/);
 });
 
 test("task-slicing prompt requires the full SkillOutputContract result", () => {

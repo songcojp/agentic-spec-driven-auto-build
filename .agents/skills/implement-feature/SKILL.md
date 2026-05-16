@@ -1,6 +1,6 @@
 ---
 name: implement-feature
-description: "Implement bounded Feature Spec work. Use when a scheduled Feature has approved requirements, design constraints, allowed file scope, source paths, and verification commands, and Codex must modify code, tests, config, or docs."
+description: "Implement bounded Feature Spec work. Use when a scheduled Feature has approved requirements, design constraints, Worktree Mode, allowed file scope, source paths, and verification commands, and Codex must modify code, tests, config, or docs through the governed worktree lifecycle."
 ---
 
 # Feature Implementation
@@ -18,6 +18,44 @@ description: "Implement bounded Feature Spec work. Use when a scheduled Feature 
 Read the Feature Spec, preserve unrelated changes, honor its declared `Worktree Mode`, implement the smallest complete behavior slice, collect Delivery Fidelity and Git delivery evidence, and avoid self-approving completion.
 
 When `Worktree Mode` is missing, return `review_needed` or `clarification_needed` for write-capable work instead of silently writing in the owner workspace. Use `shared-readonly` only for tasks that do not modify files. Use `serial-owner` for high-conflict writes, `feature-worktree` for the default one-Feature-one-PR lifecycle, `worker-worktree` for Feature-internal parallel write tasks that merge back to the Feature branch, and `manual-gated` when Git lifecycle side effects require explicit approval.
+
+## Worktree Lifecycle
+
+Use the project-local worktree skills as the Git lifecycle boundary:
+
+1. Use `$setup-worktree` before any write-capable implementation, verification write, or Git delivery step.
+2. Perform implementation inside the returned implementation workspace, not in the owner workspace, unless `Worktree Mode` explicitly allows `serial-owner`.
+3. Use `$clean-worktree` after implementation, tests, and independent review evidence are ready.
+4. If worktree setup, review, PR, merge, branch cleanup, or worktree cleanup cannot cleanly finish, return `review_needed`, `approval_needed`, or `blocked`; do not return `completed`.
+
+## Feature Execution Rules
+
+- Treat the Feature Spec directory in `sourcePaths` as the implementation scope.
+- Read `requirements.md`, `design.md`, and `tasks.md`, then implement the concrete tasks described there.
+- Do not satisfy `feature_execution` by only creating a report JSON file or by only summarizing planned work.
+- If the Feature Spec tasks cannot be implemented from the available source paths, return `blocked` with the missing decision or file scope.
+- List the actual code, test, config, or documentation files created or updated in `producedArtifacts`.
+- Completed `feature_execution` outputs must use `skill-contract/v2`.
+- Put `requirementCoverage`, `acceptanceEvidence`, `journeyEvidence`, `deliveryFidelity`, and `gitDelivery` directly under `result`.
+- For UI/app changes, provide `runtimeEvidence`; use `runtimeExemption` only for explicit foundation or stateless cases with evidence.
+- Passing tests or a commit alone is not enough for `completed`; close Journey Checkpoint, Delivery Fidelity, and Git delivery, or return the appropriate non-completed status.
+
+## Delivery Evidence
+
+For completed Feature execution, `result.gitDelivery` must include:
+
+- `ownerWorkspace`
+- `implementationWorkspace`
+- `worktree`
+- `branch`
+- `commitHash`
+- `prUrl`
+- `checks`
+- `merge`
+- `remoteBranchCleanup`
+- `localBranchCleanup`
+- `worktreeCleanup`
+- `deliveryExemption`
 
 ## References
 

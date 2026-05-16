@@ -7,6 +7,7 @@
 - [x] TASK-005: 实现 Spec Evolution Advisor，生成带来源证据和影响范围的建议。
 - [x] TASK-006: 实现 PR 创建失败路径，进入 blocked 或 Review Needed 并保留交付证据。
 - [x] TASK-007: 添加测试，验证 PR 正文追踪、交付报告完整性和 Spec Evolution 来源映射。
+- [x] TASK-008: 将 Feature worktree clean 动作固化为 `clean-worktree` 技能，`implement-feature` 通过该技能完成 commit、PR、checks、merge、branch cleanup 和 worktree cleanup 证据。
 
 ## Code Review and Final Test Gate
 

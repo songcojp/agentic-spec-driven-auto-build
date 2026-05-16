@@ -136,6 +136,7 @@ FEAT-000 System Bootstrap
 | ADD-002 | FEAT-004 | 调度触发模式作为 FEAT-004 patch 处理，不拆分独立 Feature。MVP 已实现触发记录、手动入口和时间类入口；CI 失败、审批通过、依赖完成先记录为受控事件触发请求，不直接绕过调度边界。 | 已执行 `feat-004-orchestration-state-machine/tasks.md` 中的 `TASK-010` 至 `TASK-012`。 |
 | CHG-003 | FEAT-004 | `quickstart-validation` 与 `spec-consistency-analysis` 作为后续 Orchestration patch 处理。 | 后续执行计划流水线强制阶段任务。 |
 | CHG-002 / CHG-004 | FEAT-007 | 并行写入策略和测试资源隔离属于 Workspace Isolation 安全边界 patch。 | 执行 `feat-007-workspace-isolation/tasks.md` 中的 `TASK-009` 至 `TASK-010`。 |
+| CHG-067 | FEAT-007 / FEAT-008 / FEAT-012 | Worktree 开发闭环改为 Skill-owned：`setup-worktree` 负责 worktree 开发环境 setup，`clean-worktree` 负责 commit、PR、checks、merge 和 cleanup；平台代码只传 owner workspace / Feature Spec 上下文并校验 `result.gitDelivery`。 | 已同步 `implement-feature`、新增 worktree lifecycle 技能，移除 CLI Adapter / Workspace Manager 中替代 Skill 的固化流程。 |
 | ADD-003 / CHG-005 | FEAT-013 | Dashboard Board 操作和入口作为 Product Console patch 处理，所有写操作走受控命令。 | 已执行 `feat-013-product-console/tasks.md` 中的 `TASK-010` 至 `TASK-011`。 |
 | ADD-004 | FEAT-013 | Product Console 增加界面多语言切换，首次打开默认中文；执行结果、diff、日志、路径、命令输出和用户输入保持原文。 | 已执行 `feat-013-product-console/tasks.md` 中的 `TASK-017` 至 `TASK-019`。 |
 | ADD-005 | FEAT-001 / FEAT-013 | 支持导入现有项目、在统一 `workspace/` 目录下创建新项目，并在 Product Console 中切换当前项目上下文；所有查询、命令、Memory 投影和调度入口按 `project_id` 隔离。 | Product Console UI 已执行 `TASK-020` 至 `TASK-022`；FEAT-001 仍需执行 `TASK-013` 至 `TASK-016` 补项目目录/上下文持久化与初始化目录规则。 |

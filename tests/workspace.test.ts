@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeSchema, listTables } from "../src/schema.ts";
@@ -11,13 +11,11 @@ import {
   checkMergeReadiness,
   classifyWorkspaceConflicts,
   createRollbackBoundary,
-  createWorktree,
   decideCleanup,
   evaluateParallelExecution,
   evaluateParallelFeature,
   persistWorktreeRecord,
   persistWorkspaceEvidence,
-  type CommandRunner,
 } from "../src/workspace.ts";
 
 const stableDate = new Date("2026-04-28T12:00:00.000Z");
@@ -78,33 +76,17 @@ test("parallel execution policy allows reads and isolated writes but serializes 
   assert.equal(incompleteDependency.reasons.includes("incomplete_dependency"), true);
 });
 
-test("worktree creation records path, branch, base commit, target branch, feature, task, runner, and cleanup state", () => {
-  const calls: Array<{ command: string; args: string[]; cwd: string }> = [];
-  const runner: CommandRunner = (command, args, cwd) => {
-    calls.push({ command, args, cwd });
-    if (args.join(" ") === "symbolic-ref --short refs/remotes/origin/HEAD") {
-      return { status: 0, stdout: "origin/main\n", stderr: "" };
-    }
-    if (args.join(" ") === "rev-parse origin/main") {
-      return { status: 0, stdout: "abc123\n", stderr: "" };
-    }
-    if (args[0] === "worktree") {
-      return { status: 0, stdout: "", stderr: "" };
-    }
-    return { status: 1, stdout: "", stderr: "unexpected command" };
-  };
-
-  const record = createWorktree(
-    {
-      repositoryPath: "/repo",
-      worktreePath: "/repo.worktrees/feat-007",
-      featureId: "FEAT-007",
-      taskId: "TASK-001",
-      runnerId: "codex",
-      now: stableDate,
-    },
-    runner,
-  );
+test("worktree evidence records path, branch, base commit, target branch, feature, task, runner, and cleanup state without creating git worktrees", () => {
+  const record = buildWorktreeRecord({
+    worktreePath: "/repo.worktrees/feat-007",
+    featureId: "FEAT-007",
+    taskId: "TASK-001",
+    runnerId: "codex",
+    branch: "work/feat-007-task-001",
+    targetBranch: "main",
+    baseCommit: "abc123",
+    now: stableDate,
+  });
 
   assert.equal(record.path, "/repo.worktrees/feat-007");
   assert.equal(record.branch, "work/feat-007-task-001");
@@ -114,11 +96,14 @@ test("worktree creation records path, branch, base commit, target branch, featur
   assert.equal(record.taskId, "TASK-001");
   assert.equal(record.runnerId, "codex");
   assert.equal(record.cleanupStatus, "active");
-  assert.deepEqual(calls.at(-1), {
-    command: "git",
-    args: ["worktree", "add", "-b", "work/feat-007-task-001", "/repo.worktrees/feat-007", "abc123"],
-    cwd: "/repo",
-  });
+});
+
+test("workspace module records skill-owned worktree evidence but does not execute git lifecycle commands", () => {
+  const source = readFileSync(new URL("../src/workspace.ts", import.meta.url), "utf8");
+
+  assert.doesNotMatch(source, /git['"],\s*\[\s*['"]worktree['"],\s*['"]add['"]/);
+  assert.doesNotMatch(source, /git\s+worktree\s+(add|remove)/);
+  assert.doesNotMatch(source, /function createWorktree/);
 });
 
 test("conflict classifier serializes same files, lock files, schema, shared config, and shared runtime resources", () => {

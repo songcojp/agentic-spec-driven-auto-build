@@ -1,16 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
 import { runSqlite } from "./sqlite.ts";
 import type { SqlStatement } from "./sqlite.ts";
-
-export type CommandResult = {
-  status: number | null;
-  stdout: string;
-  stderr: string;
-};
-
-export type CommandRunner = (command: string, args: string[], cwd: string) => CommandResult;
 
 export type CleanupStatus = "active" | "delivered" | "rolled_back" | "cleanup_ready" | "cleaned" | "cleanup_blocked";
 export type ConflictSeverity = "none" | "medium" | "high";
@@ -98,14 +89,14 @@ export type CleanupDecision = {
   reason: string;
 };
 
-export type CreateWorktreeInput = {
-  repositoryPath: string;
+export type WorktreeRecordInput = {
   worktreePath: string;
   featureId: string;
   taskId?: string;
   runnerId: string;
-  targetBranch?: string;
-  branch?: string;
+  targetBranch: string;
+  branch: string;
+  baseCommit: string;
   projectId?: string;
   now?: Date;
 };
@@ -168,32 +159,7 @@ const SHARED_CONFIG_PATTERNS = [
   /(^|\/)AGENTS\.md$/,
 ];
 
-export function createWorktree(input: CreateWorktreeInput, runner: CommandRunner = runCommand): WorktreeRecord {
-  const targetBranch = input.targetBranch ?? readDefaultBranch(input.repositoryPath, runner);
-  const baseCommit = readBaseCommit(input.repositoryPath, targetBranch, runner);
-  const branch = input.branch ?? buildWorkspaceBranch(input.featureId, input.taskId);
-
-  ensureGitSuccess(
-    runner("git", ["worktree", "add", "-b", branch, input.worktreePath, baseCommit], input.repositoryPath),
-    `create worktree ${input.worktreePath}`,
-  );
-
-  return buildWorktreeRecord({
-    ...input,
-    branch,
-    targetBranch,
-    baseCommit,
-  });
-}
-
-export function buildWorktreeRecord(
-  input: Omit<CreateWorktreeInput, "repositoryPath" | "worktreePath"> & {
-    worktreePath: string;
-    branch: string;
-    targetBranch: string;
-    baseCommit: string;
-  },
-): WorktreeRecord {
+export function buildWorktreeRecord(input: WorktreeRecordInput): WorktreeRecord {
   return {
     id: randomUUID(),
     projectId: input.projectId,
@@ -587,33 +553,6 @@ export const persistWorkspaceEvidence = persistWorkspaceExecutionResults;
 function resourceRef(resource: TestResourceIsolation): string {
   const raw = [resource.kind, resource.name, resource.namespace, resource.connectionRef].filter(Boolean).join(":");
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
-}
-
-function buildWorkspaceBranch(featureId: string, taskId?: string): string {
-  return `work/${featureId.toLowerCase()}${taskId ? `-${taskId.toLowerCase()}` : ""}`;
-}
-
-function readDefaultBranch(repositoryPath: string, runner: CommandRunner): string {
-  const originHead = runner("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], repositoryPath);
-  const branch = originHead.stdout.trim().replace(/^origin\//, "");
-  return branch || "main";
-}
-
-function readBaseCommit(repositoryPath: string, targetBranch: string, runner: CommandRunner): string {
-  const result = runner("git", ["rev-parse", `origin/${targetBranch}`], repositoryPath);
-  ensureGitSuccess(result, `read origin/${targetBranch}`);
-  return result.stdout.trim();
-}
-
-function runCommand(command: string, args: string[], cwd: string): CommandResult {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8", timeout: 10_000, maxBuffer: 1024 * 1024 });
-  return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
-}
-
-function ensureGitSuccess(result: CommandResult, action: string): void {
-  if (result.status !== 0) {
-    throw new Error(`${action} failed: ${result.stderr || result.stdout}`);
-  }
 }
 
 function classifySerialFile(file: string): ConflictReason[] {

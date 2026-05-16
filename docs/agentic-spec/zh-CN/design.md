@@ -451,14 +451,14 @@ Dependencies:
 
 Responsibilities:
 
-- 为项目级并行 Feature 或 Feature 内并行写任务创建独立 Git worktree 和隔离分支。
-- 记录 worktree 路径、分支名、base commit、目标分支、关联 Feature/Task、Runner 和清理状态。
+- 记录并校验执行 Skill 返回的独立 Git worktree、隔离分支和 cleanup 证据。
+- 不直接创建或删除 Feature 实现 worktree；worktree 开发环境 setup 由 `setup-worktree` 执行，清理由 `clean-worktree` 或补交付 Skill 执行。
 - 判断同一文件、锁文件、数据库 schema、公共配置、共享运行时资源等冲突范围是否必须串行。
 - 合并前执行冲突检测、Spec Alignment Check 和必要测试。
 
 Inputs:
 
-- WorktreeRequest。
+- 执行 Skill 返回的 worktree / branch / cleanup evidence。
 - Task file scope。
 - Parallelism policy。
 
@@ -1090,7 +1090,7 @@ Memory 文件必须包含：
 
 ### 6.6 Delivery Interface
 
-PR 创建、checks、merge 和 cleanup 由 `implement-feature` 或补交付 `prepare-release` 执行；Delivery Manager 只记录、校验和汇总 `result.gitDelivery`。受控命令示例：
+PR 创建、checks、merge 和 cleanup 由 `implement-feature` 编排 `clean-worktree`，或由补交付 `prepare-release` 执行；Delivery Manager 只记录、校验和汇总 `result.gitDelivery`。受控命令示例：
 
 ```bash
 gh pr create --title "<feature title>" --body-file "<delivery-report.md>" --base "<target_branch>" --head "<branch>"
@@ -1199,10 +1199,10 @@ sequenceDiagram
   FS->>SM: read ready tasks and dependencies
   FS->>WM: evaluate file/runtime conflict
   alt write task can run
-    WM->>WM: create or assign worktree
-    WM-->>FS: WorktreeRecord
     FS->>SM: Ready -> Scheduled
-    FS->>Q: enqueue cli.run
+    FS->>Q: enqueue cli.run with owner workspace and Feature Spec paths
+    Q->>Q: implement-feature invokes setup-worktree
+    Q-->>WM: skill-owned WorktreeRecord evidence
   else conflict or approval required
     FS->>SM: Ready -> Review Needed/Blocked
   end

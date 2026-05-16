@@ -7,8 +7,10 @@ const root = process.cwd();
 const skillsRoot = join(root, ".agents/skills");
 
 const required = [
+  "clean-worktree",
   "collect-project-context",
   "generate-user-stories",
+  "setup-worktree",
   "decompose-feature-specs",
   "design-architecture",
   "design-ui-spec",
