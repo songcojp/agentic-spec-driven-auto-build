@@ -237,6 +237,7 @@ test("VSCode Execution Workbench queue rows show both feature title and ID", () 
 
   assert.match(html, /Install registry support/);
   assert.match(html, /FEAT-777/);
+  assert.match(html, /class="queue-feature-title">Install registry support<\/span><code class="queue-feature-id">FEAT-777<\/code>/);
 });
 
 test("VSCode Execution Workbench renders execution result sections from durable runtime fields", () => {

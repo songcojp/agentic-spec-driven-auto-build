@@ -1257,6 +1257,42 @@ test("SpecDrive IDE view hides completed schedule-only rows from execution queue
   assert.equal(view.queue.groups.queued[0].operation, "generate_user_stories");
 });
 
+test("SpecDrive IDE queue recovers Feature identity from scheduler payload fields", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        "JOB-TOPLEVEL-FEATURE",
+        "bull-toplevel-feature",
+        "specdrive:execution-adapter",
+        "cli.run",
+        "queued",
+        JSON.stringify({
+          projectId: "project-ide",
+          operation: "feature_execution",
+          featureId: "FEAT-777",
+          featureTitle: "Install registry support",
+          taskId: "TASK-777",
+        }),
+        "2026-05-02T12:06:30.000Z",
+      ],
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const item = view.queue.groups.queued[0];
+
+  assert.equal(item.schedulerJobId, "JOB-TOPLEVEL-FEATURE");
+  assert.equal(item.featureId, "FEAT-777");
+  assert.equal(item.featureTitle, "Install registry support");
+  assert.equal(item.taskId, "TASK-777");
+});
+
 test("SpecDrive IDE queue actions operate on schedule-only jobs", async () => {
   const workspaceRoot = makeWorkspace();
   const dbPath = makeDbPath();

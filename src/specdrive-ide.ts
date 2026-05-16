@@ -2618,7 +2618,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     if (!executionId && isCompletedScheduleOnlyStatus(dbStatus)) continue;
     if (executionId && supersededExecutionIds.has(executionId)) continue;
     const executionPreference = executionPreferenceFromQueueParts(context, metadata, payload, optionalString(row.job_type), optionalString(row.executor_type));
-    const featureId = optionalString(context.featureId) ?? optionalString(payloadContext.featureId);
+    const featureId = optionalString(context.featureId) ?? optionalString(payloadContext.featureId) ?? optionalString(payload.featureId);
     const feature = featureId ? featureById.get(featureId) : undefined;
     const dbFeature = featureId ? dbFeatureById.get(featureId) : undefined;
     const review = featureId ? latestReviews.get(featureId) : undefined;
@@ -2641,7 +2641,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
       operation: optionalString(row.operation) ?? optionalString(payload.operation) ?? optionalString(payload.requestedAction),
       jobType: optionalString(row.job_type),
       featureId,
-      taskId: optionalString(context.taskId) ?? optionalString(payloadContext.taskId),
+      taskId: optionalString(context.taskId) ?? optionalString(payloadContext.taskId) ?? optionalString(payload.taskId),
       adapter: optionalString(metadata.skillName)
         ?? optionalString(metadata.adapterId)
         ?? optionalString(executionPreference?.adapterId)
@@ -2660,6 +2660,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
         ?? dbFeature?.title
         ?? optionalString(context.featureTitle)
         ?? optionalString(payloadContext.featureTitle)
+        ?? optionalString(payload.featureTitle)
         ?? optionalString(metadata.featureTitle),
       featureDescription: feature?.description ?? dbFeature?.description,
       stateReason,
