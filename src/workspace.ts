@@ -1,16 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
-import { basename, dirname, join } from "node:path";
+import { basename } from "node:path";
 import { runSqlite } from "./sqlite.ts";
 import type { SqlStatement } from "./sqlite.ts";
-
-export type CommandResult = {
-  status: number | null;
-  stdout: string;
-  stderr: string;
-};
-
-export type CommandRunner = (command: string, args: string[], cwd: string) => CommandResult;
 
 export type CleanupStatus = "active" | "delivered" | "rolled_back" | "cleanup_ready" | "cleaned" | "cleanup_blocked";
 export type ConflictSeverity = "none" | "medium" | "high";
@@ -98,33 +89,16 @@ export type CleanupDecision = {
   reason: string;
 };
 
-export type CreateWorktreeInput = {
-  repositoryPath: string;
+export type WorktreeRecordInput = {
   worktreePath: string;
   featureId: string;
   taskId?: string;
   runnerId: string;
-  targetBranch?: string;
-  branch?: string;
+  targetBranch: string;
+  branch: string;
+  baseCommit: string;
   projectId?: string;
   now?: Date;
-};
-
-export type PrepareFeatureWorktreeInput = {
-  repositoryPath: string;
-  featureId: string;
-  featureFolder?: string;
-  runnerId: string;
-  projectId?: string;
-  targetBranch?: string;
-  now?: Date;
-};
-
-export type PreparedFeatureWorktree = {
-  ownerWorkspaceRoot: string;
-  implementationWorkspaceRoot: string;
-  record: WorktreeRecord;
-  alreadyIsolated: boolean;
 };
 
 export type ParallelFeatureInput = {
@@ -185,102 +159,7 @@ const SHARED_CONFIG_PATTERNS = [
   /(^|\/)AGENTS\.md$/,
 ];
 
-export function createWorktree(input: CreateWorktreeInput, runner: CommandRunner = runCommand): WorktreeRecord {
-  const targetBranch = input.targetBranch ?? readDefaultBranch(input.repositoryPath, runner);
-  const baseCommit = readBaseCommit(input.repositoryPath, targetBranch, runner);
-  const branch = input.branch ?? buildWorkspaceBranch(input.featureId, input.taskId);
-
-  ensureGitSuccess(
-    runner("git", ["worktree", "add", "-b", branch, input.worktreePath, baseCommit], input.repositoryPath),
-    `create worktree ${input.worktreePath}`,
-  );
-
-  return buildWorktreeRecord({
-    ...input,
-    branch,
-    targetBranch,
-    baseCommit,
-  });
-}
-
-export function prepareFeatureWorktree(input: PrepareFeatureWorktreeInput, runner: CommandRunner = runCommand): PreparedFeatureWorktree {
-  const repositoryPath = input.repositoryPath;
-  const targetBranch = input.targetBranch ?? readDefaultBranch(repositoryPath, runner);
-  const baseCommit = readBaseCommit(repositoryPath, targetBranch, runner);
-  const branch = buildFeatureBranch(input.featureFolder ?? input.featureId);
-  const existingIsolation = detectExistingWorktree(repositoryPath, runner);
-
-  if (existingIsolation.alreadyIsolated) {
-    return {
-      ownerWorkspaceRoot: repositoryPath,
-      implementationWorkspaceRoot: repositoryPath,
-      alreadyIsolated: true,
-      record: buildWorktreeRecord({
-        projectId: input.projectId,
-        worktreePath: repositoryPath,
-        featureId: input.featureId,
-        runnerId: input.runnerId,
-        branch: existingIsolation.branch || branch,
-        targetBranch,
-        baseCommit,
-        now: input.now,
-      }),
-    };
-  }
-
-  const existingWorktreePath = findWorktreePathForBranch(repositoryPath, branch, runner);
-  if (existingWorktreePath) {
-    return {
-      ownerWorkspaceRoot: repositoryPath,
-      implementationWorkspaceRoot: existingWorktreePath,
-      alreadyIsolated: false,
-      record: buildWorktreeRecord({
-        projectId: input.projectId,
-        worktreePath: existingWorktreePath,
-        featureId: input.featureId,
-        runnerId: input.runnerId,
-        branch,
-        targetBranch,
-        baseCommit,
-        now: input.now,
-      }),
-    };
-  }
-
-  const worktreePath = join(dirname(repositoryPath), `${basename(repositoryPath)}.worktrees`, sanitizePathSegment(input.featureFolder ?? input.featureId));
-  const branchExists = gitRefExists(repositoryPath, `refs/heads/${branch}`, runner);
-  ensureGitSuccess(
-    branchExists
-      ? runner("git", ["worktree", "add", worktreePath, branch], repositoryPath)
-      : runner("git", ["worktree", "add", "-b", branch, worktreePath, baseCommit], repositoryPath),
-    `create feature worktree ${worktreePath}`,
-  );
-
-  return {
-    ownerWorkspaceRoot: repositoryPath,
-    implementationWorkspaceRoot: worktreePath,
-    alreadyIsolated: false,
-    record: buildWorktreeRecord({
-      projectId: input.projectId,
-      worktreePath,
-      featureId: input.featureId,
-      runnerId: input.runnerId,
-      branch,
-      targetBranch,
-      baseCommit,
-      now: input.now,
-    }),
-  };
-}
-
-export function buildWorktreeRecord(
-  input: Omit<CreateWorktreeInput, "repositoryPath" | "worktreePath"> & {
-    worktreePath: string;
-    branch: string;
-    targetBranch: string;
-    baseCommit: string;
-  },
-): WorktreeRecord {
+export function buildWorktreeRecord(input: WorktreeRecordInput): WorktreeRecord {
   return {
     id: randomUUID(),
     projectId: input.projectId,
@@ -674,82 +553,6 @@ export const persistWorkspaceEvidence = persistWorkspaceExecutionResults;
 function resourceRef(resource: TestResourceIsolation): string {
   const raw = [resource.kind, resource.name, resource.namespace, resource.connectionRef].filter(Boolean).join(":");
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
-}
-
-function buildWorkspaceBranch(featureId: string, taskId?: string): string {
-  return `work/${featureId.toLowerCase()}${taskId ? `-${taskId.toLowerCase()}` : ""}`;
-}
-
-function buildFeatureBranch(featureFolderOrId: string): string {
-  return `feat/${sanitizePathSegment(featureFolderOrId)}`;
-}
-
-function readDefaultBranch(repositoryPath: string, runner: CommandRunner): string {
-  const originHead = runner("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], repositoryPath);
-  const branch = originHead.stdout.trim().replace(/^origin\//, "");
-  if (branch) return branch;
-  const currentBranch = runner("git", ["branch", "--show-current"], repositoryPath).stdout.trim();
-  return currentBranch || "main";
-}
-
-function readBaseCommit(repositoryPath: string, targetBranch: string, runner: CommandRunner): string {
-  for (const ref of [`origin/${targetBranch}`, targetBranch, "HEAD"]) {
-    const result = runner("git", ["rev-parse", ref], repositoryPath);
-    if (result.status === 0 && result.stdout.trim()) return result.stdout.trim();
-  }
-  const result = runner("git", ["rev-parse", "HEAD"], repositoryPath);
-  ensureGitSuccess(result, `read base commit for ${targetBranch}`);
-  return result.stdout.trim();
-}
-
-function runCommand(command: string, args: string[], cwd: string): CommandResult {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8", timeout: 10_000, maxBuffer: 1024 * 1024 });
-  return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
-}
-
-function ensureGitSuccess(result: CommandResult, action: string): void {
-  if (result.status !== 0) {
-    throw new Error(`${action} failed: ${result.stderr || result.stdout}`);
-  }
-}
-
-function detectExistingWorktree(repositoryPath: string, runner: CommandRunner): { alreadyIsolated: boolean; branch: string } {
-  const gitDir = runner("git", ["rev-parse", "--git-dir"], repositoryPath);
-  const commonDir = runner("git", ["rev-parse", "--git-common-dir"], repositoryPath);
-  if (gitDir.status !== 0 || commonDir.status !== 0) {
-    throw new Error(`Project workspace is not a Git repository: ${repositoryPath}`);
-  }
-  const superProject = runner("git", ["rev-parse", "--show-superproject-working-tree"], repositoryPath);
-  const isSubmodule = superProject.status === 0 && superProject.stdout.trim().length > 0;
-  const branch = runner("git", ["branch", "--show-current"], repositoryPath).stdout.trim();
-  return {
-    alreadyIsolated: !isSubmodule && gitDir.stdout.trim() !== commonDir.stdout.trim(),
-    branch,
-  };
-}
-
-function findWorktreePathForBranch(repositoryPath: string, branch: string, runner: CommandRunner): string | undefined {
-  const result = runner("git", ["worktree", "list", "--porcelain"], repositoryPath);
-  if (result.status !== 0) return undefined;
-  let currentPath: string | undefined;
-  for (const line of result.stdout.split(/\r?\n/)) {
-    if (line.startsWith("worktree ")) {
-      currentPath = line.slice("worktree ".length).trim();
-      continue;
-    }
-    if (line === `branch refs/heads/${branch}` && currentPath) {
-      return currentPath;
-    }
-  }
-  return undefined;
-}
-
-function gitRefExists(repositoryPath: string, ref: string, runner: CommandRunner): boolean {
-  return runner("git", ["rev-parse", "--verify", ref], repositoryPath).status === 0;
-}
-
-function sanitizePathSegment(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "feature";
 }
 
 function classifySerialFile(file: string): ConflictReason[] {

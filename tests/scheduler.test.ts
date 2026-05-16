@@ -268,14 +268,14 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
     { name: "runs", sql: "SELECT status, metadata_json FROM execution_records WHERE id = 'RUN-CLI'" },
     { name: "task", sql: "SELECT status FROM task_graph_tasks WHERE id = 'TASK-CLI'" },
     { name: "sessions", sql: "SELECT session_id, exit_code FROM cli_session_records WHERE run_id = 'RUN-CLI'" },
-    { name: "logs", sql: "SELECT stdout FROM raw_execution_logs WHERE run_id = 'RUN-CLI'" },
+    { name: "logs", sql: "SELECT stdout, events_json FROM raw_execution_logs WHERE run_id = 'RUN-CLI'" },
     { name: "statusChecks", sql: "SELECT kind, summary, metadata_json FROM status_check_results WHERE run_id = 'RUN-CLI-SPY'" },
     { name: "policy", sql: "SELECT sandbox_mode FROM runner_policies WHERE run_id = 'RUN-CLI-SPY'" },
   ]).queries;
 
   assert.equal(result.status, "completed");
   assert.equal(resultWithSpy.status, "completed");
-  assert.equal(calls[0].cwd, expectedFeatureWorktree(root));
+  assert.equal(calls[0].cwd, root);
   assert.match(calls[0].args.join("\n"), /Execute this SpecDrive task/);
   assert.match(calls[0].args.join("\n"), /\[AUTOBUILD INVOCATION\]/);
   assert.match(calls[0].args.join("\n"), /\.autobuild\/memory\/constitution\.md/);
@@ -291,8 +291,11 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(JSON.parse(String(rows.runs[0].metadata_json)).contractValidation.valid, true);
   assert.equal(rows.task[0].status, "scheduled");
   assert.deepEqual(rows.sessions.map((row) => [row.session_id, row.exit_code]), [["SESSION-CLI", 0]]);
-  assert.match(String(rows.logs[0].stdout), /skill-contract\/v2/);
-  assert.equal(existsSync(join(expectedFeatureWorktree(root), ".autobuild", "runs", "RUN-CLI", "WORKPAD.md")), true);
+  const cliLogIndex = JSON.parse(String(rows.logs[0].events_json));
+  assert.equal(rows.logs[0].stdout, "");
+  assert.equal(cliLogIndex.storage, "file");
+  assert.match(readFileSync(cliLogIndex.stdoutPath, "utf8"), /skill-contract\/v2/);
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-CLI", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -634,7 +637,9 @@ test("cli.run does not include change ids in the execution invocation", async ()
   const metadata = JSON.parse(String(rows[0].metadata_json));
 
   assert.equal(result.status, "completed");
-  assert.equal(Object.prototype.hasOwnProperty.call(metadata.executionInvocation.traceability, "changeIds"), false);
+  const inputLog = JSON.parse(readFileSync(join(root, ".autobuild", "runs", "RUN-NO-CHANGE-ID", "cli-input.json"), "utf8"));
+  assert.equal(Object.prototype.hasOwnProperty.call(inputLog.executionInvocation.traceability, "changeIds"), false);
+  assert.equal(metadata.executionInvocation, undefined);
 });
 
 test("cli.run blocks when target project workspace is missing or lacks workspace skills", async () => {
@@ -737,7 +742,7 @@ test("cli.run uses active Gemini CLI adapter from adapter configuration", async 
   assert.equal(result.status, "completed");
   assert.equal(calls[0].command, "gemini");
   assert.deepEqual(calls[0].args.slice(0, 5), ["--model", "gemini-3-pro-preview", "--output-format", "stream-json", "-p"]);
-  assert.equal(calls[0].cwd, expectedFeatureWorktree(root));
+  assert.equal(calls[0].cwd, root);
 });
 
 test("cli.run can select built-in Claude Code CLI adapter from job execution preference", async () => {
@@ -768,7 +773,7 @@ test("cli.run can select built-in Claude Code CLI adapter from job execution pre
   assert.equal(calls[0].command, "claude");
   assert.deepEqual(calls[0].args.slice(0, 8), ["-p", calls[0].args[1], "--model", "sonnet", "--effort", "medium", "--output-format", "json"]);
   assert.equal(calls[0].args[calls[0].args.indexOf("--permission-mode") + 1], "acceptEdits");
-  assert.equal(calls[0].cwd, expectedFeatureWorktree(root));
+  assert.equal(calls[0].cwd, root);
 });
 
 test("codex.rpc.run executes mocked app-server transport and persists runner artifacts", async () => {
@@ -820,7 +825,7 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
     { name: "run", sql: "SELECT status, metadata_json FROM execution_records WHERE id = 'RUN-APP-SERVER'" },
     { name: "policy", sql: "SELECT model, reasoning_effort FROM runner_policies WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "session", sql: "SELECT session_id, command, args_json, exit_code FROM cli_session_records WHERE run_id = 'RUN-APP-SERVER'" },
-    { name: "log", sql: "SELECT stdout FROM raw_execution_logs WHERE run_id = 'RUN-APP-SERVER'" },
+    { name: "log", sql: "SELECT stdout, events_json FROM raw_execution_logs WHERE run_id = 'RUN-APP-SERVER'" },
     { name: "statusChecks", sql: "SELECT kind, summary FROM status_check_results WHERE run_id = 'RUN-APP-SERVER'" },
   ]).queries;
 
@@ -834,8 +839,6 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   assert.equal(metadata.turnId, "TURN-APP");
   assert.equal(metadata.transport, "stdio");
   assert.equal(metadata.model, "gpt-5.5");
-  assert.equal(metadata.cwd, expectedFeatureWorktree(root));
-  assert.equal(metadata.ownerWorkspaceRoot, root);
   assert.equal(metadata.contractValidation.valid, true);
   assert.equal(rows.policy[0].model, "gpt-5.5");
   assert.equal(rows.policy[0].reasoning_effort, "high");
@@ -843,8 +846,12 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   assert.equal(rows.session[0].command, "codex");
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["app-server"]);
   assert.equal(rows.session[0].exit_code, 0);
-  assert.equal(rows.log[0].stdout, "done");
-  assert.equal(existsSync(join(expectedFeatureWorktree(root), ".autobuild", "runs", "RUN-APP-SERVER", "WORKPAD.md")), true);
+  const appServerLogIndex = JSON.parse(String(rows.log[0].events_json));
+  assert.equal(rows.log[0].stdout, "");
+  assert.equal(appServerLogIndex.storage, "file");
+  assert.equal(appServerLogIndex.eventCount, appServerLogIndex.eventRefs.length);
+  assert.ok(appServerLogIndex.eventCount >= 1);
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-APP-SERVER", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -891,7 +898,7 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
   const rows = runSqlite(dbPath, [], [
     { name: "run", sql: "SELECT status, metadata_json FROM execution_records WHERE id = 'RUN-GEMINI-ACP-RPC'" },
     { name: "session", sql: "SELECT session_id, command, args_json, exit_code FROM cli_session_records WHERE run_id = 'RUN-GEMINI-ACP-RPC'" },
-    { name: "log", sql: "SELECT stdout FROM raw_execution_logs WHERE run_id = 'RUN-GEMINI-ACP-RPC'" },
+    { name: "log", sql: "SELECT stdout, events_json FROM raw_execution_logs WHERE run_id = 'RUN-GEMINI-ACP-RPC'" },
   ]).queries;
 
   assert.equal(result.status, "completed");
@@ -907,8 +914,12 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
   assert.equal(rows.session[0].command, "gemini");
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["--acp", "--skip-trust"]);
   assert.equal(rows.session[0].exit_code, 0);
-  assert.match(String(rows.log[0].stdout), /RUN-GEMINI-ACP-RPC/);
-  assert.equal(existsSync(join(expectedFeatureWorktree(root), ".autobuild", "runs", "RUN-GEMINI-ACP-RPC", "WORKPAD.md")), true);
+  const geminiLogIndex = JSON.parse(String(rows.log[0].events_json));
+  assert.equal(rows.log[0].stdout, "");
+  assert.equal(geminiLogIndex.storage, "file");
+  assert.equal(geminiLogIndex.eventCount, geminiLogIndex.eventRefs.length);
+  assert.ok(geminiLogIndex.eventCount >= 1);
+  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-GEMINI-ACP-RPC", "WORKPAD.md")), true);
 });
 
 test("codex.rpc.run projects approval pending to Feature spec-state", async () => {
@@ -1108,7 +1119,7 @@ test("codex.rpc.run routes invalid completed SkillOutputContractV1 to review_nee
   const result = await runCodexAppServerRunJob(dbPath, cliRunPayload("RUN-BAD-CONTRACT"), transport);
   const rows = runSqlite(dbPath, [], [
     { name: "run", sql: "SELECT status, summary, metadata_json FROM execution_records WHERE id = 'RUN-BAD-CONTRACT'" },
-    { name: "log", sql: "SELECT stderr FROM raw_execution_logs WHERE run_id = 'RUN-BAD-CONTRACT'" },
+    { name: "log", sql: "SELECT stderr, events_json FROM raw_execution_logs WHERE run_id = 'RUN-BAD-CONTRACT'" },
   ]).queries;
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
 
@@ -1116,7 +1127,11 @@ test("codex.rpc.run routes invalid completed SkillOutputContractV1 to review_nee
   assert.equal(rows.run[0].status, "review_needed");
   assert.match(String(rows.run[0].summary), /executionId mismatch/);
   assert.equal(metadata.contractValidation.valid, false);
-  assert.match(String(rows.log[0].stderr), /executionId mismatch/);
+  const badContractLogIndex = JSON.parse(String(rows.log[0].events_json));
+  assert.equal(rows.log[0].stderr, "");
+  assert.equal(badContractLogIndex.storage, "file");
+  assert.equal(badContractLogIndex.eventCount, badContractLogIndex.eventRefs.length);
+  assert.ok(badContractLogIndex.eventCount >= 1);
 });
 
 test("cli.run routes completed feature execution without journey evidence to review_needed", async () => {
@@ -1431,8 +1446,4 @@ function commitWorkspace(root: string, message: string): void {
 function runGit(root: string, args: string[]): void {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   assert.equal(result.status, 0, `git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
-}
-
-function expectedFeatureWorktree(root: string): string {
-  return join(`${root}.worktrees`, "feat-cli");
 }

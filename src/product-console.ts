@@ -6236,12 +6236,27 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
   const result = runSqlite(dbPath, [], [
     {
       name: "executions",
-      sql: `SELECT er.id, er.scheduler_job_id, er.executor_type, er.operation, er.project_id, er.context_json, er.metadata_json,
+      sql: `SELECT er.id, er.scheduler_job_id, er.executor_type, er.operation, er.project_id,
           json_extract(er.context_json, '$.featureId') AS feature_id,
           json_extract(er.context_json, '$.taskId') AS task_id,
-          rp.model AS policy_model
+          json_extract(er.context_json, '$.workspaceRoot') AS context_workspace_root,
+          json_extract(er.context_json, '$.model') AS context_model,
+          json_extract(er.context_json, '$.adapterId') AS context_adapter_id,
+          json_extract(er.context_json, '$.executionPreference.adapterId') AS context_preference_adapter_id,
+          json_extract(er.context_json, '$.executionPreference.runMode') AS context_preference_run_mode,
+          json_extract(er.metadata_json, '$.workspaceRoot') AS metadata_workspace_root,
+          json_extract(er.metadata_json, '$.model') AS metadata_model,
+          json_extract(er.metadata_json, '$.adapterId') AS metadata_adapter_id,
+          json_extract(er.metadata_json, '$.executionPreference.adapterId') AS metadata_preference_adapter_id,
+          json_extract(er.metadata_json, '$.executionPreference.runMode') AS metadata_preference_run_mode,
+          (
+            SELECT rp.model
+            FROM runner_policies rp
+            WHERE rp.run_id = er.id
+            ORDER BY rp.created_at DESC, rp.rowid DESC
+            LIMIT 1
+          ) AS policy_model
         FROM execution_records er
-        LEFT JOIN runner_policies rp ON rp.run_id = er.id
         ${projectFilter}
         ORDER BY COALESCE(er.completed_at, er.updated_at, er.started_at, '') DESC`,
       params: projectParams,
@@ -6268,7 +6283,7 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
       name: "rawExecutionLogs",
       sql: `SELECT id, run_id, events_json, created_at
         FROM raw_execution_logs
-        ${projectId ? "WHERE run_id IN (SELECT id FROM execution_records WHERE project_id = ?)" : ""}
+        ${projectId ? "WHERE run_id IN (SELECT id FROM execution_records WHERE project_id = ?) AND length(events_json) <= 100000" : "WHERE length(events_json) <= 100000"}
         ORDER BY created_at, rowid`,
       params: projectParams,
     },
@@ -6287,11 +6302,9 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
 
   for (const execution of result.queries.executions) {
     const runId = String(execution.id);
-    const context = parseJsonObject(execution.context_json);
-    const metadata = parseJsonObject(execution.metadata_json);
     const project = optionalString(execution.project_id);
-    const workspaceRoot = optionalString(metadata.workspaceRoot)
-      ?? optionalString(context.workspaceRoot)
+    const workspaceRoot = optionalString(execution.metadata_workspace_root)
+      ?? optionalString(execution.context_workspace_root)
       ?? (project ? workspaceRootByProject.get(project) : undefined);
     if (!workspaceRoot) continue;
     const runDir = join(workspaceRoot, ".autobuild", "runs", sanitizeRunPathSegment(runId));
@@ -6314,8 +6327,8 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
       activeRpcAdapter,
     });
     const model = optionalString(execution.policy_model)
-      ?? optionalString(metadata.model)
-      ?? optionalString(context.model)
+      ?? optionalString(execution.metadata_model)
+      ?? optionalString(execution.context_model)
       ?? pricingAdapter?.defaults?.model;
     const pricing = existingTokenRow
       ? recalculateExistingTokenPricing(existingTokenRow, normalized, model)
@@ -6374,8 +6387,8 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
           runId,
           optionalString(execution.scheduler_job_id) ?? null,
           project ?? null,
-          optionalString(execution.feature_id) ?? optionalString(context.featureId) ?? null,
-          optionalString(execution.task_id) ?? optionalString(context.taskId) ?? null,
+          optionalString(execution.feature_id) ?? null,
+          optionalString(execution.task_id) ?? null,
           optionalString(execution.operation) ?? null,
           model ?? null,
           normalized.inputTokens,
@@ -6521,15 +6534,11 @@ function adapterForExecutionPricing(
     activeRpcAdapter: RpcAdapterConfig | undefined;
   },
 ): ExecutionPricingAdapter | undefined {
-  const context = parseJsonObject(execution.context_json);
-  const metadata = parseJsonObject(execution.metadata_json);
-  const metadataPreference = parseJsonObject(metadata.executionPreference);
-  const contextPreference = parseJsonObject(context.executionPreference);
-  const adapterId = optionalString(metadata.adapterId)
-    ?? optionalString(metadataPreference.adapterId)
-    ?? optionalString(context.adapterId)
-    ?? optionalString(contextPreference.adapterId);
-  const adapterKind = adapterKindFromExecution(execution, metadataPreference, contextPreference);
+  const adapterId = optionalString(execution.metadata_adapter_id)
+    ?? optionalString(execution.metadata_preference_adapter_id)
+    ?? optionalString(execution.context_adapter_id)
+    ?? optionalString(execution.context_preference_adapter_id);
+  const adapterKind = adapterKindFromExecution(execution);
   if (adapterId) {
     if (adapterKind === "rpc") {
       const adapter = input.rpcAdaptersById.get(adapterId);
@@ -6553,10 +6562,8 @@ function adapterForExecutionPricing(
 
 function adapterKindFromExecution(
   execution: Record<string, unknown>,
-  metadataPreference: Record<string, unknown>,
-  contextPreference: Record<string, unknown>,
 ): "cli" | "rpc" | undefined {
-  const runMode = optionalString(metadataPreference.runMode) ?? optionalString(contextPreference.runMode);
+  const runMode = optionalString(execution.metadata_preference_run_mode) ?? optionalString(execution.context_preference_run_mode);
   if (runMode === "cli" || runMode === "rpc") return runMode;
   const executorType = optionalString(execution.executor_type)?.toLowerCase();
   if (!executorType) return undefined;

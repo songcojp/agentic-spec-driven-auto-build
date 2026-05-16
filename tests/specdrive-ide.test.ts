@@ -64,6 +64,110 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
   assert.equal(view.factSources.includes("execution_records"), true);
 });
 
+test("SpecDrive IDE status projections prefer Feature spec-state over stale execution rows", () => {
+  const workspaceRoot = makeWorkspace();
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-016",
+    status: "failed",
+    executionStatus: "failed",
+    currentJob: { executionId: "RUN-IDE", schedulerJobId: "JOB-IDE" },
+    blockedReasons: ["Codex CLI exited with 1."],
+    dependencies: ["FEAT-013"],
+    lastResult: { status: "failed", summary: "Codex CLI exited with 1." },
+    nextAction: "Inspect failure evidence and retry from Execution Workbench.",
+    history: [],
+  }));
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  seedRuntimeState(dbPath);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+  const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-IDE");
+
+  assert.equal(feature?.status, "failed");
+  assert.equal(feature?.latestExecutionStatus, "failed");
+  assert.equal(view.queue.groups.failed?.[0]?.executionId, "RUN-IDE");
+  assert.equal(view.queue.groups.running, undefined);
+  assert.equal(view.queue.groups.failed?.[0]?.stateReason, "Codex CLI exited with 1.");
+  assert.equal(detail?.status, "failed");
+  assert.equal(detail?.stateReason, "Codex CLI exited with 1.");
+});
+
+test("SpecDrive IDE view tolerates oversized persisted execution payloads", () => {
+  const workspaceRoot = makeWorkspace();
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-016",
+    status: "failed",
+    executionStatus: "failed",
+    currentJob: { executionId: "RUN-HUGE", schedulerJobId: "JOB-HUGE" },
+    blockedReasons: ["Codex CLI exited with 1."],
+    dependencies: ["FEAT-013"],
+    lastResult: { status: "failed", summary: "Codex CLI exited with 1." },
+    nextAction: "Inspect failure evidence and retry from Execution Workbench.",
+    history: [],
+  }));
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  const largePayload = "x".repeat(1_200_000);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json)
+        VALUES ('JOB-HUGE', 'bull-huge', 'specdrive:execution-adapter', 'cli.run', 'running', '{}')`,
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, started_at, summary, metadata_json
+      ) VALUES ('RUN-HUGE', 'JOB-HUGE', 'cli', 'feature_execution', 'project-ide', ?, 'running',
+        '2026-05-02T12:00:00.000Z', 'Running stale row.', ?)`,
+      params: [
+        JSON.stringify({ featureId: "FEAT-016", workspaceRoot, largePayload }),
+        JSON.stringify({ workspaceRoot, executionInvocation: { largePayload } }),
+      ],
+    },
+    {
+      sql: "INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json) VALUES ('LOG-HUGE', 'RUN-HUGE', '', '', ?)",
+      params: [JSON.stringify([{ type: "large", payload: largePayload }])],
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+
+  assert.equal(feature?.status, "failed");
+  assert.equal(feature?.latestExecutionStatus, "failed");
+  assert.equal(view.queue.groups.failed?.[0]?.executionId, "RUN-HUGE");
+});
+
+test("SpecDrive IDE view tolerates older review schema without reference refs", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    { sql: "ALTER TABLE review_items DROP COLUMN reference_refs_json" },
+    {
+      sql: `INSERT INTO review_items (
+          id, project_id, feature_id, status, severity, review_needed_reason,
+          trigger_reasons_json, recommended_actions_json, body, created_at, updated_at
+        ) VALUES ('REV-OLD-SCHEMA', 'project-ide', 'FEAT-016', 'review_needed', 'medium', 'risk_review_needed',
+          '["manual_review"]', '["approve_continue"]', '{"message":"Review with older schema."}',
+          '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z')`,
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+
+  assert.equal(feature?.latestReviewItemId, "REV-OLD-SCHEMA");
+  assert.deepEqual(feature?.latestReview?.referenceRefs, []);
+});
+
 test("SpecDrive IDE queue and execution detail keep DB feature titles when docs index projection is unavailable", () => {
   const workspaceRoot = makeWorkspace();
   writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
@@ -2076,7 +2180,9 @@ test("SpecDrive IDE queue actions retry failed executions and preserve previous 
   ]).queries.run;
   assert.equal(rows[0].scheduler_job_id, receipt.schedulerJobId);
   assert.equal(rows[0].status, "queued");
-  assert.equal(JSON.parse(String(rows[0].context_json)).previousExecutionId, "RUN-FAILED");
+  const retryContext = JSON.parse(String(rows[0].context_json));
+  assert.equal(retryContext.previousExecutionId, "RUN-FAILED");
+  assert.deepEqual(retryContext.expectedArtifacts, [`.autobuild/runs/${receipt.executionId}/report.json`]);
   assert.equal(JSON.parse(String(rows[0].metadata_json)).previousExecutionId, "RUN-FAILED");
   const retryState = readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016");
   assert.equal(retryState.status, "queued");
@@ -2709,7 +2815,7 @@ function seedFailedRuntimeState(dbPath: string): void {
         "codex.rpc",
         "feature_execution",
         "project-ide",
-        JSON.stringify({ featureId: "FEAT-016" }),
+        JSON.stringify({ featureId: "FEAT-016", expectedArtifacts: [".autobuild/runs/RUN-FAILED/report.json"] }),
         "failed",
         "2026-05-02T12:00:00.000Z",
         "2026-05-02T12:01:00.000Z",

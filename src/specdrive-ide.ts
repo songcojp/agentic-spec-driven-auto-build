@@ -54,6 +54,9 @@ export type SpecDriveIdeFeatureNode = {
   latestExecutionId?: string;
   latestSchedulerJobId?: string;
   latestExecutionStatus?: string;
+  specStateExecutionId?: string;
+  specStateSchedulerJobId?: string;
+  specStateExecutionStatus?: string;
   latestExecutionCompletedAt?: string;
   latestExecutionCreatedAt?: string;
   latestReviewItemId?: string;
@@ -635,17 +638,27 @@ export function buildSpecDriveIdeExecutionDetail(
   const featureId = optionalString(context.featureId);
   const featureProjection = featureId ? readFeatureStateProjection(dbPath, projectId, featureId) : undefined;
   const reviewProjection = featureId ? readLatestReviewsByFeature(dbPath, projectId).get(featureId) : undefined;
-  const stateReason = queueStateReason({
-    status: optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown",
-    summary: optionalString(row.summary),
-    metadata,
-    resumeTarget: featureProjection?.resumeTarget,
-    reviewNeededReason: reviewProjection?.reviewNeededReason,
-  });
+  const dbStatus = optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown";
+  const specStateMatchesExecution = Boolean(featureProjection && (
+    (featureProjection.executionId && featureProjection.executionId === String(row.id))
+    || (featureProjection.schedulerJobId && featureProjection.schedulerJobId === optionalString(row.scheduler_job_id))
+  ));
+  const status = specStateMatchesExecution
+    ? featureProjection?.executionStatus ?? featureProjection?.status ?? dbStatus
+    : dbStatus;
+  const stateReason = specStateMatchesExecution && featureProjection?.stateReason
+    ? featureProjection.stateReason
+    : queueStateReason({
+        status,
+        summary: optionalString(row.summary),
+        metadata,
+        resumeTarget: featureProjection?.resumeTarget,
+        reviewNeededReason: reviewProjection?.reviewNeededReason,
+      });
   return {
     schedulerJobId: optionalString(row.scheduler_job_id),
     executionId: String(row.id),
-    status: optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown",
+    status,
     operation: optionalString(row.operation),
     jobType: optionalString(row.job_type) ?? optionalString(metadata.jobType),
     featureId,
@@ -729,6 +742,20 @@ function tokenConsumptionFromRow(row: Record<string, unknown> | undefined): Spec
 }
 
 function qualityEvidenceFromExecutionMetadata(metadata: Record<string, unknown>): SpecDriveIdeQualityEvidenceProjection | undefined {
+  const qualityEvidence = isRecord(metadata.qualityEvidence) ? metadata.qualityEvidence : undefined;
+  if (qualityEvidence) {
+    const rawLogRefs = Array.isArray(metadata.rawLogRefs) ? metadata.rawLogRefs.map(String) : [];
+    const workpadRefs = rawLogRefs.filter((ref) => /(^|\/)WORKPAD\.md$|(^|\/)workpad\.json$/.test(ref));
+    return {
+      requirementCoverage: qualityEvidence.requirementCoverage,
+      acceptanceEvidence: qualityEvidence.acceptanceEvidence,
+      journeyEvidence: qualityEvidence.journeyEvidence,
+      runtimeEvidence: qualityEvidence.runtimeEvidence,
+      deliveryFidelity: qualityEvidence.deliveryFidelity,
+      gitDelivery: qualityEvidence.gitDelivery,
+      workpadRefs,
+    };
+  }
   const skillOutput = isRecord(metadata.skillOutputContract) ? metadata.skillOutputContract : undefined;
   const result = isRecord(skillOutput?.result) ? skillOutput.result : undefined;
   if (!result) return undefined;
@@ -1577,18 +1604,20 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
       const status = resolveFeatureNodeStatus(optionalString(state.status), indexEntry?.status, documents, taskProjection);
       const stateCurrentJob = isRecord(state.currentJob) ? state.currentJob : undefined;
       const stateExecutionId = optionalString(stateCurrentJob?.executionId);
+      const stateSchedulerJobId = optionalString(stateCurrentJob?.schedulerJobId);
+      const stateExecutionStatus = optionalString(state.executionStatus);
       const completedFeature = isCompletedFeatureStatus(status);
       const latestExecutionForProjection = completedFeature
         ? latestExecution?.latestCompleted ?? latestExecution?.latest
         : latestExecution?.latest;
       const latestExecutionStatus = isCompletedFeatureStatus(status)
         ? "completed"
-        : latestExecutionForProjection?.status;
-      const latestExecutionId = completedFeature
+        : stateExecutionStatus ?? latestExecutionForProjection?.status;
+      const latestExecutionId = completedFeature || stateExecutionStatus
         ? stateExecutionId ?? latestExecutionForProjection?.executionId
         : latestExecutionForProjection?.executionId;
-      const latestSchedulerJobId = completedFeature
-        ? optionalString(stateCurrentJob?.schedulerJobId) ?? latestExecutionForProjection?.schedulerJobId
+      const latestSchedulerJobId = completedFeature || stateExecutionStatus
+        ? stateSchedulerJobId ?? latestExecutionForProjection?.schedulerJobId
         : latestExecutionForProjection?.schedulerJobId;
       const tokenConsumption = latestExecutionForProjection?.tokenConsumption;
       const stateLastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
@@ -1616,6 +1645,9 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         latestExecutionId,
         latestSchedulerJobId,
         latestExecutionStatus,
+        specStateExecutionId: stateExecutionId,
+        specStateSchedulerJobId: stateSchedulerJobId,
+        specStateExecutionStatus: stateExecutionStatus,
         latestExecutionCompletedAt: latestExecutionForProjection?.completedAt,
         latestExecutionCreatedAt: latestExecutionForProjection?.createdAt,
         latestReviewItemId: latestReview?.id,
@@ -1633,23 +1665,30 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
 }
 
 function readLatestReviewsByFeature(dbPath: string, projectId?: string): Map<string, SpecDriveIdeReviewProjection> {
-  const projectFilter = projectId ? "AND (project_id = ? OR feature_id IN (SELECT id FROM features WHERE project_id = ?))" : "";
-  const params = projectId ? [projectId, projectId] : [];
+  const columnRows = runSqlite(dbPath, [], [{ name: "reviewColumns", sql: "PRAGMA table_info(review_items)" }]).queries.reviewColumns;
+  const columns = new Set(columnRows.map((row) => String(row.name)));
+  const selectColumn = (column: string, fallback: string): string => columns.has(column) ? column : `${fallback} AS ${column}`;
+  const projectFilter = projectId
+    ? columns.has("project_id")
+      ? "AND (project_id = ? OR feature_id IN (SELECT id FROM features WHERE project_id = ?))"
+      : "AND feature_id IN (SELECT id FROM features WHERE project_id = ?)"
+    : "";
+  const params = projectId ? columns.has("project_id") ? [projectId, projectId] : [projectId] : [];
   const rows = runSqlite(dbPath, [], [
     {
       name: "reviews",
       sql: `SELECT
           id,
           feature_id,
-          status,
-          severity,
-          review_needed_reason,
-          trigger_reasons_json,
-          recommended_actions_json,
-          reference_refs_json,
-          body,
-          created_at,
-          updated_at
+          ${selectColumn("status", "'review_needed'")},
+          ${selectColumn("severity", "NULL")},
+          ${selectColumn("review_needed_reason", "'risk_review_needed'")},
+          ${selectColumn("trigger_reasons_json", "'[]'")},
+          ${selectColumn("recommended_actions_json", "'[]'")},
+          ${selectColumn("reference_refs_json", "'[]'")},
+          ${selectColumn("body", "NULL")},
+          ${selectColumn("created_at", "NULL")},
+          ${selectColumn("updated_at", "created_at")}
         FROM review_items
         WHERE feature_id IS NOT NULL
           AND status IN ('review_needed', 'changes_requested', 'rejected')
@@ -2185,21 +2224,33 @@ function retryPayload(previous: QueueExecutionRow, command: IdeQueueCommandV1, a
   if (!previous.executionId) {
     throw new Error("Retry requires an execution record.");
   }
+  const executionId = randomUUID();
   const context = {
     ...previous.context,
+    expectedArtifacts: retryExpectedArtifacts(previous.context.expectedArtifacts, previous.executionId, executionId),
     executionPreference: executionPreferenceFromQueueRow(previous),
     previousExecutionId: previous.executionId,
     retryReason: command.reason,
     retriedAt: acceptedAt,
   };
   return {
-    executionId: randomUUID(),
+    executionId,
     operation: previous.operation,
     projectId: command.projectId ?? previous.projectId,
     context,
     executionPreference: executionPreferenceFromQueueRow(previous),
     requestedAction: optionalString(previous.payload.requestedAction) ?? optionalString(previous.context.skillPhase) ?? previous.operation,
   };
+}
+
+function retryExpectedArtifacts(value: unknown, previousExecutionId: string, executionId: string): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map((entry) => {
+    if (typeof entry !== "string") return entry;
+    return entry === `.autobuild/runs/${previousExecutionId}/report.json` || /^\.autobuild\/runs\/[^/]+\/report\.json$/.test(entry)
+      ? `.autobuild/runs/${executionId}/report.json`
+      : entry;
+  });
 }
 
 function persistQueuedExecution(dbPath: string, input: {
@@ -2504,9 +2555,9 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     const context = parseJsonObject(optionalString(row.context_json));
     const payloadContext = isRecord(payload.context) ? payload.context : parseJsonObject(optionalString(payload.context));
     const metadata = parseJsonObject(optionalString(row.metadata_json));
-    const status = optionalString(row.execution_status) ?? optionalString(row.job_status) ?? "unknown";
+    const dbStatus = optionalString(row.execution_status) ?? optionalString(row.job_status) ?? "unknown";
     const executionId = optionalString(row.execution_id);
-    if (!executionId && isCompletedScheduleOnlyStatus(status)) continue;
+    if (!executionId && isCompletedScheduleOnlyStatus(dbStatus)) continue;
     if (executionId && supersededExecutionIds.has(executionId)) continue;
     const executionPreference = executionPreferenceFromQueueParts(context, metadata, payload, optionalString(row.job_type), optionalString(row.executor_type));
     const featureId = optionalString(context.featureId) ?? optionalString(payloadContext.featureId);
@@ -2515,6 +2566,16 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     const review = featureId ? latestReviews.get(featureId) : undefined;
     const resumeTarget = feature?.resumeTarget;
     const reviewNeededReason = review?.reviewNeededReason;
+    const specStateMatchesQueue = Boolean(feature && (
+      (feature.specStateExecutionId && feature.specStateExecutionId === executionId)
+      || (feature.specStateSchedulerJobId && feature.specStateSchedulerJobId === optionalString(row.scheduler_job_id))
+    ));
+    const status = specStateMatchesQueue
+      ? feature?.specStateExecutionStatus ?? feature?.status ?? dbStatus
+      : dbStatus;
+    const stateReason = specStateMatchesQueue && feature?.stateReason
+      ? feature.stateReason
+      : queueStateReason({ status, summary: optionalString(row.summary), metadata, resumeTarget, reviewNeededReason });
     const item: SpecDriveIdeQueueItem = {
       schedulerJobId: optionalString(row.scheduler_job_id),
       executionId,
@@ -2543,7 +2604,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
         ?? optionalString(payloadContext.featureTitle)
         ?? optionalString(metadata.featureTitle),
       featureDescription: feature?.description ?? dbFeature?.description,
-      stateReason: queueStateReason({ status, summary: optionalString(row.summary), metadata, resumeTarget, reviewNeededReason }),
+      stateReason,
       resumeTarget,
       reviewItemId: review?.id,
       reviewNeededReason,
@@ -2678,7 +2739,17 @@ function readFeatureStateProjection(
   dbPath: string,
   projectId: string | undefined,
   featureId: string,
-): { title?: string; description?: string; resumeTarget?: SpecDriveIdeResumeTarget; stateReason?: string; nextAction?: string } | undefined {
+): {
+  title?: string;
+  description?: string;
+  status?: string;
+  executionStatus?: string;
+  executionId?: string;
+  schedulerJobId?: string;
+  resumeTarget?: SpecDriveIdeResumeTarget;
+  stateReason?: string;
+  nextAction?: string;
+} | undefined {
   const dbFeature = readDbFeatureIdentities(dbPath, projectId).get(featureId);
   const workspaceRoot = workspaceRootForProject(dbPath, projectId);
   if (!workspaceRoot) return dbFeature;
@@ -2694,13 +2765,19 @@ function readFeatureStateProjection(
   const resumeTarget = normalizeIdeResumeTarget(state.resumeTarget);
   const nextAction = optionalString(state.nextAction);
   const lastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
+  const currentJob = isRecord(state.currentJob) ? state.currentJob : undefined;
+  const status = optionalString(state.status);
   return {
     title: optionalString(state.title) ?? indexEntry?.title ?? dbFeature?.title ?? (folders.has(folder) ? titleFromFolder(folder) : undefined),
     description: optionalString(state.description) ?? (folders.has(folder) ? readFeatureDescription(workspaceRoot, folder) : undefined),
+    status,
+    executionStatus: optionalString(state.executionStatus),
+    executionId: optionalString(currentJob?.executionId),
+    schedulerJobId: optionalString(currentJob?.schedulerJobId),
     resumeTarget,
     nextAction,
     stateReason: featureStateReason({
-      status: optionalString(state.status) ?? "unknown",
+      status: status ?? "unknown",
       blockedReasons,
       resumeTarget,
       lastResultSummary: optionalString(lastResult?.summary),
