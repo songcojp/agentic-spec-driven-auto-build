@@ -368,6 +368,31 @@ test("cli.run default Feature paths use context Feature Spec folder", async () =
   assert.doesNotMatch(prompt, /docs\/agentic-spec\/features\/FEAT-CLI\/tasks\.md/);
 });
 
+test("cli.run feature execution prompt delegates workflow detail to implement-feature skill", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-feature-skill-prompt-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const calls: Array<{ args: string[] }> = [];
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-FEATURE-SKILL-PROMPT"), (_command, args) => {
+    calls.push({ args });
+    return {
+      status: 0,
+      stdout: `{"type":"session","session_id":"SESSION-FEATURE-SKILL-PROMPT"}\n${skillOutputEvent("RUN-FEATURE-SKILL-PROMPT")}`,
+      stderr: "",
+    };
+  });
+
+  const prompt = calls[0].args.join("\n");
+  assert.equal(result.status, "completed");
+  assert.match(prompt, /\.agents\/skills\/implement-feature\/SKILL\.md/);
+  assert.match(prompt, /skill-contract\/v2/);
+  assert.doesNotMatch(prompt, /The output contract must use contractVersion skill-contract\/v1/);
+  assert.doesNotMatch(prompt, /Expected artifacts:\n- docs\/agentic-spec\/features\/FEAT-CLI\/design\.md/);
+  assert.doesNotMatch(prompt, /Expected artifacts:\n- docs\/agentic-spec\/features\/FEAT-CLI\/tasks\.md/);
+});
+
 test("cli.run creates a ReviewItem when feature execution returns review_needed", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-review-"));
   prepareSkillWorkspace(root);

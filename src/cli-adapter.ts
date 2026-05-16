@@ -1499,6 +1499,8 @@ export function validateWorkspaceRoot(workspaceRoot: string | undefined): Worksp
 
 export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvocationV1, _context = ""): string {
   const instruction = invocation.skillInstruction;
+  const featureExecution = instruction.skillName === "implement-feature"
+    && (invocation.operation === "feature_execution" || instruction.requestedAction === "feature_execution");
   const taskSlicingRules = instruction.skillName === "decompose-feature-specs"
     ? [
         "- For split_feature_specs, decompose PRD, user stories, and HLD into implementation-ready Feature Spec package directories.",
@@ -1548,6 +1550,18 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         ] : []),
       ]
     : [];
+  const featureExecutionRules = featureExecution
+    ? [
+        "- For feature_execution, load and follow .agents/skills/implement-feature/SKILL.md as the workflow source of truth.",
+        "- Keep this prompt as an invocation contract; do not rely on it for lifecycle detail that belongs in the skill.",
+        "- Use CLI-native subagents for bounded implementation, verification, review, or repair slices when the skill says delegation is appropriate; keep the owner thread responsible for integration and final delivery.",
+        `- Before delegation and after each completed slice, preserve resumable state in .autobuild/runs/${invocation.executionId}/checkpoint.json or an equivalent run checkpoint.`,
+        "- A completed feature_execution result must use skill-contract/v2 and include requirementCoverage, acceptanceEvidence, journeyEvidence, deliveryFidelity, and gitDelivery under result.",
+      ]
+    : [];
+  const contractVersionRule = featureExecution
+    ? "- The output contract must use contractVersion skill-contract/v2 and echo executionId, skillName, requestedAction, and traceability.featureId from this task instruction."
+    : "- The output contract must use contractVersion skill-contract/v1 and echo executionId, skillName, requestedAction, and traceability.featureId from this task instruction.";
   return [
     renderInvocationContextManifest(buildInvocationContextManifest(invocation)),
     "",
@@ -1574,11 +1588,12 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
     "- Final status must be completed, review_needed, blocked, failed, or cancelled. Use review_needed only for a real human/risk review gate with a clear reason in summary or result.reviewNeededReason.",
     "- Each producedArtifacts item must include path, kind, status, checksum, and summary; use null for checksum or summary when unknown.",
     "- traceability must include only featureId; use null when no Feature applies. Do not include requirementIds, taskId, changeIds, or other non-Feature traceability in the common output contract.",
-    "- The output contract must use contractVersion skill-contract/v1 and echo executionId, skillName, requestedAction, and traceability.featureId from this task instruction.",
+    contractVersionRule,
     "- When Feature state is present in source files, treat it as the machine-readable Feature state. Return status and result fields that allow the scheduler to patch docs/agentic-spec/features/<feature-id>/spec-state.json.",
     "- Produce the expected artifacts and list every produced or intentionally unchanged artifact in producedArtifacts.",
     "- Prefer writing expected artifacts directly to the workspace paths named in this task instruction.",
     "- Do not assume a platform Skill Registry or Skill Center exists.",
+    ...featureExecutionRules,
     ...userStoriesRules,
     ...uiSpecRules,
     ...taskSlicingRules,

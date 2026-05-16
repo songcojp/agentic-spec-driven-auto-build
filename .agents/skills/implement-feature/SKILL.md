@@ -42,6 +42,19 @@ Use the project-local worktree skills as the Git lifecycle boundary:
 3. Use `$clean-worktree` after implementation, tests, and independent review evidence are ready.
 4. If worktree setup, review, PR, merge, branch cleanup, or worktree cleanup cannot cleanly finish, return `review_needed`, `approval_needed`, or `blocked`; do not return `completed`.
 
+## Long-Running Execution and Context Budget
+
+Default to a delegated, checkpointed execution model for long-running or context-heavy Feature implementation. The owner thread owns lifecycle coordination, integration, final evidence, and Git delivery; CLI-native subagents own bounded implementation, verification, review, or repair slices when the runtime exposes them.
+
+1. Create or update a resumable checkpoint before implementation starts. Use `.autobuild/runs/<executionId>/checkpoint.json` when an `executionId` is available.
+2. Keep the checkpoint compact and machine-readable: source refs, Feature Spec path, Worktree Mode, current stage, task slices, delegated roles, worker result refs, changed files, verification evidence, review evidence, `gitDelivery`, and next action.
+3. Slice work from `tasks.md` into independent worker scopes when files, dependencies, and runtime state allow it. Use `worker-worktree` for parallel write slices; use `serial-owner` for high-conflict files, migrations, lockfiles, shared configuration, or broad refactors.
+4. Dispatch real CLI-native subagents for eligible worker, verifier, reviewer, or repair slices. Give each subagent only paths, IDs, allowed files, verification commands, and the expected compact result. Do not paste full source documents into the prompt.
+5. If the runtime cannot create a real subagent, run the slice in the owner thread, record `fallbackReason`, and still update the checkpoint. Do not claim subagent activation from a plan or JSON record alone.
+6. After each slice, merge only compact results into the owner context and persist detailed evidence as files or command refs. Do not rely on chat history to remember task state.
+7. After context compaction, resume by reading `AGENTS.md`, this skill, the Feature Spec files, and the checkpoint before continuing. Treat the checkpoint plus repository state as the execution memory.
+8. The owner thread must reconcile worker outputs, run required verification after integration, route independent review/fix work, and call `$clean-worktree` only after implementation, tests, review, Delivery Fidelity, and Journey Closure evidence are ready.
+
 ## Feature Execution Rules
 
 - Treat the Feature Spec directory in `sourcePaths` as the implementation scope.

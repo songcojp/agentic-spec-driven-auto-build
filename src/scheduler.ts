@@ -2088,6 +2088,8 @@ function buildExecutionInvocation(input: {
   const contextImagePaths = optionalStringArray(context.imagePaths);
   const contextExpectedArtifacts = normalizeArtifactContracts(context.expectedArtifacts);
   const featureSpecPath = defaultFeatureSpecPath(input.featureId, context, input.workspaceRoot);
+  const featureExecution = skillName === "implement-feature"
+    && (input.payload.operation === "feature_execution" || requestedAction === "feature_execution");
   const sourcePaths = contextSourcePaths.length
     ? contextSourcePaths
     : [
@@ -2101,7 +2103,9 @@ function buildExecutionInvocation(input: {
       ];
   const expectedArtifacts = contextExpectedArtifacts.length
     ? contextExpectedArtifacts
-    : featureSpecPath
+    : featureExecution
+        ? []
+        : featureSpecPath
         ? normalizeArtifactContracts([`${featureSpecPath}/design.md`, `${featureSpecPath}/tasks.md`])
         : normalizeArtifactContracts([".autobuild/reports/spec-intake.json"]);
   return {
