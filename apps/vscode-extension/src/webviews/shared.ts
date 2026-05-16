@@ -764,7 +764,8 @@ export function renderQueueGroup(status: string, items: SpecDriveIdeQueueItem[],
     ${items.map((item) => {
       const key = queueItemKey(item);
       const selected = Boolean(selectedKey && key === selectedKey);
-      return `<div class="queue-item${selected ? " selected" : ""}"><span data-i18n-skip>${escapeHtml(item.featureTitle ?? item.featureId ?? item.taskId ?? item.operation ?? "execution")}</span><span data-i18n-skip><span class="badge ${statusClass(item.status)}">${escapeHtml(item.status)}</span></span><span data-i18n-skip>${escapeHtml(item.adapter ?? item.runMode ?? "-")}</span><span data-i18n-skip>${escapeHtml(queueItemMetricLabel(item))}</span><span class="toolbar">${queueReviewButton(item)}${queueSelectButton(item, selected)}</span></div>`;
+      const label = featureSpecLabel(item) ?? item.taskId ?? item.operation ?? "execution";
+      return `<div class="queue-item${selected ? " selected" : ""}"><span data-i18n-skip>${escapeHtml(label)}</span><span data-i18n-skip><span class="badge ${statusClass(item.status)}">${escapeHtml(item.status)}</span></span><span data-i18n-skip>${escapeHtml(item.adapter ?? item.runMode ?? "-")}</span><span data-i18n-skip>${escapeHtml(queueItemMetricLabel(item))}</span><span class="toolbar">${queueReviewButton(item)}${queueSelectButton(item, selected)}</span></div>`;
     }).join("") || `<div class="queue-item"><span class="muted">No items</span></div>`}
   </details>`;
 }

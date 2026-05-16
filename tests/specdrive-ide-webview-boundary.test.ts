@@ -211,6 +211,34 @@ test("VSCode Execution Workbench requires selected queue tasks for stateful acti
   assert.doesNotMatch(extensionSource, /queueButton\("Run Now", queue\.find/);
 });
 
+test("VSCode Execution Workbench queue rows show both feature title and ID", () => {
+  const { renderExecutionWorkbenchWebview } = requireExecutionWebviewModule();
+  const view = {
+    queue: {
+      groups: {
+        queued: [
+          {
+            schedulerJobId: "job-feature-id",
+            status: "queued",
+            operation: "feature_execution",
+            featureId: "FEAT-777",
+            featureTitle: "Install registry support",
+            adapter: "Codex CLI",
+            updatedAt: "2026-05-16T12:00:00.000Z",
+          },
+        ],
+      },
+    },
+    project: { id: "specdrive", name: "SpecDrive" },
+    projectInitialization: { blocked: false },
+  };
+
+  const html = renderExecutionWorkbenchWebview(view, undefined);
+
+  assert.match(html, /Install registry support/);
+  assert.match(html, /FEAT-777/);
+});
+
 test("VSCode Execution Workbench renders execution result sections from durable runtime fields", () => {
   assert.match(webviewSource, /<h2>Summary<\/h2>/);
   assert.match(webviewSource, /<h2>Raw Log Refs<\/h2>/);
