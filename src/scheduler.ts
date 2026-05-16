@@ -193,8 +193,8 @@ export function createBullMqScheduler(dbPath: string, redisUrl: string): Schedul
     },
     requeueExistingJob(input) {
       const queueName = EXECUTION_ADAPTER_QUEUE;
+      updateSchedulerJobRecord(dbPath, input.bullmqJobId, "queued");
       void requeueBullMqJob(cliQueue, input)
-        .then(() => updateSchedulerJobRecord(dbPath, input.bullmqJobId, "queued"))
         .catch((error) => markSchedulerJobFailed(dbPath, input.bullmqJobId, error));
       return { schedulerJobId: input.schedulerJobId, bullmqJobId: input.bullmqJobId, queueName, jobType: input.jobType };
     },
@@ -1985,11 +1985,12 @@ export function createQueuedJobRecord(dbPath: string, input: {
 
 export function updateSchedulerJobRecord(dbPath: string, bullmqJobId: string | undefined, status: SchedulerJobStatus, error?: unknown, attempts?: number): void {
   if (!bullmqJobId) return;
+  const queuedStatusGuard = status === "queued" ? "AND status <> 'running'" : "";
   runSqlite(dbPath, [
     {
       sql: `UPDATE scheduler_job_records
         SET status = ?, error = ?, attempts = COALESCE(?, attempts), updated_at = CURRENT_TIMESTAMP
-        WHERE bullmq_job_id = ?`,
+        WHERE bullmq_job_id = ? ${queuedStatusGuard}`,
       params: [status, error ? errorMessage(error) : null, attempts ?? null, bullmqJobId],
     },
   ]);

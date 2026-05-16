@@ -20,6 +20,7 @@ import {
   runCodexAppServerRunJob,
   runCliRunJob,
   runRpcRunJob,
+  updateSchedulerJobRecord,
 } from "../src/scheduler.ts";
 import type { CliJsonEvent } from "../src/cli-adapter.ts";
 import type { CodexAppServerTransport } from "../src/codex-rpc-adapter.ts";
@@ -416,6 +417,25 @@ test("requeueBullMqJob removes completed job ids before replaying run-now work",
     "remove",
     "add:rpc.run:BULL-RUN-NOW:JOB-RUN-NOW",
   ]);
+});
+
+test("queued replay updates do not regress a running scheduler job", () => {
+  const dbPath = makeDbPath();
+  const scheduler = createMemoryScheduler(dbPath);
+  const job = scheduler.enqueueCliRun({
+    executionId: "RUN-RACE",
+    operation: "feature_execution",
+    projectId: "project-1",
+  });
+
+  updateSchedulerJobRecord(dbPath, job.bullmqJobId, "running");
+  updateSchedulerJobRecord(dbPath, job.bullmqJobId, "queued");
+
+  const rows = runSqlite(dbPath, [], [
+    { name: "job", sql: "SELECT status FROM scheduler_job_records WHERE id = ?", params: [job.schedulerJobId] },
+  ]).queries.job;
+
+  assert.equal(rows[0].status, "running");
 });
 
 test("cli.run executes mocked CLI runner and persists runner artifacts", async () => {
