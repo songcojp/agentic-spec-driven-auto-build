@@ -175,6 +175,36 @@ test("cli.run failed exit overrides non-terminal SkillOutput in Feature spec-sta
   assert.notEqual(state.lastResult.summary, "Validation is still running.");
 });
 
+test("cli.run writes review_needed Feature execution status to spec-state file", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-review-state-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const payload = cliRunPayload("RUN-REVIEW-STATE");
+
+  const result = await runCliRunJob(dbPath, {
+    ...payload,
+    context: {
+      ...payload.context,
+      featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+    },
+  }, () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-REVIEW-STATE"}\n${skillOutputEvent("RUN-REVIEW-STATE", {
+      status: "review_needed",
+      summary: "Independent review is required before delivery.",
+    })}`,
+    stderr: "",
+  }));
+  const state = JSON.parse(readFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "spec-state.json"), "utf8"));
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(state.status, "review_needed");
+  assert.equal(state.executionStatus, "review_needed");
+  assert.equal(state.currentJob.executionId, "RUN-REVIEW-STATE");
+  assert.equal(state.lastResult.status, "review_needed");
+});
+
 test("scheduler worker startup can recover transient queued jobs created while worker was unavailable", () => {
   const dbPath = makeDbPath();
   runSqlite(dbPath, [

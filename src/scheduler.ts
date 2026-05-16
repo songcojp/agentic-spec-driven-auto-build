@@ -1648,6 +1648,7 @@ function runnerStatusToFileSpecStatus(status: RunnerQueueStatus) {
 function runnerStatusToFileSpecExecutionStatus(status: RunnerQueueStatus) {
   if (status === "completed") return "completed";
   if (status === "approval_needed") return "approval_needed";
+  if (status === "review_needed") return "review_needed";
   if (status === "blocked") return "blocked";
   if (status === "failed") return "failed";
   if (status === "running") return "running";

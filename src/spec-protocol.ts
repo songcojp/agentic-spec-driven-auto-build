@@ -25,6 +25,7 @@ export type FileSpecExecutionStatus =
   | "waiting_input"
   | "paused"
   | "approval_needed"
+  | "review_needed"
   | "cancelled"
   | "blocked"
   | "completed"
@@ -890,9 +891,7 @@ export function skillOutputToSpecStatePatch(output: {
   producedArtifacts: Array<{ path: string; kind: string; status: string; summary?: string }>;
 }): FileSpecStatePatch {
   const status: FileSpecLifecycleStatus = output.status;
-  const executionStatus: FileSpecExecutionStatus | undefined = output.status === "review_needed"
-    ? undefined
-    : output.status;
+  const executionStatus: FileSpecExecutionStatus | undefined = output.status;
   return {
     status,
     executionStatus,
@@ -1033,6 +1032,7 @@ function isFileSpecExecutionStatus(value: unknown): value is FileSpecExecutionSt
     "waiting_input",
     "paused",
     "approval_needed",
+    "review_needed",
     "blocked",
     "cancelled",
     "completed",
