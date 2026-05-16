@@ -1021,6 +1021,52 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   assert.equal(invalid?.parseStatus, "invalid");
 });
 
+test("runner token backfill waits for execution completion", () => {
+  const dbPath = makeDbPath();
+  seedConsoleData(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "token-completion-"));
+  const runDir = join(projectPath, ".autobuild", "runs", "RUN-LIVE-TOKEN");
+  mkdirSync(runDir, { recursive: true });
+  writeFileSync(join(runDir, "cli-output.json"), JSON.stringify({
+    usage: { input_tokens: 4000, cached_input_tokens: 1000, output_tokens: 500, reasoning_output_tokens: 100 },
+  }));
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+    { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
+    {
+      sql: `INSERT INTO execution_records (
+          id, executor_type, operation, project_id, context_json, status, started_at, completed_at, metadata_json
+        ) VALUES (
+          'RUN-LIVE-TOKEN', 'cli', 'feature_execution', 'project-1', ?, 'running',
+          '2026-04-28T12:03:00.000Z', NULL, ?
+        )`,
+      params: [
+        JSON.stringify({ featureId: "FEAT-013", taskId: "TASK-013-01" }),
+        JSON.stringify({ model: "gpt-5.5" }),
+      ],
+    },
+  ]);
+
+  buildRunnerConsoleView(dbPath, stableDate, "project-1");
+  const liveRecords = runSqlite(dbPath, [], [
+    { name: "records", sql: "SELECT run_id FROM token_consumption_records WHERE run_id = 'RUN-LIVE-TOKEN'" },
+  ]).queries.records;
+  assert.equal(liveRecords.length, 0);
+
+  runSqlite(dbPath, [
+    {
+      sql: "UPDATE execution_records SET status = 'review_needed', completed_at = ? WHERE id = 'RUN-LIVE-TOKEN'",
+      params: ["2026-04-28T12:05:00.000Z"],
+    },
+  ]);
+  buildRunnerConsoleView(dbPath, stableDate, "project-1");
+  const completedRecords = runSqlite(dbPath, [], [
+    { name: "records", sql: "SELECT run_id, total_tokens FROM token_consumption_records WHERE run_id = 'RUN-LIVE-TOKEN'" },
+  ]).queries.records;
+  assert.equal(completedRecords.length, 1);
+  assert.equal(completedRecords[0].total_tokens, 4600);
+});
+
 test("token cost calculation uses execution adapter rates without repricing history", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);

@@ -6236,7 +6236,7 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
   const result = runSqlite(dbPath, [], [
     {
       name: "executions",
-      sql: `SELECT er.id, er.scheduler_job_id, er.executor_type, er.operation, er.project_id,
+      sql: `SELECT er.id, er.scheduler_job_id, er.executor_type, er.operation, er.project_id, er.status, er.completed_at,
           json_extract(er.context_json, '$.featureId') AS feature_id,
           json_extract(er.context_json, '$.taskId') AS task_id,
           json_extract(er.context_json, '$.workspaceRoot') AS context_workspace_root,
@@ -6301,6 +6301,7 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
   );
 
   for (const execution of result.queries.executions) {
+    if (!isTokenRecordableExecution(execution)) continue;
     const runId = String(execution.id);
     const project = optionalString(execution.project_id);
     const workspaceRoot = optionalString(execution.metadata_workspace_root)
@@ -6406,6 +6407,13 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
           },
     ]);
   }
+}
+
+const TOKEN_RECORDABLE_EXECUTION_STATUSES = new Set(["completed", "review_needed", "blocked", "failed", "cancelled", "skipped"]);
+
+function isTokenRecordableExecution(execution: Record<string, unknown>): boolean {
+  const status = optionalString(execution.status)?.toLowerCase();
+  return Boolean(optionalString(execution.completed_at)) && Boolean(status && TOKEN_RECORDABLE_EXECUTION_STATUSES.has(status));
 }
 
 function groupRowsByString(rows: Record<string, unknown>[], key: string): Map<string, Record<string, unknown>[]> {
