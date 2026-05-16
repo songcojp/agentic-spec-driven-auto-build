@@ -1623,23 +1623,30 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
 }
 
 function readLatestReviewsByFeature(dbPath: string, projectId?: string): Map<string, SpecDriveIdeReviewProjection> {
-  const projectFilter = projectId ? "AND (project_id = ? OR feature_id IN (SELECT id FROM features WHERE project_id = ?))" : "";
-  const params = projectId ? [projectId, projectId] : [];
+  const columnRows = runSqlite(dbPath, [], [{ name: "reviewColumns", sql: "PRAGMA table_info(review_items)" }]).queries.reviewColumns;
+  const columns = new Set(columnRows.map((row) => String(row.name)));
+  const selectColumn = (column: string, fallback: string): string => columns.has(column) ? column : `${fallback} AS ${column}`;
+  const projectFilter = projectId
+    ? columns.has("project_id")
+      ? "AND (project_id = ? OR feature_id IN (SELECT id FROM features WHERE project_id = ?))"
+      : "AND feature_id IN (SELECT id FROM features WHERE project_id = ?)"
+    : "";
+  const params = projectId ? columns.has("project_id") ? [projectId, projectId] : [projectId] : [];
   const rows = runSqlite(dbPath, [], [
     {
       name: "reviews",
       sql: `SELECT
           id,
           feature_id,
-          status,
-          severity,
-          review_needed_reason,
-          trigger_reasons_json,
-          recommended_actions_json,
-          reference_refs_json,
-          body,
-          created_at,
-          updated_at
+          ${selectColumn("status", "'review_needed'")},
+          ${selectColumn("severity", "NULL")},
+          ${selectColumn("review_needed_reason", "'risk_review_needed'")},
+          ${selectColumn("trigger_reasons_json", "'[]'")},
+          ${selectColumn("recommended_actions_json", "'[]'")},
+          ${selectColumn("reference_refs_json", "'[]'")},
+          ${selectColumn("body", "NULL")},
+          ${selectColumn("created_at", "NULL")},
+          ${selectColumn("updated_at", "created_at")}
         FROM review_items
         WHERE feature_id IS NOT NULL
           AND status IN ('review_needed', 'changes_requested', 'rejected')

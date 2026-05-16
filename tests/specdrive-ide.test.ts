@@ -95,6 +95,78 @@ test("SpecDrive IDE status projections prefer Feature spec-state over stale exec
   assert.equal(detail?.stateReason, "Codex CLI exited with 1.");
 });
 
+test("SpecDrive IDE view tolerates oversized persisted execution payloads", () => {
+  const workspaceRoot = makeWorkspace();
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-016",
+    status: "failed",
+    executionStatus: "failed",
+    currentJob: { executionId: "RUN-HUGE", schedulerJobId: "JOB-HUGE" },
+    blockedReasons: ["Codex CLI exited with 1."],
+    dependencies: ["FEAT-013"],
+    lastResult: { status: "failed", summary: "Codex CLI exited with 1." },
+    nextAction: "Inspect failure evidence and retry from Execution Workbench.",
+    history: [],
+  }));
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  const largePayload = "x".repeat(1_200_000);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json)
+        VALUES ('JOB-HUGE', 'bull-huge', 'specdrive:execution-adapter', 'cli.run', 'running', '{}')`,
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, started_at, summary, metadata_json
+      ) VALUES ('RUN-HUGE', 'JOB-HUGE', 'cli', 'feature_execution', 'project-ide', ?, 'running',
+        '2026-05-02T12:00:00.000Z', 'Running stale row.', ?)`,
+      params: [
+        JSON.stringify({ featureId: "FEAT-016", workspaceRoot, largePayload }),
+        JSON.stringify({ workspaceRoot, executionInvocation: { largePayload } }),
+      ],
+    },
+    {
+      sql: "INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json) VALUES ('LOG-HUGE', 'RUN-HUGE', '', '', ?)",
+      params: [JSON.stringify([{ type: "large", payload: largePayload }])],
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+
+  assert.equal(feature?.status, "failed");
+  assert.equal(feature?.latestExecutionStatus, "failed");
+  assert.equal(view.queue.groups.failed?.[0]?.executionId, "RUN-HUGE");
+});
+
+test("SpecDrive IDE view tolerates older review schema without reference refs", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    { sql: "ALTER TABLE review_items DROP COLUMN reference_refs_json" },
+    {
+      sql: `INSERT INTO review_items (
+          id, project_id, feature_id, status, severity, review_needed_reason,
+          trigger_reasons_json, recommended_actions_json, body, created_at, updated_at
+        ) VALUES ('REV-OLD-SCHEMA', 'project-ide', 'FEAT-016', 'review_needed', 'medium', 'risk_review_needed',
+          '["manual_review"]', '["approve_continue"]', '{"message":"Review with older schema."}',
+          '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z')`,
+    },
+  ]);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+
+  assert.equal(feature?.latestReviewItemId, "REV-OLD-SCHEMA");
+  assert.deepEqual(feature?.latestReview?.referenceRefs, []);
+});
+
 test("SpecDrive IDE queue and execution detail keep DB feature titles when docs index projection is unavailable", () => {
   const workspaceRoot = makeWorkspace();
   writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
