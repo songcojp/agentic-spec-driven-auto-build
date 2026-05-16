@@ -59,13 +59,14 @@ Default to a delegated, checkpointed execution model for long-running or context
 
 During `feature_execution`, this skill owns the primary live task status writeback. The scheduler, IDE, or status-checker may patch terminal state as a fallback, but they must not be the normal path for per-task progress.
 
-- Before starting a task slice from `tasks.md`, update that task block in the source Feature Spec `tasks.md` to `Status: running`.
-- When the task slice is complete and its required verification/evidence has passed, update that task block to `Status: done`.
-- If the task cannot continue, update it to the narrowest truthful status: `blocked`, `review_needed`, `approval_needed`, or `failed`.
+- Before starting a task slice from `tasks.md`, update that task block in the active Feature Spec `tasks.md` to `Status: running`. Use the version in the `implementationWorkspace` if one is active; otherwise use the `ownerWorkspace`.
+- When the task slice is complete and its required verification/evidence has passed, update that task block to `Status: done` in the same active workspace.
+- If the task cannot continue, update it to the narrowest truthful status: `blocked`, `review_needed`, `approval_needed`, or `failed` in the active workspace.
+- Ensure that any `spec-state.json` updates also target the active workspace to prevent spec drift between the feature branch and the owner workspace.
 - For delegated worker slices, the owner thread writes the status when the worker starts and reconciles it after the worker result; workers may report suggested statuses but must not be the only source of truth.
 - Update `.autobuild/runs/<executionId>/checkpoint.json` after each status change when an `executionId` exists, but do not use the checkpoint as a substitute for the visible `tasks.md` status.
 - Preserve parser-compatible task headings and `Status:` lines. Do not place extra `TASK-*` tokens in checklist prose where the task parser could treat them as separate tasks.
-- Keep task status edits scoped to the active Feature Spec. Do not rewrite unrelated requirements, design, spec-state, or sibling Feature task files while reporting progress.
+- Keep task status and lifecycle edits scoped to the active Feature Spec in the correct workspace. Do not rewrite unrelated requirements, design, spec-state, or sibling Feature task files while reporting progress. Avoid "leaking" these updates into the `ownerWorkspace` when a `feature-worktree` or `worker-worktree` is active.
 
 ## Feature Execution Rules
 

@@ -17,6 +17,7 @@ This repository is a spec-driven autonomous coding system. Treat the spec artifa
 - Read the relevant PRD, requirements, HLD/design, Feature Spec, and task file before changing code or specs.
 - Preserve unrelated user changes. Inspect `git status --short` before editing and stage only the intended files when committing.
 - Keep changes scoped to the requested requirement, Feature Spec, or task. Do not rewrite broad docs or refactor unrelated code unless the user explicitly asks.
+- When an implementation worktree is active, all writes to Feature Specs (including `tasks.md` and `spec-state.json`), code, tests, and documentation MUST target the implementation workspace. Do not leak these updates into the owner workspace.
 - When a repository fact conflicts with a spec, update the spec through the spec-evolution path instead of silently coding around it.
 - If implementation intent, acceptance criteria, or file scope is unclear, stop for clarification before making risky changes.
 - For Chinese docs, preserve Chinese structure, numbering, and terminology unless the user asks for a language or tone change.

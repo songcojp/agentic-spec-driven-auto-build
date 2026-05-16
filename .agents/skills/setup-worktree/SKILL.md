@@ -54,6 +54,7 @@ Record these fields for handoff to `implement-feature` and final `result.gitDeli
 
 ## Boundaries
 
-- Do not modify project specs, code, tests, or docs from the owner workspace after this worktree setup starts; write work belongs in the implementation worktree.
+- Do not modify project specs (including `tasks.md` and `spec-state.json`), code, tests, or docs from the owner workspace after this worktree setup starts; write work belongs in the implementation worktree.
+- Failure to redirect spec writes to the `implementationWorkspace` will result in spec drift where progress is recorded in the `ownerWorkspace` but missing from the delivery branch.
 - Do not clean up worktrees; route cleanup to `clean-worktree`.
 - Do not mark Feature execution completed. This skill only prepares the workspace and returns worktree setup evidence.
