@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join, normalize } from "node:path";
 import { Queue, Worker, type Job, type WorkerOptions } from "bullmq";
 import IORedis from "ioredis";
@@ -50,6 +50,7 @@ import {
   writeFileSpecState,
 } from "./spec-protocol.ts";
 import { createReviewItem, listReviewCenterItems, type ReviewTrigger } from "./review-center.ts";
+import { persistWorktreeRecord, prepareFeatureWorktree, type WorktreeRecord } from "./workspace.ts";
 
 export const EXECUTION_ADAPTER_QUEUE = "specdrive:execution-adapter";
 export const BULLMQ_EXECUTION_ADAPTER_QUEUE = "specdrive-execution-adapter";
@@ -566,6 +567,8 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
           jobType: "cli.run",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
+          ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+          worktree: loaded.worktree,
           skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
           executionInvocation: loaded.executionInvocation,
@@ -574,7 +577,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     },
   ]);
   updateFeatureSpecFileState({
-    workspaceRoot: loaded.workspaceRoot,
+    workspaceRoot: loaded.ownerWorkspaceRoot,
     featureId: loaded.featureId ?? featureId,
     context,
     status: "running",
@@ -615,6 +618,8 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     jobType: "cli.run",
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
+    ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+    worktree: loaded.worktree,
     adapterId: loaded.adapter.id,
     skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
@@ -641,7 +646,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     now: new Date(),
   });
   updateFeatureSpecFileState({
-    workspaceRoot: loaded.workspaceRoot,
+    workspaceRoot: loaded.ownerWorkspaceRoot,
     featureId: loaded.featureId ?? featureId,
     context,
     status: result.status,
@@ -890,6 +895,8 @@ export async function runCodexAppServerRunJob(
       provider: "codex-rpc",
       executionPreference,
       workspaceRoot: loaded.workspaceRoot,
+      ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+      worktree: loaded.worktree,
       safety,
       skillName: loaded.executionInvocation.skillInstruction.skillName,
       skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
@@ -954,6 +961,8 @@ export async function runCodexAppServerRunJob(
           provider: "codex-rpc",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
+          ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+          worktree: loaded.worktree,
           skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
           executionInvocation: loaded.executionInvocation,
@@ -974,7 +983,7 @@ export async function runCodexAppServerRunJob(
     },
   ]);
   updateFeatureSpecFileState({
-    workspaceRoot: loaded.workspaceRoot,
+    workspaceRoot: loaded.ownerWorkspaceRoot,
     featureId: loaded.featureId ?? featureId,
     context,
     status: "running",
@@ -1023,6 +1032,8 @@ export async function runCodexAppServerRunJob(
             jobType: "rpc.run",
             executionPreference,
             workspaceRoot: loaded.workspaceRoot,
+            ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+            worktree: loaded.worktree,
             skillName: loaded.executionInvocation.skillInstruction.skillName,
             skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
             executionInvocation: loaded.executionInvocation,
@@ -1045,7 +1056,7 @@ export async function runCodexAppServerRunJob(
       },
     ]);
     updateFeatureSpecFileState({
-      workspaceRoot: loaded.workspaceRoot,
+      workspaceRoot: loaded.ownerWorkspaceRoot,
       featureId: loaded.featureId ?? featureId,
       context,
       status: "failed",
@@ -1081,6 +1092,8 @@ export async function runCodexAppServerRunJob(
     jobType: "rpc.run",
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
+    ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+    worktree: loaded.worktree,
     skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
     executionInvocation: loaded.executionInvocation,
@@ -1130,7 +1143,7 @@ export async function runCodexAppServerRunJob(
     metadata: finalMetadata,
   });
   updateFeatureSpecFileState({
-    workspaceRoot: loaded.workspaceRoot,
+    workspaceRoot: loaded.ownerWorkspaceRoot,
     featureId: loaded.featureId ?? featureId,
     context,
     status: finalStatus,
@@ -1217,6 +1230,8 @@ export async function runGeminiAcpRunJob(
       provider: "gemini-acp",
       executionPreference,
       workspaceRoot: loaded.workspaceRoot,
+      ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+      worktree: loaded.worktree,
       safety,
       skillName: loaded.executionInvocation.skillInstruction.skillName,
       skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
@@ -1282,6 +1297,8 @@ export async function runGeminiAcpRunJob(
           provider: "gemini-acp",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
+          ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+          worktree: loaded.worktree,
           skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
           executionInvocation: loaded.executionInvocation,
@@ -1296,7 +1313,7 @@ export async function runGeminiAcpRunJob(
     },
   ]);
   updateFeatureSpecFileState({
-    workspaceRoot: loaded.workspaceRoot,
+    workspaceRoot: loaded.ownerWorkspaceRoot,
     featureId: loaded.featureId ?? featureId,
     context,
     status: "running",
@@ -1347,6 +1364,8 @@ export async function runGeminiAcpRunJob(
             provider: "gemini-acp",
             executionPreference,
             workspaceRoot: loaded.workspaceRoot,
+            ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+            worktree: loaded.worktree,
             skillName: loaded.executionInvocation.skillInstruction.skillName,
             skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
             executionInvocation: loaded.executionInvocation,
@@ -1363,7 +1382,7 @@ export async function runGeminiAcpRunJob(
       },
     ]);
     updateFeatureSpecFileState({
-      workspaceRoot: loaded.workspaceRoot,
+      workspaceRoot: loaded.ownerWorkspaceRoot,
       featureId: loaded.featureId ?? featureId,
       context,
       status: "failed",
@@ -1401,6 +1420,8 @@ export async function runGeminiAcpRunJob(
     provider: "gemini-acp",
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
+    ownerWorkspaceRoot: loaded.ownerWorkspaceRoot,
+    worktree: loaded.worktree,
     skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
     executionInvocation: loaded.executionInvocation,
@@ -1441,7 +1462,7 @@ export async function runGeminiAcpRunJob(
     metadata: finalMetadata,
   });
   updateFeatureSpecFileState({
-    workspaceRoot: loaded.workspaceRoot,
+    workspaceRoot: loaded.ownerWorkspaceRoot,
     featureId: loaded.featureId ?? featureId,
     context,
     status: finalStatus,
@@ -1686,7 +1707,9 @@ function loadRunnerTaskContext(dbPath: string, payload: CliRunJobPayload): {
   description: string;
   risk: RiskLevel;
   allowedFiles: string[];
+  ownerWorkspaceRoot: string;
   workspaceRoot: string;
+  worktree?: WorktreeRecord;
   adapter: CliAdapterConfig;
   prompt: string;
   executionInvocation: ExecutionAdapterInvocationV1;
@@ -1727,9 +1750,9 @@ function loadRunnerTaskContext(dbPath: string, payload: CliRunJobPayload): {
   }
   const projectId = payload.projectId ?? optionalString(featureRow?.project_id);
   const projectRow = result.queries.project.find((entry) => !projectId || entry.id === projectId) ?? result.queries.project[0];
-  const workspace = validateWorkspaceRoot(resolveWorkspaceRoot(projectRow));
-  if (!workspace.valid || !workspace.workspaceRoot) {
-    throw new Error(workspace.blockedReasons.join("; "));
+  const ownerWorkspace = validateWorkspaceRoot(resolveWorkspaceRoot(projectRow));
+  if (!ownerWorkspace.valid || !ownerWorkspace.workspaceRoot) {
+    throw new Error(ownerWorkspace.blockedReasons.join("; "));
   }
   const adapterRow = result.queries.adapter[0];
   const adapterCount = Number(result.queries.adapterCount[0]?.count ?? 0);
@@ -1749,10 +1772,31 @@ function loadRunnerTaskContext(dbPath: string, payload: CliRunJobPayload): {
   const description = title;
   const risk = normalizeRisk(payloadContext.risk);
   const allowedFiles = optionalStringArray(payloadContext.allowedFiles);
+  const ownerWorkspaceRoot = ownerWorkspace.workspaceRoot;
+  const ownerFeatureSpecPath = defaultFeatureSpecPath(featureId, payloadContext, ownerWorkspaceRoot);
+  const preparedWorktree = shouldUseFeatureWorktree(payload, featureId)
+    ? prepareFeatureWorktree({
+        repositoryPath: ownerWorkspaceRoot,
+        featureId: featureId ?? payload.executionId,
+        featureFolder: featureFolderFromPath(ownerFeatureSpecPath),
+        runnerId: executionPreference?.adapterId ?? "execution-adapter",
+        projectId,
+      })
+    : undefined;
+  if (preparedWorktree) {
+    persistWorktreeRecord(dbPath, preparedWorktree.record);
+  }
+  const workspaceRoot = preparedWorktree?.implementationWorkspaceRoot ?? ownerWorkspaceRoot;
+  if (preparedWorktree) {
+    const implementationWorkspace = validateWorkspaceRoot(workspaceRoot);
+    if (!implementationWorkspace.valid || !implementationWorkspace.workspaceRoot) {
+      throw new Error(implementationWorkspace.blockedReasons.join("; "));
+    }
+  }
   const executionInvocation = buildExecutionInvocation({
     payload,
     projectId,
-    workspaceRoot: workspace.workspaceRoot,
+    workspaceRoot,
     featureId,
     requirementIds: parseJsonArray(featureRow?.primary_requirements_json).map(String),
     allowedFiles,
@@ -1760,6 +1804,9 @@ function loadRunnerTaskContext(dbPath: string, payload: CliRunJobPayload): {
     sandboxMode: adapter.defaults.sandbox,
     approvalPolicy: adapter.defaults.approval,
   });
+  if (preparedWorktree) {
+    assertSourcePathsAvailable(workspaceRoot, executionInvocation.skillInstruction.sourcePaths);
+  }
   const context = [
     `Execution ${payload.executionId}${featureId ? ` for feature ${featureId}` : ""}: ${title}`,
     "",
@@ -1772,7 +1819,9 @@ function loadRunnerTaskContext(dbPath: string, payload: CliRunJobPayload): {
     description,
     risk,
     allowedFiles,
-    workspaceRoot: workspace.workspaceRoot,
+    ownerWorkspaceRoot,
+    workspaceRoot,
+    worktree: preparedWorktree?.record,
     adapter,
     prompt: buildExecutionInvocationPrompt(executionInvocation, context),
     executionInvocation,
@@ -2062,6 +2111,26 @@ function defaultFeatureSpecPath(featureId: string | undefined, context: Executor
   if (!featureId) return undefined;
   const docsFolder = findFeatureSpecFolder(workspaceRoot, featureId);
   return `docs/agentic-spec/features/${docsFolder ?? featureId.toLowerCase()}`;
+}
+
+function shouldUseFeatureWorktree(payload: ExecutorRunJobPayload, featureId: string | undefined): boolean {
+  const context = payload.context ?? {};
+  const skillName = optionalString(context.skillName) ?? (featureId ? "implement-feature" : undefined);
+  const operation = optionalString(context.operation) ?? payload.operation;
+  const requestedAction = payload.requestedAction ?? optionalString(context.skillPhase) ?? operation;
+  return !!featureId && operation === "feature_execution" && requestedAction === "feature_execution" && skillName === "implement-feature";
+}
+
+function featureFolderFromPath(featureSpecPath: string | undefined): string | undefined {
+  if (!featureSpecPath) return undefined;
+  return featureSpecPath.replaceAll("\\", "/").split("/").filter(Boolean).at(-1);
+}
+
+function assertSourcePathsAvailable(workspaceRoot: string, sourcePaths: string[]): void {
+  const missing = sourcePaths.filter((sourcePath) => !existsSync(join(workspaceRoot, sourcePath)));
+  if (missing.length > 0) {
+    throw new Error(`Feature worktree is missing source paths: ${missing.join(", ")}. Commit or sync the Feature Spec source files before scheduling implementation.`);
+  }
 }
 
 function findFeatureSpecFolder(workspaceRoot: string, featureId: string): string | undefined {

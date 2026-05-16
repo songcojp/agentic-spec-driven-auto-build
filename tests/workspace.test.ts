@@ -17,6 +17,7 @@ import {
   evaluateParallelFeature,
   persistWorktreeRecord,
   persistWorkspaceEvidence,
+  prepareFeatureWorktree,
   type CommandRunner,
 } from "../src/workspace.ts";
 
@@ -119,6 +120,91 @@ test("worktree creation records path, branch, base commit, target branch, featur
     args: ["worktree", "add", "-b", "work/feat-007-task-001", "/repo.worktrees/feat-007", "abc123"],
     cwd: "/repo",
   });
+});
+
+test("feature worktree preparation detects existing isolation before creating a sibling worktree", () => {
+  const calls: string[] = [];
+  const runner: CommandRunner = (_command, args) => {
+    const key = args.join(" ");
+    calls.push(key);
+    if (key === "symbolic-ref --short refs/remotes/origin/HEAD") return { status: 1, stdout: "", stderr: "" };
+    if (key === "branch --show-current") return { status: 0, stdout: "feat/existing\n", stderr: "" };
+    if (key === "rev-parse main") return { status: 1, stdout: "", stderr: "" };
+    if (key === "rev-parse HEAD") return { status: 0, stdout: "abc123\n", stderr: "" };
+    if (key === "rev-parse --git-dir") return { status: 0, stdout: "/repo/.git/worktrees/feat-existing\n", stderr: "" };
+    if (key === "rev-parse --git-common-dir") return { status: 0, stdout: "/repo/.git\n", stderr: "" };
+    if (key === "rev-parse --show-superproject-working-tree") return { status: 0, stdout: "", stderr: "" };
+    return { status: 1, stdout: "", stderr: "unexpected command" };
+  };
+
+  const prepared = prepareFeatureWorktree({
+    repositoryPath: "/repo",
+    featureId: "FEAT-008",
+    featureFolder: "feat-008-codex-runner",
+    runnerId: "codex",
+    now: stableDate,
+  }, runner);
+
+  assert.equal(prepared.alreadyIsolated, true);
+  assert.equal(prepared.implementationWorkspaceRoot, "/repo");
+  assert.equal(prepared.record.branch, "feat/existing");
+  assert.equal(calls.some((call) => call.startsWith("worktree add")), false);
+});
+
+test("feature worktree preparation creates or reuses a sibling feature worktree", () => {
+  const createdCalls: string[] = [];
+  const createRunner: CommandRunner = (_command, args) => {
+    const key = args.join(" ");
+    createdCalls.push(key);
+    if (key === "symbolic-ref --short refs/remotes/origin/HEAD") return { status: 0, stdout: "origin/main\n", stderr: "" };
+    if (key === "rev-parse origin/main") return { status: 0, stdout: "abc123\n", stderr: "" };
+    if (key === "rev-parse --git-dir") return { status: 0, stdout: ".git\n", stderr: "" };
+    if (key === "rev-parse --git-common-dir") return { status: 0, stdout: ".git\n", stderr: "" };
+    if (key === "rev-parse --show-superproject-working-tree") return { status: 0, stdout: "", stderr: "" };
+    if (key === "branch --show-current") return { status: 0, stdout: "main\n", stderr: "" };
+    if (key === "worktree list --porcelain") return { status: 0, stdout: "worktree /repo\nHEAD abc123\nbranch refs/heads/main\n", stderr: "" };
+    if (key === "rev-parse --verify refs/heads/feat/feat-008-codex-runner") return { status: 1, stdout: "", stderr: "" };
+    if (key.startsWith("worktree add -b feat/feat-008-codex-runner ")) return { status: 0, stdout: "", stderr: "" };
+    return { status: 1, stdout: "", stderr: `unexpected command: ${key}` };
+  };
+
+  const prepared = prepareFeatureWorktree({
+    repositoryPath: "/repo",
+    featureId: "FEAT-008",
+    featureFolder: "feat-008-codex-runner",
+    runnerId: "codex",
+    now: stableDate,
+  }, createRunner);
+
+  assert.equal(prepared.alreadyIsolated, false);
+  assert.equal(prepared.implementationWorkspaceRoot, "/repo.worktrees/feat-008-codex-runner");
+  assert.equal(prepared.record.branch, "feat/feat-008-codex-runner");
+  assert.equal(createdCalls.at(-1), "worktree add -b feat/feat-008-codex-runner /repo.worktrees/feat-008-codex-runner abc123");
+
+  const reuseRunner: CommandRunner = (_command, args) => {
+    const key = args.join(" ");
+    if (key === "symbolic-ref --short refs/remotes/origin/HEAD") return { status: 0, stdout: "origin/main\n", stderr: "" };
+    if (key === "rev-parse origin/main") return { status: 0, stdout: "abc123\n", stderr: "" };
+    if (key === "rev-parse --git-dir") return { status: 0, stdout: ".git\n", stderr: "" };
+    if (key === "rev-parse --git-common-dir") return { status: 0, stdout: ".git\n", stderr: "" };
+    if (key === "rev-parse --show-superproject-working-tree") return { status: 0, stdout: "", stderr: "" };
+    if (key === "branch --show-current") return { status: 0, stdout: "main\n", stderr: "" };
+    if (key === "worktree list --porcelain") {
+      return { status: 0, stdout: "worktree /repo.worktrees/feat-008-codex-runner\nHEAD def456\nbranch refs/heads/feat/feat-008-codex-runner\n", stderr: "" };
+    }
+    return { status: 1, stdout: "", stderr: `unexpected command: ${key}` };
+  };
+
+  const reused = prepareFeatureWorktree({
+    repositoryPath: "/repo",
+    featureId: "FEAT-008",
+    featureFolder: "feat-008-codex-runner",
+    runnerId: "codex",
+    now: stableDate,
+  }, reuseRunner);
+
+  assert.equal(reused.implementationWorkspaceRoot, "/repo.worktrees/feat-008-codex-runner");
+  assert.equal(reused.record.branch, "feat/feat-008-codex-runner");
 });
 
 test("conflict classifier serializes same files, lock files, schema, shared config, and shared runtime resources", () => {

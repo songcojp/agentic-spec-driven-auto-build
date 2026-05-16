@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -274,7 +275,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
 
   assert.equal(result.status, "completed");
   assert.equal(resultWithSpy.status, "completed");
-  assert.equal(calls[0].cwd, root);
+  assert.equal(calls[0].cwd, expectedFeatureWorktree(root));
   assert.match(calls[0].args.join("\n"), /Execute this SpecDrive task/);
   assert.match(calls[0].args.join("\n"), /\[AUTOBUILD INVOCATION\]/);
   assert.match(calls[0].args.join("\n"), /\.autobuild\/memory\/constitution\.md/);
@@ -291,7 +292,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(rows.task[0].status, "scheduled");
   assert.deepEqual(rows.sessions.map((row) => [row.session_id, row.exit_code]), [["SESSION-CLI", 0]]);
   assert.match(String(rows.logs[0].stdout), /skill-contract\/v2/);
-  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-CLI", "WORKPAD.md")), true);
+  assert.equal(existsSync(join(expectedFeatureWorktree(root), ".autobuild", "runs", "RUN-CLI", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -302,6 +303,7 @@ test("cli.run default Feature paths use context Feature Spec folder", async () =
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "requirements.md"), "# Requirements\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "design.md"), "# Design\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "add lowercase feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -457,6 +459,7 @@ test("cli.run keeps large source documents out of the provider prompt", async ()
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "requirements.md"), largeRequirements);
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "design.md"), "# Design\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "update large feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -734,7 +737,7 @@ test("cli.run uses active Gemini CLI adapter from adapter configuration", async 
   assert.equal(result.status, "completed");
   assert.equal(calls[0].command, "gemini");
   assert.deepEqual(calls[0].args.slice(0, 5), ["--model", "gemini-3-pro-preview", "--output-format", "stream-json", "-p"]);
-  assert.equal(calls[0].cwd, root);
+  assert.equal(calls[0].cwd, expectedFeatureWorktree(root));
 });
 
 test("cli.run can select built-in Claude Code CLI adapter from job execution preference", async () => {
@@ -765,7 +768,7 @@ test("cli.run can select built-in Claude Code CLI adapter from job execution pre
   assert.equal(calls[0].command, "claude");
   assert.deepEqual(calls[0].args.slice(0, 8), ["-p", calls[0].args[1], "--model", "sonnet", "--effort", "medium", "--output-format", "json"]);
   assert.equal(calls[0].args[calls[0].args.indexOf("--permission-mode") + 1], "acceptEdits");
-  assert.equal(calls[0].cwd, root);
+  assert.equal(calls[0].cwd, expectedFeatureWorktree(root));
 });
 
 test("codex.rpc.run executes mocked app-server transport and persists runner artifacts", async () => {
@@ -831,7 +834,8 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   assert.equal(metadata.turnId, "TURN-APP");
   assert.equal(metadata.transport, "stdio");
   assert.equal(metadata.model, "gpt-5.5");
-  assert.equal(metadata.cwd, root);
+  assert.equal(metadata.cwd, expectedFeatureWorktree(root));
+  assert.equal(metadata.ownerWorkspaceRoot, root);
   assert.equal(metadata.contractValidation.valid, true);
   assert.equal(rows.policy[0].model, "gpt-5.5");
   assert.equal(rows.policy[0].reasoning_effort, "high");
@@ -840,7 +844,7 @@ test("codex.rpc.run executes mocked app-server transport and persists runner art
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["app-server"]);
   assert.equal(rows.session[0].exit_code, 0);
   assert.equal(rows.log[0].stdout, "done");
-  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-APP-SERVER", "WORKPAD.md")), true);
+  assert.equal(existsSync(join(expectedFeatureWorktree(root), ".autobuild", "runs", "RUN-APP-SERVER", "WORKPAD.md")), true);
   assert.equal(rows.statusChecks.length, 0);
 });
 
@@ -904,7 +908,7 @@ test("rpc.run dispatches active Gemini ACP provider and persists runner artifact
   assert.deepEqual(JSON.parse(String(rows.session[0].args_json)), ["--acp", "--skip-trust"]);
   assert.equal(rows.session[0].exit_code, 0);
   assert.match(String(rows.log[0].stdout), /RUN-GEMINI-ACP-RPC/);
-  assert.equal(existsSync(join(root, ".autobuild", "runs", "RUN-GEMINI-ACP-RPC", "WORKPAD.md")), true);
+  assert.equal(existsSync(join(expectedFeatureWorktree(root), ".autobuild", "runs", "RUN-GEMINI-ACP-RPC", "WORKPAD.md")), true);
 });
 
 test("codex.rpc.run projects approval pending to Feature spec-state", async () => {
@@ -915,6 +919,7 @@ test("codex.rpc.run projects approval pending to Feature spec-state", async () =
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-CLI\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
   writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "add approval feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const transport: CodexAppServerTransport = {
@@ -968,6 +973,7 @@ test("codex.rpc.run writes completed Feature execution to spec-state file", asyn
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-CLI\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
   writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "add completed-state feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const transport: CodexAppServerTransport = {
@@ -1407,4 +1413,26 @@ function prepareSkillWorkspace(root: string): void {
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "requirements.md"), "# Requirements\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "design.md"), "# Design\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
+  initializeGitWorkspace(root);
+}
+
+function initializeGitWorkspace(root: string): void {
+  runGit(root, ["init", "-b", "main"]);
+  runGit(root, ["config", "user.email", "specdrive-tests@example.invalid"]);
+  runGit(root, ["config", "user.name", "SpecDrive Tests"]);
+  commitWorkspace(root, "initial fixture");
+}
+
+function commitWorkspace(root: string, message: string): void {
+  runGit(root, ["add", "."]);
+  runGit(root, ["commit", "-m", message]);
+}
+
+function runGit(root: string, args: string[]): void {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+  assert.equal(result.status, 0, `git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
+}
+
+function expectedFeatureWorktree(root: string): string {
+  return join(`${root}.worktrees`, "feat-cli");
 }

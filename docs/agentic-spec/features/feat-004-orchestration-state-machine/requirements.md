@@ -15,7 +15,7 @@
 - 维护 Feature 状态机，覆盖 `draft`、`ready`、`planning`、`tasked`、`implementing`、`done`、`delivered`、`review_needed`、`blocked` 和 `failed`。
 - 项目级 `schedule_run` 和 `start_auto_run` 从 `docs/agentic-spec/features/feature-pool-queue.json` 读取已排好的 Feature 队列，调用 `plan-feature-execution` 推理选择下一个 Feature，并只执行通过代码安全校验的选择；独立 `push_feature_spec_pool` public action 不再存在。
 - Feature 调度状态从 `docs/agentic-spec/features/<feature-id>/spec-state.json` 读取；blocked / failed / review_needed Feature 必须显式 resume 后才允许再次执行。
-- Scheduler Trigger 只负责把受控命令转换为 executor job；Feature/Task/Project 是 payload context，不是 Job 顶层属性。Feature 执行必须以当前项目 workspace 中完整的 Feature Spec 目录作为输入。
+- Scheduler Trigger 只负责把受控命令转换为 executor job；Feature/Task/Project 是 payload context，不是 Job 顶层属性。Feature 执行必须以当前项目 workspace 中完整的 Feature Spec 目录作为输入，并由 Execution Adapter 在 provider 启动前准备 Feature 实现 worktree。
 - 记录立即执行、指定时间、每日、每小时、夜间、工作日、依赖完成、CI 失败和审批通过等触发模式；事件类触发先记录为受控请求。
 - 通过 BullMQ + Redis 调度 `<executor>.run` job；当前支持 `cli.run`，预留 `native.run`，并用 SQLite 保存 `scheduler_job_records` 和 `execution_records`。
 - 维护状态聚合、调度审计、状态转换审计和可恢复运行状态。
@@ -38,6 +38,7 @@
 - 每次调度运行必须记录触发模式、触发时间、触发来源、触发对象、BullMQ job id、queue、job type、attempts、payload 和调度结果。
 - Job 核心字段只保留执行层信息：`id`、`queue_name`、`job_type`、`status`、`payload_json`、`attempts`、`error`、`created_at`、`updated_at`；Feature/Task/Project 不得作为 Job 顶层属性。
 - Payload 必须包含 `operation`、`projectId` 和 `context`；Feature 执行统一使用 `operation = "feature_execution"`，并在 `context.sourcePaths` 中包含 Feature Spec `requirements.md`、`design.md` 和 `tasks.md`。
+- Feature 执行的 Scheduler Job 不把 worktree 路径作为顶层字段；Execution Adapter 根据 owner workspace、Feature ID 和 Feature Spec folder 创建或复用 worktree，并在 Execution Record metadata / `worktree_records` 中记录实现 workspace。
 - 调度器不得创建 `feature.select` 或 `feature.plan` job；所有任务激活都进入 `<executor>.run`。
 - 真实执行实例必须记录为 Execution Record（执行记录），字段包括 scheduler job、executor type、operation、project id、context、status、started/completed、summary 和 metadata。
 - 手动和时间类触发可进入候选选择；CI 失败、审批通过和依赖完成触发在 MVP 中必须先记录为 `recorded` 或 `blocked`，等待上游 Evidence/Review/Dependency 子系统确认后再进入候选选择。
@@ -56,6 +57,7 @@
 - [ ] 项目级 `schedule_run` / `start_auto_run` 不创建 `feature.select` / `feature.plan`，而是按队列规划直接入队 `cli.run` 或后续 `native.run`。
 - [ ] 项目级 `schedule_run` / `start_auto_run` 使用 `plan-feature-execution` 的选择结果作为候选输入，并由代码安全闸拒绝非法或不可执行选择。
 - [ ] Feature 级 `schedule_run` 在完整 Feature Spec 目录存在时可以直接入队 `feature_execution`，不依赖 `task_graph_tasks` / `tasks`。
+- [ ] Feature 级 `feature_execution` 的实际 provider cwd 来自 Feature 实现 worktree，owner workspace 只承担调度事实和 `spec-state.json` 状态投影。
 - [ ] 项目级调度能将缺失三件套、依赖未完成、未显式 resume 的 blocked Feature 写入 `spec-state.json` 并展示 blocked reason。
 - [ ] skip to next 不会删除队列项，但会把被跳过 Feature 的 `spec-state.json.status` 写为 `skipped`，并选择后续可执行 Feature。
 - [ ] Execution Record 与 Evidence、heartbeat、logs 和 session 能关联查询。
