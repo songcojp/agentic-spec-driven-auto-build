@@ -3126,7 +3126,7 @@ test("runner artifacts persist for audit and console lookup", async () => {
     { name: "policy", sql: "SELECT sandbox_mode, approval_policy, model, reasoning_effort FROM runner_policies WHERE id = ?", params: [policy.id] },
     { name: "heartbeat", sql: "SELECT queue_status FROM runner_heartbeats WHERE id = ?", params: [heartbeat.id] },
     { name: "session", sql: "SELECT session_id, exit_code FROM cli_session_records WHERE id = ?", params: [adapter.session.id] },
-    { name: "log", sql: "SELECT events_json FROM raw_execution_logs WHERE id = ?", params: [adapter.rawLog.id] },
+    { name: "log", sql: "SELECT stdout, stderr, events_json FROM raw_execution_logs WHERE id = ?", params: [adapter.rawLog.id] },
   ]);
 
   assert.equal(rows.queries.policy[0].sandbox_mode, "danger-full-access");
@@ -3136,7 +3136,12 @@ test("runner artifacts persist for audit and console lookup", async () => {
   assert.equal(rows.queries.heartbeat[0].queue_status, "completed");
   assert.equal(rows.queries.session[0].session_id, "S-1");
   assert.equal(rows.queries.session[0].exit_code, 0);
-  assert.equal(JSON.parse(String(rows.queries.log[0].events_json)).length, 1);
+  const logIndex = JSON.parse(String(rows.queries.log[0].events_json));
+  assert.equal(rows.queries.log[0].stdout, "");
+  assert.equal(rows.queries.log[0].stderr, "");
+  assert.equal(logIndex.storage, "file");
+  assert.equal(logIndex.eventCount, 1);
+  assert.equal(logIndex.outputPath, adapter.rawLog.files?.output);
 });
 
 test("log redaction covers common secret formats", () => {

@@ -2772,8 +2772,6 @@ export function buildExecutionResultInput(input: RunnerExecutionResultInput): {
       sessionId: input.sessionId,
       exitCode: input.exitCode,
       eventTypes: input.events.map((event) => event.type).filter(Boolean),
-      stdout: input.stdout,
-      stderr: input.stderr,
       executionInvocation: input.executionInvocation,
       skillOutput: input.skillOutput,
       contractValidation: input.contractValidation,
@@ -2900,6 +2898,10 @@ export function persistCliRunnerArtifacts(
   }
 
   if (input.rawLog) {
+    const eventRefs = input.rawLog.events.map((event, index) => ({
+      index,
+      type: typeof event.type === "string" ? event.type : undefined,
+    }));
     statements.push({
       sql: `INSERT INTO raw_execution_logs (
         id, run_id, stdout, stderr, events_json, created_at
@@ -2907,9 +2909,17 @@ export function persistCliRunnerArtifacts(
       params: [
         input.rawLog.id,
         input.rawLog.runId,
-        input.rawLog.stdout,
-        input.rawLog.stderr,
-        JSON.stringify(input.rawLog.events),
+        "",
+        "",
+        JSON.stringify({
+          storage: "file",
+          stdoutPath: input.rawLog.files?.stdout,
+          stderrPath: input.rawLog.files?.stderr,
+          outputPath: input.rawLog.files?.output,
+          reportPath: input.rawLog.files?.report,
+          eventCount: input.rawLog.events.length,
+          eventRefs,
+        }),
         input.rawLog.createdAt,
       ],
     });

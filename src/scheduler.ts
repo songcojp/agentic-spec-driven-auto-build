@@ -501,7 +501,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
           "cli",
           payload.operation,
           payload.projectId ?? null,
-          JSON.stringify(context),
+          JSON.stringify(executionRecordContext({ context, executionPreference, skillName, skillPhase })),
           "blocked",
           new Date().toISOString(),
           reason,
@@ -558,7 +558,12 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
         "cli",
         payload.operation,
         loaded.projectId ?? payload.projectId ?? null,
-        JSON.stringify(loaded.executionInvocation),
+        JSON.stringify(executionRecordContext({
+          context,
+          invocation: loaded.executionInvocation,
+          workspaceRoot: loaded.workspaceRoot,
+          executionPreference,
+        })),
         "running",
         now.toISOString(),
         JSON.stringify({
@@ -568,7 +573,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
           workspaceRoot: loaded.workspaceRoot,
           skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-          executionInvocation: loaded.executionInvocation,
+          adapterId: loaded.adapter.id,
         }),
       ],
     },
@@ -610,7 +615,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     });
       }
 
-  const finalMetadata = {
+  const finalMetadata = executionRecordMetadata({
     scheduler: "bullmq",
     jobType: "cli.run",
     executionPreference,
@@ -618,13 +623,11 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     adapterId: loaded.adapter.id,
     skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-    executionInvocation: loaded.executionInvocation,
-    skillOutputContract: result.adapterResult?.result.skillOutput,
     contractValidation: result.adapterResult?.result.contractValidation,
-    producedArtifacts: result.adapterResult?.result.skillOutput?.producedArtifacts ?? [],
+    skillOutput: result.adapterResult?.result.skillOutput,
     rawLogRefs: result.adapterResult?.executionAdapterResult?.rawLogRefs ?? [],
     commandTermination: result.adapterResult?.result.commandTermination,
-  };
+  });
   runSqlite(dbPath, [
     {
       sql: "UPDATE execution_records SET status = ?, completed_at = ?, summary = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -692,6 +695,100 @@ function ensureExecutionReviewItem(
     evidenceRefs: Array.isArray(input.metadata?.rawLogRefs) ? input.metadata.rawLogRefs.map(String) : [],
     now: input.now,
   });
+}
+
+function executionRecordContext(input: {
+  context?: Record<string, unknown>;
+  invocation?: ExecutionAdapterInvocationV1;
+  workspaceRoot?: string;
+  executionPreference?: ExecutionPreferenceV1;
+  skillName?: string;
+  skillPhase?: string;
+}): Record<string, unknown> {
+  const context = input.context ?? {};
+  const invocation = input.invocation;
+  return compactRecord({
+    featureId: optionalString(invocation?.featureId) ?? optionalString(context.featureId),
+    featureSpecPath: optionalString(context.featureSpecPath),
+    taskId: optionalString(context.taskId),
+    workspaceRoot: optionalString(input.workspaceRoot) ?? optionalString(invocation?.workspaceRoot) ?? optionalString(context.workspaceRoot),
+    skillName: optionalString(invocation?.skillInstruction.skillName) ?? input.skillName ?? optionalString(context.skillName),
+    skillPhase: optionalString(invocation?.skillInstruction.requestedAction) ?? input.skillPhase ?? optionalString(context.skillPhase),
+    operation: optionalString(invocation?.operation) ?? optionalString(context.operation),
+    executionPreference: input.executionPreference ?? parseJsonObject(context.executionPreference),
+    previousExecutionId: optionalString(context.previousExecutionId),
+    retryReason: optionalString(context.retryReason),
+    retriedAt: optionalString(context.retriedAt),
+  });
+}
+
+function executionRecordMetadata(input: {
+  scheduler: string;
+  jobType: string;
+  executionPreference?: ExecutionPreferenceV1;
+  workspaceRoot: string;
+  adapterId?: string;
+  skillName?: string;
+  skillPhase?: string;
+  skillOutput?: SkillOutputContract;
+  contractValidation?: unknown;
+  rawLogRefs?: string[];
+  commandTermination?: unknown;
+  provider?: string;
+  threadId?: string;
+  turnId?: string;
+  sessionId?: string;
+  transport?: string;
+  model?: string;
+  adapterConfig?: unknown;
+  approvalState?: unknown;
+  eventRefs?: unknown;
+  error?: string;
+}): Record<string, unknown> {
+  return compactRecord({
+    scheduler: input.scheduler,
+    jobType: input.jobType,
+    provider: input.provider,
+    executionPreference: input.executionPreference,
+    workspaceRoot: input.workspaceRoot,
+    adapterId: input.adapterId,
+    skillName: input.skillName,
+    skillPhase: input.skillPhase,
+    threadId: input.threadId,
+    turnId: input.turnId,
+    sessionId: input.sessionId,
+    transport: input.transport,
+    model: input.model,
+    adapterConfig: input.adapterConfig,
+    approvalState: input.approvalState,
+    eventRefs: input.eventRefs,
+    skillOutputStatus: input.skillOutput?.status,
+    skillOutputSummary: input.skillOutput?.summary,
+    traceability: input.skillOutput?.traceability,
+    qualityEvidence: compactQualityEvidence(input.skillOutput?.result),
+    contractValidation: input.contractValidation,
+    producedArtifacts: input.skillOutput?.producedArtifacts ?? [],
+    rawLogRefs: input.rawLogRefs ?? [],
+    commandTermination: input.commandTermination,
+    error: input.error,
+  });
+}
+
+function compactQualityEvidence(result: unknown): Record<string, unknown> | undefined {
+  const record = parseJsonObject(result);
+  const evidence = compactRecord({
+    requirementCoverage: record.requirementCoverage,
+    acceptanceEvidence: record.acceptanceEvidence,
+    journeyEvidence: record.journeyEvidence,
+    runtimeEvidence: record.runtimeEvidence,
+    deliveryFidelity: record.deliveryFidelity,
+    gitDelivery: record.gitDelivery,
+  });
+  return Object.keys(evidence).length > 0 ? evidence : undefined;
+}
+
+function compactRecord(record: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
 
 function executionReviewNeededReason(
@@ -916,23 +1013,26 @@ export async function runCodexAppServerRunJob(
         "codex.rpc",
         payload.operation,
         loaded.projectId ?? payload.projectId ?? null,
-        JSON.stringify(loaded.executionInvocation),
+        JSON.stringify(executionRecordContext({
+          context,
+          invocation: loaded.executionInvocation,
+          workspaceRoot: loaded.workspaceRoot,
+          executionPreference,
+        })),
         "running",
         now.toISOString(),
-        JSON.stringify({
+        JSON.stringify(executionRecordMetadata({
           scheduler: "bullmq",
           jobType: "rpc.run",
           provider: "codex-rpc",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
+          adapterId: adapterConfig?.id,
           skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-          executionInvocation: loaded.executionInvocation,
           threadId: payload.threadId,
           transport: adapterConfig?.transport,
           model: policy.model,
-          cwd: loaded.workspaceRoot,
-          outputSchema: policy.outputSchema,
           adapterConfig: {
             id: adapterConfig?.id,
             displayName: adapterConfig?.displayName,
@@ -940,7 +1040,7 @@ export async function runCodexAppServerRunJob(
             args: adapterConfig?.args,
             endpoint: adapterConfig?.endpoint,
           },
-        }),
+        })),
       ],
     },
   ]);
@@ -989,19 +1089,18 @@ export async function runCodexAppServerRunJob(
           "failed",
           completedAt,
           reason,
-          JSON.stringify({
+          JSON.stringify(executionRecordMetadata({
             scheduler: "bullmq",
             jobType: "rpc.run",
+            provider: "codex-rpc",
             executionPreference,
             workspaceRoot: loaded.workspaceRoot,
+            adapterId: adapterConfig?.id,
             skillName: loaded.executionInvocation.skillInstruction.skillName,
             skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-            executionInvocation: loaded.executionInvocation,
             threadId: payload.threadId,
             transport: adapterConfig?.transport,
             model: policy.model,
-            cwd: loaded.workspaceRoot,
-            outputSchema: policy.outputSchema,
             adapterConfig: {
               id: adapterConfig?.id,
               displayName: adapterConfig?.displayName,
@@ -1010,7 +1109,7 @@ export async function runCodexAppServerRunJob(
               endpoint: adapterConfig?.endpoint,
             },
             error: reason,
-          }),
+          })),
           payload.executionId,
         ],
       },
@@ -1047,23 +1146,21 @@ export async function runCodexAppServerRunJob(
     : (finalStatus === "failed" || finalStatus === "review_needed") && adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
     ? `Skill output contract validation failed: ${adapterResult.result.contractValidation.reasons.join("; ")}`
     : adapterResult.result.skillOutput?.summary ?? (adapterResult.rawLog.stderr || `Codex RPC ${finalStatus}.`);
-  const finalMetadata = {
+  const finalMetadata = executionRecordMetadata({
     scheduler: "bullmq",
     jobType: "rpc.run",
+    provider: "codex-rpc",
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
+    adapterId: adapterConfig?.id,
     skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-    executionInvocation: loaded.executionInvocation,
-    skillOutputContract: adapterResult.result.skillOutput,
-    producedArtifacts: adapterResult.result.skillOutput?.producedArtifacts ?? [],
+    skillOutput: adapterResult.result.skillOutput,
     rawLogRefs: adapterResult.executionAdapterResult?.rawLogRefs ?? [],
     threadId: adapterResult.session.sessionId,
     turnId: eventTurnId(adapterResult.rawLog.events),
     transport: adapterConfig?.transport,
     model: policy.model,
-    cwd: loaded.workspaceRoot,
-    outputSchema: policy.outputSchema,
     contractValidation: adapterResult.result.contractValidation,
     approvalState: approvalStateFromEvents(adapterResult.rawLog.events),
     eventRefs: adapterResult.rawLog.events.map((event, index) => ({
@@ -1079,7 +1176,7 @@ export async function runCodexAppServerRunJob(
       args: adapterConfig?.args,
       endpoint: adapterConfig?.endpoint,
     },
-  };
+  });
   runSqlite(dbPath, [
     {
       sql: "UPDATE execution_records SET status = ?, completed_at = ?, summary = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -1244,25 +1341,28 @@ export async function runGeminiAcpRunJob(
         "gemini.acp",
         payload.operation,
         loaded.projectId ?? payload.projectId ?? null,
-        JSON.stringify(loaded.executionInvocation),
+        JSON.stringify(executionRecordContext({
+          context,
+          invocation: loaded.executionInvocation,
+          workspaceRoot: loaded.workspaceRoot,
+          executionPreference,
+        })),
         "running",
         now.toISOString(),
-        JSON.stringify({
+        JSON.stringify(executionRecordMetadata({
           scheduler: "bullmq",
           jobType: "rpc.run",
           provider: "gemini-acp",
           executionPreference,
           workspaceRoot: loaded.workspaceRoot,
+          adapterId: adapterConfig?.id,
           skillName: loaded.executionInvocation.skillInstruction.skillName,
           skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-          executionInvocation: loaded.executionInvocation,
           sessionId: payload.threadId,
           transport: adapterConfig?.transport,
           model: policy.model,
-          cwd: loaded.workspaceRoot,
-          outputSchema: policy.outputSchema,
           adapterConfig: adapterMetadata(adapterConfig),
-        }),
+        })),
       ],
     },
   ]);
@@ -1312,23 +1412,21 @@ export async function runGeminiAcpRunJob(
           "failed",
           completedAt,
           reason,
-          JSON.stringify({
+          JSON.stringify(executionRecordMetadata({
             scheduler: "bullmq",
             jobType: "rpc.run",
             provider: "gemini-acp",
             executionPreference,
             workspaceRoot: loaded.workspaceRoot,
+            adapterId: adapterConfig?.id,
             skillName: loaded.executionInvocation.skillInstruction.skillName,
             skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-            executionInvocation: loaded.executionInvocation,
             sessionId: payload.threadId,
             transport: adapterConfig?.transport,
             model: policy.model,
-            cwd: loaded.workspaceRoot,
-            outputSchema: policy.outputSchema,
             adapterConfig: adapterMetadata(adapterConfig),
             error: reason,
-          }),
+          })),
           payload.executionId,
         ],
       },
@@ -1366,23 +1464,20 @@ export async function runGeminiAcpRunJob(
     : (finalStatus === "failed" || finalStatus === "review_needed") && adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
     ? `Skill output contract validation failed: ${adapterResult.result.contractValidation.reasons.join("; ")}`
     : adapterResult.result.skillOutput?.summary ?? (adapterResult.rawLog.stderr || `Gemini ACP ${finalStatus}.`);
-  const finalMetadata = {
+  const finalMetadata = executionRecordMetadata({
     scheduler: "bullmq",
     jobType: "rpc.run",
     provider: "gemini-acp",
     executionPreference,
     workspaceRoot: loaded.workspaceRoot,
+    adapterId: adapterConfig?.id,
     skillName: loaded.executionInvocation.skillInstruction.skillName,
     skillPhase: loaded.executionInvocation.skillInstruction.requestedAction,
-    executionInvocation: loaded.executionInvocation,
-    skillOutputContract: adapterResult.result.skillOutput,
-    producedArtifacts: adapterResult.result.skillOutput?.producedArtifacts ?? [],
+    skillOutput: adapterResult.result.skillOutput,
     rawLogRefs: adapterResult.executionAdapterResult?.rawLogRefs ?? [],
     sessionId: adapterResult.session.sessionId,
     transport: adapterConfig?.transport,
     model: policy.model,
-    cwd: loaded.workspaceRoot,
-    outputSchema: policy.outputSchema,
     contractValidation: adapterResult.result.contractValidation,
     approvalState: approvalStateFromEvents(adapterResult.rawLog.events),
     eventRefs: adapterResult.rawLog.events.map((event, index) => ({
@@ -1390,7 +1485,7 @@ export async function runGeminiAcpRunJob(
       type: optionalString(event.type),
     })),
     adapterConfig: adapterMetadata(adapterConfig),
-  };
+  });
   runSqlite(dbPath, [
     {
       sql: "UPDATE execution_records SET status = ?, completed_at = ?, summary = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",

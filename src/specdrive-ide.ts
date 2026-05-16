@@ -714,6 +714,20 @@ function tokenConsumptionFromRow(row: Record<string, unknown> | undefined): Spec
 }
 
 function qualityEvidenceFromExecutionMetadata(metadata: Record<string, unknown>): SpecDriveIdeQualityEvidenceProjection | undefined {
+  const qualityEvidence = isRecord(metadata.qualityEvidence) ? metadata.qualityEvidence : undefined;
+  if (qualityEvidence) {
+    const rawLogRefs = Array.isArray(metadata.rawLogRefs) ? metadata.rawLogRefs.map(String) : [];
+    const workpadRefs = rawLogRefs.filter((ref) => /(^|\/)WORKPAD\.md$|(^|\/)workpad\.json$/.test(ref));
+    return {
+      requirementCoverage: qualityEvidence.requirementCoverage,
+      acceptanceEvidence: qualityEvidence.acceptanceEvidence,
+      journeyEvidence: qualityEvidence.journeyEvidence,
+      runtimeEvidence: qualityEvidence.runtimeEvidence,
+      deliveryFidelity: qualityEvidence.deliveryFidelity,
+      gitDelivery: qualityEvidence.gitDelivery,
+      workpadRefs,
+    };
+  }
   const skillOutput = isRecord(metadata.skillOutputContract) ? metadata.skillOutputContract : undefined;
   const result = isRecord(skillOutput?.result) ? skillOutput.result : undefined;
   if (!result) return undefined;
