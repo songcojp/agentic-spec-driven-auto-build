@@ -62,7 +62,7 @@ During `feature_execution`, this skill owns the primary live task status writeba
 - Before starting a task slice from `tasks.md`, update that task block in the active Feature Spec `tasks.md` to `Status: running`. Use the version in the `implementationWorkspace` if one is active; otherwise use the `ownerWorkspace`.
 - When the task slice is complete and its required verification/evidence has passed, update that task block to `Status: done` in the same active workspace.
 - If the task cannot continue, update it to the narrowest truthful status: `blocked`, `review_needed`, `approval_needed`, or `failed` in the active workspace.
-- Ensure that any `spec-state.json` updates also target the active workspace to prevent spec drift between the feature branch and the owner workspace.
+- Ensure that any `spec-state.json` updates also target the active workspace to prevent spec drift between the feature branch and the owner workspace. **For completed Feature execution, ensure that `spec-state.json` is updated to `completed` within the `implementationWorkspace` BEFORE calling `$clean-worktree`.**
 - For delegated worker slices, the owner thread writes the status when the worker starts and reconciles it after the worker result; workers may report suggested statuses but must not be the only source of truth.
 - Update `.autobuild/runs/<executionId>/checkpoint.json` after each status change when an `executionId` exists, but do not use the checkpoint as a substitute for the visible `tasks.md` status.
 - Preserve parser-compatible task headings and `Status:` lines. Do not place extra `TASK-*` tokens in checklist prose where the task parser could treat them as separate tasks.
