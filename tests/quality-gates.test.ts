@@ -53,6 +53,26 @@ test("feature completion gate centralizes closure failures", () => {
   assert.equal(result.details.some((detail) => detail.includes("Runtime Evidence Gate failed")), true);
 });
 
+test("feature completion gate accepts existing delivery status compatibility terms", () => {
+  const result = validateFeatureCompletion({
+    invocation: invocation(),
+    skillOutput: output({
+      deliveryFidelity: deliveryFidelity({
+        agentReviews: [{ role: "code-review", reviewer: "Faraday", status: "passed_after_repair", findings: [], evidenceRefs: ["checkpoint.json"] }],
+      }),
+      gitDelivery: gitDelivery({
+        merge: "f41a6ba28db6afcac4d4f97dab31383875f4bd5b",
+        remoteBranchCleanup: "deleted",
+        localBranchCleanup: "deleted",
+        worktreeCleanup: "removed",
+      }),
+    }),
+    changedFiles: ["src/main/app-profile.ts"],
+  });
+
+  assert.equal(result.status, "completed");
+});
+
 test("feature completion gate rejects and accepts product usability evidence", () => {
   const failing = validateFeatureCompletion({
     invocation: invocation(),
@@ -207,7 +227,7 @@ function runtimeEvidence(): Record<string, unknown> {
   };
 }
 
-function deliveryFidelity(): Record<string, unknown> {
+function deliveryFidelity(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     sourceIntent: [{ id: "INTENT-1", status: "preserved" }],
     behaviorObligations: [{ id: "BO-1", status: "passed", evidenceRefs: ["EV-1"] }],
@@ -216,10 +236,11 @@ function deliveryFidelity(): Record<string, unknown> {
     agentReviews: [{ role: "browser-qa", status: "passed", evidenceRefs: ["EV-1"] }],
     losses: [],
     completionDecision: { status: "passed", decidedBy: "release-reviewer" },
+    ...overrides,
   };
 }
 
-function gitDelivery(): Record<string, unknown> {
+function gitDelivery(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     ownerWorkspace: "/workspace/project",
     implementationWorkspace: "/workspace/project.worktrees/quality",
@@ -232,5 +253,6 @@ function gitDelivery(): Record<string, unknown> {
     remoteBranchCleanup: "completed",
     localBranchCleanup: "completed",
     worktreeCleanup: "cleaned",
+    ...overrides,
   };
 }

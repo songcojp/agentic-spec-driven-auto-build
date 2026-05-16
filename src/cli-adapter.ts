@@ -732,6 +732,8 @@ const TASK_SLICING_RESULT_SCHEMA = {
     openQuestions: { type: "array", items: { type: "string" } },
   },
 };
+const CANONICAL_EVIDENCE_STATUS_SCHEMA = { type: "string", enum: ["passed", "failed", "blocked", "review_needed", "skipped"] };
+const CANONICAL_DELIVERY_STATUS_SCHEMA = { type: "string", enum: ["passed", "failed", "blocked", "skipped", "not_required"] };
 const FEATURE_EXECUTION_RESULT_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -741,12 +743,19 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
     "items",
     "openQuestions",
     "changedFiles",
+    "requirementCoverage",
+    "acceptanceEvidence",
+    "journeyEvidence",
     "runtimeEvidence",
     "runtimeExemption",
+    "deliveryFidelity",
+    "foundationExemption",
     "verification",
     "tasks",
     "gates",
     "delegation",
+    "gitDelivery",
+    "tokenUsage",
     "risks",
     "blockedReason",
   ],
@@ -756,6 +765,46 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
     items: { type: "array", items: { type: "string" } },
     openQuestions: { type: "array", items: { type: "string" } },
     changedFiles: { type: "array", items: { type: "string" } },
+    requirementCoverage: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["requirementId", "status", "evidence"],
+        properties: {
+          requirementId: { type: "string" },
+          status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+          evidence: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    acceptanceEvidence: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["scenarioId", "status", "evidence"],
+        properties: {
+          scenarioId: { type: "string" },
+          status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+          evidence: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    journeyEvidence: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["userStoryId", "scenario", "status", "evidence"],
+        properties: {
+          userStoryId: { type: "string" },
+          scenario: { type: "string" },
+          status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+          evidence: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
     runtimeEvidence: {
       type: ["object", "null"],
       additionalProperties: false,
@@ -767,7 +816,7 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
           required: ["command", "status", "url", "evidence"],
           properties: {
             command: { type: "string" },
-            status: { type: "string" },
+            status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
             url: { type: ["string", "null"] },
             evidence: { type: "array", items: { type: "string" } },
           },
@@ -780,7 +829,7 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
             required: ["journeyId", "status", "mode", "steps", "evidence"],
             properties: {
               journeyId: { type: "string" },
-              status: { type: "string" },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
               mode: { type: "string" },
               steps: { type: "array", items: { type: "string" } },
               evidence: { type: "array", items: { type: "string" } },
@@ -795,7 +844,7 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
             required: ["assertion", "status", "evidence"],
             properties: {
               assertion: { type: "string" },
-              status: { type: "string" },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
               evidence: { type: "array", items: { type: "string" } },
             },
           },
@@ -808,7 +857,7 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
             required: ["scenario", "status", "evidence"],
             properties: {
               scenario: { type: "string" },
-              status: { type: "string" },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
               evidence: { type: "array", items: { type: "string" } },
             },
           },
@@ -823,6 +872,142 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
         exempt: { type: "boolean" },
         reason: { type: "string" },
         evidence: { type: "array", items: { type: "string" } },
+      },
+    },
+    deliveryFidelity: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      required: ["sourceIntent", "journeys", "behaviorObligations", "handoffs", "losses", "evidence", "agentReviews", "completionDecision"],
+      properties: {
+        sourceIntent: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "summary", "sourceRef", "status"],
+            properties: {
+              id: { type: "string" },
+              summary: { type: "string" },
+              sourceRef: { type: "string" },
+              status: { type: "string", enum: ["preserved", "deferred", "changed", "lost"] },
+            },
+          },
+        },
+        journeys: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "summary", "status", "obligations"],
+            properties: {
+              id: { type: "string" },
+              summary: { type: "string" },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+              obligations: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        behaviorObligations: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "sourceRef", "description", "status", "evidenceRefs"],
+            properties: {
+              id: { type: "string" },
+              sourceRef: { type: "string" },
+              description: { type: "string" },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+              evidenceRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        handoffs: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["from", "to", "preservedObligations", "losses", "status"],
+            properties: {
+              from: { type: "string" },
+              to: { type: "string" },
+              preservedObligations: { type: "array", items: { type: "string" } },
+              losses: { type: "array", items: { type: "string" } },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+            },
+          },
+        },
+        losses: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["type", "severity", "status", "description", "owner", "evidenceRefs"],
+            properties: {
+              type: { type: "string" },
+              severity: { type: "string" },
+              status: { type: "string", enum: ["closed", "deferred", "accepted", "open"] },
+              description: { type: "string" },
+              owner: { type: "string" },
+              evidenceRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        evidence: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "type", "mode", "assertion", "source", "covers", "status", "artifactRefs"],
+            properties: {
+              id: { type: "string" },
+              type: { type: "string" },
+              mode: { type: "string" },
+              assertion: { type: "string" },
+              source: { type: "string" },
+              covers: { type: "array", items: { type: "string" } },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+              artifactRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        agentReviews: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["role", "reviewer", "status", "findings", "evidenceRefs"],
+            properties: {
+              role: { type: "string" },
+              reviewer: { type: "string" },
+              status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+              findings: { type: "array", items: { type: "string" } },
+              evidenceRefs: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        completionDecision: {
+          type: "object",
+          additionalProperties: false,
+          required: ["status", "reason", "decidedBy", "unresolvedLosses"],
+          properties: {
+            status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
+            reason: { type: "string" },
+            decidedBy: { type: "string" },
+            unresolvedLosses: { type: "array", items: { type: "string" } },
+          },
+        },
+      },
+    },
+    foundationExemption: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      required: ["exempt", "reason", "downstreamFeatures", "integrationEvidence"],
+      properties: {
+        exempt: { type: "boolean" },
+        reason: { type: "string" },
+        downstreamFeatures: { type: "array", items: { type: "string" } },
+        integrationEvidence: { type: "array", items: { type: "string" } },
       },
     },
     verification: {
@@ -865,10 +1050,47 @@ const FEATURE_EXECUTION_RESULT_SCHEMA = {
         required: ["role", "status", "files", "note"],
         properties: {
           role: { type: "string" },
-          status: { type: "string" },
+          status: CANONICAL_EVIDENCE_STATUS_SCHEMA,
           files: { type: "array", items: { type: "string" } },
           note: { type: "string" },
         },
+      },
+    },
+    gitDelivery: {
+      type: ["object", "null"],
+      additionalProperties: false,
+      required: ["ownerWorkspace", "implementationWorkspace", "worktree", "branch", "commitHash", "prUrl", "checks", "merge", "remoteBranchCleanup", "localBranchCleanup", "worktreeCleanup", "deliveryExemption"],
+      properties: {
+        ownerWorkspace: { type: "string" },
+        implementationWorkspace: { type: "string" },
+        worktree: { type: "string" },
+        branch: { type: "string" },
+        commitHash: { type: "string" },
+        prUrl: { type: ["string", "null"] },
+        checks: CANONICAL_DELIVERY_STATUS_SCHEMA,
+        merge: CANONICAL_DELIVERY_STATUS_SCHEMA,
+        remoteBranchCleanup: CANONICAL_DELIVERY_STATUS_SCHEMA,
+        localBranchCleanup: CANONICAL_DELIVERY_STATUS_SCHEMA,
+        worktreeCleanup: CANONICAL_DELIVERY_STATUS_SCHEMA,
+        deliveryExemption: {
+          type: ["object", "null"],
+          additionalProperties: false,
+          required: ["approved", "reason", "evidence"],
+          properties: {
+            approved: { type: "boolean" },
+            reason: { type: "string" },
+            evidence: { type: "array", items: { type: "string" } },
+          },
+        },
+      },
+    },
+    tokenUsage: {
+      type: "object",
+      additionalProperties: false,
+      required: ["parentUsagePresent", "subagentUsageObservable"],
+      properties: {
+        parentUsagePresent: { type: "boolean" },
+        subagentUsageObservable: { type: "boolean" },
       },
     },
     risks: { type: "array", items: { type: "string" } },
@@ -1300,8 +1522,8 @@ export function buildExecutionInvocationPrompt(invocation: ExecutionAdapterInvoc
         "- Keep this prompt as an invocation contract; do not rely on it for lifecycle detail that belongs in the skill.",
         "- Use CLI-native subagents for bounded implementation, verification, review, or repair slices when the skill says delegation is appropriate; keep the owner thread responsible for integration and final delivery.",
         `- Before delegation and after each completed slice, preserve resumable state in .autobuild/runs/${invocation.executionId}/checkpoint.json or an equivalent run checkpoint.`,
-        "- A completed feature_execution result must use skill-contract/v2 and keep result concise: summarize completion, changed files, verification, blocked risks, and runtime evidence only when UI/app behavior changed.",
-        "- Do not add delivery, release, usage, or expanded evidence ledgers to the output contract unless a separate review or release task explicitly asks for them.",
+        "- A completed feature_execution result must use skill-contract/v2 and include the structured closure fields required by the schema: requirementCoverage, acceptanceEvidence, journeyEvidence, runtimeEvidence/runtimeExemption, deliveryFidelity/foundationExemption, gitDelivery, tokenUsage, verification, tasks, gates, delegation, risks, and blockedReason.",
+        "- Use canonical nested status words in result fields: evidence/review statuses must be passed, failed, blocked, review_needed, or skipped; gitDelivery statuses must be passed, failed, blocked, skipped, or not_required. Put commit hashes, branch deletion details, and repair notes in evidence or summary fields, not in status fields.",
       ]
     : [];
   const contractVersionRule = featureExecution

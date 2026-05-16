@@ -236,7 +236,7 @@ export function assessGitDeliveryGate(invocation: ExecutionAdapterInvocationV1 |
 
   const missing: string[] = [];
   for (const field of ["checks", "merge", "remoteBranchCleanup", "localBranchCleanup", "worktreeCleanup"]) {
-    if (record[field] !== undefined && record[field] !== null && !isPassedDeliveryStatus(record[field])) {
+    if (record[field] !== undefined && record[field] !== null && !isPassedDeliveryStatus(record[field], field)) {
       missing.push(`${field} must be passed, completed, cleaned, or merged`);
     }
   }
@@ -390,17 +390,29 @@ function isClosedLossStatus(value: unknown): boolean {
   return status === "closed" || status === "deferred" || status === "accepted";
 }
 
-function isPassedDeliveryStatus(value: unknown): boolean {
+function isPassedDeliveryStatus(value: unknown, field?: string): boolean {
   const record = asRecord(value);
   const status = record ? String(record.status ?? "").toLowerCase() : String(value ?? "").toLowerCase();
-  return ["passed", "complete", "completed", "cleaned", "merged", "success", "succeeded"].includes(status);
+  const token = firstStatusToken(status);
+  if (["passed", "complete", "completed", "cleaned", "merged", "success", "succeeded"].includes(token)) return true;
+  if (field === "merge" && /^[0-9a-f]{7,40}$/i.test(status)) return true;
+  if (["remoteBranchCleanup", "localBranchCleanup", "worktreeCleanup"].includes(field ?? "")) {
+    return ["deleted", "removed", "done", "absent", "pruned"].includes(token);
+  }
+  return false;
 }
 
 function isPassedEvidence(value: unknown): boolean {
   const record = asRecord(value);
   if (!record) return false;
   const status = String(record.status ?? "").toLowerCase();
-  return ["passed", "complete", "completed", "covered", "verified"].includes(status);
+  const token = firstStatusToken(status);
+  return ["passed", "complete", "completed", "covered", "verified"].includes(token)
+    || status === "passed_after_repair";
+}
+
+function firstStatusToken(status: string): string {
+  return status.trim().split(/[\s:;]+/u)[0] ?? "";
 }
 
 function describeEvidence(value: unknown): string {

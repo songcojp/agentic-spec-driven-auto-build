@@ -806,15 +806,32 @@ test("feature execution runs receive a strict closure-evidence result output sch
     "items",
     "openQuestions",
     "changedFiles",
+    "requirementCoverage",
+    "acceptanceEvidence",
+    "journeyEvidence",
     "runtimeEvidence",
     "runtimeExemption",
+    "deliveryFidelity",
+    "foundationExemption",
     "verification",
     "tasks",
     "gates",
     "delegation",
+    "gitDelivery",
+    "tokenUsage",
     "risks",
     "blockedReason",
   ]);
+  const resultProperties = result.properties as Record<string, Record<string, unknown>>;
+  const deliveryFidelity = resultProperties.deliveryFidelity as Record<string, unknown>;
+  const deliveryFidelityProperties = deliveryFidelity.properties as Record<string, Record<string, unknown>>;
+  const agentReviewItems = (deliveryFidelityProperties.agentReviews as Record<string, unknown>).items as Record<string, unknown>;
+  const agentReviewProperties = agentReviewItems.properties as Record<string, Record<string, unknown>>;
+  assert.deepEqual(agentReviewProperties.status.enum, ["passed", "failed", "blocked", "review_needed", "skipped"]);
+  const gitDelivery = resultProperties.gitDelivery as Record<string, unknown>;
+  const gitDeliveryProperties = gitDelivery.properties as Record<string, Record<string, unknown>>;
+  assert.deepEqual(gitDeliveryProperties.merge.enum, ["passed", "failed", "blocked", "skipped", "not_required"]);
+  assert.deepEqual(gitDeliveryProperties.worktreeCleanup.enum, ["passed", "failed", "blocked", "skipped", "not_required"]);
   assertStrictSchemaObjects(schema);
 });
 
