@@ -53,6 +53,9 @@ export type SpecDriveIdeFeatureNode = {
   latestExecutionId?: string;
   latestSchedulerJobId?: string;
   latestExecutionStatus?: string;
+  specStateExecutionId?: string;
+  specStateSchedulerJobId?: string;
+  specStateExecutionStatus?: string;
   latestExecutionCompletedAt?: string;
   latestExecutionCreatedAt?: string;
   latestReviewItemId?: string;
@@ -628,17 +631,27 @@ export function buildSpecDriveIdeExecutionDetail(
   const featureId = optionalString(context.featureId);
   const featureProjection = featureId ? readFeatureStateProjection(dbPath, projectId, featureId) : undefined;
   const reviewProjection = featureId ? readLatestReviewsByFeature(dbPath, projectId).get(featureId) : undefined;
-  const stateReason = queueStateReason({
-    status: optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown",
-    summary: optionalString(row.summary),
-    metadata,
-    resumeTarget: featureProjection?.resumeTarget,
-    reviewNeededReason: reviewProjection?.reviewNeededReason,
-  });
+  const dbStatus = optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown";
+  const specStateMatchesExecution = Boolean(featureProjection && (
+    (featureProjection.executionId && featureProjection.executionId === String(row.id))
+    || (featureProjection.schedulerJobId && featureProjection.schedulerJobId === optionalString(row.scheduler_job_id))
+  ));
+  const status = specStateMatchesExecution
+    ? featureProjection?.executionStatus ?? featureProjection?.status ?? dbStatus
+    : dbStatus;
+  const stateReason = specStateMatchesExecution && featureProjection?.stateReason
+    ? featureProjection.stateReason
+    : queueStateReason({
+        status,
+        summary: optionalString(row.summary),
+        metadata,
+        resumeTarget: featureProjection?.resumeTarget,
+        reviewNeededReason: reviewProjection?.reviewNeededReason,
+      });
   return {
     schedulerJobId: optionalString(row.scheduler_job_id),
     executionId: String(row.id),
-    status: optionalString(row.status) ?? optionalString(row.job_status) ?? "unknown",
+    status,
     operation: optionalString(row.operation),
     jobType: optionalString(row.job_type) ?? optionalString(metadata.jobType),
     featureId,
@@ -1549,18 +1562,20 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
       const status = resolveFeatureNodeStatus(optionalString(state.status), indexEntry?.status, documents, taskProjection);
       const stateCurrentJob = isRecord(state.currentJob) ? state.currentJob : undefined;
       const stateExecutionId = optionalString(stateCurrentJob?.executionId);
+      const stateSchedulerJobId = optionalString(stateCurrentJob?.schedulerJobId);
+      const stateExecutionStatus = optionalString(state.executionStatus);
       const completedFeature = isCompletedFeatureStatus(status);
       const latestExecutionForProjection = completedFeature
         ? latestExecution?.latestCompleted ?? latestExecution?.latest
         : latestExecution?.latest;
       const latestExecutionStatus = isCompletedFeatureStatus(status)
         ? "completed"
-        : latestExecutionForProjection?.status;
-      const latestExecutionId = completedFeature
+        : stateExecutionStatus ?? latestExecutionForProjection?.status;
+      const latestExecutionId = completedFeature || stateExecutionStatus
         ? stateExecutionId ?? latestExecutionForProjection?.executionId
         : latestExecutionForProjection?.executionId;
-      const latestSchedulerJobId = completedFeature
-        ? optionalString(stateCurrentJob?.schedulerJobId) ?? latestExecutionForProjection?.schedulerJobId
+      const latestSchedulerJobId = completedFeature || stateExecutionStatus
+        ? stateSchedulerJobId ?? latestExecutionForProjection?.schedulerJobId
         : latestExecutionForProjection?.schedulerJobId;
       const tokenConsumption = latestExecutionForProjection?.tokenConsumption;
       const stateLastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
@@ -1588,6 +1603,9 @@ function buildFeatureNodes(dbPath: string, workspaceRoot: string, projectId?: st
         latestExecutionId,
         latestSchedulerJobId,
         latestExecutionStatus,
+        specStateExecutionId: stateExecutionId,
+        specStateSchedulerJobId: stateSchedulerJobId,
+        specStateExecutionStatus: stateExecutionStatus,
         latestExecutionCompletedAt: latestExecutionForProjection?.completedAt,
         latestExecutionCreatedAt: latestExecutionForProjection?.createdAt,
         latestReviewItemId: latestReview?.id,
@@ -2476,9 +2494,9 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     const context = parseJsonObject(optionalString(row.context_json));
     const payloadContext = isRecord(payload.context) ? payload.context : parseJsonObject(optionalString(payload.context));
     const metadata = parseJsonObject(optionalString(row.metadata_json));
-    const status = optionalString(row.execution_status) ?? optionalString(row.job_status) ?? "unknown";
+    const dbStatus = optionalString(row.execution_status) ?? optionalString(row.job_status) ?? "unknown";
     const executionId = optionalString(row.execution_id);
-    if (!executionId && isCompletedScheduleOnlyStatus(status)) continue;
+    if (!executionId && isCompletedScheduleOnlyStatus(dbStatus)) continue;
     if (executionId && supersededExecutionIds.has(executionId)) continue;
     const executionPreference = executionPreferenceFromQueueParts(context, metadata, payload, optionalString(row.job_type), optionalString(row.executor_type));
     const featureId = optionalString(context.featureId) ?? optionalString(payloadContext.featureId);
@@ -2487,6 +2505,16 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
     const review = featureId ? latestReviews.get(featureId) : undefined;
     const resumeTarget = feature?.resumeTarget;
     const reviewNeededReason = review?.reviewNeededReason;
+    const specStateMatchesQueue = Boolean(feature && (
+      (feature.specStateExecutionId && feature.specStateExecutionId === executionId)
+      || (feature.specStateSchedulerJobId && feature.specStateSchedulerJobId === optionalString(row.scheduler_job_id))
+    ));
+    const status = specStateMatchesQueue
+      ? feature?.specStateExecutionStatus ?? feature?.status ?? dbStatus
+      : dbStatus;
+    const stateReason = specStateMatchesQueue && feature?.stateReason
+      ? feature.stateReason
+      : queueStateReason({ status, summary: optionalString(row.summary), metadata, resumeTarget, reviewNeededReason });
     const item: SpecDriveIdeQueueItem = {
       schedulerJobId: optionalString(row.scheduler_job_id),
       executionId,
@@ -2515,7 +2543,7 @@ function buildQueueGroups(dbPath: string, projectId?: string, features: SpecDriv
         ?? optionalString(payloadContext.featureTitle)
         ?? optionalString(metadata.featureTitle),
       featureDescription: feature?.description ?? dbFeature?.description,
-      stateReason: queueStateReason({ status, summary: optionalString(row.summary), metadata, resumeTarget, reviewNeededReason }),
+      stateReason,
       resumeTarget,
       reviewItemId: review?.id,
       reviewNeededReason,
@@ -2650,7 +2678,17 @@ function readFeatureStateProjection(
   dbPath: string,
   projectId: string | undefined,
   featureId: string,
-): { title?: string; description?: string; resumeTarget?: SpecDriveIdeResumeTarget; stateReason?: string; nextAction?: string } | undefined {
+): {
+  title?: string;
+  description?: string;
+  status?: string;
+  executionStatus?: string;
+  executionId?: string;
+  schedulerJobId?: string;
+  resumeTarget?: SpecDriveIdeResumeTarget;
+  stateReason?: string;
+  nextAction?: string;
+} | undefined {
   const dbFeature = readDbFeatureIdentities(dbPath, projectId).get(featureId);
   const workspaceRoot = workspaceRootForProject(dbPath, projectId);
   if (!workspaceRoot) return dbFeature;
@@ -2666,13 +2704,19 @@ function readFeatureStateProjection(
   const resumeTarget = normalizeIdeResumeTarget(state.resumeTarget);
   const nextAction = optionalString(state.nextAction);
   const lastResult = isRecord(state.lastResult) ? state.lastResult : undefined;
+  const currentJob = isRecord(state.currentJob) ? state.currentJob : undefined;
+  const status = optionalString(state.status);
   return {
     title: optionalString(state.title) ?? indexEntry?.title ?? dbFeature?.title ?? (folders.has(folder) ? titleFromFolder(folder) : undefined),
     description: optionalString(state.description) ?? (folders.has(folder) ? readFeatureDescription(workspaceRoot, folder) : undefined),
+    status,
+    executionStatus: optionalString(state.executionStatus),
+    executionId: optionalString(currentJob?.executionId),
+    schedulerJobId: optionalString(currentJob?.schedulerJobId),
     resumeTarget,
     nextAction,
     stateReason: featureStateReason({
-      status: optionalString(state.status) ?? "unknown",
+      status: status ?? "unknown",
       blockedReasons,
       resumeTarget,
       lastResultSummary: optionalString(lastResult?.summary),

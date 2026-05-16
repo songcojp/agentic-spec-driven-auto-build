@@ -63,6 +63,38 @@ test("SpecDrive IDE view recognizes workspace specs, features, queue state, and 
   assert.equal(view.factSources.includes("execution_records"), true);
 });
 
+test("SpecDrive IDE status projections prefer Feature spec-state over stale execution rows", () => {
+  const workspaceRoot = makeWorkspace();
+  writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/feat-016-specdrive-ide-foundation/spec-state.json"), JSON.stringify({
+    schemaVersion: 1,
+    featureId: "FEAT-016",
+    status: "failed",
+    executionStatus: "failed",
+    currentJob: { executionId: "RUN-IDE", schedulerJobId: "JOB-IDE" },
+    blockedReasons: ["Codex CLI exited with 1."],
+    dependencies: ["FEAT-013"],
+    lastResult: { status: "failed", summary: "Codex CLI exited with 1." },
+    nextAction: "Inspect failure evidence and retry from Execution Workbench.",
+    history: [],
+  }));
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  seedRuntimeState(dbPath);
+
+  const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  const feature = view.features.find((entry) => entry.id === "FEAT-016");
+  const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-IDE");
+
+  assert.equal(feature?.status, "failed");
+  assert.equal(feature?.latestExecutionStatus, "failed");
+  assert.equal(view.queue.groups.failed?.[0]?.executionId, "RUN-IDE");
+  assert.equal(view.queue.groups.running, undefined);
+  assert.equal(view.queue.groups.failed?.[0]?.stateReason, "Codex CLI exited with 1.");
+  assert.equal(detail?.status, "failed");
+  assert.equal(detail?.stateReason, "Codex CLI exited with 1.");
+});
+
 test("SpecDrive IDE queue and execution detail keep DB feature titles when docs index projection is unavailable", () => {
   const workspaceRoot = makeWorkspace();
   writeFileSync(join(workspaceRoot, "docs/agentic-spec/features/README.md"), [
