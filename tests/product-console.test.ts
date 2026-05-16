@@ -2367,7 +2367,7 @@ test("start Auto Run replays an existing queued project job before selecting new
   ]);
 });
 
-test("start Auto Run writes file-backed state and can skip to the next Feature", () => {
+test("start Auto Run records skipped state and queues next Feature without owner state writes", () => {
   const dbPath = makeDbPath();
   seedConsoleData(dbPath);
   const scheduler = createMemoryScheduler(dbPath);
@@ -2402,7 +2402,7 @@ test("start Auto Run writes file-backed state and can skip to the next Feature",
     now: stableDate,
   }, { scheduler });
   const skipped = JSON.parse(readFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-001-ticket-capture", "spec-state.json"), "utf8"));
-  const queued = JSON.parse(readFileSync(join(projectPath, "docs", "agentic-spec", "features", "feat-002-ticket-scan", "spec-state.json"), "utf8"));
+  const selectedStatePath = join(projectPath, "docs", "agentic-spec", "features", "feat-002-ticket-scan", "spec-state.json");
   const result = runSqlite(dbPath, [], [
     { name: "execution", sql: "SELECT context_json FROM execution_records WHERE id = ?", params: [receipt.executionId] },
   ]);
@@ -2410,7 +2410,7 @@ test("start Auto Run writes file-backed state and can skip to the next Feature",
 
   assert.equal(receipt.status, "accepted");
   assert.equal(skipped.status, "skipped");
-  assert.equal(queued.status, "queued");
+  assert.equal(existsSync(selectedStatePath), false);
   assert.equal(context.featureId, "FEAT-002");
   assert.equal(context.specStatePath, "docs/agentic-spec/features/feat-002-ticket-scan/spec-state.json");
 });
@@ -2861,6 +2861,7 @@ test("console schedule command records scheduler triggers without bypassing boun
   assert.equal(cliRunPayload.context.sourcePaths.includes("docs/agentic-spec/features/feat-013-product-console/requirements.md"), true);
   assert.equal(cliRunPayload.context.sourcePaths.includes("docs/agentic-spec/features/feat-013-product-console/design.md"), true);
   assert.equal(cliRunPayload.context.sourcePaths.includes("docs/agentic-spec/features/feat-013-product-console/tasks.md"), true);
+  assert.equal(existsSync(join(featureDir, "spec-state.json")), false);
   assert.deepEqual(result.queries.jobs.map((row) => [row.job_type, row.queue_name, row.status, JSON.parse(String(row.payload_json)).operation]), [
     ["cli.run", "specdrive:execution-adapter", "queued", "feature_execution"],
   ]);

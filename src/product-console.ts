@@ -3106,26 +3106,6 @@ function executeScheduleCommand(
     status: "queued",
     acceptedAt,
   });
-  if (workspaceRoot && featureFolder && featureId) {
-    writeFileSpecState(workspaceRoot, featureFolder, mergeFileSpecState(specState ?? readFileSpecState(workspaceRoot, featureFolder, featureId, new Date(acceptedAt)), {
-      status: "queued",
-      executionStatus: "queued",
-      blockedReasons: [],
-      currentJob: {
-        schedulerJobId: job.schedulerJobId,
-        executionId,
-        operation,
-        queuedAt: acceptedAt,
-      },
-      nextAction: "Waiting for Runner to start this Feature.",
-    }, {
-      now: new Date(acceptedAt),
-      source: "schedule_run",
-      summary: "Feature execution queued.",
-      schedulerJobId: job.schedulerJobId,
-      executionId,
-    }));
-  }
   dispatchQueuedJobWhenAutomationEnabled(dbPath, {
     projectId,
     acceptedAt,
@@ -3879,16 +3859,8 @@ function enqueueNextFeatureExecutionFromQueue(
   }
   runSqlite(dbPath, queuePlan.entries.map((entry) => {
     const feature = docsById.get(entry.id)!;
-    const state = readFileSpecState(project.targetRepoPath, feature.folder ?? feature.id.toLowerCase(), feature.id, new Date(acceptedAt));
-    writeFileSpecState(project.targetRepoPath, feature.folder ?? feature.id.toLowerCase(), mergeFileSpecState(state, {
-      dependencies: entry.dependencies,
-    }, {
-      now: new Date(acceptedAt),
-      source: "feature-pool-queue",
-      summary: "Feature queue metadata synchronized from feature-pool-queue.json.",
-    }));
     return {
-    sql: `INSERT INTO features (
+      sql: `INSERT INTO features (
         id, project_id, title, status, priority, folder, primary_requirements_json, dependencies_json, updated_at
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -3901,17 +3873,17 @@ function enqueueNextFeatureExecutionFromQueue(
         primary_requirements_json = excluded.primary_requirements_json,
         dependencies_json = excluded.dependencies_json,
         updated_at = excluded.updated_at`,
-    params: [
-      feature.id,
-      project.id,
-      feature.title,
-      feature.status === "draft" ? "draft" : "ready",
-      entry.priority,
-      feature.folder ?? feature.id.toLowerCase(),
-      JSON.stringify(feature.primaryRequirements),
-      JSON.stringify(entry.dependencies),
-      acceptedAt,
-    ],
+      params: [
+        feature.id,
+        project.id,
+        feature.title,
+        feature.status === "draft" ? "draft" : "ready",
+        entry.priority,
+        feature.folder ?? feature.id.toLowerCase(),
+        JSON.stringify(feature.primaryRequirements),
+        JSON.stringify(entry.dependencies),
+        acceptedAt,
+      ],
     };
   }));
 
@@ -4014,24 +3986,6 @@ function enqueueNextFeatureExecutionFromQueue(
     status: "queued",
     acceptedAt,
   });
-  writeFileSpecState(project.targetRepoPath, selectedFolder, mergeFileSpecState(specState, {
-    status: "queued",
-    executionStatus: "queued",
-    blockedReasons: [],
-    currentJob: {
-      schedulerJobId: job.schedulerJobId,
-      executionId,
-      operation: "feature_execution",
-      queuedAt: acceptedAt,
-    },
-    nextAction: "Waiting for Runner to start this Feature.",
-  }, {
-    now: new Date(acceptedAt),
-      source: input.commandSource,
-      summary: selection.decision?.reason ?? (resumeFeatureId === selected.id ? "Blocked Feature resumed and queued." : "Next ready Feature queued."),
-    schedulerJobId: job.schedulerJobId,
-    executionId,
-  }));
   dispatchQueuedJobWhenAutomationEnabled(dbPath, {
     projectId: project.id,
     acceptedAt,
