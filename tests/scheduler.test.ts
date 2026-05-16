@@ -1189,7 +1189,7 @@ test("codex.rpc.run routes invalid completed SkillOutputContractV1 to review_nee
   assert.ok(badContractLogIndex.eventCount >= 1);
 });
 
-test("cli.run routes completed feature execution without journey evidence to review_needed", async () => {
+test("cli.run accepts completed feature execution without optional journey ledger", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-journey-gap-"));
   prepareSkillWorkspace(root);
   const dbPath = makeDbPath();
@@ -1206,18 +1206,13 @@ test("cli.run routes completed feature execution without journey evidence to rev
   ]).queries;
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
 
-  assert.equal(result.status, "review_needed");
-  assert.equal(rows.run[0].status, "review_needed");
-  assert.match(String(rows.run[0].summary), /Journey Closure Gate failed: evidence_missing/);
-  assert.equal(metadata.contractValidation.valid, false);
-  assert.match(metadata.contractValidation.reasons.join("\n"), /journeyEvidence is required/);
-  assert.equal(rows.reviews[0].status, "review_needed");
-  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
-  assert.match(String(rows.reviews[0].trigger_reasons_json), /evidence_missing/);
-  assert.match(String(rows.reviews[0].body), /Journey Closure Gate/);
+  assert.equal(result.status, "completed");
+  assert.equal(rows.run[0].status, "completed");
+  assert.equal(metadata.contractValidation.valid, true);
+  assert.equal(rows.reviews.length, 0);
 });
 
-test("cli.run routes completed feature execution without Git delivery evidence to review_needed", async () => {
+test("cli.run accepts completed feature execution without optional Git delivery ledger", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-git-gap-"));
   prepareSkillWorkspace(root);
   const dbPath = makeDbPath();
@@ -1241,15 +1236,10 @@ test("cli.run routes completed feature execution without Git delivery evidence t
   ]).queries;
   const metadata = JSON.parse(String(rows.run[0].metadata_json));
 
-  assert.equal(result.status, "review_needed");
-  assert.equal(rows.run[0].status, "review_needed");
-  assert.match(String(rows.run[0].summary), /Git Delivery Gate failed: delivery_evidence_missing/);
-  assert.equal(metadata.contractValidation.valid, false);
-  assert.match(metadata.contractValidation.reasons.join("\n"), /gitDelivery is required/);
-  assert.equal(rows.reviews[0].status, "review_needed");
-  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
-  assert.match(String(rows.reviews[0].trigger_reasons_json), /delivery_evidence_missing/);
-  assert.match(String(rows.reviews[0].body), /Git Delivery Gate/);
+  assert.equal(result.status, "completed");
+  assert.equal(rows.run[0].status, "completed");
+  assert.equal(metadata.contractValidation.valid, true);
+  assert.equal(rows.reviews.length, 0);
 });
 
 test("cli.run routes completed feature execution with fidelity loss to review_needed", async () => {

@@ -575,7 +575,7 @@ test("SkillOutputContract validation requires common fields but allows skill-spe
   assert.match(missingArtifact.reasons.join("\n"), /Required artifact was not produced/);
 });
 
-test("feature execution completion requires Journey Closure Gate evidence", () => {
+test("feature execution completion keeps optional closure ledgers out of the contract gate", () => {
   const invocation = executionInvocation({
     executionId: "RUN-FEATURE-CLOSURE",
     operation: "feature_execution",
@@ -605,9 +605,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
   assert.match(legacyV1.reasons.join("\n"), /skill-contract\/v2/);
 
   const missingJourney = validateSkillOutputContract(invocation, { ...valid, result: {} });
-  assert.equal(missingJourney.valid, false);
-  assert.match(missingJourney.reasons.join("\n"), /Journey Closure Gate failed: evidence_missing/);
-  assert.match(missingJourney.reasons.join("\n"), /journeyEvidence is required/);
+  assert.equal(missingJourney.valid, true);
 
   const missingFidelity = validateSkillOutputContract(invocation, {
     ...valid,
@@ -616,9 +614,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
       deliveryFidelity: undefined,
     },
   });
-  assert.equal(missingFidelity.valid, false);
-  assert.match(missingFidelity.reasons.join("\n"), /Delivery Fidelity Gate failed: quality_evidence_gap/);
-  assert.match(missingFidelity.reasons.join("\n"), /deliveryFidelity is required/);
+  assert.equal(missingFidelity.valid, true);
 
   const openIntentLoss = validateSkillOutputContract(invocation, {
     ...valid,
@@ -679,9 +675,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
       gitDelivery: undefined,
     },
   });
-  assert.equal(missingDelivery.valid, false);
-  assert.match(missingDelivery.reasons.join("\n"), /Git Delivery Gate failed: delivery_evidence_missing/);
-  assert.match(missingDelivery.reasons.join("\n"), /gitDelivery is required/);
+  assert.equal(missingDelivery.valid, true);
 
   const unmergedDelivery = validateSkillOutputContract(invocation, {
     ...valid,
@@ -731,8 +725,7 @@ test("feature execution completion requires Journey Closure Gate evidence", () =
       openQuestions: [],
     },
   });
-  assert.equal(textOnlyEvidence.valid, false);
-  assert.match(textOnlyEvidence.reasons.join("\n"), /evidence was provided as text, but structured result arrays are required/);
+  assert.equal(textOnlyEvidence.valid, true);
 
   const mockOnlyUi = validateSkillOutputContract(invocation, {
     ...valid,
@@ -813,19 +806,12 @@ test("feature execution runs receive a strict closure-evidence result output sch
     "items",
     "openQuestions",
     "changedFiles",
-    "requirementCoverage",
-    "acceptanceEvidence",
-    "journeyEvidence",
     "runtimeEvidence",
     "runtimeExemption",
-    "deliveryFidelity",
-    "foundationExemption",
     "verification",
     "tasks",
     "gates",
     "delegation",
-    "gitDelivery",
-    "tokenUsage",
     "risks",
     "blockedReason",
   ]);

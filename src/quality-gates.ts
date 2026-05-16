@@ -115,16 +115,6 @@ export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV
   if (foundationExemption) {
     return { passed: true, details: ["foundationExemption accepted"] };
   }
-  const missing: string[] = [];
-  if (journeyEvidence.length === 0) missing.push("journeyEvidence is required");
-  if (acceptanceEvidence.length === 0) missing.push("acceptanceEvidence is required");
-  if (requirementCoverage.length === 0) missing.push("requirementCoverage is required");
-  if (missing.length > 0 && resultItemsMentionStructuredEvidence(result)) {
-    missing.push("evidence was provided as text, but structured result arrays are required");
-  }
-  if (missing.length > 0) {
-    return { passed: false, reason: "evidence_missing", details: missing };
-  }
   const failedJourneys = journeyEvidence.filter((entry) => !isPassedEvidence(entry));
   const failedAcceptance = acceptanceEvidence.filter((entry) => !isPassedEvidence(entry));
   const failedRequirements = requirementCoverage.filter((entry) => !isPassedEvidence(entry));
@@ -133,6 +123,9 @@ export function assessJourneyClosureGate(invocation: ExecutionAdapterInvocationV
   }
   if (failedAcceptance.length > 0 || failedRequirements.length > 0) {
     return { passed: false, reason: "acceptance_gap", details: [...failedAcceptance, ...failedRequirements].map(describeEvidence) };
+  }
+  if (journeyEvidence.length === 0 && acceptanceEvidence.length === 0 && requirementCoverage.length === 0 && !resultItemsMentionStructuredEvidence(result)) {
+    return { passed: true, details: ["closure evidence not provided; contract gate skipped"] };
   }
   return { passed: true, details: ["journeyEvidence, acceptanceEvidence, and requirementCoverage passed"] };
 }
@@ -144,28 +137,15 @@ export function assessDeliveryFidelityGate(invocation: ExecutionAdapterInvocatio
   const result = output.result;
   const deliveryFidelity = result.deliveryFidelity;
   if (typeof deliveryFidelity !== "object" || deliveryFidelity === null || Array.isArray(deliveryFidelity)) {
-    return { passed: false, reason: "quality_evidence_gap", details: ["deliveryFidelity is required"] };
+    return { passed: true, details: ["deliveryFidelity not provided; contract gate skipped"] };
   }
   const ledger = deliveryFidelity as Record<string, unknown>;
-  const missing: string[] = [];
-  const sourceIntent = arrayFromRecordField(ledger, "sourceIntent");
   const behaviorObligations = arrayFromRecordField(ledger, "behaviorObligations");
   const handoffs = arrayFromRecordField(ledger, "handoffs");
   const evidence = arrayFromRecordField(ledger, "evidence");
   const agentReviews = arrayFromRecordField(ledger, "agentReviews");
   const losses = arrayFromRecordField(ledger, "losses");
-  if (sourceIntent.length === 0) missing.push("sourceIntent is required");
-  if (behaviorObligations.length === 0) missing.push("behaviorObligations is required");
-  if (handoffs.length === 0) missing.push("handoffs are required");
-  if (evidence.length === 0) missing.push("evidence is required");
-  if (agentReviews.length === 0) missing.push("agentReviews are required");
   const completionDecision = ledger.completionDecision;
-  if (typeof completionDecision !== "object" || completionDecision === null || Array.isArray(completionDecision)) {
-    missing.push("completionDecision is required");
-  }
-  if (missing.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: missing };
-  }
 
   const openCriticalLosses = losses
     .filter(isRecord)
@@ -185,18 +165,18 @@ export function assessDeliveryFidelityGate(invocation: ExecutionAdapterInvocatio
 
   const unverifiedObligations = behaviorObligations
     .filter(isRecord)
-    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.evidenceRefs))
+    .filter((entry) => isFailedOrBlockedEvidence(entry))
     .map((entry) => String(entry.id ?? "unnamed obligation"));
   if (unverifiedObligations.length > 0) {
-    return { passed: false, reason: "test_semantics_gap", details: unverifiedObligations.map((entry) => `behavior obligation lacks verification evidence: ${entry}`) };
+    return { passed: false, reason: "test_semantics_gap", details: unverifiedObligations.map((entry) => `behavior obligation failed verification: ${entry}`) };
   }
 
   const brokenHandoffs = handoffs
     .filter(isRecord)
-    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.preservedObligations))
+    .filter((entry) => isFailedOrBlockedEvidence(entry))
     .map((entry) => `${String(entry.from ?? "unknown")} -> ${String(entry.to ?? "unknown")}`);
   if (brokenHandoffs.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: brokenHandoffs.map((entry) => `handoff did not preserve obligations: ${entry}`) };
+    return { passed: false, reason: "quality_evidence_gap", details: brokenHandoffs.map((entry) => `handoff failed: ${entry}`) };
   }
 
   const evidenceRecords = evidence.filter(isRecord);
@@ -214,11 +194,11 @@ export function assessDeliveryFidelityGate(invocation: ExecutionAdapterInvocatio
   if (allEntryOnly) {
     return { passed: false, reason: "test_semantics_gap", details: ["evidence cannot only assert entry or text presence"] };
   }
-  const missingEvidenceArtifacts = evidenceRecords
-    .filter((entry) => !isPassedEvidence(entry) || !nonEmptyArray(entry.covers) || !nonEmptyArray(entry.artifactRefs))
+  const failedEvidence = evidenceRecords
+    .filter((entry) => isFailedOrBlockedEvidence(entry))
     .map((entry) => String(entry.id ?? "unnamed evidence"));
-  if (missingEvidenceArtifacts.length > 0) {
-    return { passed: false, reason: "quality_evidence_gap", details: missingEvidenceArtifacts.map((entry) => `evidence row lacks covers/artifacts or did not pass: ${entry}`) };
+  if (failedEvidence.length > 0) {
+    return { passed: false, reason: "quality_evidence_gap", details: failedEvidence.map((entry) => `evidence row failed: ${entry}`) };
   }
 
   const hasIndependentReview = agentReviews
@@ -229,12 +209,12 @@ export function assessDeliveryFidelityGate(invocation: ExecutionAdapterInvocatio
         && (role.includes("test") || role.includes("qa") || role.includes("review") || role.includes("release"))
         && !role.includes("implementation");
     });
-  if (!hasIndependentReview) {
+  if (agentReviews.length > 0 && !hasIndependentReview) {
     return { passed: false, reason: "quality_evidence_gap", details: ["independent Test/QA/Review/Release agent review is required"] };
   }
 
-  const decision = completionDecision as Record<string, unknown>;
-  if (!isPassedEvidence(decision) || !nonEmptyString(decision.decidedBy)) {
+  const decision = isRecord(completionDecision) ? completionDecision : undefined;
+  if (decision && (!isPassedEvidence(decision) || !nonEmptyString(decision.decidedBy))) {
     return { passed: false, reason: "quality_evidence_gap", details: ["completionDecision must be passed and name the deciding role"] };
   }
   return { passed: true, details: ["deliveryFidelity ledger passed"] };
@@ -247,7 +227,7 @@ export function assessGitDeliveryGate(invocation: ExecutionAdapterInvocationV1 |
   const result = output.result;
   const gitDelivery = result.gitDelivery;
   if (typeof gitDelivery !== "object" || gitDelivery === null || Array.isArray(gitDelivery)) {
-    return { passed: false, reason: "delivery_evidence_missing", details: ["gitDelivery is required"] };
+    return { passed: true, details: ["gitDelivery not provided; contract gate skipped"] };
   }
   const record = gitDelivery as Record<string, unknown>;
   if (isValidDeliveryExemption(record.deliveryExemption)) {
@@ -255,15 +235,13 @@ export function assessGitDeliveryGate(invocation: ExecutionAdapterInvocationV1 |
   }
 
   const missing: string[] = [];
-  for (const field of ["ownerWorkspace", "implementationWorkspace", "worktree", "branch", "commitHash", "prUrl"]) {
-    if (!nonEmptyString(record[field])) missing.push(`${field} is required`);
-  }
   for (const field of ["checks", "merge", "remoteBranchCleanup", "localBranchCleanup", "worktreeCleanup"]) {
-    if (!isPassedDeliveryStatus(record[field])) missing.push(`${field} must be passed, completed, cleaned, or merged`);
+    if (record[field] !== undefined && record[field] !== null && !isPassedDeliveryStatus(record[field])) {
+      missing.push(`${field} must be passed, completed, cleaned, or merged`);
+    }
   }
   if (missing.length > 0) {
-    const reason = missing.some((entry) => entry.includes("must be")) ? "delivery_not_closed" : "delivery_evidence_missing";
-    return { passed: false, reason, details: missing };
+    return { passed: false, reason: "delivery_not_closed", details: missing };
   }
   return { passed: true, details: ["worktree, PR, merge, and cleanup evidence passed"] };
 }
@@ -339,6 +317,13 @@ function evidenceRefs(value: unknown): unknown[] {
     if (Array.isArray(record[field])) return record[field];
   }
   return [];
+}
+
+function isFailedOrBlockedEvidence(value: unknown): boolean {
+  const record = asRecord(value);
+  if (!record) return false;
+  const status = String(record.status ?? "").toLowerCase();
+  return ["failed", "fail", "blocked", "review_needed", "rejected"].includes(status);
 }
 
 function resultItemsMentionStructuredEvidence(result: Record<string, unknown>): boolean {

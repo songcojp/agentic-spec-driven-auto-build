@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join, normalize } from "node:path";
 import { Queue, Worker, type Job, type WorkerOptions } from "bullmq";
 import IORedis from "ioredis";
@@ -1701,9 +1701,21 @@ function updateFeatureSpecFileState(input: {
       : undefined);
   if (!input.workspaceRoot || !input.featureId || effectiveSkillName !== "implement-feature") return;
   if (!featureSpecPath?.startsWith("docs/agentic-spec/features/")) return;
+
+  const gitDelivery = (input.skillOutput?.result as any)?.gitDelivery;
+  const implementationWorkspace = gitDelivery?.implementationWorkspace;
+  const worktreeCleanup = (gitDelivery?.worktreeCleanup as string | undefined)?.toLowerCase();
+  const isCleanedUp = worktreeCleanup === "passed" || worktreeCleanup === "completed" || worktreeCleanup === "cleaned";
+
+  // Route to implementation workspace if active; otherwise use owner workspace root.
+  const hasActiveImplementationWorkspace = Boolean(implementationWorkspace && !isCleanedUp && existsSync(implementationWorkspace));
+  const targetWorkspace = hasActiveImplementationWorkspace
+    ? implementationWorkspace
+    : input.workspaceRoot;
+
   const featureFolder = featureSpecPath.slice("docs/agentic-spec/features/".length);
   try {
-    const current = readFileSpecState(input.workspaceRoot, featureFolder, input.featureId);
+    const current = readFileSpecState(targetWorkspace, featureFolder, input.featureId);
     const outputPatch = input.skillOutput ? skillOutputToSpecStatePatch(input.skillOutput) : undefined;
     const useSkillOutputStatus = input.skillOutput?.status === input.status;
     const runnerStatus = runnerStatusToFileSpecStatus(input.status);
@@ -1729,7 +1741,7 @@ function updateFeatureSpecFileState(input: {
                 completedAt: new Date().toISOString(),
               },
         };
-    writeFileSpecState(input.workspaceRoot, featureFolder, mergeFileSpecState(current, {
+    writeFileSpecState(targetWorkspace, featureFolder, mergeFileSpecState(current, {
       ...patch,
       executionStatus: runnerStatusToFileSpecExecutionStatus(input.status) ?? patch.executionStatus,
       currentJob: {
