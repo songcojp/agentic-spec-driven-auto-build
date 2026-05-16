@@ -85,8 +85,8 @@ export const CODEX_CLI_ADAPTER_CONFIG: CliAdapterConfig = {
   defaults: {
     model: CODEX_DEFAULT_MODEL,
     reasoningEffort: CODEX_DEFAULT_REASONING_EFFORT,
-    serviceTier: "fast",
-    fastMode: true,
+    serviceTier: "standard",
+    fastMode: false,
     sandbox: "danger-full-access",
     approval: "never",
     costRates: {

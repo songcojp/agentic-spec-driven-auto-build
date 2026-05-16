@@ -320,8 +320,8 @@ test("CLI adapter dry-run validates JSON-managed command templates", () => {
   assert.equal(result.command, "codex");
   assert.equal(result.args?.includes("--output-schema"), true);
   assert.equal(result.args?.includes("/tmp/runner-output.schema.json"), true);
-  assert.equal(result.args?.includes("service_tier=\"fast\""), true);
-  assert.equal(result.args?.includes("features.fast_mode=true"), true);
+  assert.equal(result.args?.includes("service_tier=\"standard\""), true);
+  assert.equal(result.args?.includes("features.fast_mode=false"), true);
 });
 
 test("CLI adapter exposes unified execution adapter config", () => {
@@ -334,8 +334,8 @@ test("CLI adapter exposes unified execution adapter config", () => {
   assert.ok(config.capabilities.includes("image-generation"));
   assert.ok(config.capabilities.includes("image-generation:generate"));
   assert.equal(config.defaults.model, "gpt-5.5");
-  assert.equal(config.defaults.serviceTier, "fast");
-  assert.equal(config.defaults.fastMode, true);
+  assert.equal(config.defaults.serviceTier, "standard");
+  assert.equal(config.defaults.fastMode, false);
   assert.deepEqual(config.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
   assert.deepEqual(config.inputMapping.argumentTemplate, DEFAULT_CLI_ADAPTER_CONFIG.argumentTemplate);
   assert.deepEqual(config.inputMapping.imageGeneration, DEFAULT_CLI_ADAPTER_CONFIG.imageGeneration);
@@ -951,8 +951,8 @@ test("CLI adapter upgrades stale built-in sandbox defaults", () => {
   assert.equal(normalized.defaults.sandbox, "danger-full-access");
   assert.equal(normalized.defaults.approval, "never");
   assert.equal(normalized.defaults.reasoningEffort, "high");
-  assert.equal(normalized.defaults.serviceTier, "fast");
-  assert.equal(normalized.defaults.fastMode, true);
+  assert.equal(normalized.defaults.serviceTier, "standard");
+  assert.equal(normalized.defaults.fastMode, false);
   assert.deepEqual(normalized.defaults.costRates?.["gpt-5.5"], CODEX_GPT_5_5_STANDARD_COST_RATE);
 });
 
@@ -1441,9 +1441,9 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
     "-c",
     'model_reasoning_effort="high"',
     "-c",
-    'service_tier="fast"',
+    'service_tier="standard"',
     "-c",
-    "features.fast_mode=true",
+    "features.fast_mode=false",
     "--cd",
     workspaceRoot,
     "-p",
@@ -1862,9 +1862,9 @@ test("Codex CLI adapter passes output schema for new exec runs", async () => {
     "-c",
     'model_reasoning_effort="high"',
     "-c",
-    'service_tier="fast"',
+    'service_tier="standard"',
     "-c",
-    "features.fast_mode=true",
+    "features.fast_mode=false",
     "--cd",
     policy.workspaceRoot,
     "exec",

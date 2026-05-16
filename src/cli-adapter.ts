@@ -1325,6 +1325,12 @@ function upgradeBuiltInAdapterConfig(config: CliAdapterConfig): CliAdapterConfig
   if (config.id !== DEFAULT_CLI_ADAPTER_CONFIG.id) return upgraded;
   return {
     ...upgraded,
+    argumentTemplate: DEFAULT_CLI_ADAPTER_CONFIG.argumentTemplate,
+    resumeArgumentTemplate: DEFAULT_CLI_ADAPTER_CONFIG.resumeArgumentTemplate,
+    configSchema: DEFAULT_CLI_ADAPTER_CONFIG.configSchema,
+    formSchema: DEFAULT_CLI_ADAPTER_CONFIG.formSchema,
+    outputMapping: DEFAULT_CLI_ADAPTER_CONFIG.outputMapping,
+    imageGeneration: DEFAULT_CLI_ADAPTER_CONFIG.imageGeneration,
     defaults: {
       ...config.defaults,
       sandbox: DEFAULT_CLI_ADAPTER_CONFIG.defaults.sandbox,
