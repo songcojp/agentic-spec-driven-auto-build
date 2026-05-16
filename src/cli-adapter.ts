@@ -1358,9 +1358,10 @@ export function validateCliAdapterConfig(config: CliAdapterConfig): CliAdapterVa
   if (!normalizeReasoningEffort(config.defaults.reasoningEffort)) errors.push("default reasoning effort must be low, medium, high, or xhigh");
   const serviceTier = config.defaults.serviceTier ?? config.defaults.service_tier;
   const fastMode = config.defaults.fastMode ?? config.defaults.fast_mode;
-  if (serviceTier !== undefined && !normalizeServiceTier(serviceTier)) errors.push("default service tier must be standard or fast");
+  const normalizedServiceTier = normalizeServiceTier(serviceTier);
+  if (serviceTier !== undefined && !normalizedServiceTier) errors.push("default service tier must be standard or fast");
   if (fastMode !== undefined && typeof fastMode !== "boolean") errors.push("default fast mode must be boolean");
-  if (config.id === CODEX_CLI_ADAPTER_CONFIG.id && fastMode === true && serviceTier !== "fast") {
+  if (config.id === CODEX_CLI_ADAPTER_CONFIG.id && fastMode === true && normalizedServiceTier !== "fast") {
     errors.push("codex-cli fast mode requires defaults.serviceTier to be fast");
   }
   if (config.imageGeneration) {
@@ -1425,7 +1426,9 @@ export function renderCliAdapterCommand(input: {
     sandbox: input.policy.sandboxMode,
     model: input.policy.model,
     reasoning_effort: input.policy.reasoningEffort,
-    service_tier: config.defaults.serviceTier ?? config.defaults.service_tier ?? "standard",
+    service_tier: normalizeServiceTier(config.defaults.serviceTier ?? config.defaults.service_tier) ?? "standard",
+    service_tier_config_flag: normalizeServiceTier(config.defaults.serviceTier ?? config.defaults.service_tier) === "fast" ? "-c" : "",
+    service_tier_config: normalizeServiceTier(config.defaults.serviceTier ?? config.defaults.service_tier) === "fast" ? "service_tier=\"fast\"" : "",
     fast_mode: String(config.defaults.fastMode ?? config.defaults.fast_mode ?? false),
     profile: input.policy.profile ?? "",
     profile_flag: input.policy.profile ? "-p" : "",
@@ -3113,6 +3116,7 @@ function normalizeReasoningEffort(value: unknown): RunnerReasoningEffort | undef
 }
 
 function normalizeServiceTier(value: unknown): RunnerServiceTier | undefined {
+  if (value === "flex") return "standard";
   return value === "standard" || value === "fast" ? value : undefined;
 }
 

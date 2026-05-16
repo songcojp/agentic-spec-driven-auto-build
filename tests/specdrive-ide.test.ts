@@ -1894,7 +1894,9 @@ test("SpecDrive IDE queue actions retry failed executions and preserve previous 
   ]).queries.run;
   assert.equal(rows[0].scheduler_job_id, receipt.schedulerJobId);
   assert.equal(rows[0].status, "queued");
-  assert.equal(JSON.parse(String(rows[0].context_json)).previousExecutionId, "RUN-FAILED");
+  const retryContext = JSON.parse(String(rows[0].context_json));
+  assert.equal(retryContext.previousExecutionId, "RUN-FAILED");
+  assert.deepEqual(retryContext.expectedArtifacts, [`.autobuild/runs/${receipt.executionId}/report.json`]);
   assert.equal(JSON.parse(String(rows[0].metadata_json)).previousExecutionId, "RUN-FAILED");
   const retryState = readFileSpecState(workspaceRoot, "feat-016-specdrive-ide-foundation", "FEAT-016");
   assert.equal(retryState.status, "queued");
@@ -2527,7 +2529,7 @@ function seedFailedRuntimeState(dbPath: string): void {
         "codex.rpc",
         "feature_execution",
         "project-ide",
-        JSON.stringify({ featureId: "FEAT-016" }),
+        JSON.stringify({ featureId: "FEAT-016", expectedArtifacts: [".autobuild/runs/RUN-FAILED/report.json"] }),
         "failed",
         "2026-05-02T12:00:00.000Z",
         "2026-05-02T12:01:00.000Z",

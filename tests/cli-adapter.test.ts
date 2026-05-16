@@ -320,7 +320,8 @@ test("CLI adapter dry-run validates JSON-managed command templates", () => {
   assert.equal(result.command, "codex");
   assert.equal(result.args?.includes("--output-schema"), true);
   assert.equal(result.args?.includes("/tmp/runner-output.schema.json"), true);
-  assert.equal(result.args?.includes("service_tier=\"standard\""), true);
+  assert.equal(result.args?.includes("service_tier=\"standard\""), false);
+  assert.equal(result.args?.includes("service_tier=\"flex\""), false);
   assert.equal(result.args?.includes("features.fast_mode=false"), true);
 });
 
@@ -1433,15 +1434,13 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
   });
 
   assert.equal(calls[0].command, "codex");
-  assert.deepEqual(calls[0].args.slice(0, 17), [
+  assert.deepEqual(calls[0].args.slice(0, 15), [
     "-a",
     "never",
     "--sandbox",
     "danger-full-access",
     "-c",
     'model_reasoning_effort="high"',
-    "-c",
-    'service_tier="standard"',
     "-c",
     "features.fast_mode=false",
     "--cd",
@@ -1452,12 +1451,12 @@ test("Codex CLI adapter captures JSON events, session id, output, and redacts lo
     "resume",
     "--ignore-user-config",
   ]);
-  assert.equal(calls[0].args[17], "--json");
-  assert.equal(calls[0].args[18], "-m");
-  assert.equal(calls[0].args[19], "gpt-5.5");
-  assert.equal(calls[0].args[20], "SESSION-OLD");
-  assert.match(calls[0].args[21], /Implement bounded task token=abc123/);
-  assert.match(calls[0].args[21], /matching this schema/);
+  assert.equal(calls[0].args[15], "--json");
+  assert.equal(calls[0].args[16], "-m");
+  assert.equal(calls[0].args[17], "gpt-5.5");
+  assert.equal(calls[0].args[18], "SESSION-OLD");
+  assert.match(calls[0].args[19], /Implement bounded task token=abc123/);
+  assert.match(calls[0].args[19], /matching this schema/);
   assert.equal(calls[0].cwd, workspaceRoot);
   assert.doesNotMatch(result.session.args.join(" "), /abc123/);
   assert.match(result.session.args.join(" "), /token=\[REDACTED\]/);
@@ -1856,13 +1855,11 @@ test("Codex CLI adapter passes output schema for new exec runs", async () => {
     },
   });
 
-  assert.deepEqual(calls[0].args.slice(0, 18), [
+  assert.deepEqual(calls[0].args.slice(0, 16), [
     "-a",
     "never",
     "-c",
     'model_reasoning_effort="high"',
-    "-c",
-    'service_tier="standard"',
     "-c",
     "features.fast_mode=false",
     "--cd",
@@ -1876,7 +1873,7 @@ test("Codex CLI adapter passes output schema for new exec runs", async () => {
     "gpt-5.5",
     "--output-schema",
   ]);
-  assert.equal(calls[0].args[18], "/tmp/runner-output.schema.json");
+  assert.equal(calls[0].args[16], "/tmp/runner-output.schema.json");
 });
 
 test("Codex CLI adapter terminates variadic image arguments before prompt", () => {

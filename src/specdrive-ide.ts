@@ -2196,21 +2196,33 @@ function retryPayload(previous: QueueExecutionRow, command: IdeQueueCommandV1, a
   if (!previous.executionId) {
     throw new Error("Retry requires an execution record.");
   }
+  const executionId = randomUUID();
   const context = {
     ...previous.context,
+    expectedArtifacts: retryExpectedArtifacts(previous.context.expectedArtifacts, previous.executionId, executionId),
     executionPreference: executionPreferenceFromQueueRow(previous),
     previousExecutionId: previous.executionId,
     retryReason: command.reason,
     retriedAt: acceptedAt,
   };
   return {
-    executionId: randomUUID(),
+    executionId,
     operation: previous.operation,
     projectId: command.projectId ?? previous.projectId,
     context,
     executionPreference: executionPreferenceFromQueueRow(previous),
     requestedAction: optionalString(previous.payload.requestedAction) ?? optionalString(previous.context.skillPhase) ?? previous.operation,
   };
+}
+
+function retryExpectedArtifacts(value: unknown, previousExecutionId: string, executionId: string): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map((entry) => {
+    if (typeof entry !== "string") return entry;
+    return entry === `.autobuild/runs/${previousExecutionId}/report.json` || /^\.autobuild\/runs\/[^/]+\/report\.json$/.test(entry)
+      ? `.autobuild/runs/${executionId}/report.json`
+      : entry;
+  });
 }
 
 function persistQueuedExecution(dbPath: string, input: {
