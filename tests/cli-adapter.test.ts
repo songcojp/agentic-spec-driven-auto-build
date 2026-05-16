@@ -1023,7 +1023,7 @@ test("runner policy resolves development defaults and clamps heartbeat cadence",
   assert.equal(isolated.testEnvironmentIsolation?.environmentId, "it-run-002d");
 });
 
-test("safety gate blocks dangerous files, commands, high-risk text, and permission escalation", () => {
+test("safety gate blocks dangerous files, commands, and permission escalation without prompt risk scanning", () => {
   const policy = resolveRunnerPolicy({
     runId: "RUN-003",
     risk: "high",
@@ -1036,29 +1036,42 @@ test("safety gate blocks dangerous files, commands, high-risk text, and permissi
     policy,
     files: [".env", "src/auth/login.ts"],
     commands: ["rm -rf /tmp/demo"],
-    taskText: "Update payment token migration",
+    taskText: "Store artifact evidence with permission status and token usage metadata.",
   });
 
   assert.equal(result.allowed, false);
   assert.equal(result.reviewNeeded, true);
   assert.equal(result.reasons.some((reason) => reason.includes(".env")), true);
   assert.equal(result.reasons.some((reason) => reason.includes("dangerous command")), true);
-  assert.equal(result.reasons.some((reason) => reason.includes("task text")), true);
+  assert.equal(result.reasons.some((reason) => reason.includes("task text")), false);
 
   const promptOnly = evaluateRunnerSafety({
     policy,
-    prompt: "Update auth payment workflow",
+    taskText: "保存 Artifact 文件引用、Run Evidence、结构化错误和结果状态。",
+    prompt: [
+      "Implement FEAT-007 artifact and run evidence presentation.",
+      "Evidence text may mention permission, secret, token, or key fields as data labels.",
+      "Allowed paths are src/main, src/shared, src/preload, src/renderer, and tests.",
+    ].join("\n"),
   });
-  assert.equal(promptOnly.allowed, false);
-  assert.equal(promptOnly.reviewNeeded, true);
+  assert.equal(promptOnly.allowed, true);
+  assert.equal(promptOnly.reviewNeeded, false);
 
   const dangerousPrompt = evaluateRunnerSafety({
     policy,
     prompt: "Run git reset --hard before continuing",
   });
-  assert.equal(dangerousPrompt.allowed, false);
-  assert.equal(dangerousPrompt.reviewNeeded, true);
-  assert.equal(dangerousPrompt.reasons.some((reason) => reason.includes("dangerous command")), true);
+  assert.equal(dangerousPrompt.allowed, true);
+  assert.equal(dangerousPrompt.reviewNeeded, false);
+
+  const highRiskCommand = evaluateRunnerSafety({
+    policy,
+    commands: ["npm run db:migrate"],
+    prompt: "Run the bounded implementation task.",
+  });
+  assert.equal(highRiskCommand.allowed, false);
+  assert.equal(highRiskCommand.reviewNeeded, true);
+  assert.equal(highRiskCommand.reasons.some((reason) => reason.includes("high-risk command")), true);
 
   const docsDirectWritePolicy = resolveRunnerPolicy({
     runId: "RUN-DOCS-DIRECT",

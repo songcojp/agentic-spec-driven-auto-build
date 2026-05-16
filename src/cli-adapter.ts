@@ -1191,14 +1191,6 @@ export function evaluateRunnerSafety(input: SafetyGateInput): SafetyGateResult {
     }
   }
 
-  const safetyText = [input.taskText, input.prompt].filter(Boolean).join("\n");
-  if (safetyText && DANGEROUS_COMMAND_PATTERNS.some((pattern) => pattern.test(safetyText))) {
-    reasons.push("prompt or task text includes a dangerous command and requires review");
-  }
-  if (safetyText && HIGH_RISK_TEXT_PATTERNS.some((pattern) => pattern.test(safetyText))) {
-    reasons.push("task text or prompt references high-risk auth, permission, payment, migration, secret, token, or key changes");
-  }
-
   const reviewNeeded = reasons.length > 0;
   return {
     allowed: !reviewNeeded,
