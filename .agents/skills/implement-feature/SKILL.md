@@ -38,15 +38,17 @@ When `Worktree Mode` is missing, return `review_needed` or `clarification_needed
 Use the project-local worktree skills as the Git lifecycle boundary:
 
 1. Use `$setup-worktree` before any write-capable implementation, verification write, or Git delivery step.
-2. Perform implementation inside the returned implementation workspace, not in the owner workspace, unless `Worktree Mode` explicitly allows `serial-owner`.
-3. Use `$clean-worktree` after implementation, tests, and independent review evidence are ready.
-4. If worktree setup, review, PR, merge, branch cleanup, or worktree cleanup cannot cleanly finish, return `review_needed`, `approval_needed`, or `blocked`; do not return `completed`.
+2. Do not ask platform code, scheduler code, IDE code, or adapters to modify project files before `$setup-worktree` has returned an implementation workspace. Before setup, code may record database rows, queue events, logs, or read-only evidence only.
+3. Perform implementation, task status edits, `spec-state.json` edits, tests that write artifacts, and docs/code changes inside the returned implementation workspace, not in the owner workspace, unless `Worktree Mode` explicitly allows `serial-owner`. Runtime state changes are allowed during execution, but file-backed Feature state for `feature-worktree` or `worker-worktree` must be written to the active worktree so Git captures it on the feature branch.
+4. Use `$clean-worktree` after implementation, tests, and independent review evidence are ready.
+5. After `$clean-worktree` reports branch/worktree cleanup as complete, do not ask platform code to patch project files or owner-workspace Feature Specs. Any final delivery facts after cleanup must be returned as structured `gitDelivery`, review, report, or database evidence.
+6. If worktree setup, review, PR, merge, branch cleanup, or worktree cleanup cannot cleanly finish, return `review_needed`, `approval_needed`, or `blocked`; do not return `completed`.
 
 ## Long-Running Execution and Context Budget
 
 Default to a delegated, checkpointed execution model for long-running or context-heavy Feature implementation. The owner thread owns lifecycle coordination, integration, final evidence, and Git delivery; CLI-native subagents own bounded implementation, verification, review, or repair slices when the runtime exposes them.
 
-1. Create or update a resumable checkpoint before implementation starts. Use `.autobuild/runs/<executionId>/checkpoint.json` when an `executionId` is available.
+1. For write-capable worktree modes, call `$setup-worktree` before creating or updating any project file checkpoint. Use `.autobuild/runs/<executionId>/checkpoint.json` only inside the active implementation workspace, or use runtime database/log evidence when setup has not completed yet.
 2. Keep the checkpoint compact and machine-readable: source refs, Feature Spec path, Worktree Mode, current stage, task slices, delegated roles, worker result refs, changed files, verification evidence, review evidence, `gitDelivery`, and next action.
 3. Slice work from `tasks.md` into independent worker scopes when files, dependencies, and runtime state allow it. Use `worker-worktree` for parallel write slices; use `serial-owner` for high-conflict files, migrations, lockfiles, shared configuration, or broad refactors.
 4. Dispatch real CLI-native subagents for eligible worker, verifier, reviewer, or repair slices. Give each subagent only paths, IDs, allowed files, verification commands, and the expected compact result. Do not paste full source documents into the prompt.
@@ -57,12 +59,13 @@ Default to a delegated, checkpointed execution model for long-running or context
 
 ## Live Task Status Writeback
 
-During `feature_execution`, this skill owns the primary live task status writeback. The scheduler, IDE, or status-checker may patch terminal state as a fallback, but they must not be the normal path for per-task progress.
+During `feature_execution`, this skill owns the primary live task status writeback. The scheduler, IDE, or status-checker may patch terminal state as a fallback only when it can target the active implementation workspace after setup and before cleanup; they must not be the normal path for per-task progress.
 
 - Before starting a task slice from `tasks.md`, update that task block in the active Feature Spec `tasks.md` to `Status: running`. Use the version in the `implementationWorkspace` if one is active; otherwise use the `ownerWorkspace`.
 - When the task slice is complete and its required verification/evidence has passed, update that task block to `Status: done` in the same active workspace.
 - If the task cannot continue, update it to the narrowest truthful status: `blocked`, `review_needed`, `approval_needed`, or `failed` in the active workspace.
 - Ensure that any `spec-state.json` updates also target the active workspace to prevent spec drift between the feature branch and the owner workspace. **For completed Feature execution, ensure that `spec-state.json` is updated to `completed` within the `implementationWorkspace` BEFORE calling `$clean-worktree`.**
+- Do not rely on scheduler, IDE, status-checker, or adapter code to create the normal `running`, `done`, `completed`, or `review_needed` file edits before setup or after cleanup. Those code paths are fallback projections only; when they run for worktree modes, they must write to the active `implementationWorkspace` and may intentionally skip filesystem writes when no active implementation workspace exists.
 - For delegated worker slices, the owner thread writes the status when the worker starts and reconciles it after the worker result; workers may report suggested statuses but must not be the only source of truth.
 - Update `.autobuild/runs/<executionId>/checkpoint.json` after each status change when an `executionId` exists, but do not use the checkpoint as a substitute for the visible `tasks.md` status.
 - Preserve parser-compatible task headings and `Status:` lines. Do not place extra `TASK-*` tokens in checklist prose where the task parser could treat them as separate tasks.

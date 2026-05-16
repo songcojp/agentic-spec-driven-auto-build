@@ -1154,7 +1154,6 @@ const BOARD_COLUMNS = new Set([
 ]);
 
 export function buildProjectOverview(dbPath: string): ProjectOverviewModel {
-  ensureTokenConsumptionRecords(dbPath);
   const result = runSqlite(dbPath, [], [
     {
       name: "projects",
@@ -1310,7 +1309,6 @@ export function buildProjectOverview(dbPath: string): ProjectOverviewModel {
 }
 
 export function buildDashboardQuery(dbPath: string, options: DashboardQueryOptions = {}): DashboardQueryModel {
-  ensureTokenConsumptionRecords(dbPath, options.projectId);
   const started = process.hrtime.bigint();
   const now = options.now ?? new Date();
   const todayPrefix = now.toISOString().slice(0, 10);
@@ -1561,7 +1559,6 @@ export function buildDashboardBoardView(dbPath: string, projectId?: string): Das
 }
 
 export function buildSpecWorkspaceView(dbPath: string, featureId?: string, projectId?: string): SpecWorkspaceViewModel {
-  ensureTokenConsumptionRecords(dbPath, projectId);
   const eligibleFeatureWhere = "id NOT LIKE 'FEAT-INTAKE-%'";
   const featureFilter = projectId ? `WHERE project_id = ? AND ${eligibleFeatureWhere}` : `WHERE ${eligibleFeatureWhere}`;
   const featureParams = projectId ? [projectId] : [];
@@ -2095,7 +2092,6 @@ function resolveExistingSourcePath(
 }
 
 export function buildRunnerConsoleView(dbPath: string, now: Date = new Date(), projectId?: string): RunnerConsoleViewModel {
-  ensureTokenConsumptionRecords(dbPath, projectId);
   const runProjectFilter = projectId ? "WHERE run_id IN (SELECT id FROM execution_records WHERE project_id = ?)" : "";
   const runProjectParams = projectId ? [projectId] : [];
   const featureProjectFilter = projectId ? "WHERE feature_id IN (SELECT id FROM features WHERE project_id = ?)" : "";
@@ -6303,6 +6299,7 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
   for (const execution of result.queries.executions) {
     if (!isTokenRecordableExecution(execution)) continue;
     const runId = String(execution.id);
+    if (existingTokenRowsByRunId.has(runId)) continue;
     const project = optionalString(execution.project_id);
     const workspaceRoot = optionalString(execution.metadata_workspace_root)
       ?? optionalString(execution.context_workspace_root)
@@ -6319,8 +6316,6 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
     if (!usage) continue;
     const normalized = normalizeTokenUsage(usage);
     if (normalized.totalTokens <= 0) continue;
-    const existingTokenRow = existingTokenRowsByRunId.get(runId);
-    if (existingTokenRow && tokenUsageMatchesRow(normalized, existingTokenRow, sourcePath)) continue;
     const pricingAdapter = adapterForExecutionPricing(execution, {
       cliAdaptersById: adaptersById,
       rpcAdaptersById,
@@ -6331,53 +6326,18 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
       ?? optionalString(execution.metadata_model)
       ?? optionalString(execution.context_model)
       ?? pricingAdapter?.defaults?.model;
-    const pricing = existingTokenRow
-      ? recalculateExistingTokenPricing(existingTokenRow, normalized, model)
-      : calculateTokenCost({
-          usage: normalized,
-          model,
-          costRates: pricingAdapter?.defaults?.costRates ?? {},
-          pricingSource: {
-            adapterId: pricingAdapter?.adapterId,
-            adapterKind: pricingAdapter?.adapterKind,
-          },
-        });
+    const pricing = calculateTokenCost({
+      usage: normalized,
+      model,
+      costRates: pricingAdapter?.defaults?.costRates ?? {},
+      pricingSource: {
+        adapterId: pricingAdapter?.adapterId,
+        adapterKind: pricingAdapter?.adapterKind,
+      },
+    });
     runSqlite(dbPath, [
-      existingTokenRow
-        ? {
-            sql: `UPDATE token_consumption_records
-              SET model = ?,
-                input_tokens = ?,
-                cached_input_tokens = ?,
-                output_tokens = ?,
-                reasoning_output_tokens = ?,
-                total_tokens = ?,
-                cost_usd = ?,
-                currency = ?,
-                pricing_status = ?,
-                usage_json = ?,
-                pricing_json = ?,
-                source_path = ?,
-                recorded_at = CURRENT_TIMESTAMP
-              WHERE run_id = ?`,
-            params: [
-              pricing.model ?? null,
-              normalized.inputTokens,
-              normalized.cachedInputTokens,
-              normalized.outputTokens,
-              normalized.reasoningOutputTokens,
-              normalized.totalTokens,
-              pricing.costUsd,
-              "USD",
-              pricing.pricingStatus,
-              JSON.stringify(usage),
-              JSON.stringify(pricing.pricingSnapshot),
-              sourcePath,
-              runId,
-            ],
-          }
-        : {
-            sql: `INSERT INTO token_consumption_records (
+      {
+        sql: `INSERT INTO token_consumption_records (
             id, run_id, scheduler_job_id, project_id, feature_id, task_id, operation, model,
             input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens,
             cost_usd, currency, pricing_status, usage_json, pricing_json, source_path
@@ -6404,7 +6364,7 @@ export function ensureTokenConsumptionRecords(dbPath: string, projectId?: string
           JSON.stringify(pricing.pricingSnapshot),
           sourcePath,
         ],
-          },
+      },
     ]);
   }
 }
@@ -6436,8 +6396,9 @@ function aggregateRawExecutionLogTokenUsage(rows: Record<string, unknown>[]): { 
       usage,
     }));
   });
-  if (sources.length === 0) return undefined;
-  const aggregate = aggregateTokenUsage(sources.map((source) => source.usage));
+  const uniqueSources = uniqueTokenUsageSources(sources);
+  if (uniqueSources.length === 0) return undefined;
+  const aggregate = aggregateTokenUsage(uniqueSources.map((source) => source.usage));
   if (aggregate.totalTokens <= 0) return undefined;
   return {
     usage: {
@@ -6451,10 +6412,29 @@ function aggregateRawExecutionLogTokenUsage(rows: Record<string, unknown>[]): { 
       outputTokens: aggregate.outputTokens,
       reasoningOutputTokens: aggregate.reasoningOutputTokens,
       totalTokens: aggregate.totalTokens,
-      sources,
+      sources: uniqueSources,
     },
-    sourcePath: sources.map((source) => source.sourcePath).join(","),
+    sourcePath: uniqueSources.map((source) => source.sourcePath).join(","),
   };
+}
+
+function uniqueTokenUsageSources<T extends { usage: Record<string, unknown> }>(sources: T[]): T[] {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const source of sources) {
+    const usage = normalizeTokenUsage(source.usage);
+    const key = [
+      usage.inputTokens,
+      usage.cachedInputTokens,
+      usage.outputTokens,
+      usage.reasoningOutputTokens,
+      usage.totalTokens,
+    ].join(":");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(source);
+  }
+  return unique;
 }
 
 function tokenUsageSourcesFromEvents(events: unknown[]): Record<string, unknown>[] {
@@ -6479,52 +6459,6 @@ function aggregateTokenUsage(usages: Record<string, unknown>[]): ReturnType<type
       }),
       { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningOutputTokens: 0, totalTokens: 0 },
     );
-}
-
-function tokenUsageMatchesRow(
-  usage: ReturnType<typeof normalizeTokenUsage>,
-  row: Record<string, unknown>,
-  sourcePath: string,
-): boolean {
-  return Number(row.input_tokens ?? 0) === usage.inputTokens
-    && Number(row.cached_input_tokens ?? 0) === usage.cachedInputTokens
-    && Number(row.output_tokens ?? 0) === usage.outputTokens
-    && Number(row.reasoning_output_tokens ?? 0) === usage.reasoningOutputTokens
-    && Number(row.total_tokens ?? 0) === usage.totalTokens
-    && String(row.source_path ?? "") === sourcePath;
-}
-
-function recalculateExistingTokenPricing(
-  row: Record<string, unknown>,
-  usage: ReturnType<typeof normalizeTokenUsage>,
-  fallbackModel?: string,
-): {
-  model?: string;
-  costUsd: number;
-  pricingStatus: "priced" | "missing_rate";
-  pricingSnapshot: Record<string, unknown>;
-} {
-  const pricingSnapshot = parseJsonObject(row.pricing_json);
-  const model = optionalString(row.model) ?? optionalString(pricingSnapshot.model) ?? fallbackModel;
-  const preservedRate = normalizeCostRates(model ? { [model]: pricingSnapshot.rate } : {})[model ?? ""];
-  if (preservedRate) {
-    const pricing = calculateTokenCost({
-      usage,
-      model,
-      costRates: { [model]: preservedRate },
-      pricingSource: {
-        adapterId: optionalString(pricingSnapshot.adapterId),
-        adapterKind: pricingSnapshot.adapterKind === "rpc" ? "rpc" : pricingSnapshot.adapterKind === "cli" ? "cli" : undefined,
-      },
-    });
-    return { model, ...pricing };
-  }
-  return {
-    model,
-    costUsd: Number(row.cost_usd ?? 0),
-    pricingStatus: row.pricing_status === "priced" ? "priced" : "missing_rate",
-    pricingSnapshot,
-  };
 }
 
 type ExecutionPricingAdapter = {

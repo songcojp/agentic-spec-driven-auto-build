@@ -144,6 +144,7 @@ test("cli.run failed exit overrides non-terminal SkillOutput in Feature spec-sta
       stdout: `{"type":"session","session_id":"SESSION-FAILED-RUNNING"}\n${skillOutputEvent("RUN-FAILED-RUNNING", {
         status: "running",
         summary: "Validation is still running.",
+        result: {},
       })}`,
       stderr: "Reading additional input from stdin...",
     }),
@@ -155,6 +156,7 @@ test("cli.run failed exit overrides non-terminal SkillOutput in Feature spec-sta
     context: {
       ...payload.context,
       featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+      specState: { worktreeMode: "serial-owner" },
     },
   });
   await scheduler.drain();
@@ -187,12 +189,14 @@ test("cli.run writes review_needed Feature execution status to spec-state file",
     context: {
       ...payload.context,
       featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+      specState: { worktreeMode: "serial-owner" },
     },
   }, () => ({
     status: 0,
     stdout: `{"type":"session","session_id":"SESSION-REVIEW-STATE"}\n${skillOutputEvent("RUN-REVIEW-STATE", {
       status: "review_needed",
       summary: "Independent review is required before delivery.",
+      result: {},
     })}`,
     stderr: "",
   }));
@@ -203,6 +207,146 @@ test("cli.run writes review_needed Feature execution status to spec-state file",
   assert.equal(state.executionStatus, "review_needed");
   assert.equal(state.currentJob.executionId, "RUN-REVIEW-STATE");
   assert.equal(state.lastResult.status, "review_needed");
+});
+
+test("cli.run does not write feature-worktree spec-state before setup-worktree", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-pre-setup-state-"));
+  prepareSkillWorkspace(root);
+  const statePath = join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "spec-state.json");
+  const initialState = {
+    schemaVersion: 1,
+    featureId: "FEAT-CLI",
+    status: "ready",
+    worktreeMode: "feature-worktree",
+    executionStatus: null,
+    updatedAt: "2026-05-16T12:00:00Z",
+    history: [],
+  };
+  writeFileSync(statePath, `${JSON.stringify(initialState, null, 2)}\n`);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const payload = cliRunPayload("RUN-PRE-SETUP-NO-FILE-WRITE");
+
+  const result = await runCliRunJob(dbPath, {
+    ...payload,
+    context: {
+      ...payload.context,
+      featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+      specState: { worktreeMode: "feature-worktree" },
+    },
+  }, () => ({
+    status: 1,
+    stdout: `{"type":"session","session_id":"SESSION-PRE-SETUP"}`,
+    stderr: "setup did not run",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "execution", sql: "SELECT status FROM execution_records WHERE id = 'RUN-PRE-SETUP-NO-FILE-WRITE'" },
+  ]).queries;
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+
+  assert.equal(result.status, "failed");
+  assert.equal(rows.execution[0].status, "failed");
+  assert.deepEqual(state, initialState);
+});
+
+test("cli.run does not write owner spec-state after clean-worktree cleanup", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-post-clean-state-"));
+  prepareSkillWorkspace(root);
+  const statePath = join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "spec-state.json");
+  const initialState = {
+    schemaVersion: 1,
+    featureId: "FEAT-CLI",
+    status: "ready",
+    worktreeMode: "feature-worktree",
+    executionStatus: null,
+    updatedAt: "2026-05-16T12:00:00Z",
+    history: [],
+  };
+  writeFileSync(statePath, `${JSON.stringify(initialState, null, 2)}\n`);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const payload = cliRunPayload("RUN-POST-CLEAN-NO-FILE-WRITE");
+
+  const result = await runCliRunJob(dbPath, {
+    ...payload,
+    context: {
+      ...payload.context,
+      featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+      specState: { worktreeMode: "feature-worktree" },
+    },
+  }, () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-POST-CLEAN"}\n${skillOutputEvent("RUN-POST-CLEAN-NO-FILE-WRITE")}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "execution", sql: "SELECT status FROM execution_records WHERE id = 'RUN-POST-CLEAN-NO-FILE-WRITE'" },
+  ]).queries;
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+
+  assert.equal(result.status, "completed");
+  assert.equal(rows.execution[0].status, "completed");
+  assert.deepEqual(state, initialState);
+});
+
+test("cli.run writes feature-worktree spec-state inside active implementation workspace", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-owner-state-"));
+  const implementationRoot = mkdtempSync(join(tmpdir(), "specdrive-cli-implementation-state-"));
+  prepareSkillWorkspace(root);
+  prepareSkillWorkspace(implementationRoot);
+  const ownerStatePath = join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "spec-state.json");
+  const implementationStatePath = join(implementationRoot, "docs", "agentic-spec", "features", "FEAT-CLI", "spec-state.json");
+  const initialState = {
+    schemaVersion: 1,
+    featureId: "FEAT-CLI",
+    status: "ready",
+    worktreeMode: "feature-worktree",
+    executionStatus: null,
+    updatedAt: "2026-05-16T12:00:00Z",
+    history: [],
+  };
+  writeFileSync(ownerStatePath, `${JSON.stringify(initialState, null, 2)}\n`);
+  writeFileSync(implementationStatePath, `${JSON.stringify(initialState, null, 2)}\n`);
+  commitWorkspace(root, "seed owner spec-state");
+  commitWorkspace(implementationRoot, "seed implementation spec-state");
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const payload = cliRunPayload("RUN-ACTIVE-WORKTREE-STATE");
+  const resultPayload = {
+    ...validJourneyResult(),
+    gitDelivery: {
+      ...validGitDelivery(),
+      ownerWorkspace: root,
+      implementationWorkspace: implementationRoot,
+      worktree: implementationRoot,
+      worktreeCleanup: "pending",
+    },
+  };
+
+  const result = await runCliRunJob(dbPath, {
+    ...payload,
+    context: {
+      ...payload.context,
+      featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+      specState: { worktreeMode: "feature-worktree" },
+    },
+  }, () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-ACTIVE-WORKTREE"}\n${skillOutputEvent("RUN-ACTIVE-WORKTREE-STATE", {
+      result: resultPayload,
+    })}`,
+    stderr: "",
+  }));
+  const ownerState = JSON.parse(readFileSync(ownerStatePath, "utf8"));
+  const implementationState = JSON.parse(readFileSync(implementationStatePath, "utf8"));
+  const implementationDiff = spawnSync("git", ["diff", "--name-only"], { cwd: implementationRoot, encoding: "utf8" });
+
+  assert.equal(result.status, "review_needed");
+  assert.deepEqual(ownerState, initialState);
+  assert.equal(implementationState.status, "review_needed");
+  assert.equal(implementationState.executionStatus, "review_needed");
+  assert.equal(implementationState.currentJob.executionId, "RUN-ACTIVE-WORKTREE-STATE");
+  assert.match(implementationDiff.stdout, /docs\/agentic-spec\/features\/FEAT-CLI\/spec-state\.json/);
 });
 
 test("scheduler worker startup can recover transient queued jobs created while worker was unavailable", () => {
@@ -283,7 +427,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
 
   const result = await runCliRunJob(dbPath, cliRunPayload("RUN-CLI"), () => ({
     status: 0,
-    stdout: `{"type":"session","session_id":"SESSION-CLI"}\n${skillOutputEvent("RUN-CLI")}`,
+    stdout: `{"type":"session","session_id":"SESSION-CLI"}\n${skillOutputEvent("RUN-CLI")}\n{"type":"turn.completed","usage":{"input_tokens":1000,"cached_input_tokens":100,"output_tokens":50,"reasoning_output_tokens":25}}`,
     stderr: "",
   }));
   const resultWithSpy = await runCliRunJob(dbPath, cliRunPayload("RUN-CLI-SPY"), (_command, args, cwd) => {
@@ -299,6 +443,7 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
     { name: "task", sql: "SELECT status FROM task_graph_tasks WHERE id = 'TASK-CLI'" },
     { name: "sessions", sql: "SELECT session_id, exit_code FROM cli_session_records WHERE run_id = 'RUN-CLI'" },
     { name: "logs", sql: "SELECT stdout, events_json FROM raw_execution_logs WHERE run_id = 'RUN-CLI'" },
+    { name: "tokens", sql: "SELECT run_id, total_tokens, source_path FROM token_consumption_records WHERE run_id = 'RUN-CLI'" },
     { name: "statusChecks", sql: "SELECT kind, summary, metadata_json FROM status_check_results WHERE run_id = 'RUN-CLI-SPY'" },
     { name: "policy", sql: "SELECT sandbox_mode FROM runner_policies WHERE run_id = 'RUN-CLI-SPY'" },
   ]).queries;
@@ -321,6 +466,8 @@ test("cli.run executes mocked CLI runner and persists runner artifacts", async (
   assert.equal(JSON.parse(String(rows.runs[0].metadata_json)).contractValidation.valid, true);
   assert.equal(rows.task[0].status, "done");
   assert.deepEqual(rows.sessions.map((row) => [row.session_id, row.exit_code]), [["SESSION-CLI", 0]]);
+  assert.deepEqual(rows.tokens.map((row) => [row.run_id, row.total_tokens]), [["RUN-CLI", 1075]]);
+  assert.match(String(rows.tokens[0].source_path), /RUN-CLI\/cli-output\.json$/);
   const cliLogIndex = JSON.parse(String(rows.logs[0].events_json));
   assert.equal(rows.logs[0].stdout, "");
   assert.equal(cliLogIndex.storage, "file");
@@ -1012,6 +1159,7 @@ test("codex.rpc.run projects approval pending to Feature spec-state", async () =
       ...payload.context,
       featureSpecPath: "docs/agentic-spec/features/feat-cli",
       skillName: "implement-feature",
+      specState: { worktreeMode: "serial-owner" },
     },
   }, transport);
   const rows = runSqlite(dbPath, [], [
@@ -1053,7 +1201,18 @@ test("codex.rpc.run writes completed Feature execution to spec-state file", asyn
       yield {
         type: "turn/completed",
         status: "completed",
-        output: skillOutputObject("RUN-COMPLETED-STATE"),
+        output: {
+          ...skillOutputObject("RUN-COMPLETED-STATE"),
+          result: {
+            ...validJourneyResult(),
+            gitDelivery: {
+              ...validGitDelivery(),
+              ownerWorkspace: root,
+              implementationWorkspace: root,
+              worktree: root,
+            },
+          },
+        },
       };
     },
   };
@@ -1064,6 +1223,7 @@ test("codex.rpc.run writes completed Feature execution to spec-state file", asyn
     context: {
       ...payload.context,
       featureSpecPath: "docs/agentic-spec/features/feat-cli",
+      specState: { worktreeMode: "serial-owner" },
     },
   }, transport);
   const state = JSON.parse(readFileSync(join(featureDir, "spec-state.json"), "utf8"));

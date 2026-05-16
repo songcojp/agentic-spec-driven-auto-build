@@ -9,6 +9,8 @@ description: "Set up a SpecDrive Feature implementation worktree. Use when imple
 
 Prepare the implementation workspace for a Feature before any write-capable work starts. This skill owns Git worktree creation and reuse decisions; platform code may pass owner workspace and Feature Spec paths, but must not run `git worktree add` on its behalf.
 
+Until this skill returns a valid implementation workspace, platform code, scheduler code, IDE code, adapters, and status checkers must not modify project files in either the owner workspace or a would-be implementation path. They may only read files and record runtime/database/log evidence.
+
 ## Inputs
 
 - Owner workspace root.
@@ -54,6 +56,7 @@ Record these fields for handoff to `implement-feature` and final `result.gitDeli
 
 ## Boundaries
 
+- This skill is the first file-mutation boundary for worktree modes. Any `tasks.md`, `spec-state.json`, code, test, docs, checkpoint, or evidence file update that belongs to implementation must wait until setup has selected the active workspace.
 - Do not modify project specs (including `tasks.md` and `spec-state.json`), code, tests, or docs from the owner workspace after this worktree setup starts; write work belongs in the implementation worktree.
 - Failure to redirect spec writes to the `implementationWorkspace` will result in spec drift where progress is recorded in the `ownerWorkspace` but missing from the delivery branch.
 - Do not clean up worktrees; route cleanup to `clean-worktree`.

@@ -5,6 +5,7 @@ import { Queue, Worker, type Job, type WorkerOptions } from "bullmq";
 import IORedis from "ioredis";
 import { runSqlite } from "./sqlite.ts";
 import { recordAuditEvent } from "./persistence.ts";
+import { calculateTokenCost } from "./adapter-pricing.ts";
 import {
   type RiskLevel,
 } from "./orchestration.ts";
@@ -588,7 +589,6 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     schedulerJobId: optionalString((payload as unknown as Record<string, unknown>).schedulerJobId),
     executionId: payload.executionId,
   });
-
   const result = await processRunnerQueueItem({
     runId: payload.executionId,
     featureId: loaded.featureId,
@@ -628,12 +628,28 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
     rawLogRefs: result.adapterResult?.executionAdapterResult?.rawLogRefs ?? [],
     commandTermination: result.adapterResult?.result.commandTermination,
   });
+  const completedAt = new Date().toISOString();
   runSqlite(dbPath, [
     {
       sql: "UPDATE execution_records SET status = ?, completed_at = ?, summary = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      params: [result.status, new Date().toISOString(), result.summary, JSON.stringify(finalMetadata), payload.executionId],
+      params: [result.status, completedAt, result.summary, JSON.stringify(finalMetadata), payload.executionId],
     },
   ]);
+  recordTokenConsumptionForCompletedRun(dbPath, {
+    runId: payload.executionId,
+    schedulerJobId: optionalString((payload as unknown as Record<string, unknown>).schedulerJobId),
+    projectId: loaded.projectId ?? payload.projectId,
+    featureId: loaded.featureId ?? featureId,
+    taskId: optionalString(context.taskId),
+    operation: payload.operation,
+    model: policy.model ?? loaded.adapter.defaults.model,
+    adapterId: loaded.adapter.id,
+    adapterKind: "cli",
+    costRates: loaded.adapter.defaults.costRates ?? {},
+    events: result.adapterResult?.result.events ?? [],
+    sourcePath: result.adapterResult?.rawLog.files?.output ?? result.adapterResult?.result.logFiles?.output,
+    completedAt,
+  });
   updateRuntimeTaskStateForRun(dbPath, {
     featureId: loaded.featureId ?? featureId,
     taskId: optionalString(context.taskId),
@@ -1091,7 +1107,6 @@ export async function runCodexAppServerRunJob(
     schedulerJobId: optionalString((payload as unknown as Record<string, unknown>).schedulerJobId),
     executionId: payload.executionId,
   });
-
   const activeTransport = transport ?? createCodexAppServerTransportFromConfig(adapterConfig ?? DEFAULT_CODEX_APP_SERVER_ADAPTER_CONFIG, loaded.workspaceRoot);
   let adapterResult: Awaited<ReturnType<typeof runCodexAppServerSession>>;
   try {
@@ -1418,7 +1433,6 @@ export async function runGeminiAcpRunJob(
     schedulerJobId: optionalString((payload as unknown as Record<string, unknown>).schedulerJobId),
     executionId: payload.executionId,
   });
-
   const activeTransport = transport ?? createGeminiAcpTransportFromConfig(adapterConfig ?? DEFAULT_GEMINI_ACP_ADAPTER_CONFIG, loaded.workspaceRoot);
   let adapterResult: Awaited<ReturnType<typeof runGeminiAcpSession>>;
   try {
@@ -1703,12 +1717,24 @@ function updateFeatureSpecFileState(input: {
   if (!featureSpecPath?.startsWith("docs/agentic-spec/features/")) return;
 
   const gitDelivery = (input.skillOutput?.result as any)?.gitDelivery;
-  const implementationWorkspace = gitDelivery?.implementationWorkspace;
+  const implementationWorkspace = optionalString(gitDelivery?.implementationWorkspace);
+  const ownerWorkspace = optionalString(gitDelivery?.ownerWorkspace);
   const worktreeCleanup = (gitDelivery?.worktreeCleanup as string | undefined)?.toLowerCase();
   const isCleanedUp = worktreeCleanup === "passed" || worktreeCleanup === "completed" || worktreeCleanup === "cleaned";
+  const worktreeMode = featureWorktreeMode(input.context, input.skillOutput);
+  const hasSeparateImplementationWorkspace = Boolean(
+    implementationWorkspace && implementationWorkspace !== (ownerWorkspace ?? input.workspaceRoot),
+  );
+  const requiresSetupWorktree = worktreeMode === "serial-owner"
+    ? hasSeparateImplementationWorkspace
+    : true;
 
-  // Route to implementation workspace if active; otherwise use owner workspace root.
   const hasActiveImplementationWorkspace = Boolean(implementationWorkspace && !isCleanedUp && existsSync(implementationWorkspace));
+  if (requiresSetupWorktree && (!hasActiveImplementationWorkspace || isCleanedUp)) {
+    return;
+  }
+
+  // Route to implementation workspace if active; otherwise use owner workspace root for serial-owner fallback only.
   const targetWorkspace = hasActiveImplementationWorkspace
     ? implementationWorkspace
     : input.workspaceRoot;
@@ -1760,6 +1786,153 @@ function updateFeatureSpecFileState(input: {
   } catch {
     // Spec state is operator-facing context; execution_records remain the runtime fact if this projection fails.
   }
+}
+
+function featureWorktreeMode(context: ExecutorJobContext, skillOutput?: SkillOutputContract): string | undefined {
+  return optionalString(parseJsonObject(context.specState).worktreeMode)
+    ?? optionalString(parseJsonObject((skillOutput?.result as Record<string, unknown> | undefined)?.worktree).mode)
+    ?? optionalString(parseJsonObject((skillOutput?.result as Record<string, unknown> | undefined)?.gitDelivery).worktreeMode);
+}
+
+function recordTokenConsumptionForCompletedRun(
+  dbPath: string,
+  input: {
+    runId: string;
+    schedulerJobId?: string;
+    projectId?: string;
+    featureId?: string;
+    taskId?: string;
+    operation?: string;
+    model?: string;
+    adapterId?: string;
+    adapterKind: "cli" | "rpc";
+    costRates: Record<string, unknown>;
+    events: unknown[];
+    sourcePath?: string;
+    completedAt: string;
+  },
+): void {
+  const usage = tokenUsageFromEvents(input.events);
+  if (!usage || usage.totalTokens <= 0 || !input.sourcePath) return;
+  const pricing = calculateTokenCost({
+    usage,
+    model: input.model,
+    costRates: input.costRates as Parameters<typeof calculateTokenCost>[0]["costRates"],
+    pricingSource: {
+      adapterId: input.adapterId,
+      adapterKind: input.adapterKind,
+    },
+  });
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO token_consumption_records (
+          id, run_id, scheduler_job_id, project_id, feature_id, task_id, operation, model,
+          input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens,
+          cost_usd, currency, pricing_status, usage_json, pricing_json, source_path, recorded_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(run_id) DO NOTHING`,
+      params: [
+        randomUUID(),
+        input.runId,
+        input.schedulerJobId ?? null,
+        input.projectId ?? null,
+        input.featureId ?? null,
+        input.taskId ?? null,
+        input.operation ?? null,
+        pricing.model ?? null,
+        usage.inputTokens,
+        usage.cachedInputTokens,
+        usage.outputTokens,
+        usage.reasoningOutputTokens,
+        usage.totalTokens,
+        pricing.costUsd,
+        "USD",
+        pricing.pricingStatus,
+        JSON.stringify({
+          input_tokens: usage.inputTokens,
+          cached_input_tokens: usage.cachedInputTokens,
+          output_tokens: usage.outputTokens,
+          reasoning_output_tokens: usage.reasoningOutputTokens,
+          total_tokens: usage.totalTokens,
+          inputTokens: usage.inputTokens,
+          cachedInputTokens: usage.cachedInputTokens,
+          outputTokens: usage.outputTokens,
+          reasoningOutputTokens: usage.reasoningOutputTokens,
+          totalTokens: usage.totalTokens,
+        }),
+        JSON.stringify(pricing.pricingSnapshot),
+        input.sourcePath,
+        input.completedAt,
+      ],
+    },
+  ]);
+}
+
+function tokenUsageFromEvents(events: unknown[]): {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+  totalTokens: number;
+} | undefined {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = parseJsonObject(events[index]);
+    const usage = normalizeTokenUsage(event.usage ?? event.stats ?? tokenUsageFromRecord(event));
+    if (usage.totalTokens > 0) return usage;
+  }
+  return undefined;
+}
+
+function tokenUsageFromRecord(record: Record<string, unknown>): unknown {
+  if (hasTokenUsageFields(record)) return record;
+  return tokenUsageFromValue(record.result)
+    ?? tokenUsageFromValue(record.output)
+    ?? tokenUsageFromValue(record.item);
+}
+
+function tokenUsageFromValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    for (let index = value.length - 1; index >= 0; index -= 1) {
+      const usage = tokenUsageFromValue(value[index]);
+      if (usage) return usage;
+    }
+    return undefined;
+  }
+  const record = parseJsonObject(value);
+  if (hasTokenUsageFields(record)) return record;
+  return undefined;
+}
+
+function hasTokenUsageFields(record: Record<string, unknown>): boolean {
+  return ["inputTokens", "input_tokens", "promptTokens", "prompt_tokens", "outputTokens", "output_tokens", "completionTokens", "completion_tokens", "totalTokens", "total_tokens"]
+    .some((key) => record[key] !== undefined);
+}
+
+function normalizeTokenUsage(value: unknown): {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+  totalTokens: number;
+} {
+  const record = parseJsonObject(value);
+  const inputTokens = nonNegativeInteger(record.inputTokens ?? record.input_tokens ?? record.promptTokens ?? record.prompt_tokens);
+  const cachedInputTokens = nonNegativeInteger(record.cachedInputTokens ?? record.cached_input_tokens ?? record.cacheReadInputTokens ?? record.cache_read_input_tokens);
+  const outputTokens = nonNegativeInteger(record.outputTokens ?? record.output_tokens ?? record.completionTokens ?? record.completion_tokens);
+  const reasoningOutputTokens = nonNegativeInteger(record.reasoningOutputTokens ?? record.reasoning_output_tokens);
+  const explicitTotal = nonNegativeInteger(record.totalTokens ?? record.total_tokens);
+  return {
+    inputTokens,
+    cachedInputTokens,
+    outputTokens,
+    reasoningOutputTokens,
+    totalTokens: explicitTotal > 0 ? explicitTotal : inputTokens + outputTokens + reasoningOutputTokens,
+  };
+}
+
+function nonNegativeInteger(value: unknown): number {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0 ? Math.trunc(numberValue) : 0;
 }
 
 function runnerStatusToFileSpecStatus(status: RunnerQueueStatus) {

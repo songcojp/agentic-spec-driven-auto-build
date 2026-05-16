@@ -14,7 +14,7 @@ import {
   submitIdeQueueCommand,
   submitIdeSpecChangeRequest,
 } from "../src/specdrive-ide.ts";
-import { submitConsoleCommand } from "../src/product-console.ts";
+import { ensureTokenConsumptionRecords, submitConsoleCommand } from "../src/product-console.ts";
 import { createControlPlaneServer, listen } from "../src/server.ts";
 import { createMemoryScheduler } from "../src/scheduler.ts";
 import { runStatusCheck } from "../src/status-checker.ts";
@@ -2426,6 +2426,10 @@ test("SpecDrive IDE Feature Spec nodes persist token usage from cli-output.json"
     },
   ]);
 
+  const refreshOnlyView = buildSpecDriveIdeView(dbPath, { workspaceRoot });
+  assert.equal(refreshOnlyView.features.find((entry) => entry.id === "FEAT-016")?.tokenConsumption, undefined);
+
+  ensureTokenConsumptionRecords(dbPath, "project-ide");
   const view = buildSpecDriveIdeView(dbPath, { workspaceRoot });
   const feature = view.features.find((entry) => entry.id === "FEAT-016");
 

@@ -7,7 +7,7 @@ import {
   interruptCodexAppServerTurn,
   type CodexAppServerAdapterConfig,
 } from "./codex-rpc-adapter.ts";
-import { ensureTokenConsumptionRecords, submitConsoleCommand, type ConsoleCommandInput, type ConsoleCommandReceipt } from "./product-console.ts";
+import { submitConsoleCommand, type ConsoleCommandInput, type ConsoleCommandReceipt } from "./product-console.ts";
 import type { ExecutorRunJobPayload, SchedulerClient, SchedulerJobType } from "./scheduler.ts";
 import { runSqlite } from "./sqlite.ts";
 import {
@@ -422,7 +422,6 @@ export function buildSpecDriveIdeView(dbPath: string, options: BuildSpecDriveIde
   const project = resolveProject(dbPath, options);
   const workspaceRoot = options.workspaceRoot ? resolve(options.workspaceRoot) : optionalString(project?.target_repo_path);
   const projectId = options.projectId ?? optionalString(project?.id);
-  if (projectId) ensureTokenConsumptionRecords(dbPath, projectId);
   const specRoot = workspaceRoot ? detectSpecRoot(workspaceRoot) : undefined;
   const language = specRoot?.startsWith("docs/agentic-spec/") ? specRoot.slice("docs/agentic-spec/".length) : undefined;
   const documents = workspaceRoot ? buildTopLevelDocuments(workspaceRoot, specRoot) : [];

@@ -827,6 +827,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
     },
   ]);
 
+  ensureTokenConsumptionRecords(dbPath, "project-1");
   const runner = buildRunnerConsoleView(dbPath, stableDate, "project-1");
   const jobOutput = runner.schedulerJobs.find((job) => job.id === "JOB-SKILL")?.skillOutput;
   const workspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
@@ -853,6 +854,8 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   ]).queries.records;
   assert.equal(afterRepeatedViews.length, 1);
 
+  // Refresh-time backfill is append-only by run. Once the completed run has a
+  // token record, later log or pricing changes must not rewrite the cost fact.
   writeFileSync(join(runDir, "cli-output.json"), JSON.stringify({
     usage: { input_tokens: 11000000, cached_input_tokens: 1000000, output_tokens: 4000000, reasoning_output_tokens: 1000000 },
   }));
@@ -872,23 +875,6 @@ test("runner and spec workspace record token consumption from cli-output.json", 
       })],
     },
   ]);
-  const updatedWorkspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
-  const refreshedTokens = runSqlite(dbPath, [], [
-    {
-      name: "records",
-      sql: "SELECT input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens, total_tokens, cost_usd, pricing_json FROM token_consumption_records WHERE run_id = 'RUN-SKILL'",
-    },
-  ]).queries.records;
-  assert.equal(refreshedTokens.length, 1);
-  assert.equal(refreshedTokens[0].input_tokens, 11000000);
-  assert.equal(refreshedTokens[0].cached_input_tokens, 1000000);
-  assert.equal(refreshedTokens[0].output_tokens, 4000000);
-  assert.equal(refreshedTokens[0].reasoning_output_tokens, 1000000);
-  assert.equal(refreshedTokens[0].total_tokens, 16000000);
-  assert.equal(refreshedTokens[0].cost_usd, 60.2);
-  assert.equal(JSON.parse(String(refreshedTokens[0].pricing_json)).rate.inputUsdPer1M, 2);
-  assert.equal(updatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 16000000);
-
   runSqlite(dbPath, [
     {
       sql: `INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json, created_at)
@@ -905,6 +891,7 @@ test("runner and spec workspace record token consumption from cli-output.json", 
       ])],
     },
   ]);
+  const updatedWorkspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
   const aggregatedWorkspace = buildSpecWorkspaceView(dbPath, "FEAT-013", "project-1");
   const aggregatedTokens = runSqlite(dbPath, [], [
     {
@@ -914,17 +901,17 @@ test("runner and spec workspace record token consumption from cli-output.json", 
   ]).queries.records;
   const aggregatedUsage = JSON.parse(String(aggregatedTokens[0].usage_json));
   assert.equal(aggregatedTokens.length, 1);
-  assert.equal(aggregatedTokens[0].input_tokens, 3000);
-  assert.equal(aggregatedTokens[0].cached_input_tokens, 300);
-  assert.equal(aggregatedTokens[0].output_tokens, 100);
-  assert.equal(aggregatedTokens[0].reasoning_output_tokens, 30);
-  assert.equal(aggregatedTokens[0].total_tokens, 3130);
-  assert.equal(aggregatedTokens[0].cost_usd, 0.0065);
-  assert.match(String(aggregatedTokens[0].source_path), /raw_execution_logs:LOG-UI-SPEC#usage-1/);
-  assert.match(String(aggregatedTokens[0].source_path), /raw_execution_logs:LOG-IMAGE-GEN#usage-1/);
-  assert.equal(aggregatedUsage.sources.length, 2);
+  assert.equal(aggregatedTokens[0].input_tokens, 9000000);
+  assert.equal(aggregatedTokens[0].cached_input_tokens, 0);
+  assert.equal(aggregatedTokens[0].output_tokens, 9000000);
+  assert.equal(aggregatedTokens[0].reasoning_output_tokens, 0);
+  assert.equal(aggregatedTokens[0].total_tokens, 18000000);
+  assert.equal(aggregatedTokens[0].cost_usd, 90);
+  assert.equal(aggregatedTokens[0].source_path, join(runDir, "cli-output.json"));
+  assert.equal(aggregatedUsage.sources, undefined);
   assert.equal(JSON.parse(String(aggregatedTokens[0].pricing_json)).rate.inputUsdPer1M, 2);
-  assert.equal(aggregatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 3130);
+  assert.equal(updatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 18000000);
+  assert.equal(aggregatedWorkspace.selectedFeature?.skillOutput?.tokenConsumption?.totalTokens, 18000000);
 
   const otherProject = buildRunnerConsoleView(dbPath, stableDate, "project-2");
   assert.equal(otherProject.schedulerJobs.some((job) => job.id === "JOB-SKILL"), false);
@@ -1059,12 +1046,74 @@ test("runner token backfill waits for execution completion", () => {
       params: ["2026-04-28T12:05:00.000Z"],
     },
   ]);
-  buildRunnerConsoleView(dbPath, stableDate, "project-1");
+  ensureTokenConsumptionRecords(dbPath, "project-1");
   const completedRecords = runSqlite(dbPath, [], [
     { name: "records", sql: "SELECT run_id, total_tokens FROM token_consumption_records WHERE run_id = 'RUN-LIVE-TOKEN'" },
   ]).queries.records;
   assert.equal(completedRecords.length, 1);
   assert.equal(completedRecords[0].total_tokens, 4600);
+});
+
+test("runner token backfill deduplicates repeated raw log usage snapshots", () => {
+  const dbPath = makeDbPath();
+  seedConsoleData(dbPath);
+  const projectPath = mkdtempSync(join(tmpdir(), "token-refresh-dedupe-"));
+  const runDir = join(projectPath, ".autobuild", "runs", "RUN-REFRESH-TOKEN");
+  mkdirSync(runDir, { recursive: true });
+  writeFileSync(join(runDir, "cli-output.json"), JSON.stringify({
+    usage: { input_tokens: 4000, cached_input_tokens: 1000, output_tokens: 500, reasoning_output_tokens: 100 },
+  }));
+  runSqlite(dbPath, [
+    { sql: "UPDATE projects SET target_repo_path = ? WHERE id = 'project-1'", params: [projectPath] },
+    { sql: "UPDATE repository_connections SET local_path = ? WHERE id = 'RC-1'", params: [projectPath] },
+    {
+      sql: `INSERT INTO execution_records (
+          id, executor_type, operation, project_id, context_json, status, started_at, completed_at, metadata_json
+        ) VALUES (
+          'RUN-REFRESH-TOKEN', 'cli', 'feature_execution', 'project-1', ?, 'completed',
+          '2026-04-28T12:03:00.000Z', '2026-04-28T12:05:00.000Z', ?
+        )`,
+      params: [
+        JSON.stringify({ featureId: "FEAT-013", taskId: "TASK-013-01" }),
+        JSON.stringify({ model: "gpt-5.5" }),
+      ],
+    },
+    {
+      sql: `INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json, created_at)
+        VALUES ('LOG-REFRESH-1', 'RUN-REFRESH-TOKEN', '', '', ?, '2026-04-28T12:05:01.000Z')`,
+      params: [JSON.stringify([
+        { type: "turn.completed", usage: { input_tokens: 4000, cached_input_tokens: 1000, output_tokens: 500, reasoning_output_tokens: 100 } },
+      ])],
+    },
+    {
+      sql: `INSERT INTO raw_execution_logs (id, run_id, stdout, stderr, events_json, created_at)
+        VALUES ('LOG-REFRESH-2', 'RUN-REFRESH-TOKEN', '', '', ?, '2026-04-28T12:05:02.000Z')`,
+      params: [JSON.stringify([
+        { type: "turn.completed", usage: { input_tokens: 4000, cached_input_tokens: 1000, output_tokens: 500, reasoning_output_tokens: 100 } },
+      ])],
+    },
+  ]);
+
+  buildRunnerConsoleView(dbPath, stableDate, "project-1");
+  const refreshOnlyRecords = runSqlite(dbPath, [], [
+    { name: "records", sql: "SELECT run_id FROM token_consumption_records WHERE run_id = 'RUN-REFRESH-TOKEN'" },
+  ]).queries.records;
+  assert.equal(refreshOnlyRecords.length, 0);
+
+  ensureTokenConsumptionRecords(dbPath, "project-1");
+  buildRunnerConsoleView(dbPath, stableDate, "project-1");
+  const records = runSqlite(dbPath, [], [
+    {
+      name: "records",
+      sql: "SELECT COUNT(*) AS count, total_tokens, source_path, usage_json FROM token_consumption_records WHERE run_id = 'RUN-REFRESH-TOKEN'",
+    },
+  ]).queries.records;
+  const usage = JSON.parse(String(records[0].usage_json));
+  assert.equal(records[0].count, 1);
+  assert.equal(records[0].total_tokens, 4600);
+  assert.match(String(records[0].source_path), /raw_execution_logs:LOG-REFRESH-1#usage-1/);
+  assert.doesNotMatch(String(records[0].source_path), /LOG-REFRESH-2/);
+  assert.equal(usage.sources.length, 1);
 });
 
 test("token cost calculation uses execution adapter rates without repricing history", () => {

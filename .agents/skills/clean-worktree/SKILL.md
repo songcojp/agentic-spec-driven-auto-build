@@ -9,6 +9,8 @@ description: "Clean a SpecDrive Feature implementation worktree after verificati
 
 Finish the Git delivery lifecycle for a Feature worktree without letting platform code perform Git side effects. This skill owns commit, PR, merge, branch cleanup, and worktree removal decisions; the platform records and validates the resulting evidence.
 
+This skill is also the final file-mutation boundary for worktree modes. Once it reports merge/branch/worktree cleanup as complete, platform code must not patch owner-workspace Feature Specs, task files, code, docs, or checkpoints to "finish" the run. Any final state after cleanup must come from the structured result and runtime records.
+
 ## Inputs
 
 - Owner workspace root.
@@ -56,3 +58,4 @@ Use statuses such as `passed`, `completed`, `merged`, or `cleaned` only when fre
 - Do not create implementation worktrees; route setup to `setup-worktree`.
 - Do not hide missing review, test, or delivery evidence behind prose-only summaries.
 - Do not remove a dirty worktree or delete a branch that contains unmerged user work.
+- Do not ask scheduler, IDE, status-checker, adapter, or product-console code to modify project files after this skill has cleaned the worktree. If a final summary or review item is needed, return it as `gitDelivery`, `producedArtifacts`, review evidence, or database/log evidence before cleanup completes.
