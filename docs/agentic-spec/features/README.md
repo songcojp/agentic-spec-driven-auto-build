@@ -30,6 +30,7 @@
 | FEAT-021 | IDE Workbench Webviews | `feat-021-ide-execution-webview` | done / execution-preference-followup | REQ-084、REQ-086 | M8 | FEAT-016、FEAT-019、FEAT-020 |
 | FEAT-022 | IDE System Settings Webview | `feat-022-ide-system-settings-webview` | done / execution-preference-followup | REQ-085、REQ-086 | M8 | FEAT-016、FEAT-018、FEAT-021 |
 | FEAT-023 | Full Lifecycle Delivery Fidelity | `feat-023-full-lifecycle-delivery-fidelity` | in-progress | REQ-087 至 REQ-094 | M9 | FEAT-002、FEAT-004、FEAT-008、FEAT-011、FEAT-012 |
+| FEAT-024 | Product Usability Autonomy | `feat-024-product-usability-autonomy` | ready | REQ-095 至 REQ-102 | M10 | FEAT-002、FEAT-004、FEAT-008、FEAT-011、FEAT-012、FEAT-021、FEAT-023 |
 
 FEAT-013 当前补充 Execution Adapter / Scheduler UI refinement：任务调度中心已改为执行队列视图，主列表展示 `scheduler_job_records` 中的 `cli.run` / 后续 `rpc.run` Job，并下钻到 Execution Record、payload context、执行结果 和日志。旧 `feature.select -> feature.plan -> cli.run` 流水线卡片已废弃；Feature 级编码执行由 `implement-feature` 直接读取 Feature Spec 目录中的 `requirements.md`、`design.md`、`tasks.md`，不再依赖平台 `task_graph_tasks` / `tasks` 表。
 
@@ -40,6 +41,8 @@ FEAT-013 当前补充 Execution Adapter / Scheduler UI refinement：任务调度
 2026-05-03 adapter redesign：执行层不再使用 Runner 作为核心概念，统一改为 Execution Adapter Layer。FEAT-008 是 CLI Adapter 迁移来源，负责 `cli.run`、Codex CLI、Gemini CLI、Claude Code CLI 和本机进程执行；FEAT-018 是 RPC Adapter 迁移来源，负责 `rpc.run`、Codex RPC、HTTP/JSON-RPC/WebSocket 远程执行。迁移顺序为先落 `ExecutionAdapterConfigV1` / `ExecutionAdapterInvocationV1` / `ExecutionAdapterEventV1` / `ExecutionAdapterResultV1` 接口，再迁移 Codex CLI provider，再迁移 Codex RPC provider，最后清理 UI、数据库兼容字段和历史命名。
 
 2026-05-11 delivery fidelity update：FEAT-023 将 Agentic Spec 从“编号阶段 + 最终 gate”升级为 lifecycle-first 的 Delivery Lifecycle OS。Define、Plan、Build、Verify、Review、Ship 每个 handoff 都必须保留 source intent、journey、behavior obligation、loss、evidence 和 independent review；`feature_execution` completed 输出必须使用 `skill-contract/v2` 和 `result.deliveryFidelity`。
+
+2026-05-15 product usability autonomy update：FEAT-024 将成熟技能库实践与 Agentic Spec 协议双向收敛。该 Feature 要求 `LifecycleHandoff`、`SkillWrapperContract`、`DecisionLog`、`ProtocolGap`、`UsabilityEvidence` 和 `ReferencePatternMap` 同时具备 human-readable spec 与 machine-readable runtime contract，并通过 Product Usability Gate、ReviewItem 和 VSCode Execution Workbench 证明 P0/P1 用户故事真正可用。
 
 ## Dependency Tree
 
@@ -82,6 +85,8 @@ FEAT-000 System Bootstrap
         │               └── FEAT-022 IDE System Settings Webview
         └── FEAT-023 Full Lifecycle Delivery Fidelity
             (also requires FEAT-002, FEAT-008, FEAT-011, FEAT-012)
+            └── FEAT-024 Product Usability Autonomy
+                (also requires FEAT-002, FEAT-004, FEAT-008, FEAT-011, FEAT-012, FEAT-021)
 ```
 
 ### Direct Dependencies
@@ -112,6 +117,7 @@ FEAT-000 System Bootstrap
 | FEAT-021 | FEAT-016、FEAT-019、FEAT-020 |
 | FEAT-022 | FEAT-016、FEAT-018、FEAT-021 |
 | FEAT-023 | FEAT-002、FEAT-004、FEAT-008、FEAT-011、FEAT-012 |
+| FEAT-024 | FEAT-002、FEAT-004、FEAT-008、FEAT-011、FEAT-012、FEAT-021、FEAT-023 |
 
 ## Delivery Order
 
@@ -126,6 +132,7 @@ FEAT-000 System Bootstrap
 9. FEAT-016 to FEAT-020 add the VSCode IDE surface, RPC Adapter for Codex RPC, IDE execution loop, and diagnostics refinement after Product Console and Execution Adapter foundations exist.
 10. FEAT-021 adds independent VSCode Webview Web UIs for Execution Workbench, Spec Workspace, and Feature Spec; they must not reuse Product Console pages, routes, navigation, App Shell, or component implementation.
 11. FEAT-023 upgrades autonomous delivery to lifecycle-first Delivery Fidelity across skills, contracts, review routing, Feature aggregation, Spec Artifact Granularity Gate, and Spec document quality repair loops.
+12. FEAT-024 upgrades delivery closure to Product Usability Autonomy by making protocol structures machine-queryable, status-affecting, and visible in the VSCode Execution Workbench.
 
 ## Spec Evolution Notes
 

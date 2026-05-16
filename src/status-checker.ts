@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { recordAuditEvent, recordMetricSample, sanitizeForOrdinaryLog } from "./persistence.ts";
+import { assessProductUsabilityGate, type ProductUsabilityGateInput } from "./product-usability.ts";
 import { createReviewItem, type ReviewTrigger } from "./review-center.ts";
 import { runSqlite, type SqlStatement } from "./sqlite.ts";
 
@@ -96,6 +97,7 @@ export type CompletionEvidenceInput = {
   runtimeEvidence?: unknown;
   deliveryFidelity?: unknown;
   gitDelivery?: unknown;
+  productUsability?: ProductUsabilityGateInput;
   requireRuntimeEvidence?: boolean;
 };
 
@@ -520,6 +522,10 @@ function evaluateCompletionEvidence(input: CompletionEvidenceInput | undefined):
   if (input.gitDelivery && !gitDeliveryLooksClosed(input.gitDelivery)) {
     reasons.push("gitDelivery is missing PR/check/merge/cleanup closure evidence.");
   }
+  const productUsability = assessProductUsabilityGate(input.productUsability);
+  if (!productUsability.passed) {
+    reasons.push(`Product Usability Gate failed: ${productUsability.details.join("; ")}`);
+  }
   return { passed: reasons.length === 0, reasons };
 }
 
@@ -775,7 +781,7 @@ function findOpenStatusReview(dbPath: string, result: StatusCheckResult): { id: 
 }
 
 function reviewReasonForStatusCheck(result: StatusCheckResult): "approval_needed" | "clarification_needed" | "risk_review_needed" {
-  if (result.reasons.some((reason) => /requirementCoverage|acceptanceEvidence|journeyEvidence|runtimeEvidence|deliveryFidelity|gitDelivery/.test(reason))) {
+  if (result.reasons.some((reason) => /requirementCoverage|acceptanceEvidence|journeyEvidence|runtimeEvidence|deliveryFidelity|gitDelivery|Product Usability Gate/.test(reason))) {
     return "risk_review_needed";
   }
   if (isRepeatedFailureEscalation(result)) {
@@ -819,6 +825,7 @@ function reviewTriggersForStatusCheck(result: StatusCheckResult): ReviewTrigger[
   if (/runtimeEvidence/.test(reasonText)) triggers.add("evidence_missing");
   if (/deliveryFidelity/.test(reasonText)) triggers.add("quality_evidence_gap");
   if (/gitDelivery/.test(reasonText)) triggers.add("delivery_evidence_missing");
+  if (/Product Usability Gate/.test(reasonText)) triggers.add("product_usability_gap");
   return triggers.size > 0 ? [...triggers] : ["high_risk_file"];
 }
 

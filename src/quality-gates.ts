@@ -6,6 +6,7 @@ import type {
   SkillArtifactContract,
   SkillOutputContract,
 } from "./cli-adapter.ts";
+import { assessProductUsabilityGate, type ProductUsabilityGateInput } from "./product-usability.ts";
 
 export type RuntimeEvidence = {
   appLaunch?: {
@@ -81,6 +82,13 @@ export function validateFeatureCompletion(input: {
   if (!runtimeEvidence.passed) {
     triggers.push(runtimeEvidence.reason);
     details.push(`Runtime Evidence Gate failed: ${runtimeEvidence.reason}${runtimeEvidence.details.length ? ` (${runtimeEvidence.details.join("; ")})` : ""}.`);
+  }
+
+  const productUsability = assessProductUsabilityGate(asProductUsabilityGateInput(output.result.productUsability));
+  if (!productUsability.passed) {
+    triggers.push(productUsability.reason ?? "product_usability_gap");
+    triggers.push(...productUsability.triggers);
+    details.push(`Product Usability Gate failed: ${productUsability.details.join("; ")}.`);
   }
 
   if (details.length === 0) {
@@ -346,6 +354,30 @@ function resultItemsMentionStructuredEvidence(result: Record<string, unknown>): 
 function arrayFromRecordField(record: Record<string, unknown>, field: string): unknown[] {
   const value = record[field];
   return Array.isArray(value) ? value : [];
+}
+
+function asProductUsabilityGateInput(value: unknown): ProductUsabilityGateInput | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  const invalidFields: string[] = [];
+  return {
+    priorityStories: productUsabilityArrayField(record, "priorityStories", invalidFields)?.map(String) ?? [],
+    decisionLog: (productUsabilityArrayField(record, "decisionLog", invalidFields) as ProductUsabilityGateInput["decisionLog"] | undefined) ?? [],
+    skillWrapperContracts: productUsabilityArrayField(record, "skillWrapperContracts", invalidFields) as ProductUsabilityGateInput["skillWrapperContracts"] | undefined,
+    protocolGaps: (productUsabilityArrayField(record, "protocolGaps", invalidFields) as ProductUsabilityGateInput["protocolGaps"] | undefined) ?? [],
+    usabilityEvidence: (productUsabilityArrayField(record, "usabilityEvidence", invalidFields) as ProductUsabilityGateInput["usabilityEvidence"] | undefined) ?? [],
+    lifecycleHandoffs: (productUsabilityArrayField(record, "lifecycleHandoffs", invalidFields) as ProductUsabilityGateInput["lifecycleHandoffs"] | undefined) ?? [],
+    referencePatternMap: (productUsabilityArrayField(record, "referencePatternMap", invalidFields) as ProductUsabilityGateInput["referencePatternMap"] | undefined) ?? [],
+    invalidFields,
+  };
+}
+
+function productUsabilityArrayField(record: Record<string, unknown>, field: string, invalidFields: string[]): unknown[] | undefined {
+  if (!(field in record)) return undefined;
+  const value = record[field];
+  if (Array.isArray(value)) return value;
+  invalidFields.push(field);
+  return undefined;
 }
 
 function isValidFoundationExemption(value: unknown): boolean {

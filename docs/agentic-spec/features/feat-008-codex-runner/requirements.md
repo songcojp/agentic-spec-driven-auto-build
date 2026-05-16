@@ -13,10 +13,10 @@
 - 通过 CLI Adapter 调用 Codex CLI、Google Gemini CLI、Claude Code CLI 或后续等价编码 CLI 执行代码修改、测试或修复，默认 adapter 为 `codex-cli`，内置可选 adapter 为 `gemini-cli` 和 `claude-cli`。
 - 通过 BullMQ `cli.run` job 调度 Execution Adapter Worker；Console 运行动作不得直接执行 CLI，后续远程/app-server 执行由 `rpc.run` 和 RPC Adapter 承载。
 - CLI Adapter 只消费已审计的 scheduler job / Execution Record / invocation contract，不提供给 Product Console 直接执行 shell 或 CLI 的接口。
-- 编码 CLI 必须在目标项目 workspace 中启动，workspace root 来自当前项目 repository `local_path` 或 `target_repo_path`。
+- 编码 CLI 必须在 Feature 实现 worktree 中启动；owner workspace root 来自当前项目 repository `local_path` 或 `target_repo_path`，实现 workspace root 来自为本次 `feature_execution` 创建或复用的 Git worktree。
 - 通过 JSON + JSON Schema 管理 CLI Adapter 配置，隔离 executable、argument template、输出映射和 session resume 逻辑，并符合 HLD 7.8 的 `ExecutionAdapterConfigV1`。
 - 支持 CLI skill invocation contract，将 Spec/UI 操作转换为项目 workspace 内部 Skill prompt。
-- Feature 级 `feature_execution` 通过 `implement-feature` 直接读取 Feature Spec 目录执行；CLI Adapter 不要求 `task_graph_tasks` / `tasks` 表存在，也不替 Skill 执行 worktree/PR/merge/cleanup。
+- Feature 级 `feature_execution` 通过 `implement-feature` 直接读取 Feature Spec 目录执行；CLI/RPC Adapter 不要求 `task_graph_tasks` / `tasks` 表存在，并在调用 provider 前创建或复用 Feature 实现 worktree。PR、merge 和 cleanup 证据仍由 `implement-feature`/delivery 流程完成并回传。
 - 根据开发阶段策略和任务上下文设置 sandbox mode、approval policy、model、profile、provider-specific speed / service tier、output schema、JSON event stream、workspace root 和 session resume。
 - 开发阶段默认使用 `danger-full-access` 和 `approval=never`，不触发编码 CLI 人工确认。
 - 默认不得使用 bypass approvals；敏感文件、危险命令和 forbidden files 仍由 Safety Gate 阻断。
@@ -26,7 +26,7 @@
 ## Non-Scope
 
 - 不决定任务是否完成；状态判断归属 FEAT-009。
-- CLI Adapter 不创建 worktree 或 PR；Feature Git 生命周期由 `implement-feature` 管理，workspace 证据记录归属 FEAT-007。
+- CLI/RPC Adapter 只负责为 `feature_execution` 准备实现 worktree、校验 source paths 在 worktree 中可见并记录 `WorktreeRecord`；不创建 PR、不 merge、不清理已交付 worktree。PR、merge、cleanup 和交付判断仍由 `implement-feature`/delivery 流程管理。
 - 不展示 UI；Execution Console 归属 FEAT-013。
 
 ## User Value
@@ -41,6 +41,8 @@
 - CLI Adapter 不得绕过受控命令和 Scheduler 直接响应 UI 写操作；所有执行类入口必须有 Execution Record、job、audit 和 raw log 追踪。
 - CLI Adapter 必须在启动前校验 workspace root；项目路径缺失、不可读或缺少必要 `.agents/skills` / `AGENTS.md` 时进入 blocked。
 - `feature_execution` 的 `ExecutionAdapterInvocationV1.skillInstruction` 必须包含 Feature Spec `requirements.md`、`design.md` 和 `tasks.md` 作为 `sourcePaths`；缺失完整 Feature Spec 目录时，新执行必须 blocked。
+- Feature 级 `feature_execution` 必须在 provider 启动前检测当前项目是否已经处于 linked worktree；若已经隔离则复用该 workspace，若不是则创建或复用 sibling Feature worktree，并把 provider `cwd`、`ExecutionAdapterInvocationV1.workspaceRoot`、Run Report 和 Workpad 写入实现 worktree。
+- Feature worktree 创建后必须校验 `AGENTS.md`、`.agents/skills` 和全部 `sourcePaths` 在实现 worktree 内可读；若 Feature Spec 源文件尚未提交或无法同步到 worktree，新执行必须 blocked 并提示先提交或同步 Feature Spec。
 - Feature 级 `implement-feature` 不得只生成报告 JSON 或总结计划来满足执行；输出 contract 的 `producedArtifacts` 必须列出实际创建或更新的代码、测试、配置或文档文件。
 - CLI Adapter 必须使用 `ExecutionAdapterInvocationV1` 作为唯一输入协议，并通过内嵌 `skillInstruction` 携带 `skillName`、`requestedAction`、`sourcePaths`、`expectedArtifacts`、`imagePaths` 和可选 `operatorInput`。
 - `ExecutionAdapterInvocationV1` 必须携带当前 `specState`，供 Skill 明确读取 Feature 文件状态而不是查询数据库。
@@ -73,8 +75,9 @@
 - [ ] `gemini-cli` adapter 可以通过 active CLI Adapter 配置在指定 workspace root 中启动 Google Gemini CLI。
 - [ ] `claude-cli` adapter 可以通过 active CLI Adapter 配置在指定 workspace root 中启动 Claude Code CLI，并从完整 stdout JSON 的 `structured_output` 提取 SkillOutputContractV1。
 - [ ] `codex-cli` 和 `gemini-cli` adapter preset 会把图像生成接口投影为 `image-generation` capability，并保留 provider 专属命令/模型/环境变量约定。
-- [ ] `codex-cli` adapter 在 mock CLI adapter 中收到的 cwd 等于目标项目 workspace root。
+- [ ] `codex-cli` adapter 在 mock CLI adapter 中收到的 cwd 等于 Feature 实现 worktree；Execution Record metadata 同时记录 owner workspace root 和 worktree 信息。
 - [ ] Feature 级 `schedule_run` 可以在完整 Feature Spec 目录存在时产生 `cli.run` scheduler job，Worker 执行后持久化 session/log/status check 并回写 Execution Record 状态。
+- [ ] Feature 级 `schedule_run` 会为 `feature_execution` 创建或复用 Git worktree，持久化 `worktree_records`，并在 CLI、Codex RPC 和 Gemini ACP provider 中使用该 worktree 作为执行 cwd。
 - [ ] `run_board_tasks` 作为兼容入口仍可产生 `cli.run` scheduler job，但编码执行不依赖 Task Board 或旧 task 表。
 - [ ] Spec/UI 操作可以生成 `ExecutionAdapterInvocationV1.skillInstruction` 驱动的短 prompt，并在 Execution Record metadata 中追踪 workspace、skill phase、expected artifacts 和输出 contract 校验结果。
 - [ ] 有效 `SkillOutputContractV1` 会写入 Execution Record metadata；无效输出会进入 `review_needed` 而不是被当成成功。

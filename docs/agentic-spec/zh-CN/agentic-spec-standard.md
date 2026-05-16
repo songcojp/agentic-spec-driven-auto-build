@@ -827,6 +827,25 @@ Foundation Feature 可以声明 `foundationExemption`，但必须说明为什么
 
 ---
 
+## 6.3.2 Product Usability Autonomy
+
+FEAT-024 将产品可用性提升为协议级完成要求。成熟 Skill 库工作流是参考模式，Agentic Spec 则负责拥有、约束和展示这些实践对应的持久协议结构。
+
+必须保留以下结构：
+
+- `LifecycleHandoff`
+- `SkillWrapperContract`
+- `DecisionLog`
+- `ProtocolGap`
+- `UsabilityEvidence`
+- `ReferencePatternMap`
+
+Docs 定义语义；`src/` 定义可机器读取的 contract、validator、ReviewItem payload、状态投影和 IDE 可消费 view model。Docs 与 runtime 对关键字段的漂移必须视为测试失败。
+
+本规则不表示运行时直接委派到外部成熟 Skill，也不 vendor 外部 Skill 库。`docs/agentic-spec/references/mature-skill-pattern-map.md` 只记录 source-backed reference pattern；项目本地 `.agents/skills/*` 通过 `SkillWrapperContract` 吸收成熟实践，并在影响 P0/P1 用户故事、生命周期 handoff、执行就绪、验证、评审或完成决策时产出或保留 `DecisionLog`、`ProtocolGap`、`UsabilityEvidence` 和 `LifecycleHandoff`。
+
+---
+
 ## 6.4 HLD
 
 文件：
@@ -1249,6 +1268,8 @@ PRD intent
 当 requirements 变化时，必须先 refine design，再 sync tasks。不得用
 Quick Plan 或直接编码绕过 requirements analysis、design review 和 task
 sync。
+
+上游产品/需求链路采用 Pattern-First Skill 质量改造：成熟系统级 Skill 的澄清、默认假设、Open Question 分级和可测试性做法作为本地 Skill 的输出要求吸收，不作为当前 runtime 直接调用外部 Skill 的承诺。`refine-product-intent`、`generate-user-stories` 和 `validate-requirements` 必须先关闭或显式阻断高风险不确定项，再允许下游设计、Feature 拆分或执行。FEAT-024 进一步把 Pattern-First 扩展为 Product Usability Autonomy：关键 Skill 必须通过 `SkillWrapperContract` 记录 source refs、lifecycle stage、decision policy、protocol gaps、usability evidence、handoff readiness 和 anti-rationalization 规则，使成熟 Skill 实践与 Agentic Spec 协议双向收敛。
 
 ### 7.4.1 Artifact 粒度责任
 

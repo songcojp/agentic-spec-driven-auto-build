@@ -10,6 +10,8 @@
 4. Skill 产物必须保持可追踪：需求 ID、Feature Spec、任务、证据和交付记录之间要能互相定位。
 5. 当仓库事实与规格文档冲突时，先走 `manage-spec-change`，不要绕过规格直接编码。
 6. 共享输出 schema 由 Adapter/Runner 代码提供；Skill 只说明如何满足调用端传入的 schema，不在 `.agents/skills` 根目录维护全局合同文件。
+7. 上游产品/需求类 Skill 采用 Pattern-First 质量改造：成熟系统级 Skill 只作为参考模式，当前运行时仍调用项目本地 Skill。`refine-product-intent`、`generate-user-stories` 和 `validate-requirements` 必须记录默认假设、Open Questions、Blocking Open Questions、用户旅程、验收标准、证据路径和下游阻断条件；不得声称已直接 runtime delegation 到外部 Skill。
+8. FEAT-024 Product Usability Autonomy 要求关键项目级 Skill 吸收成熟 Skill 库实践，但仍通过本地 `SkillWrapperContract`、`DecisionLog`、`ProtocolGap`、`UsabilityEvidence` 和 `LifecycleHandoff` 落地；参考映射见 `docs/agentic-spec/references/mature-skill-pattern-map.md`。
 
 ## 生命周期视图
 
@@ -36,6 +38,20 @@ Spec Workspace、Feature Pool 或 Runner 调起项目级 Skill 时，通过 `Exe
 调用端必须提供 workspace、Feature 级上下文、当前 `specState`、traceability、constraints、输出 schema、`skillInstruction.skillName`、`requestedAction`、`sourcePaths`、`expectedArtifacts` 和可选操作员输入。Skill 不应从数据库反推 Spec 状态。
 
 Skill 输出必须符合调用端传入的 `SkillOutputContractV1` 或 `SkillOutputContractV2`，包含 `contractVersion`、`executionId`、`skillName`、`requestedAction`、`status`、`summary`、`nextAction`、`producedArtifacts`、`traceability` 和 `result`。Feature execution 完成语义使用 `skill-contract/v2`，`implement-feature` 返回 `completed` 时必须提供 Delivery Fidelity、Journey closure、Git delivery 和可复查证据。
+
+### SkillWrapperContract
+
+当 Skill 影响 P0/P1 用户故事、生命周期 handoff、执行就绪、验证、评审或完成决策时，必须在自身说明和输出中满足 FEAT-024 `SkillWrapperContract`：
+
+- `sourceRefs`：列出已消费的 PRD、requirements、HLD、UI Spec、Feature Spec、tasks、代码、测试或 ReviewItem。
+- `lifecycleStage`：明确 Define、Plan、Build、Verify、Review 或 Ship。
+- `decisionPolicy`：安全自动决策记录为 `DecisionLog`；中风险歧义记录为 Open Questions；高风险歧义记录为 Blocking Open Questions。
+- `protocolGaps`：把 source、story、journey、interaction、state/data、test、runtime、review、ship 证据缺口分类为 `ProtocolGap`。
+- `usabilityEvidence`：对受影响的 P0/P1 用户故事保留或产出 `UsabilityEvidence`。
+- `handoffReadiness`：说明下游是否可以继续，并列出保留的 `LifecycleHandoff` 义务。
+- `antiRationalization`：不得仅凭文本存在、fixture、API seed、自我评审或命令成功就标记 ready / completed。
+
+这些字段是 Agentic Spec 的本地协议结构，不表示 runtime 直接调用外部成熟 Skill。
 
 ## Skill 清单
 

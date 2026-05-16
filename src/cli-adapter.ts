@@ -1991,15 +1991,17 @@ function completionEvidenceFromSkillOutput(output: SkillOutputContract | undefin
   const changedFiles = Array.isArray(result.changedFiles)
     ? result.changedFiles.map(String)
     : [...(inputFiles ?? []), ...output.producedArtifacts.map((artifact) => artifact.path)];
-  return {
+  const evidence: CompletionEvidenceInput & { productUsability?: unknown } = {
     requirementCoverage: Array.isArray(result.requirementCoverage) ? result.requirementCoverage : undefined,
     acceptanceEvidence: Array.isArray(result.acceptanceEvidence) ? result.acceptanceEvidence : undefined,
     journeyEvidence: Array.isArray(result.journeyEvidence) ? result.journeyEvidence : undefined,
     runtimeEvidence: result.runtimeEvidence,
     deliveryFidelity: result.deliveryFidelity,
     gitDelivery: result.gitDelivery,
+    productUsability: result.productUsability,
     requireRuntimeEvidence: changedFiles.some(isAppTouchingFile),
   };
+  return evidence;
 }
 
 export async function processRunnerQueueItem(
@@ -2199,7 +2201,9 @@ export async function processRunnerQueueItem(
     }
   }
   const finalStatus = statusCheckResult ? queueStatusFromStatusCheck(statusCheckResult.status, status) : status;
-  const contractSummary = adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
+  const contractSummary = adapterResult.session.exitCode !== 0
+    ? `Codex CLI exited with ${adapterResult.session.exitCode ?? "unknown"}.`
+    : adapterResult.result.contractValidation && !adapterResult.result.contractValidation.valid
     ? `Skill output contract review needed: ${adapterResult.result.contractValidation.reasons.join("; ")}`
     : adapterResult.result.skillOutput?.summary;
   return {

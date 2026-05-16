@@ -613,7 +613,7 @@ export async function runCliRunJob(dbPath: string, payload: CliRunJobPayload, ru
         message: result.summary,
       }),
     });
-      }
+  }
 
   const finalMetadata = executionRecordMetadata({
     scheduler: "bullmq",
@@ -675,6 +675,7 @@ function ensureExecutionReviewItem(
     item.status !== "approved" &&
     item.status !== "closed"
   );
+  const productUsability = executionReviewProductUsability(input.metadata);
   createReviewItem(dbPath, {
     id: existing?.id ?? `execution-review-${input.executionId}`,
     projectId: input.projectId,
@@ -691,6 +692,7 @@ function ensureExecutionReviewItem(
         contractValidation: input.metadata?.contractValidation,
         producedArtifacts: input.metadata?.producedArtifacts,
       },
+      productUsability,
     },
     evidenceRefs: Array.isArray(input.metadata?.rawLogRefs) ? input.metadata.rawLogRefs.map(String) : [],
     now: input.now,
@@ -783,6 +785,7 @@ function compactQualityEvidence(result: unknown): Record<string, unknown> | unde
     runtimeEvidence: record.runtimeEvidence,
     deliveryFidelity: record.deliveryFidelity,
     gitDelivery: record.gitDelivery,
+    productUsability: record.productUsability,
   });
   return Object.keys(evidence).length > 0 ? evidence : undefined;
 }
@@ -797,6 +800,7 @@ function executionReviewNeededReason(
 ): "approval_needed" | "clarification_needed" | "risk_review_needed" {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
   if (
+    hasProductUsabilityReviewRisk(summary, metadata) ||
     hasDeliveryFidelityReviewRisk(metadata) ||
     text.includes("journey closure gate") ||
     text.includes("delivery fidelity gate") ||
@@ -823,6 +827,7 @@ function executionReviewNeededReason(
 
 function executionReviewTriggers(summary: string, metadata?: Record<string, unknown>): ReviewTrigger[] {
   const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (hasProductUsabilityReviewRisk(summary, metadata)) return ["product_usability_gap"];
   if (hasDeliveryFidelityReviewRisk(metadata)) return ["quality_evidence_gap"];
   if (/\bevidence_missing\b/.test(text) || text.includes("journey closure gate")) return ["evidence_missing"];
   if (text.includes("journey_not_closed")) return ["journey_not_closed"];
@@ -849,6 +854,33 @@ function executionReviewTriggers(summary: string, metadata?: Record<string, unkn
   if (text.includes("constitution")) return ["constitution_change"];
   if (text.includes("architecture")) return ["architecture_change"];
   return ["failed_tests_continue"];
+}
+
+function hasProductUsabilityReviewRisk(summary: string, metadata?: Record<string, unknown>): boolean {
+  const text = `${summary}\n${JSON.stringify(metadata ?? {})}`.toLowerCase();
+  if (text.includes("product usability gate failed") || text.includes("product_usability_gap")) return true;
+  const productUsability = asRecord(executionReviewProductUsability(metadata));
+  if (!productUsability) return false;
+  const gaps = [
+    ...(Array.isArray(productUsability.gaps) ? productUsability.gaps : []),
+    ...(Array.isArray(productUsability.protocolGaps) ? productUsability.protocolGaps : []),
+  ];
+  return gaps.some((gap) => {
+    const item = asRecord(gap);
+    const status = optionalString(item?.status)?.toLowerCase();
+    const severity = optionalString(item?.severity)?.toLowerCase();
+    return status !== "closed" && (severity === "p0" || severity === "p1" || severity === "critical" || severity === "high");
+  });
+}
+
+function executionReviewProductUsability(metadata?: Record<string, unknown>): unknown {
+  const direct = metadata?.productUsability;
+  if (direct !== undefined) return direct;
+  const qualityEvidence = asRecord(metadata?.qualityEvidence);
+  if (qualityEvidence?.productUsability !== undefined) return qualityEvidence.productUsability;
+  const skillOutput = asRecord(metadata?.skillOutputContract) ?? asRecord(metadata?.skillOutput);
+  const result = asRecord(skillOutput?.result);
+  return result?.productUsability;
 }
 
 function hasDeliveryFidelityReviewRisk(metadata?: Record<string, unknown>): boolean {
@@ -1557,10 +1589,14 @@ function updateFeatureSpecFileState(input: {
   const featureFolder = featureSpecPath.slice("docs/agentic-spec/features/".length);
   try {
     const current = readFileSpecState(input.workspaceRoot, featureFolder, input.featureId);
-    const patch = input.skillOutput
-      ? skillOutputToSpecStatePatch(input.skillOutput)
+    const outputPatch = input.skillOutput ? skillOutputToSpecStatePatch(input.skillOutput) : undefined;
+    const useSkillOutputStatus = input.skillOutput?.status === input.status;
+    const runnerStatus = runnerStatusToFileSpecStatus(input.status);
+    const patch = useSkillOutputStatus && outputPatch
+      ? outputPatch
       : {
-          status: runnerStatusToFileSpecStatus(input.status),
+          status: runnerStatus,
+          executionStatus: runnerStatusToFileSpecExecutionStatus(input.status),
           blockedReasons: input.status === "blocked" || input.status === "failed" ? [input.summary] : [],
           nextAction: input.status === "running"
             ? "Runner is executing this Feature."
@@ -1569,6 +1605,14 @@ function updateFeatureSpecFileState(input: {
             : input.status === "completed"
               ? "Run status checks and prepare review."
               : "Review execution result and resume or skip.",
+          lastResult: input.status === "running"
+            ? outputPatch?.lastResult ?? current.lastResult
+            : {
+                status: runnerStatus,
+                summary: input.summary,
+                producedArtifacts: input.skillOutput?.producedArtifacts ?? current.lastResult?.producedArtifacts ?? [],
+                completedAt: new Date().toISOString(),
+              },
         };
     writeFileSpecState(input.workspaceRoot, featureFolder, mergeFileSpecState(current, {
       ...patch,

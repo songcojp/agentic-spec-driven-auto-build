@@ -28,7 +28,8 @@ export type ReviewTrigger =
   | "test_semantics_gap"
   | "journey_bypassed_by_fixture"
   | "delivery_evidence_missing"
-  | "delivery_not_closed";
+  | "delivery_not_closed"
+  | "product_usability_gap";
 
 export type ReviewItemStatus = "review_needed" | "approved" | "rejected" | "changes_requested" | "closed";
 export type ReviewDecision =
@@ -63,6 +64,7 @@ export type ReviewItem = {
     pausedChildTaskStatuses?: Array<{ id: string; status: BoardColumn }>;
     pausedChildGraphTaskStatuses?: Array<{ id: string; status: BoardColumn }>;
     executionResultId?: string;
+    productUsability?: unknown;
   };
   referenceRefs: string[];
   evidenceRefs: string[];
@@ -146,6 +148,7 @@ export function createReviewItem(dbPath: string, input: CreateReviewItemInput): 
       pausedFeatureStatus: existing?.body.pausedFeatureStatus ?? context.featureStatus,
       pausedChildTaskStatuses: existing?.body.pausedChildTaskStatuses ?? context.pausedChildTaskStatuses,
       pausedChildGraphTaskStatuses: existing?.body.pausedChildGraphTaskStatuses ?? context.pausedChildGraphTaskStatuses,
+      productUsability: input.body?.productUsability,
     },
     referenceRefs: input.referenceRefs ?? input.evidenceRefs ?? [],
     evidenceRefs: input.referenceRefs ?? input.evidenceRefs ?? [],
@@ -1054,6 +1057,7 @@ function rowToReviewItem(row: Record<string, unknown>): ReviewItem {
       pausedChildTaskStatuses: parseStatusSnapshots(body.pausedChildTaskStatuses),
       pausedChildGraphTaskStatuses: parseStatusSnapshots(body.pausedChildGraphTaskStatuses),
       executionResultId: optionalString(body.executionResultId),
+      productUsability: body.productUsability,
     },
     referenceRefs: parseJsonStringArray(row.reference_refs_json),
     evidenceRefs: parseJsonStringArray(row.reference_refs_json),

@@ -175,6 +175,42 @@ test("review router records clarification, approval, and risk review reasons wit
   assert.equal(items.find((item) => item.id === "REV-RISK")?.evidence.length, 0);
 });
 
+test("Review Center preserves product usability gap payload", () => {
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  const productUsability = {
+    gaps: [{
+      id: "GAP-1",
+      category: "runtime_gap",
+      severity: "P1",
+      status: "open",
+      message: "Execution Workbench does not show evidence.",
+    }],
+  };
+
+  const item = createReviewItem(dbPath, {
+    id: "review-product-usability",
+    projectId: "project-review",
+    featureId: "FEAT-024",
+    runId: "RUN-PUA",
+    message: "Product Usability Gate failed.",
+    reviewNeededReason: "risk_review_needed",
+    triggerReasons: ["product_usability_gap"],
+    body: {
+      riskExplanation: "P0/P1 user story lacks runtime evidence.",
+      productUsability,
+    },
+    evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+  });
+
+  assert.equal(item.triggerReasons.includes("product_usability_gap"), true);
+  assert.deepEqual((item.body.productUsability as Record<string, unknown>).gaps, productUsability.gaps);
+  assert.deepEqual(
+    (listReviewCenterItems(dbPath).find((entry) => entry.id === "review-product-usability")?.body.productUsability as Record<string, unknown>).gaps,
+    productUsability.gaps,
+  );
+});
+
 test("review decisions cannot bypass recommended safety actions", () => {
   const dbPath = seedReviewData();
   createReviewItem(dbPath, {

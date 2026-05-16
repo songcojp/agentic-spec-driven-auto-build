@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -130,6 +131,48 @@ test("local embedded scheduler preserves review_needed job status", async () => 
   assert.equal(rows.job[0].status, "review_needed");
   assert.equal(rows.execution[0].status, "review_needed");
   assert.equal(rows.review[0].status, "review_needed");
+});
+
+test("cli.run failed exit overrides non-terminal SkillOutput in Feature spec-state", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-failed-running-state-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const scheduler = createLocalScheduler(dbPath, {
+    runner: () => ({
+      status: 1,
+      stdout: `{"type":"session","session_id":"SESSION-FAILED-RUNNING"}\n${skillOutputEvent("RUN-FAILED-RUNNING", {
+        status: "running",
+        summary: "Validation is still running.",
+      })}`,
+      stderr: "Reading additional input from stdin...",
+    }),
+  });
+
+  const payload = cliRunPayload("RUN-FAILED-RUNNING");
+  const job = scheduler.enqueueCliRun({
+    ...payload,
+    context: {
+      ...payload.context,
+      featureSpecPath: "docs/agentic-spec/features/FEAT-CLI",
+    },
+  });
+  await scheduler.drain();
+  await scheduler.close();
+  const rows = runSqlite(dbPath, [], [
+    { name: "job", sql: "SELECT status FROM scheduler_job_records WHERE id = ?", params: [job.schedulerJobId] },
+    { name: "execution", sql: "SELECT status, summary FROM execution_records WHERE id = 'RUN-FAILED-RUNNING'" },
+  ]).queries;
+  const state = JSON.parse(readFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "spec-state.json"), "utf8"));
+
+  assert.equal(rows.job[0].status, "failed");
+  assert.equal(rows.execution[0].status, "failed");
+  assert.notEqual(rows.execution[0].summary, "Validation is still running.");
+  assert.equal(state.status, "failed");
+  assert.equal(state.executionStatus, "failed");
+  assert.equal(state.lastResult.status, "failed");
+  assert.deepEqual(state.blockedReasons, [rows.execution[0].summary]);
+  assert.notEqual(state.lastResult.summary, "Validation is still running.");
 });
 
 test("scheduler worker startup can recover transient queued jobs created while worker was unavailable", () => {
@@ -263,6 +306,7 @@ test("cli.run default Feature paths use context Feature Spec folder", async () =
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "requirements.md"), "# Requirements\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "design.md"), "# Design\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "feat-cli", "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "add lowercase feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -369,6 +413,47 @@ test("cli.run classifies review_needed delivery fidelity losses as risk review b
   assert.match(String(rows.reviews[0].body), /behavior-obligation gaps/);
 });
 
+test("cli.run projects product usability gate failures into risk review items", async () => {
+  const root = mkdtempSync(join(tmpdir(), "specdrive-cli-run-product-usability-"));
+  prepareSkillWorkspace(root);
+  const dbPath = makeDbPath();
+  seedCliRunData(dbPath, root);
+  const productUsability = {
+    protocolGaps: [{
+      id: "GAP-PUA-1",
+      category: "runtime_gap",
+      severity: "P1",
+      status: "open",
+      message: "Execution Workbench lacks product evidence for the priority story.",
+      affectedStories: ["US-CLI"],
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+    }],
+  };
+
+  const result = await runCliRunJob(dbPath, cliRunPayload("RUN-CLI-PRODUCT-USABILITY"), () => ({
+    status: 0,
+    stdout: `{"type":"session","session_id":"SESSION-CLI-PRODUCT-USABILITY"}\n${skillOutputEvent("RUN-CLI-PRODUCT-USABILITY", {
+      status: "review_needed",
+      summary: "Product Usability Gate failed: priority user story lacks runtime evidence.",
+      result: {
+        ...validJourneyResult(),
+        productUsability,
+      },
+    })}`,
+    stderr: "",
+  }));
+  const rows = runSqlite(dbPath, [], [
+    { name: "reviews", sql: "SELECT status, review_needed_reason, trigger_reasons_json, body FROM review_items WHERE run_id = 'RUN-CLI-PRODUCT-USABILITY'" },
+  ]).queries;
+  const body = JSON.parse(String(rows.reviews[0].body));
+
+  assert.equal(result.status, "review_needed");
+  assert.equal(rows.reviews[0].status, "review_needed");
+  assert.equal(rows.reviews[0].review_needed_reason, "risk_review_needed");
+  assert.deepEqual(JSON.parse(String(rows.reviews[0].trigger_reasons_json)), ["product_usability_gap"]);
+  assert.deepEqual(body.productUsability, productUsability);
+});
+
 test("cli.run keeps large source documents out of the provider prompt", async () => {
   const root = mkdtempSync(join(tmpdir(), "specdrive-cli-compact-prompt-"));
   prepareSkillWorkspace(root);
@@ -377,6 +462,7 @@ test("cli.run keeps large source documents out of the provider prompt", async ()
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "requirements.md"), largeRequirements);
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "design.md"), "# Design\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "update large feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const calls: Array<{ args: string[] }> = [];
@@ -844,6 +930,7 @@ test("codex.rpc.run projects approval pending to Feature spec-state", async () =
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-CLI\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
   writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "add approval feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const transport: CodexAppServerTransport = {
@@ -897,6 +984,7 @@ test("codex.rpc.run writes completed Feature execution to spec-state file", asyn
   writeFileSync(join(featureDir, "requirements.md"), "# Feature Spec: FEAT-CLI\n");
   writeFileSync(join(featureDir, "design.md"), "# Design\n");
   writeFileSync(join(featureDir, "tasks.md"), "# Tasks\n");
+  commitWorkspace(root, "add completed-state feature fixture");
   const dbPath = makeDbPath();
   seedCliRunData(dbPath, root);
   const transport: CodexAppServerTransport = {
@@ -1237,7 +1325,7 @@ function skillOutputEvent(executionId: string, overrides: {
   requestedAction?: string;
   producedArtifacts?: Array<{ path: string; kind: string; status: string }>;
   changeIds?: string[];
-  status?: "completed" | "review_needed" | "blocked" | "failed" | "cancelled";
+  status?: "queued" | "running" | "waiting_input" | "approval_needed" | "completed" | "review_needed" | "blocked" | "failed" | "cancelled";
   summary?: string;
   result?: Record<string, unknown>;
 } = {}): string {
@@ -1340,4 +1428,22 @@ function prepareSkillWorkspace(root: string): void {
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "requirements.md"), "# Requirements\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "design.md"), "# Design\n");
   writeFileSync(join(root, "docs", "agentic-spec", "features", "FEAT-CLI", "tasks.md"), "# Tasks\n");
+  initializeGitWorkspace(root);
+}
+
+function initializeGitWorkspace(root: string): void {
+  runGit(root, ["init", "-b", "main"]);
+  runGit(root, ["config", "user.email", "specdrive-tests@example.invalid"]);
+  runGit(root, ["config", "user.name", "SpecDrive Tests"]);
+  commitWorkspace(root, "initial fixture");
+}
+
+function commitWorkspace(root: string, message: string): void {
+  runGit(root, ["add", "."]);
+  runGit(root, ["commit", "-m", message]);
+}
+
+function runGit(root: string, args: string[]): void {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+  assert.equal(result.status, 0, `git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
 }

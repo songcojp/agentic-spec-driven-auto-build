@@ -17,6 +17,7 @@ import {
 import { submitConsoleCommand } from "../src/product-console.ts";
 import { createControlPlaneServer, listen } from "../src/server.ts";
 import { createMemoryScheduler } from "../src/scheduler.ts";
+import { runStatusCheck } from "../src/status-checker.ts";
 import type { AppConfig } from "../src/config.ts";
 
 test("SpecDrive IDE view recognizes workspace specs, features, queue state, and active adapter", () => {
@@ -204,6 +205,291 @@ test("SpecDrive IDE queue and execution detail keep DB feature titles when docs 
 
   const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-FEAT-001");
   assert.equal(detail?.featureTitle, "Project and Repository Foundation");
+});
+
+test("SpecDrive IDE projects product usability evidence from execution metadata", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json)
+        VALUES ('FEAT-016', 'project-ide', 'SpecDrive IDE Foundation', 'ready', 10, 'feat-016-specdrive-ide-foundation', '["REQ-099"]')`,
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, summary, metadata_json, started_at, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        "RUN-PUA-IDE",
+        "JOB-PUA-IDE",
+        "cli",
+        "feature_execution",
+        "project-ide",
+        JSON.stringify({ featureId: "FEAT-016" }),
+        "review_needed",
+        "Product Usability Gate failed.",
+        JSON.stringify({
+          skillOutputContract: {
+            contractVersion: "skill-contract/v2",
+            executionId: "RUN-PUA-IDE",
+            skillName: "implement-feature",
+            requestedAction: "feature_execution",
+            status: "completed",
+            summary: "Feature implemented.",
+            nextAction: null,
+            producedArtifacts: [],
+            traceability: { featureId: "FEAT-016" },
+            result: {
+              productUsability: {
+                priorityStories: ["US-024-04"],
+                decisionLog: [{
+                  id: "DL-1",
+                  type: "auto_decided",
+                  summary: "Use IDE as primary UI.",
+                  sourceRefs: ["AGENTS.md"],
+                  rationale: "Repo guidance.",
+                  risk: "low",
+                  affectedArtifacts: ["apps/vscode-extension/src/webviews/execution.ts"],
+                  verification: ["npm run ide:build"],
+                  status: "accepted",
+                }],
+                protocolGaps: [{
+                  id: "GAP-1",
+                  category: "runtime_gap",
+                  severity: "P1",
+                  status: "open",
+                  message: "No evidence display.",
+                  affectedStories: ["US-024-04"],
+                  affectedJourneys: ["JOURNEY-1"],
+                  evidenceRefs: ["tests/specdrive-ide.test.ts"],
+                  resumeStage: "Verify",
+                }],
+                usabilityEvidence: [{
+                  id: "UE-1",
+                  userStoryId: "US-024-04",
+                  journeyId: "JOURNEY-1",
+                  checkpointId: "CP-1",
+                  mode: "browser",
+                  status: "passed",
+                  assertion: "Evidence panel visible.",
+                  evidenceRefs: ["screenshot.png"],
+                }],
+                lifecycleHandoffs: [{
+                  id: "LH-1",
+                  from: "Verify",
+                  to: "Review",
+                  owner: "review-delivery-evidence",
+                  inputRefs: ["tests/specdrive-ide.test.ts"],
+                  outputRefs: ["review_items"],
+                  preservedObligations: ["US-024-04"],
+                  evidenceRefs: ["screenshot.png"],
+                  status: "passed",
+                }],
+                referencePatternMap: [],
+              },
+            },
+          },
+        }),
+        "2026-05-15T00:00:00.000Z",
+        "2026-05-15T00:01:00.000Z",
+      ],
+    },
+  ]);
+
+  const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-PUA-IDE");
+
+  assert.equal(detail?.productUsability?.protocolGaps?.[0]?.id, "GAP-1");
+  assert.equal(detail?.productUsability?.usabilityEvidence?.[0]?.id, "UE-1");
+  assert.equal(detail?.productUsability?.decisionLog?.[0]?.id, "DL-1");
+});
+
+test("hybrid golden journey links mature skill evidence to status checker and IDE projection", () => {
+  const workspaceRoot = makeWorkspace();
+  const dbPath = makeDbPath();
+  initializeSchema(dbPath);
+  seedProject(dbPath, workspaceRoot);
+  const productUsability = {
+    priorityStories: ["US-024-04"],
+    decisionLog: [{
+      id: "DL-GOLDEN-1",
+      type: "auto_decided" as const,
+      summary: "Use Execution Workbench as primary Product Usability evidence surface.",
+      sourceRefs: ["AGENTS.md", "docs/superpowers/specs/2026-05-15-product-usability-autonomy-design.md"],
+      rationale: "Repo guidance makes VSCode IDE Webview the primary current UI.",
+      rejectedAlternatives: ["Product Console primary display"],
+      risk: "low" as const,
+      affectedArtifacts: ["apps/vscode-extension/src/webviews/execution.ts"],
+      verification: ["node --test tests/specdrive-ide-webview-boundary.test.ts", "npm run ide:build"],
+      status: "accepted" as const,
+    }],
+    protocolGaps: [{
+      id: "GAP-GOLDEN-CLOSED",
+      category: "runtime_gap" as const,
+      severity: "P1" as const,
+      status: "closed" as const,
+      message: "Execution Workbench usability evidence display implemented.",
+      affectedStories: ["US-024-04"],
+      affectedJourneys: ["JOURNEY-EXECUTION-WORKBENCH-EVIDENCE"],
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+      resumeStage: "Review" as const,
+    }],
+    usabilityEvidence: [{
+      id: "UE-GOLDEN-1",
+      userStoryId: "US-024-04",
+      journeyId: "JOURNEY-EXECUTION-WORKBENCH-EVIDENCE",
+      checkpointId: "CP-EVIDENCE-PANEL",
+      mode: "browser" as const,
+      status: "passed" as const,
+      assertion: "Execution Workbench displays Product Usability evidence groups.",
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts", "npm run ide:build"],
+    }],
+    lifecycleHandoffs: [{
+      id: "LH-GOLDEN-1",
+      from: "Verify" as const,
+      to: "Review" as const,
+      owner: "review-delivery-evidence",
+      inputRefs: ["tests/product-usability.test.ts", "tests/specdrive-ide.test.ts"],
+      outputRefs: ["review_items", "Execution Workbench"],
+      preservedObligations: ["US-024-04", "REQ-099"],
+      evidenceRefs: ["tests/specdrive-ide-webview-boundary.test.ts"],
+      status: "passed" as const,
+    }],
+    referencePatternMap: [{
+      source: "superpowers" as const,
+      workflow: "verification-before-completion",
+      specdriveStage: "Verify" as const,
+      localRule: "Evidence must exist before completion.",
+      localSkill: "verify-behavior",
+      evidenceField: "UsabilityEvidence" as const,
+    }, {
+      source: "agent-skills" as const,
+      workflow: "verification-evidence",
+      specdriveStage: "Verify" as const,
+      localRule: "Product usability requires concrete evidence refs.",
+      localSkill: "review-delivery-evidence",
+      evidenceField: "ProtocolGap" as const,
+    }, {
+      source: "everything-claude-code" as const,
+      workflow: "orchestration-status",
+      specdriveStage: "Review" as const,
+      localRule: "Review blockers must be machine-queryable.",
+      localSkill: "use-specdrive-lifecycle",
+      evidenceField: "DecisionLog" as const,
+    }],
+  };
+  runSqlite(dbPath, [
+    {
+      sql: `INSERT INTO features (id, project_id, title, status, priority, folder, primary_requirements_json)
+        VALUES ('FEAT-016', 'project-ide', 'SpecDrive IDE Foundation', 'ready', 10, 'feat-016-specdrive-ide-foundation', '["REQ-099"]')`,
+    },
+    {
+      sql: `INSERT INTO scheduler_job_records (id, bullmq_job_id, queue_name, job_type, status, payload_json)
+        VALUES ('JOB-PUA-GOLDEN', 'bull-pua-golden', 'specdrive:execution-adapter', 'cli.run', 'completed', ?)`,
+      params: [JSON.stringify({ operation: "feature_execution", projectId: "project-ide", context: { featureId: "FEAT-016" } })],
+    },
+    {
+      sql: `INSERT INTO execution_records (
+        id, scheduler_job_id, executor_type, operation, project_id, context_json,
+        status, summary, metadata_json, started_at, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        "RUN-PUA-GOLDEN",
+        "JOB-PUA-GOLDEN",
+        "cli",
+        "feature_execution",
+        "project-ide",
+        JSON.stringify({ featureId: "FEAT-016", taskId: "TASK-024-08" }),
+        "completed",
+        "Hybrid golden journey completed.",
+        JSON.stringify({
+          skillOutputContract: {
+            contractVersion: "skill-contract/v2",
+            executionId: "RUN-PUA-GOLDEN",
+            skillName: "implement-feature",
+            requestedAction: "feature_execution",
+            status: "completed",
+            summary: "Hybrid golden journey completed.",
+            nextAction: null,
+            producedArtifacts: [],
+            traceability: { featureId: "FEAT-016", taskId: "TASK-024-08", requirementIds: ["REQ-099", "REQ-102"] },
+            result: {
+              productUsability: {
+                ...productUsability,
+                gate: { passed: true, triggers: [] },
+              },
+            },
+          },
+        }),
+        "2026-05-15T00:00:00.000Z",
+        "2026-05-15T00:01:00.000Z",
+      ],
+    },
+  ]);
+
+  const status = runStatusCheck({
+    runId: "RUN-PUA-GOLDEN",
+    taskId: "TASK-024-08",
+    featureId: "FEAT-016",
+    projectId: "project-ide",
+    agentType: "codex",
+    workspaceRoot,
+    dbPath,
+    runner: { status: "completed", exitCode: 0, summary: "runner completed", stdout: "runner ok", stderr: "" },
+    diff: {
+      files: ["tests/product-usability.test.ts", "tests/specdrive-ide.test.ts"],
+      summary: "Added hybrid golden journey coverage.",
+    },
+    allowedFiles: ["tests/product-usability.test.ts", "tests/specdrive-ide.test.ts"],
+    commandChecks: [
+      { kind: "unit_test", command: "node --test tests/product-usability.test.ts tests/specdrive-ide.test.ts", status: "passed", exitCode: 0 },
+    ],
+    requiredCommandChecks: ["unit_test"],
+    specAlignment: {
+      taskId: "TASK-024-08",
+      userStoryIds: ["US-024-04"],
+      requirementIds: ["REQ-099", "REQ-102"],
+      acceptanceCriteriaIds: ["AC-024-HYBRID-GOLDEN-JOURNEY"],
+      coveredRequirementIds: ["REQ-099", "REQ-102"],
+      testCoverage: true,
+      changedFiles: ["tests/product-usability.test.ts", "tests/specdrive-ide.test.ts"],
+    },
+    completionEvidence: {
+      requirementCoverage: [{ requirementId: "REQ-102", status: "passed", evidence: ["tests/product-usability.test.ts"] }],
+      acceptanceEvidence: [{ scenarioId: "AC-024-HYBRID-GOLDEN-JOURNEY", status: "passed", evidence: ["tests/specdrive-ide.test.ts"] }],
+      journeyEvidence: [{ userStoryId: "US-024-04", status: "passed", evidence: ["tests/specdrive-ide.test.ts"] }],
+      runtimeEvidence: {
+        appLaunch: { status: "passed", evidence: ["npm run ide:build"] },
+        journeys: [{ scenario: "Execution Workbench evidence display", status: "passed", evidence: ["tests/specdrive-ide-webview-boundary.test.ts"] }],
+        stateAssertions: [{ assertion: "status checker persisted done evidence", status: "passed", evidence: ["status_check_results"] }],
+        negativePaths: [{ scenario: "closed Product Usability gap does not block Done", status: "passed", evidence: ["GAP-GOLDEN-CLOSED"] }],
+      },
+      deliveryFidelity: { completionDecision: { status: "passed" }, losses: [] },
+      gitDelivery: {
+        prUrl: "https://github.com/example/specdrive/pull/24",
+        commitHash: "abc1234",
+        checks: "passed",
+        merge: "merged",
+        remoteBranchCleanup: "completed",
+        localBranchCleanup: "completed",
+        worktreeCleanup: "cleaned",
+      },
+      productUsability,
+      requireRuntimeEvidence: true,
+    },
+  });
+
+  assert.equal(status.status, "done");
+  assert.equal(status.reasons.some((reason) => reason.includes("Product Usability Gate failed")), false);
+
+  const detail = buildSpecDriveIdeExecutionDetail(dbPath, "RUN-PUA-GOLDEN");
+  assert.equal(detail?.productUsability?.decisionLog?.[0]?.id, "DL-GOLDEN-1");
+  assert.equal(detail?.productUsability?.protocolGaps?.[0]?.status, "closed");
+  assert.equal(detail?.productUsability?.usabilityEvidence?.[0]?.id, "UE-GOLDEN-1");
+  assert.deepEqual(detail?.productUsability?.gate, { passed: true, triggers: [] });
+  assert.equal(detail?.executionResults[0]?.metadata.status, "done");
 });
 
 test("SpecDrive IDE feature dependencies come from feature-pool-queue.json", () => {

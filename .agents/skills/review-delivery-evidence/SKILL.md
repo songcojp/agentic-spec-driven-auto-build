@@ -13,9 +13,23 @@ description: "Review delivery evidence and release readiness. Use for journey cl
 4. Produce or review the requested artifacts with traceability to PRD, requirements, HLD, Feature Spec, execution records, tests, or evidence as applicable.
 5. Return the runtime-supplied structured output shape exactly. Echo `executionId`, `skillName`, `requestedAction`, produced artifacts, next action, and Feature-level traceability when the adapter provides them.
 
+## Product Usability Autonomy Wrapper
+
+Apply FEAT-024 Product Usability Autonomy when this skill affects P0/P1 user stories, lifecycle handoffs, execution readiness, verification, review, or completion decisions.
+
+Required wrapper fields:
+
+- Source refs: list the PRD, requirements, HLD, UI Spec, Feature Spec, tasks, code, tests, or ReviewItems consumed.
+- Lifecycle stage: name Define, Plan, Build, Verify, Review, or Ship.
+- Decision policy: record safe automatic decisions as `DecisionLog`; record medium-risk ambiguity as Open Questions; record high-risk ambiguity as Blocking Open Questions.
+- Protocol gaps: classify missing source, story, journey, interaction, state/data, test, runtime, review, and ship evidence as `ProtocolGap`.
+- Usability evidence: preserve or produce `UsabilityEvidence` for P0/P1 stories affected by the skill.
+- Handoff readiness: state whether downstream work may continue and which `LifecycleHandoff` obligations are preserved.
+- Anti-rationalization: do not mark work ready or completed only because text, fixtures, API seeds, self-review, or command success exists.
+
 ## Guidance
 
-Decide whether behavior, evidence, quality gates, approvals, and release readiness are sufficient. Do not let implementation evidence alone close delivery.
+Decide whether behavior, evidence, quality gates, approvals, and release readiness are sufficient. Review Product Usability Gate results, decision logs, protocol gaps, and usability evidence before accepting P0/P1 story closure. Do not let implementation evidence alone close delivery.
 
 When reviewing Spec Artifact Granularity for requirements work:
 

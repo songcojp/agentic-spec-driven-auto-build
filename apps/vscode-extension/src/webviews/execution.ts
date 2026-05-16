@@ -117,6 +117,10 @@ export function renderExecutionWorkbenchWebview(
                   ${renderBlockersAndApprovals(selectedBlockers, executionDetail)}
                 </details>
                 <details class="execution-detail-card execution-detail-card-full" open>
+                  <summary class="section-title"><h2>Product Usability</h2><span>${productUsabilityCount(executionDetail)}</span></summary>
+                  ${renderProductUsabilityEvidence(executionDetail)}
+                </details>
+                <details class="execution-detail-card execution-detail-card-full" open>
                   <summary class="section-title"><h2>Result Projection</h2><span>spec-state.json</span></summary>
                   ${renderSkillOutputSummary(executionDetail)}
                 </details>
@@ -498,6 +502,36 @@ function renderDeliveryFidelityEntry(value: unknown): string {
     ["Agent Reviews", record.agentReviews],
   ];
   return `<div class="result-entry result-entry-wide"><span>Delivery Fidelity</span><div class="result-content" data-i18n-skip>${rows.map(([label, entry]) => `<strong>${escapeHtml(label)}</strong>${renderResultValue(entry)}`).join("")}</div></div>`;
+}
+
+function productUsabilityCount(detail: SpecDriveIdeExecutionDetail | undefined): number {
+  const usability = detail?.productUsability;
+  return [
+    productUsabilityEntries(usability?.decisionLog),
+    productUsabilityEntries(usability?.protocolGaps),
+    productUsabilityEntries(usability?.usabilityEvidence),
+    productUsabilityEntries(usability?.lifecycleHandoffs),
+    productUsabilityEntries(usability?.referencePatternMap),
+  ].reduce((count, entries) => count + entries.length, 0);
+}
+
+function productUsabilityEntries(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function renderProductUsabilityEvidence(detail: SpecDriveIdeExecutionDetail | undefined): string {
+  const usability = detail?.productUsability;
+  if (!usability) return emptyState("No Product Usability evidence recorded.");
+  const rows: Array<[string, unknown]> = [
+    ["Priority Stories", usability.priorityStories],
+    ["Decision Log", usability.decisionLog],
+    ["Protocol Gaps", usability.protocolGaps],
+    ["Usability Evidence", usability.usabilityEvidence],
+    ["Lifecycle Handoffs", usability.lifecycleHandoffs],
+    ["Reference Pattern Map", usability.referencePatternMap],
+    ["Gate", usability.gate],
+  ];
+  return `<div class="result-group product-usability-evidence" data-i18n-skip>${rows.map(([label, value]) => `<div class="result-entry result-entry-wide"><span>${escapeHtml(label)}</span><div class="result-content">${renderResultValue(value)}</div></div>`).join("")}</div>`;
 }
 
 function renderGitDeliveryEntry(value: unknown): string {

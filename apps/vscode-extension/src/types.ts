@@ -102,6 +102,19 @@ export type SpecDriveIdeExecutionDetail = SpecDriveIdeQueueItem & {
   contractValidation?: unknown;
   outputSchema?: unknown;
   approvalRequests: unknown[];
+  productUsability?: SpecDriveIdeProductUsabilityProjection;
+};
+
+export type SpecDriveIdeProductUsabilityProjection = {
+  priorityStories?: string[];
+  decisionLog?: unknown[];
+  skillWrapperContracts?: unknown[];
+  protocolGaps?: unknown[];
+  usabilityEvidence?: unknown[];
+  lifecycleHandoffs?: unknown[];
+  referencePatternMap?: unknown[];
+  invalidFields?: string[];
+  gate?: unknown;
 };
 
 export type SpecDriveIdeReviewProjection = {

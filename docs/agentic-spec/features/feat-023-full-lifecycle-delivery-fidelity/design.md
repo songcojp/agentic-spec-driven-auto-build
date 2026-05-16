@@ -82,6 +82,8 @@ HLD 参考: Delivery Lifecycle OS、Execution Adapter Layer、Status Checker、R
 
 `skill-local references/quality-loop.md` 是所有 Spec 文档生成/更新 Skill 的共享协议。它适用于项目章程、PRD、requirements、HLD、UI Spec、Feature Spec `requirements.md` / `design.md` / `tasks.md`、Feature index、Feature Pool Queue、ADR 和后续向规划或执行传递的 Markdown / JSON 规格产物。
 
+Pattern-First Skill 质量改造是该门禁的上游输入策略。`docs/agentic-spec/zh-CN/skill-refact.md` 定义如何把成熟 Skill 的澄清压缩、默认假设、Open Questions 和 Blocking Open Questions 做法吸收到 `refine-product-intent`、`generate-user-stories` 和 `validate-requirements` 中；它不改变 FEAT-023 的 Delivery Fidelity、Granularity Gate 或 quality repair loop 职责，也不表示当前 runtime 已直接调用外部 system skills。
+
 运行职责：
 
 - Owner thread：由调用方 Skill 选择 `qualityReviewSkill` / `repairOwner`，定义 `qualityLoopPlan`，为每个 review / repair dispatch 设置可见 `displayName` 和 `dispatchDescription`，通过平台 subagent/Task 工具调度 subagent、合并 compact result，并决定继续或退出。
