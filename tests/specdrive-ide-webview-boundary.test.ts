@@ -151,11 +151,13 @@ test("VSCode Execution Workbench requires selected queue tasks for stateful acti
   assert.match(extensionSource, /renderExecutionWorkbenchWebview\(view, detail, selectedQueueKey, autoRefreshEnabled, sharedWorkbenchLocale, sharedWorkbenchTheme\)/);
   assert.match(extensionSource, /automation\?: SpecDriveIdeAutomationState/);
   assert.match(extensionSource, /autoRunButton\(view\)/);
-  assert.match(extensionSource, /let autoRefreshEnabled = true/);
+  assert.match(extensionSource, /let autoRefreshEnabled = false/);
   assert.match(extensionSource, /WEBVIEW_AUTO_REFRESH_INTERVAL_MS = 60_000/);
   assert.match(extensionSource, /setInterval\(\(\) => \{/);
   assert.match(extensionSource, /\}, WEBVIEW_AUTO_REFRESH_INTERVAL_MS\)/);
   assert.match(extensionSource, /message\.command === "toggleAutoRefresh"/);
+  assert.match(extensionSource, /async function openExecutionWorkbench[\s\S]*let autoRefreshEnabled = false[\s\S]*if \(autoRefreshEnabled\) startAutoRefresh\(\);[\s\S]*await render\(\);/);
+  assert.doesNotMatch(extensionSource, /async function openExecutionWorkbench[\s\S]*executionWorkbenchPanel = \{ panel, render \};\n  startAutoRefresh\(\);\n  await render\(\);/);
   assert.match(extensionSource, /if \(autoRefreshEnabled && view && !selectedQueueKey\)/);
   assert.match(extensionSource, /runningExecutionItem\(view\)/);
   assert.match(webviewSource, /autoRefreshSwitch\(autoRefreshEnabled\)/);
@@ -672,7 +674,8 @@ test("VSCode Feature Spec Webview switches between list and dependency graph vie
   assert.match(extensionSource, /action: "mark_feature_ready"/);
   assert.match(extensionSource, /panelOpenState = Object\.fromEntries/);
   assert.match(extensionSource, /panel\.onDidDispose\(\(\) => \{\n    stopAutoRefresh\(\);\n    featureSpecPanel = undefined;/);
-  assert.match(extensionSource, /async function openFeatureSpec[\s\S]*let autoRefreshEnabled = true[\s\S]*startAutoRefresh\(\);\n  await render\(\);/);
+  assert.match(extensionSource, /async function openFeatureSpec[\s\S]*let autoRefreshEnabled = false[\s\S]*if \(autoRefreshEnabled\) startAutoRefresh\(\);[\s\S]*await render\(\);/);
+  assert.doesNotMatch(extensionSource, /async function openFeatureSpec[\s\S]*featureSpecPanel = \{ panel, render, selectFeature \};\n  startAutoRefresh\(\);\n  await render\(\);/);
   assert.match(webviewSource, /autoRefreshSwitch\(autoRefreshEnabled\)/);
   assert.match(extensionSource, /title: "Blocked"/);
   assert.match(extensionSource, /title: "In-Process"/);
@@ -755,6 +758,8 @@ test("VSCode Spec Workspace keeps global skill input at top and document actions
   assert.match(extensionSource, /renderSpecWorkspaceWebview/);
   assert.match(extensionSource, /renderSpecWorkspaceWebview\(view, uiConceptImages, autoRefreshEnabled, panel\.webview\.cspSource, sharedWorkbenchLocale, sharedWorkbenchTheme\)/);
   assert.match(extensionSource, /panel\.onDidDispose\(\(\) => \{\n    stopAutoRefresh\(\);\n    specWorkspacePanel = undefined;/);
+  assert.match(extensionSource, /async function openSpecWorkspace[\s\S]*let autoRefreshEnabled = false[\s\S]*if \(autoRefreshEnabled\) startAutoRefresh\(\);[\s\S]*await render\(\);/);
+  assert.doesNotMatch(extensionSource, /async function openSpecWorkspace[\s\S]*specWorkspacePanel = \{ panel, render \};\n  startAutoRefresh\(\);\n  await render\(\);/);
   assert.match(specWorkspaceWebviewSource, /autoRefreshSwitch\(autoRefreshEnabled\)/);
   assert.match(specWorkspaceWebviewSource, /autoRefreshEnabled = false/);
   assert.match(extensionSource, /commandButton\("New Requirement", "openWorkbenchForm", \{ formMode: "newRequirement", intent: "requirement_intake" \}\)/);

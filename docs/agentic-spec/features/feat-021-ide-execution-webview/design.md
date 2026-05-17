@@ -42,7 +42,7 @@ HLD 参考: 第 7.15 节 VSCode SpecDrive Extension
 | Feature Spec | Review Clarification Dialog | 当选中 Feature 状态为 `blocked` / `block` 或 `need review` / `review_needed` 时显示 Clarify 入口；点击后弹出澄清输入框，提交后以 `clarification` 意图进入 Spec change request。 |
 | Feature Spec | Mark Feature Ready | 当选中 Feature 不是 `ready` 且不是 `done` / `completed` / `delivered` 时显示 `Ready` 入口；点击后通过受控命令把 Feature 文件状态和数据库投影设置为 `ready`。 |
 | Feature Spec | Temporary Pass Recovery | `Pass` / `mark_feature_complete` 仅作为临时状态重置命令保留，不作为 Webview 默认入口展示；需要临时收敛状态时仍必须走 Control Plane 受控命令。 |
-| Feature Spec | Auto Refresh | 自动刷新 switch 默认开启；打开 Webview 时由 VSCode extension host 启动自动刷新定时器，Webview 只负责显示当前 switch 状态并提交 `toggleAutoRefresh`。 |
+| VSCode IDE Webviews | Auto Refresh | 自动刷新 switch 默认关闭；首次打开 Execution Workbench、Spec Workspace 或 Feature Spec Webview 时不得启动自动刷新定时器。Webview 只负责显示当前 switch 状态并提交 `toggleAutoRefresh`，用户打开 switch 后由 VSCode extension host 启动定时器。 |
 
 ## 3. Contract 边界
 

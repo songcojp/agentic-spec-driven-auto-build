@@ -147,10 +147,10 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 描述: Feature Spec 详情将 token/cost 标注并投影为最后一次有效执行费用；清空 `spec-state.json.currentJob` 只表示当前 Job 已解除，不清空历史最后执行费用。Execution Workbench / Execution Workspace 继续按 Job / Run 展示单次费用；同一 Feature 多次执行总成本只能从 Job / Execution 历史累计 `token_consumption_records`。Feature 是否能再次 queued 或 run 只看当前 Feature 状态、依赖、安全闸和 active execution，不因历史 Job 中出现同一 Feature 多次执行而阻塞。
 验证: `node --test tests/specdrive-ide.test.ts tests/specdrive-ide-webview-boundary.test.ts` 覆盖 ready Feature 保留最后执行费用、多次执行只展示最新费用、Webview 标题边界和历史 Job 费用不覆盖。
 
-### T-021-27 Feature Spec 自动刷新默认开启
+### T-021-27 Feature Spec 自动刷新历史默认行为
 状态: done
-描述: Feature Spec Webview 打开时默认开启自动刷新，并在 VSCode extension host 中立即启动自动刷新定时器；Webview switch 初始状态显示为开启，用户仍可手动关闭。
-验证: `node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖 Feature Spec Webview 默认开启自动刷新和定时器启动边界。
+描述: 历史任务。Feature Spec Webview 曾要求打开时默认开启自动刷新，并在 VSCode extension host 中立即启动自动刷新定时器；该默认开启行为已由 T-021-40 / CHG-067 替代为默认关闭。
+验证: 历史验证已被 `node --test tests/specdrive-ide-webview-boundary.test.ts` 中的默认关闭边界替代。
 
 ### T-021-28 Spec Workspace UI Spec Concept Images 每行上限
 状态: done
@@ -211,3 +211,8 @@ Git delivery: Execution Workbench 必须把 `result.gitDelivery` 中的 worktree
 状态: done
 描述: 在共享 Webview shell 中为 Spec Workspace、Feature Spec、Execution Workbench 和 System Settings 提供左侧导航栏；当前页面高亮，点击导航项通过 extension host 打开对应 Webview，导航栏可折叠/展开并只使用工作台级 localStorage 保留状态，不在每个页面的 Webview state 中保存副本。
 验证: `npm run ide:build`，`node --test tests/specdrive-ide-webview-boundary.test.ts`，`git diff --check`。
+
+### T-021-40 VSCode IDE Webview 自动刷新默认关闭
+状态: done
+描述: Execution Workbench、Spec Workspace 和 Feature Spec Webview 首次打开时默认关闭自动刷新，switch 初始状态显示为关闭，extension host 不启动自动刷新定时器；用户显式打开 switch 后才启动 60 秒刷新定时器，关闭 switch 后停止定时器。
+验证: `node --test tests/specdrive-ide-webview-boundary.test.ts` 覆盖三组 Webview 默认关闭自动刷新、首次打开不启动定时器和 toggle 后启动定时器边界；`npm run ide:build` 验证 VSCode Webview 编译。

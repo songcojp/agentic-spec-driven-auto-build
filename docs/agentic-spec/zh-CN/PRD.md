@@ -1234,6 +1234,7 @@ VSCode 插件能力包括：
 * 在 System Settings 中按项目保存系统级执行默认值，包括 `cli` / `rpc` run mode 和对应 Execution Adapter provider；在 Execution Workbench 创建新 Job 前允许用户选择 Job 级 run mode 与 provider 覆盖项目默认。
 * 在 Feature Spec Webview 顶部提供 New Feature 弹出输入框；用户提交自然语言内容后，插件只提交受控需求输入，由模型判定进入需求新增流程或需求变更流程。
 * Feature Spec 和 Execution Workbench 的详情区域必须展示 Feature Spec 标题和描述信息，不得只显示 Feature 编号作为任务意图说明。
+* Execution Workbench、Spec Workspace 和 Feature Spec Webview 首次打开时自动刷新默认关闭；用户显式打开自动刷新 switch 后才启动定时器。
 * 需求新增、需求变更和澄清输入在 Webview 中以聊天对话框形态展示；Webview 自动刷新或手动刷新不得清空尚未提交的输入草稿。
 * 刷新 Feature Spec Webview 时同时读取 `docs/agentic-spec/features/README.md` 和 `docs/agentic-spec/features/*` 目录，发现需求新增流程未同步 index 时补齐 Feature index 或展示同步阻塞原因。
 * 点击 Feature 后在详情面板解析对应 `tasks.md`，展示任务列表、任务状态、描述和验证命令。

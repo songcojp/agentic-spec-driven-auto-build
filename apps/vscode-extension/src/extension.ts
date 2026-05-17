@@ -1203,7 +1203,7 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
   });
   panel.iconPath = specExplorePanelIconUri("run-all");
   let selectedQueueKey: string | undefined;
-  let autoRefreshEnabled = true;
+  let autoRefreshEnabled = false;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1262,7 +1262,7 @@ async function openExecutionWorkbench(provider: SpecExplorerProvider): Promise<v
     await handleWorkbenchMessage(message, provider, render);
   });
   executionWorkbenchPanel = { panel, render };
-  startAutoRefresh();
+  if (autoRefreshEnabled) startAutoRefresh();
   await render();
 }
 
@@ -1282,7 +1282,7 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
     localResourceRoots,
   });
   panel.iconPath = specExplorePanelIconUri("checklist");
-  let autoRefreshEnabled = true;
+  let autoRefreshEnabled = false;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1335,7 +1335,7 @@ async function openSpecWorkspace(provider: SpecExplorerProvider): Promise<void> 
     await handleWorkbenchMessage(message, provider, render);
   });
   specWorkspacePanel = { panel, render };
-  startAutoRefresh();
+  if (autoRefreshEnabled) startAutoRefresh();
   await render();
 }
 
@@ -1359,7 +1359,7 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
   panel.iconPath = specExplorePanelIconUri("layout");
   let selectedFeatureId = isFeatureItem(item) ? item.feature.id : undefined;
   let panelOpenState: Record<string, boolean> = {};
-  let autoRefreshEnabled = true;
+  let autoRefreshEnabled = false;
   let autoRefreshTimer: ReturnType<typeof setInterval> | undefined;
   let rendering = false;
   const render = async (): Promise<void> => {
@@ -1443,7 +1443,7 @@ async function openFeatureSpec(provider: SpecExplorerProvider, item?: unknown): 
     await handleWorkbenchMessage(message, provider, render);
   });
   featureSpecPanel = { panel, render, selectFeature };
-  startAutoRefresh();
+  if (autoRefreshEnabled) startAutoRefresh();
   await render();
 }
 
